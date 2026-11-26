@@ -24,6 +24,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Mayúsculas de los nombres como se escriben en castellano: «Palma de Mallorca», «Jerez de la Frontera», «Torre de Garay», «FGL Granada-Jaén», en aeropuertos, centrales, minas y lugares de Wikidata. Los aeropuertos pierden las marcas de nota de AENA («(**)») y los helipuertos salen como «Ceuta (helipuerto)».
 - Museos y castillos sin nombre en castellano toman el gallego, catalán o euskera antes que el inglés (antes salían 19 en inglés; quedan 12, que Wikidata solo nombra en inglés).
 - La franja de créditos nombra las fuentes nuevas: MITECO, MAPA, AENA, Puertos del Estado, IGME, Wikidata y OpenStreetMap.
+- Consejeros de España sin gráficos vacíos ni «0 puntos» (E50): Economía muestra el empleo por sector y pone el mapa
+  de PIB, la clasificación y el gráfico de crecimiento por provincias; Prosperidad compara la renta con el alquiler
+  anual; el Explorador quita las columnas sin datos y abre con renta frente a crecimiento; Cultura oculta la sección
+  de desastres cuando no hay datos.
 - La potencia por provincia (consejero de Energía y Explorador) ya no sale vacía en España: `spain_resources` la
   rellena en `states.json` al terminar, con la misma suma que EE UU.
 - Restos de inglés y de EE UU en el mapa de España: los tooltips de puertos y aeropuertos («Large hub», «short tons»,

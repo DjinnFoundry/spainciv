@@ -226,7 +226,8 @@ export async function mount(ctx) {
   // The disaster records arrive after the rest of the dashboard is up (the view may be gone by then).
   disastersP.then((dis) => {
     if (!active()) return;
-    if (!dis) dSec.innerHTML = `<p class="adv-empty">${t("adv.cult.noDisasters")}</p>`;
+    // A map without disaster records (Spain: its hazard is the wildfires lens) has no section to show.
+    if (!dis) dSec.closest(".adv-sec").remove();
     else drawDisasters(dis);
     drawTiles(dis);
     drawSources(dis);
