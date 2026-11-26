@@ -1,0 +1,679 @@
+# Blue Flag beaches 2026-2027 (ADEAC, Bandera Azul), read from its PDF by tools/bandera_azul_pdf.py.
+community,province,municipality,beach
+ANDALUCÍA,ALMERÍA,Adra,Censo
+ANDALUCÍA,ALMERÍA,Adra,El Carboncillo
+ANDALUCÍA,ALMERÍA,Adra,San Nicolás
+ANDALUCÍA,ALMERÍA,Adra,Sirena Loca
+ANDALUCÍA,ALMERÍA,Almería,Almería
+ANDALUCÍA,ALMERÍA,Almería,El Toyo
+ANDALUCÍA,ALMERÍA,Almería,San Miguel Cabo de Gata
+ANDALUCÍA,ALMERÍA,Balanegra,Balanegra
+ANDALUCÍA,ALMERÍA,Carboneras,El Ancón
+ANDALUCÍA,ALMERÍA,Carboneras,Las Marinicas
+ANDALUCÍA,ALMERÍA,Carboneras,Los Barquicos-Cocones
+ANDALUCÍA,ALMERÍA,Cuevas del Almanzora,Playazo-Villaricos
+ANDALUCÍA,ALMERÍA,Cuevas del Almanzora,Pozo del Esparto
+ANDALUCÍA,ALMERÍA,Cuevas del Almanzora,Quitapellejos-Palomares
+ANDALUCÍA,ALMERÍA,El Ejido,Balerma
+ANDALUCÍA,ALMERÍA,El Ejido,Levante Almerimar
+ANDALUCÍA,ALMERÍA,El Ejido,Poniente Almerimar
+ANDALUCÍA,ALMERÍA,El Ejido,San Miguel
+ANDALUCÍA,ALMERÍA,Mojácar,El Cantal
+ANDALUCÍA,ALMERÍA,Mojácar,El Descargador
+ANDALUCÍA,ALMERÍA,Mojácar,Lance Nuevo
+ANDALUCÍA,ALMERÍA,Mojácar,Marina de la Torre
+ANDALUCÍA,ALMERÍA,Mojácar,Piedra Villazar
+ANDALUCÍA,ALMERÍA,Mojácar,Venta del Bancal-Ventanicas
+ANDALUCÍA,ALMERÍA,Níjar,Aguamarga
+ANDALUCÍA,ALMERÍA,Níjar,San José
+ANDALUCÍA,ALMERÍA,Pulpí,Calipso
+ANDALUCÍA,ALMERÍA,Pulpí,Los Nardos
+ANDALUCÍA,ALMERÍA,Pulpí,Mar Rabiosa
+ANDALUCÍA,ALMERÍA,Pulpí,Mar Serena
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,Aguadulce
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,La Bajadilla
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,Las Salinas
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,Romanillas
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,Urbanización Playa Serena
+ANDALUCÍA,ALMERÍA,Roquetas de Mar,Urbanización Roquetas
+ANDALUCÍA,ALMERÍA,Vera,El Playazo
+ANDALUCÍA,ALMERÍA,Vera,Las Marinas-Bolaga
+ANDALUCÍA,CÁDIZ,Algeciras,Getares
+ANDALUCÍA,CÁDIZ,Barbate,Zahara de los Atunes
+ANDALUCÍA,CÁDIZ,Cádiz,La Caleta
+ANDALUCÍA,CÁDIZ,Cádiz,La Cortadura-Poniente
+ANDALUCÍA,CÁDIZ,Cádiz,La Victoria
+ANDALUCÍA,CÁDIZ,Cádiz,Santa María del Mar
+ANDALUCÍA,CÁDIZ,Chiclana de la Frontera,La Barrosa
+ANDALUCÍA,CÁDIZ,Chiclana de la Frontera,Sancti Petri
+ANDALUCÍA,CÁDIZ,Chipiona,Camarón-La Laguna
+ANDALUCÍA,CÁDIZ,Chipiona,Cruz del Mar-Canteras
+ANDALUCÍA,CÁDIZ,Chipiona,La Ballena
+ANDALUCÍA,CÁDIZ,Chipiona,Micaela
+ANDALUCÍA,CÁDIZ,Chipiona,Regla
+ANDALUCÍA,CÁDIZ,Conil de la Frontera,El Roche
+ANDALUCÍA,CÁDIZ,Conil de la Frontera,La Fontanilla
+ANDALUCÍA,CÁDIZ,Conil de la Frontera,Los Bateles
+ANDALUCÍA,CÁDIZ,El Puerto de Santa María,Fuentebravía
+ANDALUCÍA,CÁDIZ,El Puerto de Santa María,La Puntilla
+ANDALUCÍA,CÁDIZ,El Puerto de Santa María,Santa Catalina (tramo Vistahermosa-Las Redes)
+ANDALUCÍA,CÁDIZ,El Puerto de Santa María,Valdelagrana
+ANDALUCÍA,CÁDIZ,Rota,Galeones
+ANDALUCÍA,CÁDIZ,Rota,La Ballena
+ANDALUCÍA,CÁDIZ,Rota,La Costilla
+ANDALUCÍA,CÁDIZ,Rota,Punta Candor
+ANDALUCÍA,CÁDIZ,Rota,Puntalillo
+ANDALUCÍA,CÁDIZ,Rota,Rompidillo-Chorrillo
+ANDALUCÍA,CÁDIZ,San Fernando,Camposoto-El Castillo
+ANDALUCÍA,CÁDIZ,San Roque,Alcaidesa- El Faro
+ANDALUCÍA,CÁDIZ,San Roque,Cala Sardina
+ANDALUCÍA,CÁDIZ,San Roque,Puerto Sotogrande
+ANDALUCÍA,CÁDIZ,San Roque,Torreguadiaro
+ANDALUCÍA,CÁDIZ,Vejer de la Frontera,El Palmar
+ANDALUCÍA,CÓRDOBA,Almodóvar del Río,La Breña
+ANDALUCÍA,GRANADA,Almuñécar,La Herradura
+ANDALUCÍA,GRANADA,Almuñécar,Marina del Este (Los Berengueles)
+ANDALUCÍA,GRANADA,Almuñécar,Puerta del Mar
+ANDALUCÍA,GRANADA,Almuñécar,San Cristóbal
+ANDALUCÍA,GRANADA,Almuñécar,Velilla
+ANDALUCÍA,GRANADA,Gualchos,Sotillo-Castell
+ANDALUCÍA,GRANADA,Gualchos,Cambriles
+ANDALUCÍA,GRANADA,Motril,Carchuna
+ANDALUCÍA,GRANADA,Motril,Calahonda
+ANDALUCÍA,GRANADA,Motril,Playa Granada
+ANDALUCÍA,GRANADA,Motril,Playa de Poniente
+ANDALUCÍA,GRANADA,Salobreña,La Guardia
+ANDALUCÍA,GRANADA,Torrenueva Costa,Del Cañon-La Pelá
+ANDALUCÍA,GRANADA,Torrenueva Costa,Torrenueva
+ANDALUCÍA,HUELVA,Ayamonte,Isla Canela
+ANDALUCÍA,HUELVA,Ayamonte,Los Haraganes
+ANDALUCÍA,HUELVA,Ayamonte,Punta del Moral
+ANDALUCÍA,HUELVA,Cartaya,Caño de la Culata
+ANDALUCÍA,HUELVA,Cartaya,San Miguel
+ANDALUCÍA,HUELVA,Huelva,Paraje Natural Marismas del Odiel
+ANDALUCÍA,HUELVA,Isla Cristina,La Casita Azul
+ANDALUCÍA,HUELVA,Isla Cristina,Playa Central
+ANDALUCÍA,HUELVA,Isla Cristina/Lepe,Islantilla
+ANDALUCÍA,HUELVA,Lepe,Santa Pura
+ANDALUCÍA,HUELVA,Moguer,Del Parador (Castilla)
+ANDALUCÍA,HUELVA,Punta Umbría,Punta Umbría (Tramo El Albergue)
+ANDALUCÍA,JAÉN,Andújar,El Encinarejo
+ANDALUCÍA,MÁLAGA,Algarrobo,Algarrobo Costa
+ANDALUCÍA,MÁLAGA,Benalmádena,Carvajal
+ANDALUCÍA,MÁLAGA,Benalmádena,Fuente de la Salud
+ANDALUCÍA,MÁLAGA,Benalmádena,Torrebermeja-Santa Ana
+ANDALUCÍA,MÁLAGA,Casares,Ancha
+ANDALUCÍA,MÁLAGA,Fuengirola,Boliches-Gaviotas
+ANDALUCÍA,MÁLAGA,Fuengirola,Carvajal
+ANDALUCÍA,MÁLAGA,Fuengirola,Castillo-Ejido
+ANDALUCÍA,MÁLAGA,Fuengirola,Fuengirola
+ANDALUCÍA,MÁLAGA,Málaga,Caleta
+ANDALUCÍA,MÁLAGA,Málaga,El Dedo
+ANDALUCÍA,MÁLAGA,Málaga,El Palo
+ANDALUCÍA,MÁLAGA,Málaga,Malagueta
+ANDALUCÍA,MÁLAGA,Málaga,Misericoria
+ANDALUCÍA,MÁLAGA,Málaga,Pedregalejo
+ANDALUCÍA,MÁLAGA,Málaga,San Andrés
+ANDALUCÍA,MÁLAGA,Manilva,Las Gaviotas
+ANDALUCÍA,MÁLAGA,Manilva,Sabinillas
+ANDALUCÍA,MÁLAGA,Marbella,Cabopino
+ANDALUCÍA,MÁLAGA,Marbella,El Cable
+ANDALUCÍA,MÁLAGA,Marbella,El Faro
+ANDALUCÍA,MÁLAGA,Marbella,La Fontanilla
+ANDALUCÍA,MÁLAGA,Marbella,Nagüeles-Casablanca
+ANDALUCÍA,MÁLAGA,Marbella,Los Monteros (Adelfas)
+ANDALUCÍA,MÁLAGA,Marbella,San Pedro de Alcántara (Guadalmina)
+ANDALUCÍA,MÁLAGA,Marbella,Venus-Bajadilla
+ANDALUCÍA,MÁLAGA,Mijas,Calahonda I (Royal Beach – La Luna)
+ANDALUCÍA,MÁLAGA,Mijas,Calahonda (Riviera)
+ANDALUCÍA,MÁLAGA,Mijas,El Bombo
+ANDALUCÍA,MÁLAGA,Mijas,El Chaparral
+ANDALUCÍA,MÁLAGA,Mijas,La Cala
+ANDALUCÍA,MÁLAGA,Nerja,Burriana
+ANDALUCÍA,MÁLAGA,Nerja,Maro
+ANDALUCÍA,MÁLAGA,Nerja,Playazo - Chucho
+ANDALUCÍA,MÁLAGA,Nerja,Torrecilla
+ANDALUCÍA,MÁLAGA,Torremolinos,El Bajondillo
+ANDALUCÍA,MÁLAGA,Torremolinos,La Carihuela-Montemar
+ANDALUCÍA,MÁLAGA,Torremolinos,Los Álamos
+ANDALUCÍA,MÁLAGA,Torremolinos,Playamar
+ANDALUCÍA,MÁLAGA,Torrox,Cenicero-Las Dunas
+ANDALUCÍA,MÁLAGA,Torrox,El Morche
+ANDALUCÍA,MÁLAGA,Torrox,Ferrara
+ANDALUCÍA,MÁLAGA,Vélez-Málaga,Benajarafe
+ANDALUCÍA,MÁLAGA,Vélez-Málaga,La Caleta (Paseo)
+ANDALUCÍA,MÁLAGA,Vélez-Málaga,Torre del Mar (Paseo Marítimo)
+PRINCIPADO DE ASTURIAS,,Castrillón,Arnao
+PRINCIPADO DE ASTURIAS,,Castrillón,Salinas
+PRINCIPADO DE ASTURIAS,,Castrillón,Santa María del Mar
+PRINCIPADO DE ASTURIAS,,Castropol,Arnao
+PRINCIPADO DE ASTURIAS,,Castropol- Tapia de Casariego,Peñarronda
+PRINCIPADO DE ASTURIAS,,Cudillero,Concha de Artedo
+PRINCIPADO DE ASTURIAS,,El Franco,Porcia
+PRINCIPADO DE ASTURIAS,,Muros de Nalón,Aguilar
+PRINCIPADO DE ASTURIAS,,Navia,Frejulfe
+PRINCIPADO DE ASTURIAS,,Navia,Navia
+PRINCIPADO DE ASTURIAS,,Valdés,Cadavedo
+PRINCIPADO DE ASTURIAS,,Valdés,Cueva
+PRINCIPADO DE ASTURIAS,,Valdés,Otur
+PRINCIPADO DE ASTURIAS,,Valdés,Salinas o Tercera de Luarca
+PRINCIPADO DE ASTURIAS,,Villaviciosa,La Ñora
+PRINCIPADO DE ASTURIAS,,Villaviciosa,Rodiles
+ILLES BALEARS,IBIZA,Sant Joan de Labritja,Cala Benirrás
+ILLES BALEARS,IBIZA,Sant Joan de Labritja,Cala Sant Vicent
+ILLES BALEARS,IBIZA,Sant Joan de Labritja,Port de Sant Miquel
+ILLES BALEARS,IBIZA,Santa Eulària des Riu,Santa Eularia
+ILLES BALEARS,IBIZA,Santa Eulària des Riu,Cala Llenya
+ILLES BALEARS,IBIZA,Santa Eulària des Riu,Es Canar
+ILLES BALEARS,IBIZA,Santa Eulària des Riu,Es Figueral
+ILLES BALEARS,MALLORCA,Alcudia,Alcudia
+ILLES BALEARS,MALLORCA,Andratx,Sant Elm
+ILLES BALEARS,MALLORCA,Felanitx,Cala Marçal
+ILLES BALEARS,MALLORCA,Felanitx,Cala Sa Nau
+ILLES BALEARS,MALLORCA,Felanitx,Porto Colom (Platja S’ Arenal)
+ILLES BALEARS,MALLORCA,Muro,Muro
+ILLES BALEARS,MALLORCA,Palma de Mallorca,Cala Estancia
+ILLES BALEARS,MALLORCA,Palma de Mallorca,Cala Major
+ILLES BALEARS,MALLORCA,Palma de Mallorca,Ciutat Jardí
+ILLES BALEARS,MALLORCA,Pollença,Cala Barques
+ILLES BALEARS,MALLORCA,Pollença,Cala Molins
+ILLES BALEARS,MALLORCA,Pollença,Formentor
+ILLES BALEARS,MALLORCA,Sant Llorenç des Cardassar,Cala Millor (Cala Nau)
+ILLES BALEARS,MALLORCA,Sant Llorenç des Cardassar,Sa Coma
+ILLES BALEARS,MALLORCA,Santa Margalida,Can Picafort
+ILLES BALEARS,MALLORCA,Santa Margalida,Son Bauló
+ILLES BALEARS,MALLORCA,Santa Margalida,Son Serra
+ILLES BALEARS,MALLORCA,Santanyí,Cala Mondragó (Sa Font de n’Alís)
+ILLES BALEARS,MALLORCA,Santanyí,S’Amarador
+ILLES BALEARS,MALLORCA,Ses Salines,Es Port-Es Dolç
+ILLES BALEARS,MALLORCA,Son Servera,Cala Millor
+ILLES BALEARS,MALLORCA,Son Servera,Es Ribell
+ILLES BALEARS,MENORCA,Alaior,Cala En Porter
+ILLES BALEARS,MENORCA,Alaior,Son Bou
+ILLES BALEARS,MENORCA,Sant Lluis,Binibeca Nou
+ILLES BALEARS,MENORCA,Sant Lluis,Punta Prima
+CANARIAS,FUERTEVENTURA,La Oliva,Corralejo Viejo
+CANARIAS,FUERTEVENTURA,La Oliva,Grandes Playas
+CANARIAS,FUERTEVENTURA,La Oliva,La Concha
+CANARIAS,FUERTEVENTURA,Pájara,Butihondo
+CANARIAS,FUERTEVENTURA,Pájara,Costa Calma
+CANARIAS,FUERTEVENTURA,Pájara,El Matorral
+CANARIAS,FUERTEVENTURA,Pájara,Morro Jable
+CANARIAS,FUERTEVENTURA,Puerto del Rosario,Blanca
+CANARIAS,FUERTEVENTURA,Puerto del Rosario,Los Pozos
+CANARIAS,FUERTEVENTURA,Puerto del Rosario,Puerto Lajas
+CANARIAS,FUERTEVENTURA,Tuineje,Gran Tarajal
+CANARIAS,GRAN CANARIA,Agaete,Las Nieves
+CANARIAS,GRAN CANARIA,Arucas,El Puertillo
+CANARIAS,GRAN CANARIA,Arucas,Los Charcones
+CANARIAS,GRAN CANARIA,Gáldar,Sardina
+CANARIAS,GRAN CANARIA,Ingenio,El Burrero
+CANARIAS,GRAN CANARIA,San Bartolomé de Tirajana,El Inglés
+CANARIAS,GRAN CANARIA,San Bartolomé de Tirajana,Las Burras
+CANARIAS,GRAN CANARIA,San Bartolomé de Tirajana,Maspalomas
+CANARIAS,GRAN CANARIA,San Bartolomé de Tirajana,Meloneras
+CANARIAS,GRAN CANARIA,San Bartolomé de Tirajana,San Agustín
+CANARIAS,GRAN CANARIA,Telde,Hoya del Pozo
+CANARIAS,GRAN CANARIA,Telde,La Garita
+CANARIAS,GRAN CANARIA,Telde,Melenara
+CANARIAS,GRAN CANARIA,Telde,Salinetas
+CANARIAS,GRAN CANARIA,Villa de Agüimes,Arinaga
+CANARIAS,LANZAROTE,Arrecife,El Reducto
+CANARIAS,LANZAROTE,Tías,Grande (Blanca)
+CANARIAS,LANZAROTE,Tías,Matagorda
+CANARIAS,LANZAROTE,Tías,Pila de la Barrilla
+CANARIAS,LANZAROTE,Tías,Pocillos
+CANARIAS,LANZAROTE,Yaiza,Blanca
+CANARIAS,LA GOMERA,Alajeró,Santiago
+CANARIAS,EL HIERRO,Pinar del Hierro,La Restinga
+CANARIAS,EL HIERRO,Valverde,Timijiraque
+CANARIAS,LA PALMA,Breña Alta,Bajamar
+CANARIAS,LA PALMA,Breña Baja,Los Cancajos
+CANARIAS,LA PALMA,Los Llanos de Aridane,Charco Verde
+CANARIAS,LA PALMA,Los Llanos de Aridane,Puerto Naos
+CANARIAS,LA PALMA,Santa Cruz de la Palma,Santa Cruz de la Palma
+CANARIAS,LA PALMA,Tazacorte,El Puerto de Tazacorte
+CANARIAS,TENERIFE,Adeje,El Duque (Sur)
+CANARIAS,TENERIFE,Adeje,Torviscas
+CANARIAS,TENERIFE,Arona,Las Vistas
+CANARIAS,TENERIFE,Guía de Isora,Playa de la Jaquita
+CANARIAS,TENERIFE,Guía de Isora,Playa San Juan
+CANARIAS,TENERIFE,Icod de los Vinos,San Marcos
+CANARIAS,TENERIFE,Los Realejos,Socorro
+CANARIAS,TENERIFE,San Cristóbal de La Laguna,Piscinas Naturales de Bajamar
+CANARIAS,TENERIFE,San Cristóbal de La Laguna,Piscina Natural del Arenisco
+CANARIAS,TENERIFE,San Cristóbal de La Laguna,Piscina Natural de Jóver
+CANARIAS,TENERIFE,Tacoronte,La Arena (Mesa del Mar)
+CANTABRIA,,Arnuero,El Sable de Quejo
+CANTABRIA,,Arnuero,La Arena
+CANTABRIA,,Castro-Urdiales,Brazomar
+CANTABRIA,,Castro-Urdiales,Oriñón
+CANTABRIA,,Castro-Urdiales,Ostende
+CANTABRIA,,Noja,Helgueras
+CANTABRIA,,Noja,Ris
+CANTABRIA,,Noja,Trengandín
+CANTABRIA,,San Vicente de la Barquera,Sable de Merón
+CANTABRIA,,Suances,El Sable de Tagle
+CANTABRIA,,Suances,Los Locos
+CATALUÑA,BARCELONA,Badalona,Coco
+CATALUÑA,BARCELONA,Badalona,Dels Pescadors
+CATALUÑA,BARCELONA,Badalona,La Marina
+CATALUÑA,BARCELONA,Barcelona,Bogatell
+CATALUÑA,BARCELONA,Barcelona,Mar Bella
+CATALUÑA,BARCELONA,Barcelona,Nova Icaria
+CATALUÑA,BARCELONA,Barcelona,Nova Mar Bella
+CATALUÑA,BARCELONA,Barcelona,Sant Sebastià
+CATALUÑA,BARCELONA,Barcelona,Somorrostro
+CATALUÑA,BARCELONA,Barcelona,Zona de Banys Fòrum
+CATALUÑA,BARCELONA,Caldes d´Estrac,Dels Tres Micos
+CATALUÑA,BARCELONA,Caldes d´Estrac,Kalima
+CATALUÑA,BARCELONA,Calella,Garbí
+CATALUÑA,BARCELONA,Canet de Mar,Canet de Mar
+CATALUÑA,BARCELONA,Castelldefels,Del Baixador
+CATALUÑA,BARCELONA,Castelldefels,Lluminetes
+CATALUÑA,BARCELONA,Cubelles,Llarga
+CATALUÑA,BARCELONA,Cubelles,Mota de Sant Pere
+CATALUÑA,BARCELONA,El Masnou,El Masnou
+CATALUÑA,BARCELONA,Gavà,Gavà Mar
+CATALUÑA,BARCELONA,Malgrat de Mar,Malgrat Centre
+CATALUÑA,BARCELONA,Malgrat de Mar,L’Astillero
+CATALUÑA,BARCELONA,Mataró,Del Callao
+CATALUÑA,BARCELONA,Mataró,Varador
+CATALUÑA,BARCELONA,Pineda del Mar,dels Pescadors
+CATALUÑA,BARCELONA,Pineda del Mar,La Riera
+CATALUÑA,BARCELONA,Sitges,Aiguadolç
+CATALUÑA,BARCELONA,Sitges,Balmins
+CATALUÑA,BARCELONA,Sitges,Garraf
+CATALUÑA,BARCELONA,Sitges,L’Estanyol
+CATALUÑA,BARCELONA,Sitges,La Barra
+CATALUÑA,BARCELONA,Sitges,La Ribera
+CATALUÑA,BARCELONA,Sitges,Les Botigues
+CATALUÑA,BARCELONA,Sitges,Sant Sebastiá
+CATALUÑA,BARCELONA,Sitges,Terramar
+CATALUÑA,BARCELONA,Vilanova i la Geltrú,D´Adarró
+CATALUÑA,BARCELONA,Vilanova i la Geltrú,Ibersol
+CATALUÑA,BARCELONA,Vilanova i la Geltrú,Ribes Roges
+CATALUÑA,BARCELONA,Vilanova i la Geltrú,Sant Gervasi
+CATALUÑA,GIRONA,Blanes,Blanes
+CATALUÑA,GIRONA,Blanes,S’Abanell
+CATALUÑA,GIRONA,Blanes,Sant Francesc (Cala Bona)
+CATALUÑA,GIRONA,Calonge i Sant Antoni,Cala Cristus-Ses Torretes
+CATALUÑA,GIRONA,Calonge i Sant Antoni,Es Monestrí
+CATALUÑA,GIRONA,Calonge i Sant Antoni,Sant Antoni
+CATALUÑA,GIRONA,Calonge i Sant Antoni,Torre Valentina
+CATALUÑA,GIRONA,"Castell d’Aro, Platja d’Aro i S’Agaró",Cala Rovira
+CATALUÑA,GIRONA,"Castell d’Aro, Platja d’Aro i S’Agaró",Platja Gran
+CATALUÑA,GIRONA,"Castell d’Aro, Platja d’Aro i S’Agaró",Sa Conca
+CATALUÑA,GIRONA,Castelló d’Empúries,Empuriabrava
+CATALUÑA,GIRONA,Llançà,Del Port
+CATALUÑA,GIRONA,Llançà,Grifeu
+CATALUÑA,GIRONA,Lloret de Mar,Cala Canyelles
+CATALUÑA,GIRONA,Lloret de Mar,Fenals
+CATALUÑA,GIRONA,Lloret de Mar,Lloret
+CATALUÑA,GIRONA,Lloret de Mar,Sa Boadella
+CATALUÑA,GIRONA,Lloret de Mar,Santa Cristina
+CATALUÑA,GIRONA,Palafrugell,Canadell
+CATALUÑA,GIRONA,Palafrugell,Llafranc
+CATALUÑA,GIRONA,Palafrugell,Tamariu
+CATALUÑA,GIRONA,Palamós,La Fosca
+CATALUÑA,GIRONA,Sant Feliu de Guíxols,Sant Feliu
+CATALUÑA,GIRONA,Sant Feliu de Guíxols,Sant Pol
+CATALUÑA,GIRONA,Torroella de Montgrí,Cala Montgó
+CATALUÑA,GIRONA,Tossa de Mar,Gran de Tossa
+CATALUÑA,GIRONA,Tossa de Mar,La Mar Menuda
+CATALUÑA,TARRAGONA,Altafulla,Altafulla
+CATALUÑA,TARRAGONA,Calafell,Calafell
+CATALUÑA,TARRAGONA,Calafell,L’Estany Mas Mel
+CATALUÑA,TARRAGONA,Calafell,Segur Llevant
+CATALUÑA,TARRAGONA,Calafell,Segur Ponent
+CATALUÑA,TARRAGONA,Cambrils,Cavet
+CATALUÑA,TARRAGONA,Cambrils,La Llosa
+CATALUÑA,TARRAGONA,Cambrils,L’Esquirol
+CATALUÑA,TARRAGONA,Cambrils,Prat d’en Forés- El Regueral
+CATALUÑA,TARRAGONA,Cambrils,Vilafortuny
+CATALUÑA,TARRAGONA,Cunit,Cunit Llevant
+CATALUÑA,TARRAGONA,Cunit,Cunit Ponent
+CATALUÑA,TARRAGONA,El Vendrell,El Francàs
+CATALUÑA,TARRAGONA,El Vendrell,Sant Salvador
+CATALUÑA,TARRAGONA,Roda de Berà,Costa Daurada
+CATALUÑA,TARRAGONA,Roda de Berà,Llarga
+CATALUÑA,TARRAGONA,Tarragona,L’Arrabassada
+CATALUÑA,TARRAGONA,Tarragona,La Móra
+CATALUÑA,TARRAGONA,Tarragona,Savinosa
+CATALUÑA,TARRAGONA,Tarragona,Tamarit
+CATALUÑA,TARRAGONA,Torredembarra,Els Muntanyans
+CATALUÑA,TARRAGONA,Torredembarra,La Paella
+CATALUÑA,TARRAGONA,Vandellós i l’Hospitalet de l’Infant,L’Almadrava
+CATALUÑA,TARRAGONA,Vandellós i l’Hospitalet de l’Infant,L’Arenal
+CATALUÑA,TARRAGONA,Vandellós i l’Hospitalet de l’Infant,La Punta del Riu
+CATALUÑA,TARRAGONA,Vandellós i l’Hospitalet de l’Infant,El Torn
+CATALUÑA,TARRAGONA,Vila-Seca,La Pineda
+CATALUÑA,TERRES DE L’EBRE,Alcanar,Les Cases d’Alcanar-El Marjal
+CATALUÑA,TERRES DE L’EBRE,Deltebre,Riumar
+CATALUÑA,TERRES DE L’EBRE,L’Ametlla de Mar,Cala Forn
+CATALUÑA,TERRES DE L’EBRE,L’Ametlla de Mar,L’Alguer
+CATALUÑA,TERRES DE L’EBRE,L’Ametlla de Mar,Sant Jordi d’Alfama
+CATALUÑA,TERRES DE L’EBRE,L’Ampolla,Cap Roig
+CATALUÑA,TERRES DE L’EBRE,L’Ampolla,Les Avellanes
+CATALUÑA,TERRES DE L’EBRE,La Ràpita,Les Delícies
+COMUNITAT VALENCIANA,ALICANTE,Alicante,Postiguet
+COMUNITAT VALENCIANA,ALICANTE,Alicante,Saladar-Urbanova
+COMUNITAT VALENCIANA,ALICANTE,Alicante,Sant Joan
+COMUNITAT VALENCIANA,ALICANTE,Alicante,Tabarca
+COMUNITAT VALENCIANA,ALICANTE,Altea,Cap Blanch
+COMUNITAT VALENCIANA,ALICANTE,Altea,El Bol
+COMUNITAT VALENCIANA,ALICANTE,Altea,La Roda
+COMUNITAT VALENCIANA,ALICANTE,Altea,L’Espigó
+COMUNITAT VALENCIANA,ALICANTE,Benidorm,Llevant
+COMUNITAT VALENCIANA,ALICANTE,Benidorm,Ponent
+COMUNITAT VALENCIANA,ALICANTE,Benissa,Cala del Baladrar
+COMUNITAT VALENCIANA,ALICANTE,Benissa,L’Advocat
+COMUNITAT VALENCIANA,ALICANTE,Calp,Cantal Roig
+COMUNITAT VALENCIANA,ALICANTE,Calp,La Fossa
+COMUNITAT VALENCIANA,ALICANTE,Calp,L’Arenal-Bol
+COMUNITAT VALENCIANA,ALICANTE,Calp,Puerto Blanco
+COMUNITAT VALENCIANA,ALICANTE,Calp,Racò
+COMUNITAT VALENCIANA,ALICANTE,Denia,Els Molins
+COMUNITAT VALENCIANA,ALICANTE,Denia,Les Bovetes
+COMUNITAT VALENCIANA,ALICANTE,Denia,Les Deveses
+COMUNITAT VALENCIANA,ALICANTE,Denia,Les Marines
+COMUNITAT VALENCIANA,ALICANTE,Denia,Marineta Cassiana
+COMUNITAT VALENCIANA,ALICANTE,Denia,Punta Negra
+COMUNITAT VALENCIANA,ALICANTE,Denia,Punta del Raset
+COMUNITAT VALENCIANA,ALICANTE,El Campello,Cala Lanuza
+COMUNITAT VALENCIANA,ALICANTE,El Campello,Carrer de la Mar
+COMUNITAT VALENCIANA,ALICANTE,El Campello,Mutxavista
+COMUNITAT VALENCIANA,ALICANTE,El Poble Nou de Benitatxell,Cala del Moraig
+COMUNITAT VALENCIANA,ALICANTE,Elx,Arenals del Sol-Sur
+COMUNITAT VALENCIANA,ALICANTE,Elx,Carabassí
+COMUNITAT VALENCIANA,ALICANTE,Elx,L’Altet
+COMUNITAT VALENCIANA,ALICANTE,Elx,La Marina
+COMUNITAT VALENCIANA,ALICANTE,Elx,Les Pesqueres-El Rebollo
+COMUNITAT VALENCIANA,ALICANTE,Guardamar del Segura,Centre
+COMUNITAT VALENCIANA,ALICANTE,Guardamar del Segura,Dels Vivers
+COMUNITAT VALENCIANA,ALICANTE,Guardamar del Segura,Ortigues-Campo
+COMUNITAT VALENCIANA,ALICANTE,Guardamar del Segura,Del Moncaio
+COMUNITAT VALENCIANA,ALICANTE,Guardamar del Segura,La Roqueta
+COMUNITAT VALENCIANA,ALICANTE,L’Alfas del Pi,Racó de l’Albir
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Calas de Aguamarina
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Barranco Rubio
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Cabo Roig -La Caleta
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Cala Capitán
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Cala Cerrada
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Cala Estaca
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Campoamor-La Glea
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,La Zenia- Cala Bosque
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Mil Palmeras
+COMUNITAT VALENCIANA,ALICANTE,Orihuela,Punta Prima
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Del Conde
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Higuericas
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Jesuitas
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Mil Palmeras
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Puerto
+COMUNITAT VALENCIANA,ALICANTE,Pilar de la Horadada,Rocamar
+COMUNITAT VALENCIANA,ALICANTE,Santa Pola,Calas del Este
+COMUNITAT VALENCIANA,ALICANTE,Santa Pola,Calas de Santiago Bernabéu
+COMUNITAT VALENCIANA,ALICANTE,Santa Pola,La Ermita
+COMUNITAT VALENCIANA,ALICANTE,Santa Pola,Tamarit
+COMUNITAT VALENCIANA,ALICANTE,Santa Pola,Varador
+COMUNITAT VALENCIANA,ALICANTE,Teulada,Del Portet
+COMUNITAT VALENCIANA,ALICANTE,Teulada,Les Platgetes
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,Cabo Cervera
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,Cala de las Piteras
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,El Cura
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,La Mata (antigua La Mata Sur)
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,Los Locos
+COMUNITAT VALENCIANA,ALICANTE,Torrevieja,Los Náufragos
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,Bon Nou
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,Ciutat (Centro)
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,De Torres
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,La Caleta
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,Paradís
+COMUNITAT VALENCIANA,ALICANTE,Vila Joiosa,Varadero
+COMUNITAT VALENCIANA,ALICANTE,Xàbia,Arenal
+COMUNITAT VALENCIANA,ALICANTE,Xàbia,Granadella
+COMUNITAT VALENCIANA,ALICANTE,Xàbia,La Grava
+COMUNITAT VALENCIANA,CASTELLÓN,Alcalá de Xivert,Del Carregador
+COMUNITAT VALENCIANA,CASTELLÓN,Alcalá de Xivert,Del Moro
+COMUNITAT VALENCIANA,CASTELLÓN,Alcalá de Xivert,La Romana
+COMUNITAT VALENCIANA,CASTELLÓN,Alcalá de Xivert,Manyetes
+COMUNITAT VALENCIANA,CASTELLÓN,Almassora,Benafeli
+COMUNITAT VALENCIANA,CASTELLÓN,Almassora,Pla de la Torre
+COMUNITAT VALENCIANA,CASTELLÓN,Almenara,Casablanca
+COMUNITAT VALENCIANA,CASTELLÓN,Benicarló,La Caracola
+COMUNITAT VALENCIANA,CASTELLÓN,Benicarló,Morrongo
+COMUNITAT VALENCIANA,CASTELLÓN,Benicàssim,Dels Terrers
+COMUNITAT VALENCIANA,CASTELLÓN,Benicàssim,Heliópolis
+COMUNITAT VALENCIANA,CASTELLÓN,Benicàssim,L´Almadrava
+COMUNITAT VALENCIANA,CASTELLÓN,Benicàssim,Torre de Sant Vicent
+COMUNITAT VALENCIANA,CASTELLÓN,Benicàssim,Voramar
+COMUNITAT VALENCIANA,CASTELLÓN,Burriana,El Grao
+COMUNITAT VALENCIANA,CASTELLÓN,Burriana,L´Arenal
+COMUNITAT VALENCIANA,CASTELLÓN,Burriana,Malvarrosa
+COMUNITAT VALENCIANA,CASTELLÓN,Castelló de la Plana,Gurugú
+COMUNITAT VALENCIANA,CASTELLÓN,Castelló de la Plana,Pinar
+COMUNITAT VALENCIANA,CASTELLÓN,Castelló de la Plana,Serradal
+COMUNITAT VALENCIANA,CASTELLÓN,Moncofa,Grao
+COMUNITAT VALENCIANA,CASTELLÓN,Moncofa,L’Estanyol
+COMUNITAT VALENCIANA,CASTELLÓN,Moncofa,Masbó
+COMUNITAT VALENCIANA,CASTELLÓN,Moncofa,Pedra Roja
+COMUNITAT VALENCIANA,CASTELLÓN,Montanejos,Fuente de los Baños
+COMUNITAT VALENCIANA,CASTELLÓN,Oropesa del Mar,La Conxa
+COMUNITAT VALENCIANA,CASTELLÓN,Oropesa del Mar,Les Amplaries
+COMUNITAT VALENCIANA,CASTELLÓN,Oropesa del Mar,Morro de Gos
+COMUNITAT VALENCIANA,CASTELLÓN,Oropesa del Mar,Plagetes de Bellver
+COMUNITAT VALENCIANA,CASTELLÓN,Peñíscola,Nord
+COMUNITAT VALENCIANA,CASTELLÓN,Torreblanca,Nord
+COMUNITAT VALENCIANA,CASTELLÓN,Torreblanca,Torrenostra
+COMUNITAT VALENCIANA,CASTELLÓN,Vinaròs,Fora Forat
+COMUNITAT VALENCIANA,CASTELLÓN,Vinaròs,Fortí
+COMUNITAT VALENCIANA,CASTELLÓN,Xilxes,El Cerezo
+COMUNITAT VALENCIANA,CASTELLÓN,Xilxes,Les Cases
+COMUNITAT VALENCIANA,VALENCIA,Bellreguard,Bellreguard
+COMUNITAT VALENCIANA,VALENCIA,Canet d’en Berenguer,Racó de la Mar
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Cap Blanc
+COMUNITAT VALENCIANA,VALENCIA,Cullera,El Brosquil
+COMUNITAT VALENCIANA,VALENCIA,Cullera,El Dossel
+COMUNITAT VALENCIANA,VALENCIA,Cullera,El Far
+COMUNITAT VALENCIANA,VALENCIA,Cullera,El Mareny de Sant Llorenç
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Escollera
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Los Olivos
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Marenyet-L'illa
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Racó
+COMUNITAT VALENCIANA,VALENCIA,Cullera,Sant Antoni
+COMUNITAT VALENCIANA,VALENCIA,Daimús,Daimús
+COMUNITAT VALENCIANA,VALENCIA,Gandía,Auir
+COMUNITAT VALENCIANA,VALENCIA,Gandía,Nord
+COMUNITAT VALENCIANA,VALENCIA,Guardamar de la Safor,Guardamar de la Safor
+COMUNITAT VALENCIANA,VALENCIA,La Pobla de Farnals,Norte
+COMUNITAT VALENCIANA,VALENCIA,La Pobla de Farnals,Pobla Marina
+COMUNITAT VALENCIANA,VALENCIA,Miramar,Miramar
+COMUNITAT VALENCIANA,VALENCIA,Navarrés,Playa-Monte
+COMUNITAT VALENCIANA,VALENCIA,Oliva,L’Aigua Blanca
+COMUNITAT VALENCIANA,VALENCIA,Oliva,L’Aigua Morta
+COMUNITAT VALENCIANA,VALENCIA,Oliva,Pau-Pi
+COMUNITAT VALENCIANA,VALENCIA,Oliva,Terranova-Burguera
+COMUNITAT VALENCIANA,VALENCIA,Piles,Piles
+COMUNITAT VALENCIANA,VALENCIA,Puçol,Puçol
+COMUNITAT VALENCIANA,VALENCIA,Sagunt,Corinto
+COMUNITAT VALENCIANA,VALENCIA,Sagunt,L’Almardá
+COMUNITAT VALENCIANA,VALENCIA,Sagunt,Malvarrosa
+COMUNITAT VALENCIANA,VALENCIA,Sagunt,Port de Sagunt
+COMUNITAT VALENCIANA,VALENCIA,Tavernes de la Valldigna,La Goleta
+COMUNITAT VALENCIANA,VALENCIA,Tavernes de la Valldigna,Tavernes de la Valldigna
+COMUNITAT VALENCIANA,VALENCIA,Valencia,L’Arbre del Gos
+COMUNITAT VALENCIANA,VALENCIA,Valencia,El Saler
+COMUNITAT VALENCIANA,VALENCIA,Valencia,La Devesa
+COMUNITAT VALENCIANA,VALENCIA,Valencia,La Garrofera
+COMUNITAT VALENCIANA,VALENCIA,Valencia,Malva-Rosa
+COMUNITAT VALENCIANA,VALENCIA,Valencia,Recatí-Perellonet
+COMUNITAT VALENCIANA,VALENCIA,Xeraco,Xeraco
+EXTREMADURA,BADAJOZ,Campanario,Campanario
+EXTREMADURA,BADAJOZ,Casas de Don Pedro,Los Calicantos
+EXTREMADURA,BADAJOZ,Castuera,Isla del Zújar
+EXTREMADURA,BADAJOZ,Cheles,La Dehesa
+EXTREMADURA,BADAJOZ,Herrera del Duque,El Espolón-Peloche
+EXTREMADURA,BADAJOZ,Orellana la Vieja,Playa dulce de Orellana
+EXTREMADURA,BADAJOZ,Talarrubias,Talarrubias-Puerto Peña
+EXTREMADURA,CÁCERES,Cañamero,Cancho del Fresno
+GALICIA,A CORUÑA,A Coruña,As Lapas
+GALICIA,A CORUÑA,A Coruña,Orzán-Matadero
+GALICIA,A CORUÑA,A Coruña,Oza
+GALICIA,A CORUÑA,A Coruña,Riazor
+GALICIA,A CORUÑA,A Coruña,San Amaro
+GALICIA,A CORUÑA,A Laracha,Caión
+GALICIA,A CORUÑA,A Pobra do Caramiñal,Lombiña-Cabío
+GALICIA,A CORUÑA,Arteixo,A Salsa (Repibelo)
+GALICIA,A CORUÑA,Arteixo,Barrañán
+GALICIA,A CORUÑA,Arteixo,Combouzas
+GALICIA,A CORUÑA,Arteixo,Porto de Suevos
+GALICIA,A CORUÑA,Arteixo,Sabón
+GALICIA,A CORUÑA,Arteixo,Valcobo
+GALICIA,A CORUÑA,As Pontes de García Rodríguez,Lago de As Pontes
+GALICIA,A CORUÑA,Bergondo,Gandarío
+GALICIA,A CORUÑA,Camariñas,Arou
+GALICIA,A CORUÑA,Carballo,Pedra do Sal
+GALICIA,A CORUÑA,Carballo,Razo
+GALICIA,A CORUÑA,Carballo,Saíñas
+GALICIA,A CORUÑA,Dumbría,Ézaro
+GALICIA,A CORUÑA,Ferrol,A Fragata-O Pareixal
+GALICIA,A CORUÑA,Ferrol,Caranza
+GALICIA,A CORUÑA,Ferrol,Doniños
+GALICIA,A CORUÑA,Ferrol,Esmelle
+GALICIA,A CORUÑA,Ferrol,Ponzos
+GALICIA,A CORUÑA,Ferrol,San Xurxo
+GALICIA,A CORUÑA,Laxe,Laxe
+GALICIA,A CORUÑA,Malpica de Bergantiños,Area Mayor
+GALICIA,A CORUÑA,Miño,A Ribeira
+GALICIA,A CORUÑA,Miño,Grande
+GALICIA,A CORUÑA,Miño,Perbes-Andahío
+GALICIA,A CORUÑA,Muros,San Francisco
+GALICIA,A CORUÑA,Oleiros,Bastiagueiro
+GALICIA,A CORUÑA,Oleiros,Espiñeiro
+GALICIA,A CORUÑA,Oleiros,Mera
+GALICIA,A CORUÑA,Oleiros,Naval
+GALICIA,A CORUÑA,Oleiros,Santa Cristina
+GALICIA,A CORUÑA,Ortigueira,A Concha
+GALICIA,A CORUÑA,Ortigueira,Morouzos
+GALICIA,A CORUÑA,Ponteceso,A Ermida
+GALICIA,A CORUÑA,Ponteceso,Balarés
+GALICIA,A CORUÑA,Ponteceso,Niñons
+GALICIA,A CORUÑA,Ponteceso,O Osmo
+GALICIA,A CORUÑA,Riveira,Coroso
+GALICIA,LUGO,Barreiros,Coto
+GALICIA,LUGO,Barreiros,Fontela Valea
+GALICIA,LUGO,Barreiros,Pasadas
+GALICIA,LUGO,Burela,A Marosa
+GALICIA,LUGO,Burela,O Portelo
+GALICIA,LUGO,Cervo,O Torno
+GALICIA,LUGO,Foz,A Rapadoira
+GALICIA,LUGO,Foz,Areoura
+GALICIA,LUGO,Foz,As Polas
+GALICIA,LUGO,Foz,Llas
+GALICIA,LUGO,Foz,Peizás
+GALICIA,LUGO,O Vicedo,Abrela
+GALICIA,LUGO,O Vicedo,Xilloi
+GALICIA,LUGO,Ribadeo,As Catedrais
+GALICIA,LUGO,Ribadeo,Os Castros-Illas
+GALICIA,LUGO,Viveiro,Area
+GALICIA,LUGO,Xove,Esteiro
+GALICIA,OURENSE,A Veiga,Playa de los Franceses
+GALICIA,PONTEVEDRA,A Guarda,Area Grande
+GALICIA,PONTEVEDRA,A Guarda,O Muíño
+GALICIA,PONTEVEDRA,A Illa de Arousa,Area da Secada
+GALICIA,PONTEVEDRA,A Illa de Arousa,Bao (Camaxe)
+GALICIA,PONTEVEDRA,Baiona,Barbeira
+GALICIA,PONTEVEDRA,Baiona,Concheira
+GALICIA,PONTEVEDRA,Baiona,Frades
+GALICIA,PONTEVEDRA,Baiona,Ladeira
+GALICIA,PONTEVEDRA,Baiona,Ribeira
+GALICIA,PONTEVEDRA,Baiona,Santa Marta
+GALICIA,PONTEVEDRA,Bueu,Area de Bon
+GALICIA,PONTEVEDRA,Bueu,Lagos
+GALICIA,PONTEVEDRA,Bueu,Lapamán
+GALICIA,PONTEVEDRA,Bueu,Portomaior
+GALICIA,PONTEVEDRA,Marín,Aguete
+GALICIA,PONTEVEDRA,Marín,Loira
+GALICIA,PONTEVEDRA,Marín,Mogor
+GALICIA,PONTEVEDRA,Marín,Portocelo
+GALICIA,PONTEVEDRA,Marín,Santo de Mar – A Coviña
+GALICIA,PONTEVEDRA,Moaña,O Con
+GALICIA,PONTEVEDRA,Poio,Cabeceira
+GALICIA,PONTEVEDRA,Poio,O Laño
+GALICIA,PONTEVEDRA,Poio,Xiorto
+GALICIA,PONTEVEDRA,Ponte Caldelas,Playa fluvial A Calzada
+GALICIA,PONTEVEDRA,Sanxenxo,A Lapa
+GALICIA,PONTEVEDRA,Sanxenxo,Agra
+GALICIA,PONTEVEDRA,Sanxenxo,Areas
+GALICIA,PONTEVEDRA,Sanxenxo,Areas Gordas
+GALICIA,PONTEVEDRA,Sanxenxo,Baltar
+GALICIA,PONTEVEDRA,Sanxenxo,Bascuas
+GALICIA,PONTEVEDRA,Sanxenxo,Canelas
+GALICIA,PONTEVEDRA,Sanxenxo,Caneliñas
+GALICIA,PONTEVEDRA,Sanxenxo,Foxos
+GALICIA,PONTEVEDRA,Sanxenxo,Major
+GALICIA,PONTEVEDRA,Sanxenxo,Montalvo
+GALICIA,PONTEVEDRA,Sanxenxo,Nosa Señora da Lanzada
+GALICIA,PONTEVEDRA,Sanxenxo,O Espiñeiro-A Lanzada
+GALICIA,PONTEVEDRA,Sanxenxo,Pampaído
+GALICIA,PONTEVEDRA,Sanxenxo,Panadeira
+GALICIA,PONTEVEDRA,Sanxenxo,Paxariñas
+GALICIA,PONTEVEDRA,Sanxenxo,Pragueira
+GALICIA,PONTEVEDRA,Sanxenxo,Silgar
+GALICIA,PONTEVEDRA,Vigo,A Argazada
+GALICIA,PONTEVEDRA,Vigo,A Fontaiña
+GALICIA,PONTEVEDRA,Vigo,A Punta
+GALICIA,PONTEVEDRA,Vigo,As Rodas (Islas Cíes)
+GALICIA,PONTEVEDRA,Vigo,Canido
+GALICIA,PONTEVEDRA,Vigo,Carril
+GALICIA,PONTEVEDRA,Vigo,O Adro
+GALICIA,PONTEVEDRA,Vigo,O Fortiñón
+GALICIA,PONTEVEDRA,Vigo,O Mende
+GALICIA,PONTEVEDRA,Vigo,O Vao
+GALICIA,PONTEVEDRA,Vigo,Santa Baia
+GALICIA,PONTEVEDRA,Vigo,Tombo do Gato
+GALICIA,PONTEVEDRA,Vilagarcía de Arousa,Campanario
+GALICIA,PONTEVEDRA,Vilagarcía de Arousa,Compostela
+COMUNIDAD DE MADRID,,San Martín de Valdeiglesias,Virgen de la Nueva
+REGIÓN DE MURCIA,,Águilas,Calarreona
+REGIÓN DE MURCIA,,Águilas,El Hornillo
+REGIÓN DE MURCIA,,Águilas,La Carolina
+REGIÓN DE MURCIA,,Águilas,La Casica Verde
+REGIÓN DE MURCIA,,Águilas,La Colonia
+REGIÓN DE MURCIA,,Águilas,La Higuerica
+REGIÓN DE MURCIA,,Águilas,Las Delicias
+REGIÓN DE MURCIA,,Águilas,Levante
+REGIÓN DE MURCIA,,Águilas,Matalentisco
+REGIÓN DE MURCIA,,Águilas,Poniente
+REGIÓN DE MURCIA,,Cartagena,Cala Cortina
+REGIÓN DE MURCIA,,Cartagena,Cala del Barco
+REGIÓN DE MURCIA,,Cartagena,Calblanque
+REGIÓN DE MURCIA,,Cartagena,El Portús
+REGIÓN DE MURCIA,,Cartagena,Isla Plana
+REGIÓN DE MURCIA,,Cartagena,La Azohía-El Cuartel
+REGIÓN DE MURCIA,,Cartagena,La Chapineta
+REGIÓN DE MURCIA,,Cartagena,Levante-Cabo de Palos
+REGIÓN DE MURCIA,,Cartagena,San Ginés
+REGIÓN DE MURCIA,,Lorca,Calnegre
+REGIÓN DE MURCIA,,Mazarrón,Alamillo
+REGIÓN DE MURCIA,,Mazarrón,Bahía – La Reya
+REGIÓN DE MURCIA,,Mazarrón,Del Mojón
+REGIÓN DE MURCIA,,Mazarrón,Grande-Castellar
+REGIÓN DE MURCIA,,Mazarrón,Nares
+REGIÓN DE MURCIA,,Mazarrón,Rihuete
+REGIÓN DE MURCIA,,San Javier/Cartagena,Banco del Tabal-Calnegre
+REGIÓN DE MURCIA,,San Javier,El Arenal
+REGIÓN DE MURCIA,,San Javier,Ensenada del Esparto
+REGIÓN DE MURCIA,,San Javier,Pedrucho
+REGIÓN DE MURCIA,,San Pedro del Pinatar,El Mojón
+REGIÓN DE MURCIA,,San Pedro del Pinatar,Las Salinas
+REGIÓN DE MURCIA,,San Pedro del Pinatar,Torre Derribada
+PAÍS VASCO,ÁLAVA,Arratzua-Ubarrundia,Landa
+PAÍS VASCO,ÁLAVA,Barrundia,Moskurio (Garaio Norte)
+PAÍS VASCO,ÁLAVA,Elburgo,Salurriaga (Garaio Sur)
+PAÍS VASCO,VIZCAYA,Bakio,Bakio
+CIUDAD AUTÓNOMA DE CEUTA,,Ciudad Autónoma de Ceuta,Chorrillo
+CIUDAD AUTÓNOMA DE CEUTA,,Ciudad Autónoma de Ceuta,Ribera
+CIUDAD AUTÓNOMA DE MELILLA,,Ciudad Autónoma de Melilla,Hipódromo
+CIUDAD AUTÓNOMA DE MELILLA,,Ciudad Autónoma de Melilla,Los Galápagos
+CIUDAD AUTÓNOMA DE MELILLA,,Ciudad Autónoma de Melilla,San Lorenzo-Los Cárabos

@@ -655,3 +655,28 @@ class SpainLanguagesTest(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             castilian_codes({"46": ["Atlántida"]}, self.MUNIS)
+
+
+class SpainBeachesTest(unittest.TestCase):
+    def test_beach_town(self):
+        from pipeline.build.spain import beach_town
+
+        by_key = {("29", "marbella"): "29069", ("30", "san javier"): "30035"}
+        self.assertEqual(beach_town({"province": "29", "municipality": "Marbella"}, by_key), "29069")
+        self.assertEqual(beach_town({"province": "30", "municipality": "San Javier/Cartagena"}, by_key), "30035")
+        self.assertEqual(beach_town({"province": "07", "municipality": "Palma de Mallorca"}, by_key), "07040")
+        with self.assertRaises(RuntimeError):
+            beach_town({"province": "29", "municipality": "Atlántida"}, by_key)
+
+    def test_beaches_take_coastal_hexes_in_turn(self):
+        from pipeline.build.spain import beaches_lens
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=10.0, cols=5, rows=1)
+        owner = [0, 0, 0, -1, -1]  # three land hexes, the third on the sea
+        world = {"owner": owner, "county": [0, 0, 0, -1, -1], "counties": ["29069"]}
+        munis = [{"geoid": "29069", "name": "Marbella", "state_fips": "29", "centre": list(grid.center(0, 0))}]
+        beaches = [{"beach": b, "municipality": "Marbella", "province": "29"} for b in ("Cabopino", "Venus")]
+        lens = beaches_lens(beaches, munis, world, grid, lambda lon, lat: (lon, lat))
+        self.assertEqual(lens["values"][:3], [0, 0, 2])  # both on the only coastal hex
+        self.assertEqual([lens["names"][k] for k in lens["labels"][2]], ["Cabopino (Marbella)", "Venus (Marbella)"])

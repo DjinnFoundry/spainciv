@@ -36,7 +36,7 @@ from .spain_wonders import place_key
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
-            "calidad_diferenciada", "pleiades_iberia", "lenguas_es"]
+            "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -340,6 +340,63 @@ def languages_lens(lenguas: dict, municipalities: list[dict], world: dict) -> di
     }
 
 
+# ADEAC's municipality names that are not INE's: (province, ADEAC name) → INE codes (the first holds a shared beach).
+BEACH_TOWNS = {("03", "Vila Joiosa"): ["03139"], ("07", "Palma de Mallorca"): ["07040"],
+               ("08", "Pineda del Mar"): ["08163"], ("15", "Riveira"): ["15073"],
+               ("33", "Castropol- Tapia de Casariego"): ["33017", "33070"], ("35", "Villa de Agüimes"): ["35002"],
+               ("38", "Pinar del Hierro"): ["38901"], ("51", "Ciudad Autónoma de Ceuta"): ["51001"],
+               ("52", "Ciudad Autónoma de Melilla"): ["52001"]}
+
+
+BEACH_REACH_KM = 15
+
+
+def beach_town(beach: dict, by_key: dict) -> str:
+    """The INE code of the municipality a Blue Flag beach belongs to (the first, for one shared by two)."""
+    key = (beach["province"], beach["municipality"])
+    if key in BEACH_TOWNS:
+        return BEACH_TOWNS[key][0]
+    first = beach["municipality"].split("/")[0]
+    code = by_key.get((beach["province"], place_key(first)))
+    if not code:
+        raise RuntimeError(f"Blue Flag: no municipality {beach['municipality']!r} in province {beach['province']}")
+    return code
+
+
+def beaches_lens(beaches: list[dict], municipalities: list[dict], world: dict, grid: HexGrid, proj) -> dict:
+    """Blue Flag beaches per hex. ADEAC gives each beach's municipality, not its position: a municipality's beaches
+    take its coastal hexes in turn, nearest its centre first. A municipality too small to own a hex uses the coastal
+    hexes within BEACH_REACH_KM of its centre; a lake or river beach (no coast near) its nearest land hex."""
+    owner, county, geoids = world["owner"], world["county"], world["counties"]
+    by_key = {(m["state_fips"], place_key(part)): m["geoid"] for m in municipalities for part in m["name"].split("/")}
+    centre = {m["geoid"]: m["centre"] for m in municipalities}
+    hexes: dict[str, list[int]] = {}
+    for c, (o, ci) in enumerate(zip(owner, county)):
+        if o >= 0 and ci >= 0:
+            hexes.setdefault(geoids[ci], []).append(c)
+    coastal = {c for c, o in enumerate(owner) if o >= 0 and any(owner[n] == -1 for n in grid.neighbours(c))}
+    used: dict[str, int] = {}
+    cells_of = []
+    for b in beaches:
+        town = beach_town(b, by_key)
+        x, y = proj(*centre[town])
+        dist = lambda c: math.dist(grid.center(*grid.col_row(c)), (x, y))
+        own = hexes.get(town, [])
+        options = ([c for c in own if c in coastal] or [c for c in coastal if dist(c) <= BEACH_REACH_KM] or own
+                   or [nearest_land(grid, owner, max(grid.cell_at(x, y), 0), x, y, -1)])
+        options.sort(key=dist)
+        cells_of.append([options[used.get(town, 0) % len(options)]])
+        used[town] = used.get(town, 0) + 1
+    return {
+        "id": "beaches", "group": "heritage", "name": "Blue Flag beaches", "icon": "l-beaches", "emoji": "🏖️",
+        "unit": "Blue Flag beaches", "format": "int", "scale": "linear", "higher_is": "good", "domain": [0, 6],
+        "ramp": ["#0d2b45", "#134f74", "#1a77a3", "#2ea3c9", "#7fd1e3", "#e6f8fb"], "source": "bandera_azul",
+        "description": f"The {len(beaches)} beaches flying the Blue Flag in 2026-27, named in the tooltip. ADEAC lists "
+        "each beach's municipality, not its position, so a municipality's beaches are spread over its coastal hexes.",
+        **named_counts([f"{b['beach']} ({b['municipality']})" for b in beaches], cells_of, owner),
+    }
+
+
 PEOPLE_REACH_KM = 175  # further than this from every people's point a hex is left blank: the Balearic and Canary Islands
 # Eight colours, assigned so that neighbouring territories never share one.
 PEOPLE_COLOURS = ["#c8553d", "#f2a541", "#7fb069", "#3d8fbf", "#9b5de5", "#e86a92", "#43aa8b", "#d4c26a"]
@@ -504,7 +561,8 @@ def build() -> None:
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
-        languages_lens(load_interim("lenguas_es"), lau["municipalities"], world)] + land_lenses(world, "corine")
+        languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
+        beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + land_lenses(world, "corine")
     set_domains(lenses)
     groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
 
