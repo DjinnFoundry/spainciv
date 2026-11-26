@@ -37,7 +37,7 @@ import math
 import re
 import unicodedata
 
-from ..core.geo import Shape, geojson_rings, ring_area, ring_centroid
+from ..core.geo import Shape, geojson_rings
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
@@ -48,6 +48,7 @@ from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_popu
 from . import spain_daily
 from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
 from .spain_fiesta import FIESTA_REQUIRES, fiesta_lenses
+from .spain_food import food_lens
 from .spain_named import named_counts, shore_cell
 from .spain_wonders import place_key
 from .states import label_anchor, land_shares
@@ -551,30 +552,6 @@ def dishes_lens(dishes: list[dict], world: dict) -> dict:
     }
 
 
-def food_lens(names: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
-    """Protected food and drink names (DOP, IGP, wine denominations) whose area holds each land hex's centre. A name
-    whose area holds no hex centre (a small vino de pago) goes to the land hex nearest its area's centre."""
-    centres = {c: grid.center(*grid.col_row(c)) for c in range(grid.size) if owner[c] >= 0}
-    cells_of = []
-    for n in names:
-        shape = Shape([[proj(lon, lat) for lon, lat in ring] for ring in n["rings"] if len(ring) >= 3])
-        x0, y0, x1, y1 = shape.bbox
-        cells = [c for c, (x, y) in centres.items() if x0 <= x <= x1 and y0 <= y <= y1 and shape.contains(x, y)]
-        if not cells:
-            x, y = proj(*ring_centroid(max(n["rings"], key=lambda r: abs(ring_area(r)))))
-            cells = [nearest_land(grid, owner, max(grid.cell_at(x, y), 0), x, y, -1)]
-        cells_of.append(cells)
-    return {
-        "id": "food", "group": "food", "name": "Denominaciones de origen", "icon": "l-food", "emoji": "🍷",
-        "unit": "denominaciones (DOP, IGP, vinos)", "format": "int", "scale": "linear", "higher_is": "neutral",
-        "ramp": ["#2b1320", "#5c1f3a", "#8e3049", "#c25a4a", "#e89a5a", "#ffe0a0"], "source": "calidad_diferenciada",
-        "description": f"Cuántas de las {len(names)} denominaciones de calidad con zona cartografiada (DOP, IGP, vinos de "
-        "pago y vinos de calidad: Rioja, Jamón de Teruel, Queso Manchego…) incluyen cada hexágono en su zona, según "
-        "el Ministerio de Agricultura. Pasa el ratón por un hexágono para ver sus nombres.",
-        **named_counts([n["name"] for n in names], cells_of, owner),
-    }
-
-
 def build() -> None:
     world = load_interim("_world")
     lau = load_interim("siane")
@@ -684,6 +661,7 @@ def build() -> None:
 
     # --- lenses ------------------------------------------------------------------------------------------------
     wikidata = load_interim("wikidata_es")
+    food = load_interim("calidad_diferenciada")
     pops = [muni.get(g, {}).get("pop", {}).get(str(year)) for g in world["counties"]]
     _, weights, density = spread_population(
         world, proj, pops, lambda k: (*centre[world["counties"][k]], muni.get(world["counties"][k], {}).get("display", ""))
@@ -699,7 +677,7 @@ def build() -> None:
         "values": density,
     }, income_lens(adrh_p, world["counties"], weights), *people_lenses(world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
-        food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
+        food_lens(food["names"], proj, grid, world, lau["municipalities"], food["not_registered"]),
         dishes_lens(load_interim("gastronomia_es")["dishes"], world),
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),

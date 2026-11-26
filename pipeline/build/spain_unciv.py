@@ -58,7 +58,7 @@ FAMILIES = {"Vinos": "Wine", "Pescados, Moluscos, Crustáceos": "Fish"}
 DESIGNATIONS = {
     "Cítricos Valencianos (IGP)": "Citrus", "Clementinas de las Tierras del Ebro (IGP)": "Citrus",
     "Azafrán de La Mancha (DOP)": "Spices", "Pimentón de Murcia (DOP)": "Spices", "Pimentón de la Vera (DOP)": "Spices",
-    "Carne Morucha de Salamanca (IGP)": "Cattle", "Carne de Cantabria (IGP)": "Cattle",
+    "Carne de Salamanca (IGP · provincia)": "Cattle", "Carne de Cantabria (IGP)": "Cattle",
     "Carne de Vacuno del País Vasco o Euskal Okela (IGP)": "Cattle", "Carne de la Sierra de Guadarrama (IGP)": "Cattle",
     "Carne de Ávila (IGP)": "Cattle", "Ternera Asturiana (IGP)": "Cattle", "Ternera Gallega (IGP)": "Cattle",
     "Ternera de Extremadura (IGP)": "Cattle", "Ternera de Navarra o Nafarroako Aratxea (IGP)": "Cattle",
