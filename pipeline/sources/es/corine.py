@@ -9,15 +9,14 @@ each class is cross-walked to the NLCD code whose cover rules (world.py) describ
 from __future__ import annotations
 
 from collections import Counter
-from pathlib import Path
 
 from ...core.png import decode
 from ...core.source import Source, SourceInfo
+from .tls import HARICA_ROOT
 
 WMS = "https://servicios.idee.es/wms-inspire/ocupacion-suelo"
 # servicios.idee.es chains to HARICA TLS RSA Root CA 2021, which older system CA bundles (macOS /etc/ssl/cert.pem) lack.
 # Copied from the macOS system root store; SHA-256 D9:5D:0E:8E:DA:79:52:5B:F9:BE:B1:1B:14:D2:10:0D:32:94:98:5F:0C:62:D9:FA:BD:9C:D9:99:EC:CB:7B:1D.
-IDEE_ROOT = Path(__file__).parent / "certs" / "harica-tls-rsa-root-ca-2021.pem"
 LAYER = "LC.LandCoverSurfaces"
 PIXEL_M = 500
 TILE_PX = 1500
@@ -130,7 +129,7 @@ class Corine(Source):
 
     def fetch(self, force=False):
         for name, bbox in self._tiles():
-            self.download(wms_url(bbox), f"clc2018_{name}_{PIXEL_M}m.png", force=force, expect_binary=True, cafile=IDEE_ROOT)
+            self.download(wms_url(bbox), f"clc2018_{name}_{PIXEL_M}m.png", force=force, expect_binary=True, cafile=HARICA_ROOT)
 
     def process(self):
         rasters, counts, unknown = [], Counter(), Counter()

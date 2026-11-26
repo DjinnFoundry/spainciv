@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from ...core.geo import geojson_rings
 from ...core.source import Source, SourceInfo
+from .tls import GLOBALSIGN_R46
 
 ZONES = ("https://wmts.mapama.gob.es/sig-api/ogc/features/v1/collections/alimentacion:CDZ_CalidadDiferenciada/items"
          "?f=json&limit={limit}&startIndex={start}")
@@ -15,7 +15,6 @@ PAGE = 25  # features per request: the whole collection is over 50 MB and one re
 TOTAL = 301
 EAMBROSIA = "https://webgate.ec.europa.eu/eambrosia-api/api/geographical-indications?size=2000&page={page}"
 EAMBROSIA_PAGES = 2  # 2,000 names a page (the API's maximum); the register holds about 3,900
-GLOBALSIGN_R46 = Path(__file__).parent / "certs" / "globalsign-root-r46.pem"  # webgate's root; macOS's bundle lacks it
 # The Ministry's designation types ('Denominación de Origen Protegida', 'Indicación Geográfica Protegida Bebida
 # Espirituosa', 'Vino de Pago'…) by the words that set them apart, in order: the first match names the kind.
 KIND = [("Pago", "Vino de pago"), ("Calidad", "Vino de calidad"), ("Origen", "DOP"), ("Protegida", "IGP"),

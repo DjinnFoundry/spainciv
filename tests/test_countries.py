@@ -620,3 +620,38 @@ class SpainPeoplesTest(unittest.TestCase):
         self.assertEqual(lens["values"][5], 1)
         self.assertNotEqual(lens["categories"][0]["color"], lens["categories"][1]["color"])  # they touch
         self.assertEqual(lens["domain"], [0, 1])
+
+
+class SpainLanguagesTest(unittest.TestCase):
+    MUNIS = [{"geoid": "46250", "name": "València", "state_fips": "46", "centre": [-0.37, 39.47]},
+             {"geoid": "46098", "name": "Cofrentes", "state_fips": "46", "centre": [-1.06, 39.23]},
+             {"geoid": "03903", "name": "Los Montesinos", "state_fips": "03", "centre": [-0.74, 38.03]},
+             {"geoid": "12022", "name": "Bejís", "state_fips": "12", "centre": [-0.71, 39.9]},
+             {"geoid": "25243", "name": "Vielha e Mijaran", "state_fips": "25", "centre": [0.8, 42.7]},
+             {"geoid": "31201", "name": "Pamplona/Iruña", "state_fips": "31", "centre": [-1.64, 42.82]},
+             {"geoid": "31232", "name": "Tudela", "state_fips": "31", "centre": [-1.6, 42.06]},
+             {"geoid": "28079", "name": "Madrid", "state_fips": "28", "centre": [-3.7, 40.4]}]
+
+    def test_castilian_list_parsing(self):
+        from pipeline.sources.es.languages import castilian_valencia
+
+        xml = ("<p>1. Provincia de Alicante: Albatera, Orihuela.</p><p>2. Provincia de Castellón: Bejfs.</p>"
+               "<p>3. Provincia de Valencia: Cofrentes, Requena.</p>")
+        self.assertEqual(castilian_valencia(xml), {"03": ["Albatera", "Orihuela"], "12": ["Bejfs"],
+                                                   "46": ["Cofrentes", "Requena"]})
+
+    def test_language_of_municipalities(self):
+        from pipeline.build.spain import language_of
+
+        mixed = {"type": "Polygon", "coordinates": [[[-2, 42.5], [-1, 42.5], [-1, 43], [-2, 43], [-2, 42.5]]]}
+        lang = language_of({"valencia_castilian": {"03": [], "12": ["Bejfs"], "46": ["Cofrentes"]},
+                            "navarra_zones": [{"zone": "basque_mixed", "geometry": mixed}]}, self.MUNIS)
+        self.assertEqual(lang, {"46250": "valencian", "46098": "valencia_castilian", "03903": "valencia_castilian",
+                                "12022": "valencia_castilian", "25243": "aranese", "31201": "basque_mixed",
+                                "31232": "spanish", "28079": "spanish"})
+
+    def test_unknown_castilian_name_fails(self):
+        from pipeline.build.spain import castilian_codes
+
+        with self.assertRaises(RuntimeError):
+            castilian_codes({"46": ["Atlántida"]}, self.MUNIS)

@@ -24,7 +24,7 @@ import math
 import re
 import unicodedata
 
-from ..core.geo import Shape, ring_area, ring_centroid
+from ..core.geo import Shape, geojson_rings, ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
@@ -32,10 +32,11 @@ from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
 from .states import label_anchor, land_shares
+from .spain_wonders import place_key
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
-            "calidad_diferenciada", "pleiades_iberia"]
+            "calidad_diferenciada", "pleiades_iberia", "lenguas_es"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -263,6 +264,82 @@ def museums_lens(museums: list[dict], proj, grid: HexGrid, owner: list[int]) -> 
     }
 
 
+LANGUAGES = [
+    {"id": "spanish", "name": "Spanish only", "color": "#c9b99a"},
+    {"id": "catalan", "name": "Catalan (co-official)", "color": "#d9534f"},
+    {"id": "aranese", "name": "Aranese/Occitan and Catalan (co-official)", "color": "#9b5de5"},
+    {"id": "valencian", "name": "Valencian (co-official): Valencian-speaking area", "color": "#f0883e"},
+    {"id": "valencia_castilian", "name": "Valencian (co-official): Spanish-speaking area", "color": "#f3c98b"},
+    {"id": "galician", "name": "Galician (co-official)", "color": "#4f9fd9"},
+    {"id": "basque", "name": "Basque (co-official)", "color": "#2e8b57"},
+    {"id": "basque_mixed", "name": "Basque: Navarre's mixed zone", "color": "#9ad0a6"},
+    {"id": "asturian", "name": "Asturian (protected, not co-official)", "color": "#e8d44d"},
+]
+# Province code → the language co-official (or protected) in all of it.
+LANGUAGE_OF_PROVINCE = {**dict.fromkeys(("08", "17", "25", "43", "07"), "catalan"),
+                        **dict.fromkeys(("15", "27", "32", "36"), "galician"),
+                        **dict.fromkeys(("01", "20", "48"), "basque"), "33": "asturian",
+                        **dict.fromkeys(("03", "12", "46"), "valencian")}
+ARAN = {"25025", "25031", "25045", "25057", "25059", "25063", "25121", "25243", "25247"}  # Val d'Aran (Llei 35/2010)
+# Names in Llei 4/1983 art. 36 that are not today's: misprints in the BOE text, a rename (Aras de Alpuente → Aras de
+# los Olmos) and Gátova, which moved from Castellón to Valencia in 1995. (province, 1983 name) → today's INE code.
+CASTILIAN_ALIASES = {("12", "Bejfs"): "12022", ("12", "Mentanejos"): "12079", ("12", "Gátova"): "46902",
+                     ("46", "Aras de Alpuente"): "46041", ("46", "Higeruelas"): "46141", ("46", "Tuéiar"): "46247"}
+# Municipalities split off after 1983 from a Spanish-speaking one, which the law therefore does not list.
+CASTILIAN_SINCE_1983 = {"03902": "Orihuela", "03903": "Almoradí", "03904": "Albatera"}
+
+
+def castilian_codes(lists: dict[str, list[str]], municipalities: list[dict]) -> set[str]:
+    """INE codes of the Valencian Community's Spanish-speaking municipalities (Llei 4/1983, art. 36)."""
+    by_key = {(m["state_fips"], place_key(part)): m["geoid"] for m in municipalities for part in m["name"].split("/")}
+    codes = set(CASTILIAN_SINCE_1983)
+    for province, names in lists.items():
+        for name in names:
+            code = CASTILIAN_ALIASES.get((province, name)) or by_key.get((province, place_key(name)))
+            if not code:
+                raise RuntimeError(f"Llei 4/1983 art. 36: no municipality {name!r} in province {province}")
+            codes.add(code)
+    return codes
+
+
+def language_of(lenguas: dict, municipalities: list[dict]) -> dict[str, str]:
+    """INE municipality code → LANGUAGES id."""
+    castilian = castilian_codes(lenguas["valencia_castilian"], municipalities)
+    zones = [(z["zone"], Shape(geojson_rings(z["geometry"]))) for z in lenguas["navarra_zones"]]
+    out = {}
+    for m in municipalities:
+        g = m["geoid"]
+        if g[:2] == "31":
+            out[g] = next((zone for zone, shape in zones if shape.contains(*m["centre"])), "spanish")
+        elif g in ARAN:
+            out[g] = "aranese"
+        elif g in castilian:
+            out[g] = "valencia_castilian"
+        else:
+            out[g] = LANGUAGE_OF_PROVINCE.get(g[:2], "spanish")
+    return out
+
+
+def languages_lens(lenguas: dict, municipalities: list[dict], world: dict) -> dict:
+    language = language_of(lenguas, municipalities)
+    index = {c["id"]: k for k, c in enumerate(LANGUAGES)}
+    values = [index[language[world["counties"][ci]]] if o >= 0 and ci >= 0 and world["counties"][ci] in language else None
+              for o, ci in zip(world["owner"], world["county"])]
+    return {
+        "id": "languages", "group": "heritage", "name": "Languages", "icon": "l-languages", "emoji": "🗣️",
+        "unit": "official languages", "format": "category", "scale": "linear", "higher_is": "neutral",
+        "categories": LANGUAGES, "ramp": [c["color"] for c in LANGUAGES], "domain": [0, len(LANGUAGES) - 1],
+        "source": "lenguas_es",
+        "description": "Where each regional language is official, municipality by municipality, as the laws set it: "
+        "co-official in all of Catalonia, the Balearic Islands, Galicia and the Basque Country; Aranese in Val d'Aran; "
+        "Navarre's Basque-speaking and mixed zones (Ley Foral 18/1986); in the Valencian Community, the "
+        "Spanish-speaking municipalities of Llei 4/1983 (Valencian is co-official there too); Asturian, protected "
+        "but not co-official. Aragonese and Catalan in Aragon have no published list of municipalities yet, so "
+        "Aragon shows Spanish only. Dialects (Andalusian, Canarian…) are not legal categories and are not mapped.",
+        "values": values,
+    }
+
+
 PEOPLE_REACH_KM = 175  # further than this from every people's point a hex is left blank: the Balearic and Canary Islands
 # Eight colours, assigned so that neighbouring territories never share one.
 PEOPLE_COLOURS = ["#c8553d", "#f2a541", "#7fb069", "#3d8fbf", "#9b5de5", "#e86a92", "#43aa8b", "#d4c26a"]
@@ -426,7 +503,8 @@ def build() -> None:
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
-        peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner)] + land_lenses(world, "corine")
+        peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
+        languages_lens(load_interim("lenguas_es"), lau["municipalities"], world)] + land_lenses(world, "corine")
     set_domains(lenses)
     groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
 

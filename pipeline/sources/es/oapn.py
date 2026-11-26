@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ...core.geo import geojson_rings, load_geojson
 from ...core.source import Source, SourceInfo
+from .tls import SECTIGO_R46_DV_R36
 
 LAYER = "LimitesParquesNacionalesZPP:view_red_oapn_limite_pn"
 URL = ("https://sigred.oapn.es/geoserverOAPN/LimitesParquesNacionalesZPP/wfs?service=WFS&version=2.0.0&request=GetFeature"
@@ -16,7 +17,6 @@ FILE = "limites_parques_nacionales.geojson"
 # sigred.oapn.es sends no intermediate certificate, and its root is newer than older system bundles: the intermediate
 # (from the certificate's own AIA URL) and Sectigo's R46 root (from the macOS system root store), checked with
 # `openssl verify`. SHA-256: intermediate 8C:54:C3:34:…:A4:EF:22:E0, root 7B:B6:47:A6:…:EC:38:F2:5A:06.
-OAPN_CHAIN = Path(__file__).parent / "certs" / "sectigo-r46-dv-r36.pem"
 
 
 VISITORS = Path(__file__).parent / "data" / "visitantes_parques_nacionales_2025.csv"
@@ -58,7 +58,7 @@ class Oapn(Source):
     )
 
     def fetch(self, force=False):
-        self.download(URL, FILE, force=force, cafile=OAPN_CHAIN)
+        self.download(URL, FILE, force=force, cafile=SECTIGO_R46_DV_R36)
 
     def process(self):
         parks = []

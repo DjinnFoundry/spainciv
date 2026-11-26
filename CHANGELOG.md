@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Capa «Languages»: dónde es oficial cada lengua, municipio a municipio según las leyes (catalán, aranés, valenciano
+  con sus zonas castellanohablantes, gallego, euskera con la zona mixta de Navarra, asturiano protegido).
 - Capa «Ancient peoples»: cada hexágono en el territorio del pueblo prerromano más cercano según Pleiades
   (Vaccaei, Vascones, Cantabri, Ilergetes, Turdetania…), sin que dos vecinos compartan color.
 - Capa «Museums»: los 2.517 museos que Wikidata sitúa en España, contados por hexágono y nombrados en el tooltip.
