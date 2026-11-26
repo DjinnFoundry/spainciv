@@ -8,7 +8,8 @@
   check                  validate web/data/*.json and print a data-quality report
   all                    fetch + process + build everything, then check
   list                   show sources and builders
-  serve                  serve web/ on http://127.0.0.1:8765
+  serve                  serve web/ on http://127.0.0.1:8765; restarts itself when the
+                         pipeline's code changes, so index.html is what 'package' writes
   package                build usaciv.zip: the site to upload, with the source code inside
                          as usaciv-source.zip
 
@@ -27,6 +28,8 @@ import ast
 import functools
 import http.server
 import io
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -35,7 +38,7 @@ from types import ModuleType
 from . import countries, site
 from .build import BUILDERS, builders_for, requires
 from .core import fetch
-from .core.paths import WEB
+from .core.paths import ROOT, WEB
 from .core.store import interim_dir, save_interim, web_dir
 from .sources import BY_ID, SOURCES, sources_for
 
@@ -196,11 +199,39 @@ def site_handler():
     return functools.partial(type("Handler", (_SiteHandler,), {"data_dir": web_dir()}), directory=str(WEB))
 
 
-def cmd_serve(port=8765):
-    handler = site_handler()
-    with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as srv:
-        print(f"serving web/ ({countries.active().name}) at http://127.0.0.1:{port}")
-        srv.serve_forever()
+def code_stamp() -> float:
+    """The newest change to the pipeline's code (pipeline/**/*.py)."""
+    return max(p.stat().st_mtime for p in (ROOT / "pipeline").rglob("*.py"))
+
+
+SERVE_CHILD = "PIPELINE_SERVE_CHILD"  # set in the server process that cmd_serve starts and watches
+
+
+def cmd_serve(port=8765, argv=()):
+    """Serve the site. web/ is read from disk on every request, but index.html and the social card are made by the
+    pipeline's code (site.py, the country's page), which a running process keeps as it was when it started: edit it and
+    the page turns half new, half stale. So the server runs in a child process that restarts when that code changes."""
+    if os.environ.get(SERVE_CHILD):
+        with http.server.ThreadingHTTPServer(("127.0.0.1", port), site_handler()) as srv:
+            print(f"serving web/ ({countries.active().name}) at http://127.0.0.1:{port}", flush=True)
+            srv.serve_forever()
+        return
+    cmd = [sys.executable, "-m", "pipeline", *argv]
+    while True:
+        stamp = code_stamp()
+        child = subprocess.Popen(cmd, cwd=ROOT, env={**os.environ, SERVE_CHILD: "1"})
+        try:
+            while child.poll() is None and code_stamp() == stamp:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            child.terminate()
+            child.wait()
+            return
+        if child.poll() is not None:
+            sys.exit(child.returncode)
+        print("pipeline code changed: restarting the server", flush=True)
+        child.terminate()
+        child.wait()
 
 
 def select_country(country_id: str) -> None:
@@ -242,7 +273,7 @@ def main(argv=None):
     elif a.command == "list":
         cmd_list()
     elif a.command == "serve":
-        cmd_serve(a.port)
+        cmd_serve(a.port, sys.argv[1:] if argv is None else argv)
     elif a.command == "package":
         from .package import cmd_package
 
