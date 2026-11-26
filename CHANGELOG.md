@@ -6,6 +6,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
+  y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
+  (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
+  suelo del mapa; recursos de datos: vino en 81 denominaciones de origen, sal, mármol, piedra, hierro y petróleo de las
+  explotaciones del IGME, cobre y oro de sus minas, ganado, ovejas, pescado, cítricos y especias de sus IGP y DOP. El
+  Peñón de Gibraltar es la maravilla natural. España empieza en Madrid y los demás en las grandes áreas urbanas.
+  Probado en Unciv 5.0.1: el mod se instala desde su enlace, el mapa se abre en el editor y una partida de 40 turnos
+  corre sobre él (E51–E57).
 - Lente de **valor de la vivienda** por provincia: valor tasado de la vivienda libre del Ministerio de Vivienda, 2.º trimestre de 2026 (España 2.355 €/m²; de Ciudad Real, 854, a Madrid, 4.090). Va en €/m²: no hay fuente con el valor de una vivienda entera.
 - Lentes de Conocimiento, Vida diaria, Fe y Riesgos para España, equivalentes a las de EE UU con datos oficiales
   (E32–E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la

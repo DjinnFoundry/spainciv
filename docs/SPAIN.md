@@ -33,7 +33,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `puertos_estado` | Puertos del Estado: traffic 2025 by Port Authority (XLSX) + service areas (WFS, CC BY 4.0) | Puertos del Estado legal notice; WFS CC BY 4.0 | Ports |
 | `siiu_universidades` | SIIU (Ministerio de Ciencia, Innovación y Universidades): students by centre 2024-25 and centre municipalities (XLSX) | Reuse citing the Ministry | Great-university wonders |
 | `power_plants_es` | powerplantmatching (PyPSA, pinned commit) + OpenStreetMap power plants on the Canary Islands | CC BY 4.0; ODbL 1.0 | Power plants (resources) |
-| `igme_minas` | IGME: Estadística Minera de España 2019 active workings (XLSX published with Panorama Minero 2022), placed at the matching deposit of IGME's BDMIN (ArcGIS REST) | IGME licence of use: free reuse citing the source (Ley 37/2007) | Mines (resources) |
+| `igme_minas` | IGME: Estadística Minera de España 2019 active workings (XLSX published with Panorama Minero 2022), placed at the matching deposit of IGME's BDMIN (ArcGIS REST) | IGME licence of use: free reuse citing the source (Ley 37/2007) | Mines (resources); every working by substance and municipality for the Unciv map |
 | `calidad_diferenciada` | MAPA "Calidad diferenciada" areas (OGC API, 2017) + eAmbrosia EU register | CC BY 4.0 | Food & drink lens |
 | `pleiades_iberia` | Pleiades: peoples of ancient Iberia (points) and the regions named after peoples | CC BY 3.0 | Ancient peoples lens |
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
@@ -74,6 +74,29 @@ The same values reach the browser in `<script id="country-page">`, so the share 
 sources and notice without rebuilding `world.json`. The social card, `og-image.png` (1200×630), is drawn from
 `world.json`, `cities.json` and the country's `page` by `pipeline/card.py` whenever the site is packaged or served,
 so it follows the data; it is not kept in the repo.
+
+## Unciv
+
+Spain is also a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V (desktop and
+Android). `pipeline/build/spain_unciv.py` writes `sites/es/data/unciv.json`: the Unciv `TileMap` (83 × 53 tiles 25 km
+across, base ruleset Civ V - Gods & Kings) and a summary of what is on it. `pipeline/build/unciv.py` holds the format
+(read in Unciv's source, file paths in its docstring), the resampling of world.json's 10 km hexes, the terrain rules,
+the rivers on tile edges and the resource placement that keeps every resource on a terrain the ruleset allows. When
+the site is served or packaged, `pipeline/play.py` makes from it:
+
+- `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`, `maps/España` (the
+  map, gzip + base64 as Unciv saves it), `preview.png`, `README.md` and `LICENSE` (CC BY 4.0);
+- `unciv/espana`: the bare map, saved as `España` by the page's link;
+- `jugar.html`: how to play it and what is real data and what is game convention, linked from the help dialog.
+
+The rules and the reasons are DECISIONS.md E51–E57, A15 and F26. The map was checked in Unciv 5.0.1 (the jar of the
+GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
+every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
+locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).
+
+The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
+the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and
+commit the contents of `Spainciv Unciv/` at the repository's root.
 
 The site is a Cloudflare Pages project of its own (`spainciv`, account Djinn Foundry), deployed by hand:
 
