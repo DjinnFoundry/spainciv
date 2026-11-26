@@ -909,3 +909,143 @@ class SpainDishesTest(unittest.TestCase):
         from pipeline.sources.es.dishes import slug
 
         self.assertEqual(slug("la provincia de Córdoba (España)"), "la_provincia_de_crdoba_espaa")
+
+
+class SpainDailyLensesTest(unittest.TestCase):
+    """Broadband, commuting, life expectancy, religious weddings and wildfires (spain_daily and its sources)."""
+
+    @staticmethod
+    def process(src, files: dict[str, str]) -> dict:
+        import tempfile
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in files.items():
+                (Path(d) / name).write_text(text, encoding="utf-8")
+            with mock.patch.object(type(src), "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                return src.process()
+
+    def test_rest_of_province_is_the_province_minus_its_listed_municipalities(self):
+        from pipeline.sources.es.ine_daily import rest_of_provinces
+
+        rest = rest_of_provinces({"28": {"total": 100, "religious": 20}, "08": {"total": 5}},
+                                 {"28079": {"total": 60, "religious": 15}})
+        self.assertEqual(rest, {"28": {"total": 40, "religious": 5}, "08": {"total": 5}})
+        with self.assertRaises(RuntimeError):
+            rest_of_provinces({"28": {"total": 10}}, {"28079": {"total": 11}})
+
+    def test_place_of_work_keeps_totals_of_provinces_and_cities(self):
+        from pipeline.sources.es.ine_daily import IneLugarTrabajo
+
+        head = ("﻿Total Nacional;Comunidades y Ciudades Autónomas;Provincias;Actividad económica;Lugar trabajo;Sexo;"
+                "Periodo;Total\n")
+        rows = ["Total Nacional;;;Total CNAE;Mismo municipio al de residencia;Total;2024;8.487.050",
+                "Total Nacional;;;Total CNAE;Otra comunidad autónoma;Total;2024;1.216.891",
+                "Total Nacional;;;A Agricultura;Otra comunidad autónoma;Total;2024;5",
+                "Total Nacional;13 Madrid, Comunidad de;;Total CNAE;Mismo municipio al de residencia;Total;2024;1",
+                "Total Nacional;;;Total CNAE;Mismo municipio al de residencia;Total;2023;9"]
+        for code in PROVINCES:
+            rows += [f"Total Nacional;X;{code} P;Total CNAE;Mismo municipio al de residencia;Total;2024;1.000",
+                     f"Total Nacional;X;{code} P;Total CNAE;Distinto municipio de la misma provincia;Total;2024;500",
+                     f"Total Nacional;X;{code} P;Total CNAE;Distinto municipio de la misma provincia;Mujeres;2024;7"]
+        cities = ("﻿Capitales de provincia y principales ciudades;Lugar trabajo;Sexo;Actividad económica;"
+                  "Situación profesional;Periodo;Total\n"
+                  "28079 Madrid;Mismo municipio al de residencia;Total;Total CNAE;Total;2024;600\n"
+                  "28079 Madrid;Distinto municipio de la misma provincia;Total;Total CNAE;Total;2024;100\n"
+                  "28079 Madrid;Distinto municipio de la misma provincia;Total;Total CNAE;Asalariado;2024;99\n")
+        out = self.process(IneLugarTrabajo(), {"69968.csv": head + "\n".join(rows) + "\n", "69987.csv": cities})
+        self.assertEqual(out["year"], 2024)
+        self.assertEqual(out["nation"], {"same": 8487050, "other_community": 1216891})
+        self.assertEqual(out["provinces"]["28"], {"same": 1000, "province": 500})
+        self.assertEqual(out["municipalities"], {"28079": {"same": 600, "province": 100}})
+        self.assertEqual(out["rest_of_province"]["28"], {"same": 400, "province": 400})
+
+    def test_weddings_by_province_nation_and_main_municipalities(self):
+        from pipeline.sources.es.ine_daily import IneMatrimonios
+
+        prov = "﻿Nacional y provincias;Mes de celebración;Forma de celebración;Periodo;Total\n" + "".join(
+            f"{code} P;Total;{form};2025;{n}\n" for code in PROVINCES
+            for form, n in (("Total", "1.000"), ("Matrimonios religiosos", "200")))
+        prov += ("Total Nacional;Total;Total;2025;179.823\nTotal Nacional;Total;Matrimonios religiosos;2025;29.023\n"
+                 "No residente;Total;Total;2025;5\n28 P;Enero;Total;2025;80\n")
+        muni = ("﻿Provincias;Municipios;Mes de celebración;Forma de celebración;Periodo;Total\n"
+                "28 Madrid;;Total;Total;2025;1.000\n28 Madrid;28079 Madrid;Total;Total;2025;600\n"
+                "28 Madrid;28079 Madrid;Total;Matrimonios religiosos;2025;150\n")
+        out = self.process(IneMatrimonios(), {"77172.csv": prov, "37645.csv": muni})
+        self.assertEqual(out["nation"], {"total": 179823, "religious": 29023})
+        self.assertEqual(out["provinces"]["28"], {"total": 1000, "religious": 200})
+        self.assertEqual(out["rest_of_province"]["28"], {"total": 400, "religious": 50})
+
+    def test_life_expectancy_takes_the_latest_year_of_both_tables(self):
+        from pipeline.sources.es.ine_daily import IneEsperanzaVida
+
+        prov = "﻿Provincias;Sexo;Periodo;Total\n" + "".join(
+            f"{code} P;Ambos sexos;{y};8{y % 10},5\n" for code in PROVINCES for y in (2024, 2025))
+        muni = "﻿Municipios;Sexo;Periodo;Total\n28079 Madrid;Ambos sexos;2024;85,3\n28079 Madrid;Mujeres;2024;87,9\n"
+        out = self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni})
+        self.assertEqual(out["year"], 2024, "2025 has provinces but no municipalities")
+        self.assertEqual((out["provinces"]["28"], out["municipalities"]), (84.5, {"28079": 85.3}))
+
+    def test_broadband_reads_the_newest_100_mbps_column(self):
+        from pipeline.sources.es import broadband
+
+        header = ["Comunidad Autónoma", "Provincia", "CMUN", "Municipio",
+                  "Cob. 100Mbps condiciones máxima demanda\n(junio 2024)",
+                  "Cob. 100Mbps condiciones máxima demanda\n(junio 2025)",
+                  "Cob. 1Gbps descarga condiciones máxima demanda\n(junio 2026)"]
+        rows = [header, ["X", "Y", "01001", "A", "0.5", "0.98588235294117643", "0.1"], ["X", "Y", "01002", "B", "0.5", None],
+                ["X", "Y", "01003", "C", "0", "1.0000000030050729"]]
+        self.assertEqual(broadband.latest_column(header), (5, 2025))
+        self.assertEqual(broadband.coverage(rows, 2, 5), {"01001": 0.9859, "01003": 1.0})
+        with self.assertRaises(RuntimeError):
+            broadband.latest_column(header[:4])
+
+    def test_effis_keeps_spanish_polygons_of_every_geometry_kind(self):
+        from pipeline.sources.es.effis import fires
+
+        sq = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
+        poly = {"type": "Polygon", "coordinates": sq}
+        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "40", "PROVINCE": "Ourense"}, "geometry": poly},
+                 {"properties": {"COUNTRY": "ES", "AREA_HA": "9"}, "geometry": {"type": "GeometryCollection", "geometries": [
+                     poly, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}]}},
+                 {"properties": {"COUNTRY": "PT", "AREA_HA": "500"}, "geometry": poly},
+                 {"properties": {"COUNTRY": "ES", "AREA_HA": "0"}, "geometry": poly}]
+        self.assertEqual([(f["area_ha"], len(f["rings"])) for f in fires(feats, 2025)], [(40.0, 1), (9.0, 1)])
+
+    def test_burnt_area_is_shared_by_the_hexes_a_fire_covers(self):
+        from pipeline.build.spain_daily import burnt_cells
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=10.0, cols=2, rows=1)  # cell centres at x = 0 and 17.32; the edge between them at 8.66
+
+        def box(x0, x1, y0=-1.0, y1=1.0):
+            return [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
+
+        fires = [{"area_ha": 30.0, "rings": [box(-2, 2)]},
+                 {"area_ha": 700.0, "rings": [box(5.0, 12.0)]},
+                 {"area_ha": 1.0, "rings": [box(16.0, 16.05, 0.0, 0.05)]}]  # smaller than a sample: its centroid's hex
+        out = burnt_cells(fires, lambda lon, lat: (lon, lat), grid)
+        self.assertAlmostEqual(sum(out.values()), 731.0)
+        sample = 700 * 0.2 / 7  # one 0.2 km column of samples across the 7 km fire
+        self.assertAlmostEqual(out[0], 30 + 700 * 3.66 / 7, delta=sample)
+        self.assertAlmostEqual(out[1], 1 + 700 * 3.34 / 7, delta=sample)
+
+    def test_lenses_use_a_listed_municipality_or_the_rest_of_its_province(self):
+        from pipeline.build import spain_daily
+
+        geoids = ["28079", "28065", "08019"]
+        weights = [[(0, 300.0), (1, 100.0)], [(2, 10.0)], []]
+        work = {"year": 2024, "nation": {"same": 1, "province": 1, "community": 0, "other_community": 0},
+                "municipalities": {"28079": {"same": 75, "province": 25, "community": 0, "other_community": 0}},
+                "rest_of_province": {"28": {"same": 20, "province": 70, "community": 0, "other_community": 10}}}
+        # (0.25 × 300 + 0.8 × 100) ÷ 400; Barcelona has no figure
+        self.assertEqual(spain_daily.commuters_lens(work, geoids, weights)["values"], [0.3875, None, None])
+        life = {"year": 2024, "municipalities": {"28079": 85.0}, "provinces": {"28": 84.0, "08": 83.5}}
+        self.assertEqual(spain_daily.life_expectancy_lens(life, geoids, weights)["values"], [84.75, 83.5, None])
+        weddings = {"year": 2025, "nation": {"total": 10, "religious": 2}, "municipalities": {},
+                    "rest_of_province": {"28": {"total": 10, "religious": 1}, "08": {"total": 0, "religious": 0}}}
+        self.assertEqual(spain_daily.weddings_lens(weddings, geoids, weights)["values"], [0.1, None, None])
+        bb = spain_daily.broadband_lens({"year": 2025, "nation": 0.98, "municipalities": {"28079": 1.0, "28065": 0.6}},
+                                        geoids, weights)
+        self.assertEqual((bb["id"], bb["group"], bb["values"]), ("broadband", "knowledge", [0.9, None, None]))
+        self.assertIn("98,0 %", bb["description"])

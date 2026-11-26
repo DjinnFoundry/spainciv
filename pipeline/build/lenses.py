@@ -389,6 +389,9 @@ FAITH_NOTE = ("Counts adherents of congregations where they worship, not residen
 AMENITY_MEASURES = ["mhlth", "depression", "ghlth", "lpa"]
 AMENITIES_NOTE = "Model-based CDC estimates of adult health, not a happiness survey. No data for Kentucky or Pennsylvania (2025 release)."
 DISASTERS_NOTE = "A declaration is an administrative act that unlocks federal aid, not a measure of damage."
+FAITH_RAMP = ["#1a1033", "#3d2466", "#6b3d8f", "#a5649c", "#d99a8f", "#f7dca0"]
+AMENITIES_RAMP = ["#3b0a1e", "#7a1f3d", "#b9534f", "#e3a35c", "#c9d97a", "#7ecf8e"]
+DISASTERS_RAMP = ["#14161f", "#2e2a4a", "#5b3466", "#93405f", "#cf6a4a", "#f4b860"]
 
 
 def faith_county(rec: dict | None) -> dict | None:
@@ -464,7 +467,7 @@ def community_lenses(geoids: list[str], county: list, weights, acs: dict) -> lis
         lenses.append({
             "id": "faith", "name": "Faith", "icon": "l-faith", "emoji": "🕍", **common,
             "unit": "adherents per 100 residents", "format": "float", "scale": "linear", "domain": [0, 100],
-            "ramp": ["#1a1033", "#3d2466", "#6b3d8f", "#a5649c", "#d99a8f", "#f7dca0"],
+            "ramp": FAITH_RAMP,
             "description": "Religious adherents per 100 residents in 2020: adherents reported by the congregations in "
             "each county (members, their children and regular attenders, counted where the congregation meets) ÷ "
             "the 2020 population × 100, population-weighted over a hex's counties. Computed from the counts, not "
@@ -493,7 +496,7 @@ def community_lenses(geoids: list[str], county: list, weights, acs: dict) -> lis
         lenses.append({
             "id": "amenities", "group": "life", "name": "Wellbeing", "icon": "l-amenities", "emoji": "🎭",
             "unit": "index (100 = average county)", "format": "float", "scale": "linear", "higher_is": "good",
-            "ramp": ["#3b0a1e", "#7a1f3d", "#b9534f", "#e3a35c", "#c9d97a", "#7ecf8e"],
+            "ramp": AMENITIES_RAMP,
             "source": "cdc_places", "note": AMENITIES_NOTE,
             "description": "A health and wellbeing index (standing in for the strategy-game Amenities) from CDC "
             f"PLACES {release} age-adjusted estimates for adults: "
@@ -512,7 +515,7 @@ def community_lenses(geoids: list[str], county: list, weights, acs: dict) -> lis
         lenses.append({
             "id": "disasters", "group": "hazards", "name": "Disasters", "icon": "l-disasters", "emoji": "🌪️",
             "unit": "major-disaster declarations", "format": "int", "scale": "linear", "higher_is": "bad",
-            "ramp": ["#14161f", "#2e2a4a", "#5b3466", "#93405f", "#cf6a4a", "#f4b860"],
+            "ramp": DISASTERS_RAMP,
             "source": "fema_declarations", "note": DISASTERS_NOTE,
             "description": f"Distinct FEMA major-disaster (DR) declarations naming the county from {start} to {as_of}, "
             "each disaster counted once (Biological/COVID-19, emergency and fire-management declarations excluded; "
