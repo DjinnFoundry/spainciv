@@ -191,6 +191,9 @@ class SpanishDataTest(unittest.TestCase):
              "locale", "currency",
              "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
+    # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
+    # Toledo") and some surnames are English words ("Eva Forest").
+    PEOPLE = {("personajes.json", "name")}
     ENGLISH = set("""the of and with from for by is are was not this that its which who people residents workers jobs
         county counties state states share median average farm wind plant plants power station airport airports
         students visitors island islands short tons pounds lb million billion year years unknown phase landmark
@@ -225,7 +228,7 @@ class SpanishDataTest(unittest.TestCase):
         def walk(x, path):
             if isinstance(x, dict):
                 for k, v in x.items():
-                    if k not in self.CODES:
+                    if k not in self.CODES and (name, k) not in self.PEOPLE:
                         walk(v, f"{path}.{k}")
             elif isinstance(x, list):
                 for i, v in enumerate(x):

@@ -87,6 +87,7 @@ export default {
   // app/search.js (the long placeholder is page.search.placeholder)
   "search.short": "Search",
   "search.none": "No city or state matches “{q}”",
+  "search.bornIn": "{name} was born in {place}",
 
   // app/share.js
   "share.title": "Share this view",

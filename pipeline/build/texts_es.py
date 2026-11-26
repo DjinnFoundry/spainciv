@@ -326,6 +326,18 @@ SOURCES = {
         "used_for": ["Maravillas de Patrimonio Mundial y catedrales", "Lente de patrimonio (Bienes de Interés Cultural)",
                      "Lente de museos", "Lentes de castillos y de plazas de toros"],
     },
+    "wikidata_personajes": {
+        "title": "Wikidata: personajes famosos nacidos en España (oficios, cargos, premios, lugares y fechas)",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (cesión al dominio público)",
+        "description": "Las personas cuyo lugar de nacimiento sitúa Wikidata en España (o, en lugares históricos, en un "
+        "reino o un estado de la península: Calagurris en la Antigua Roma, una villa de la Corona de Castilla), con "
+        "sus ocupaciones, cargos (monarcas, papas, cardenales), premios Nobel, estado de canonización, número de "
+        "enlaces a proyectos de Wikimedia, fechas de nacimiento y muerte y coordenadas del lugar de nacimiento, del "
+        "servicio SPARQL de Wikidata. Lo editan voluntarios: quién tiene ficha y qué oficios lista sigue la "
+        "cobertura de Wikipedia, no un registro.",
+        "used_for": ["Lentes de grandes personajes", "Búsqueda de personajes"],
+    },
     "aena_airports": {
         "title": "Pasajeros, operaciones y mercancías por aeropuerto de la red de AENA (2025, definitivos)",
         "publisher": "Aena; posiciones de los aeropuertos de OurAirports",

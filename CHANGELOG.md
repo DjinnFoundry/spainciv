@@ -14,6 +14,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   Peñón de Gibraltar es la maravilla natural. España empieza en Madrid y los demás en las grandes áreas urbanas.
   Probado en Unciv 5.0.1: el mod se instala desde su enlace, el mapa se abre en el editor y una partida de 40 turnos
   corre sobre él (E51–E57).
+- **Grandes personajes**: 6.119 personas famosas nacidas en la España actual, de Wikidata, en el hexágono de su lugar de nacimiento, en 19 categorías al estilo de los grandes personajes de Civilization (de premios Nobel y conquistadores a cantantes y deportistas) con un umbral de fama cada una (E58, E59, F27). Dos lentes: personajes por hexágono y categoría con más personajes; la ayuda emergente da nombre, oficio y fechas («Pablo Picasso (pintor, 1881–1973)»). El buscador encuentra a las personas y por su pueblo: «Cervantes» lleva a Alcalá de Henares.
 - Lente de **valor de la vivienda** por provincia: valor tasado de la vivienda libre del Ministerio de Vivienda, 2.º trimestre de 2026 (España 2.355 €/m²; de Ciudad Real, 854, a Madrid, 4.090). Va en €/m²: no hay fuente con el valor de una vivienda entera.
 - Lentes de Conocimiento, Vida diaria, Fe y Riesgos para España, equivalentes a las de EE UU con datos oficiales
   (E32–E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la
