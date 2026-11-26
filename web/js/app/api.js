@@ -10,6 +10,7 @@
 // main.js assembles the full `app` (see its "extension API" section); the exact surface is documented there.
 import { parseHash, formatHash } from "./urlstate.js";
 import { icon } from "../ui/icon.js";
+import { t } from "../i18n.js";
 import { hasIcon } from "../icons.js";
 import { esc } from "../format.js";
 
@@ -433,14 +434,14 @@ export function createMapToggles({ dock, after, area, hash, onChange }) {
     btn.setAttribute("aria-haspopup", "true");
     btn.setAttribute("aria-expanded", "false");
     btn.setAttribute("aria-controls", "map-layers-pop");
-    btn.title = "Map layers: roads, rail, military and more";
+    btn.title = t("map.layers.title");
     dock.insertBefore(btn, after && after.parentNode === dock ? after.nextSibling : dock.firstChild);
     pop = document.createElement("div");
     pop.id = "map-layers-pop";
     pop.className = "panel map-layers-pop";
     pop.hidden = true;
     pop.setAttribute("role", "menu");
-    pop.setAttribute("aria-label", "Map layers");
+    pop.setAttribute("aria-label", t("map.layers"));
     (area || document.body).insertBefore(pop, (area || document.body).firstChild);
     btn.onclick = () => (pop.hidden ? open() : close());
     pop.onclick = (e) => {
@@ -474,13 +475,13 @@ export function createMapToggles({ dock, after, area, hash, onChange }) {
     btn.hidden = !list.length;
     const nOn = list.filter(isOn).length;
     btn.classList.toggle("active", nOn > 0);
-    btn.setAttribute("aria-label", `Map layers (${nOn} of ${list.length} on)`);
-    btn.innerHTML = `${glyph("terrain", 15)}<span>Map</span>${nOn ? `<b class="ml-count">${nOn}</b>` : ""}`;
+    btn.setAttribute("aria-label", t("map.layers.count", { on: nOn, n: list.length }));
+    btn.innerHTML = `${glyph("terrain", 15)}<span>${t("map.layers.button")}</span>${nOn ? `<b class="ml-count">${nOn}</b>` : ""}`;
     if (pop.hidden) return;
-    pop.innerHTML = `<div class="ml-head">Map layers</div>` + list.map((t) => {
-      const on = isOn(t);
-      return `<button type="button" class="ml-row${on ? " on" : ""}" role="menuitemcheckbox" aria-checked="${on}" data-toggle="${esc(t.id)}"
-        ${t.title ? `title="${esc(t.title)}"` : ""}><span class="ml-ic">${glyph(t.icon, 16)}</span><span class="ml-lbl">${esc(t.label)}</span>
+    pop.innerHTML = `<div class="ml-head">${t("map.layers")}</div>` + list.map((tg) => {
+      const on = isOn(tg);
+      return `<button type="button" class="ml-row${on ? " on" : ""}" role="menuitemcheckbox" aria-checked="${on}" data-toggle="${esc(tg.id)}"
+        ${tg.title ? `title="${esc(tg.title)}"` : ""}><span class="ml-ic">${glyph(tg.icon, 16)}</span><span class="ml-lbl">${esc(tg.label)}</span>
         <span class="ml-switch" aria-hidden="true"></span></button>`;
     }).join("");
   }

@@ -20,6 +20,7 @@ import { installExtensions } from "./ext/index.js";
 import { initShare } from "./app/share.js";
 import { setCountry, applyCountryChrome, country } from "./app/country.js";
 import { initHelp } from "./app/help.js";
+import { t, translatePage } from "./i18n.js";
 
 const { drawStatic, drawOverlay, OCEAN_BG } = mapRender;
 
@@ -51,12 +52,14 @@ const SELECT_ANIM_MS = 33; // ~30 fps while a state's border highlight animates
 const isMobile = () => matchMedia("(max-width: 700px)").matches;
 
 async function main() {
+  translatePage(); // the page's settings already name the language (app/country.js)
   const [world, cities, nation, lenses, sources, resources, statesData] = await Promise.all([
     loadJSON("world"), loadJSON("cities"), loadJSON("nation"),
     loadJSON("lenses", true), loadJSON("sources", true), loadJSON("resources", true), loadJSON("states", true),
   ]);
   setCountry(world);
   applyCountryChrome();
+  translatePage();
   const lensFile = lenses && Array.isArray(lenses.lenses) ? lenses : { vintage: "", groups: [], lenses: [] };
   const w = prepareWorld(world, cities, { resources });
   const state = {
@@ -533,12 +536,12 @@ async function main() {
     announceEl.textContent = "";
     setTimeout(() => (announceEl.textContent = text), 30);
   };
-  const stateName = (idx) => states?.[idx]?.name || w.raw.states[idx]?.name || "State";
+  const stateName = (idx) => states?.[idx]?.name || w.raw.states[idx]?.name || country().levels.region.one;
 
   function describeCanvas() {
-    const parts = [country().id === "us" ? "Hex map of the contiguous United States" : `Hex map of ${country().name}`, state.lens ? `coloured by the ${state.lens.name} lens` : "showing terrain"];
-    if (state.selectedCity) parts.push(`${state.selectedCity.name} selected`);
-    else if (state.selectedState != null) parts.push(`${stateName(state.selectedState)} selected`);
+    const parts = [t("map.aria"), state.lens ? t("map.aria.lens", { name: state.lens.name }) : t("map.aria.terrain")];
+    if (state.selectedCity) parts.push(t("map.aria.selected", { name: state.selectedCity.name }));
+    else if (state.selectedState != null) parts.push(t("map.aria.selected", { name: stateName(state.selectedState) }));
     canvas.setAttribute("aria-label", parts.join(", "));
   }
 
@@ -556,7 +559,7 @@ async function main() {
     state.selectedState = null;
     app.panels.city(city, panelCtx());
     if (fly && city.cell != null) focusCity(city);
-    announce(`${city.name} selected. ${city.full || ""}`);
+    announce(t("map.selectedCity", { name: city.name, full: city.full || "" }));
     afterSelect();
   }
 
@@ -566,7 +569,7 @@ async function main() {
     state.selectedState = idx;
     app.panels.state(idx, panelCtx());
     if (fly) focusState(idx);
-    announce(`${stateName(idx)} selected.`);
+    announce(t("map.selectedState", { name: stateName(idx) }));
     afterSelect();
   }
 
@@ -575,7 +578,7 @@ async function main() {
     state.selectedCity = null;
     state.selectedState = null;
     app.panels.close();
-    if (had) announce("Selection closed.");
+    if (had) announce(t("map.selectionClosed"));
     afterSelect();
   }
 
@@ -663,12 +666,12 @@ async function main() {
     if (b) b.innerHTML = html;
     return b;
   };
-  setBtn("btn-share", `${icon("share", "🔗", { size: 15 })}<span class="lbl">Share</span>`);
+  setBtn("btn-share", `${icon("share", "🔗", { size: 15 })}<span class="lbl">${t("map.btn.share")}</span>`);
   setBtn("btn-help", icon("help", "?", { size: 15 }));
-  setBtn("btn-pedia", `${icon("pedia", "📖", { size: 16 })}<span class="lbl">Almanac</span>`);
+  setBtn("btn-pedia", `${icon("pedia", "📖", { size: 16 })}<span class="lbl">${t("map.btn.pedia")}</span>`);
   const searchIc = document.querySelector(".search-ic");
   if (searchIc) searchIc.innerHTML = icon("search", "🔍", { size: 14 });
-  document.querySelector(".search-kbd")?.setAttribute("title", "Press / or Ctrl K to search");
+  document.querySelector(".search-kbd")?.setAttribute("title", t("map.searchKey"));
 
   const search = initSearch({
     cities,
@@ -822,7 +825,7 @@ async function main() {
   const resBtn = document.getElementById("btn-res");
   if (resBtn) {
     resBtn.hidden = !w.resources;
-    resBtn.innerHTML = `${icon("resources", "⛏️", { size: 15 })}<span>Resources</span>`;
+    resBtn.innerHTML = `${icon("resources", "⛏️", { size: 15 })}<span>${t("map.btn.resources")}</span>`;
     const sync = () => {
       resBtn.classList.toggle("active", state.showResources);
       resBtn.setAttribute("aria-pressed", String(state.showResources));
@@ -841,7 +844,7 @@ async function main() {
       const on = !document.body.classList.contains("minimap-on");
       document.body.classList.toggle("minimap-on", on);
       mmBtn.setAttribute("aria-pressed", String(on));
-      mmBtn.setAttribute("aria-label", on ? "Hide the minimap" : "Show the minimap");
+      mmBtn.setAttribute("aria-label", on ? t("map.minimap.hide") : t("page.minimap.show"));
       minimap.draw();
     };
   }
@@ -1278,5 +1281,5 @@ main().catch((err) => {
   const el = document.getElementById("loading");
   if (!el) return;
   el.classList.add("error");
-  el.textContent = `Could not load the map data (${err.message}). Run "uv run python -m pipeline all" and serve web/ over HTTP.`;
+  el.textContent = t("map.loadError", { error: err.message });
 });
