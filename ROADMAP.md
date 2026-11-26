@@ -10,10 +10,11 @@ decisiones que salgan van a `DECISIONS.md`.
 ## Después
 
 2. I+D por comunidad (estadística de I+D del INE) para el rendimiento Science.
-4. Minas (IGME) como recursos.
 
 ## Huecos conocidos
 
+- Minas: la lista por mina más reciente del IGME es la de 2019; La Parrilla (wolframio, desde 2020) y Alquife (hierro,
+  2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
 - El oro de las ciudades queda vacío: no hay PIB municipal oficial.
 - Mediana de renta por hogar, alquiler, valor de la vivienda y paro de las ciudades: sin fuente municipal todavía.

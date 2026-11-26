@@ -13,6 +13,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Minas como recursos: las 25 explotaciones metálicas y de minerales industriales clave activas en 2019 según la
+  Estadística Minera (IGME): cobre (Riotinto, Las Cruces, Aguas Teñidas, Cueva de la Mora, Sotiel), oro (El Valle-Boinás),
+  wolframio (Los Santos), estaño y tántalo (Penouta), potasa, fluorita, celestina, magnesita y sulfato sódico. Están en
+  su yacimiento del BDMIN del IGME (21) o en el centro de su municipio (4), sin valor: la estadística no publica la
+  producción de cada mina.
 - Capa «Platos regionales»: 577 platos, embutidos, quesos, dulces y vinos de las categorías de gastronomía por
   provincia de la Wikipedia en español, filtrados con Wikidata, listados en cada hexágono de su provincia.
 - Interfaz de spainciv en castellano: tablas `web/js/i18n/<lang>/`, `t()`, números en es-ES (Intl) y textos de los
