@@ -434,6 +434,16 @@ SOURCES = {
         "arrendador; la del mapa de EE. UU. es el alquiler bruto, con suministros, que declara el inquilino.",
         "used_for": ["Alquiler mensual de áreas urbanas, provincias y España", "Alquiler ÷ renta"],
     },
+    "mivau_valor_tasado": {
+        "title": "Valor tasado de la vivienda libre por m², por provincia (Ministerio de Vivienda, VDP006)",
+        "publisher": "Ministerio de Vivienda y Agenda Urbana",
+        "license": _REUSE,
+        "description": "Valor medio por m² construido de las viviendas libres según las tasaciones que las sociedades "
+        "tasadoras hacen cada trimestre, por provincia. Las comunidades de una sola provincia (Madrid, Asturias, Navarra, "
+        "Murcia, Cantabria, La Rioja, Baleares) vienen como fila de comunidad. La serie municipal solo se publica en un "
+        "XLS que hoy no se puede descargar, así que todo hexágono lleva el valor de su provincia.",
+        "used_for": ["Lente de valor de la vivienda (€/m², por provincia)"],
+    },
     "cobertura_banda_ancha": {
         "title": "Cobertura de banda ancha en España 2021-2025 por municipio, provincia, comunidad autónoma y España",
         "license": _REUSE,

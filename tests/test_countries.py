@@ -603,17 +603,20 @@ class SpainPeopleTest(unittest.TestCase):
                                                                         "42173": {"total": 100, "abroad": 10}}},
             "ine_censo_formacion": {"year": 2024, "municipalities": {"28079": {"total": 100, "higher": 50}}},
             "ine_censo2021_indicadores": {"year": 2021, "municipalities": {"28079": {"owned": 7, "rented": 2, "other": 1}}},
+            "mivau_valor_tasado": {"year": 2026, "quarter": 2, "spain": 2355.0, "provinces": {"28": 4000.0, "42": 1200.0}},
         }
         payload = lambda name: {"data": interims[name]}
         geoids = ["28079", "42173", "44001"]
         weights = [[(0, 300.0), (1, 100.0)], [(1, 50.0)], [(2, 10.0)], []]
         with mock.patch.object(spain_people, "load_interim_payload", payload):
             lenses = {l["id"]: l for l in spain_people.people_lenses(geoids, weights)}
-        self.assertEqual(list(lenses), ["poverty", "age", "foreign_born", "bachelors", "homeownership"])
+        self.assertEqual(list(lenses), ["poverty", "age", "foreign_born", "bachelors", "homeownership", "home"])
         for lid, lens in lenses.items():
             us = COUNTY_LENSES[lid][1]
-            self.assertEqual({k: lens[k] for k in spain_people.SHARED}, {k: us[k] for k in spain_people.SHARED})
-            self.assertTrue(lens["source"].startswith("ine_"))
+            shared = [k for k in spain_people.SHARED if not (lid == "home" and k == "format")]  # euros, not dollars
+            self.assertEqual({k: lens[k] for k in shared}, {k: us[k] for k in shared})
+        self.assertEqual(lenses["home"]["format"], "eur")
+        self.assertEqual(lenses["home"]["values"], [3300.0, 1200.0, None, None])  # every municipality, its province's
         self.assertEqual(lenses["age"]["values"], [45.0, 48.0, None, None])
         self.assertEqual(lenses["foreign_born"]["values"], [0.25, 0.1, None, None])
         self.assertEqual(lenses["poverty"]["values"], [0.2, None, None, None])  # Soria has no figure: not a zero
