@@ -47,6 +47,11 @@ Almanac entry in `texts_es.SOURCES`.
 | `ine_adrh` | INE table 30824 (Atlas de Distribución de Renta de los Hogares) | CC BY 4.0, citing INE | Income lens (mean net income per person, 2024); household income of cities, provinces and Spain (mean net income per household: total income ÷ households, each municipality weighted by its households) |
 | `ine_censo_actividad` | INE table 66594 (Annual Population Census, population 16+ by relationship with activity) | CC BY 4.0, citing INE | Unemployment: unemployed ÷ (employed + unemployed), summed over an area's municipalities (not the EPA rate, not SEPE registered unemployment) |
 | `serpavi` | Ministerio de Vivienda, SERPAVI 2011-2024 (rents declared in IRPF, XLSX) | Public-sector information, reuse citing the source (Ley 37/2007) | Monthly rent: median rent of the whole dwelling, flats and houses and an area's municipalities combined as a lease-weighted mean of medians; rent ÷ income |
+| `cobertura_banda_ancha` | Ministerio para la Transformación Digital: broadband coverage 2021-2025 by municipality (XLSX) | Public-sector information, reuse citing the source (Ley 37/2007) | Broadband lens: households covered at 100 Mbps or more under peak demand, June 2025 (coverage, not subscriptions) |
+| `ine_censo_lugar_trabajo` | INE tables 69968 and 69987 (Annual Population Census, employed by place of work: Spain, provinces, 151 main cities) | CC BY 4.0, citing INE | Commuting lens: employed who work in another municipality ÷ employed with a known workplace; other municipalities take the rest of their province |
+| `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
+| `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
+| `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).
 

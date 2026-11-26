@@ -387,6 +387,57 @@ SOURCES = {
         "arrendador; la del mapa de EE. UU. es el alquiler bruto, con suministros, que declara el inquilino.",
         "used_for": ["Alquiler mensual de áreas urbanas, provincias y España", "Alquiler ÷ renta"],
     },
+    "cobertura_banda_ancha": {
+        "title": "Cobertura de banda ancha en España 2021-2025 por municipio, provincia, comunidad autónoma y España",
+        "license": _REUSE,
+        "description": "Proporción de los hogares a los que pueden dar servicio las redes fijas y móviles, por tecnología "
+        "y por velocidad en condiciones de máxima demanda, en junio de cada año, a partir de la cobertura que los "
+        "operadores declaran al ministerio, situada por parcela catastral (hogares del Censo 2021 del INE). El mapa toma "
+        "la cobertura de 100 Mbps o más de cada municipio. Mide hasta dónde llega una red, no quién la contrata.",
+        "used_for": ["Lente de banda ancha"],
+    },
+    "ine_censo_lugar_trabajo": {
+        "title": "Censo anual de población: ocupados por lugar de trabajo (tablas 69968 y 69987)",
+        "license": _INE_LICENCE,
+        "description": "Ocupados de 16 años o más según dónde trabajan respecto a dónde viven (el mismo municipio, otro "
+        "de la provincia, otra provincia de la comunidad, otra comunidad, o sin información), del Censo anual de "
+        "población que el INE elabora con registros administrativos: España y cada provincia (tabla 69968) y las "
+        "capitales de provincia y ciudades principales (151 municipios, tabla 69987). El resto de cada provincia es la "
+        "provincia menos esas ciudades. Es dónde se trabaja, no cuánto se tarda: el INE no publica el tiempo de "
+        "desplazamiento por municipio.",
+        "used_for": ["Lente de los que trabajan fuera de su municipio"],
+    },
+    "ine_esperanza_vida": {
+        "title": "Esperanza de vida al nacer por provincia y por municipio (Indicadores Demográficos Básicos, tablas 1485 "
+        "y 30687)",
+        "license": _INE_LICENCE,
+        "description": "Esperanza de vida al nacer, ambos sexos, de cada provincia (tabla 1485) y de los municipios para "
+        "los que el INE la calcula (unos 150 grandes, tabla 30687), a partir de las defunciones (Movimiento Natural de "
+        "la Población) y la población. El mapa toma el último año que tienen las dos tablas.",
+        "used_for": ["Lente de esperanza de vida"],
+    },
+    "ine_matrimonios": {
+        "title": "Matrimonios por provincia y principales municipios de residencia y forma de celebración (MNP, tablas "
+        "77172 y 37645)",
+        "license": _INE_LICENCE,
+        "description": "Matrimonios de cada año según dónde vive la pareja, civiles o religiosos (las tablas del INE no "
+        "separan los católicos de los de otras confesiones), de España y cada provincia (tabla 77172) y de los "
+        "principales municipios de residencia (unos 150, tabla 37645), del Movimiento Natural de la Población. El resto "
+        "de cada provincia es la provincia menos esos municipios.",
+        "used_for": ["Lente de bodas religiosas"],
+    },
+    "effis_incendios": {
+        "title": "Superficies quemadas en España, 2016-2025, del EFFIS (Servicio de Gestión de Emergencias de Copernicus)",
+        "publisher": "Comisión Europea, Centro Común de Investigación: Sistema Europeo de Información sobre Incendios "
+        "Forestales (EFFIS), Servicio de Gestión de Emergencias de Copernicus",
+        "license": "CC BY 4.0 (política de reutilización de la Comisión Europea), citando EFFIS / Copernicus EMS",
+        "description": "Los perímetros de los incendios que el EFFIS cartografió en España cada temporada con imágenes de "
+        "satélite (MODIS y Sentinel-2), de unas 30 ha o más, con su superficie. El mapa suma lo quemado en las diez "
+        "últimas temporadas completas en cada hexágono: la superficie de cada incendio se reparte entre los hexágonos "
+        "que cubre su perímetro. La estadística oficial española (EGIF, del Ministerio para la Transición Ecológica) "
+        "cuenta todos los incendios, también los pequeños, pero no tiene descarga por municipio.",
+        "used_for": ["Lente de incendios"],
+    },
 }
 
 
