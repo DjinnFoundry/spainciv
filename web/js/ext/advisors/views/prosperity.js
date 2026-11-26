@@ -15,15 +15,23 @@ export function mount(ctx) {
   const { app, data, el, link } = ctx;
   const n = data.nat;
   const { states, metros, counties } = data.levels;
+  // Housing cost against income: home value where the country publishes it (US), else a year's rent (Spain: no
+  // official home value by place, DECISIONS E30; rent from SERPAVI, E29).
+  const byHome = fin(n.home_value);
+  const cost = byHome
+    ? { of: (r) => r.v.home_value, domain: [2, 10], ref: [3, 5, 8].map((k) => ({ k, label: `${k}×` })), fmt: (v) => times(+v, 1), legendFmt: (v) => `×${v}` }
+    : { of: (r) => (fin(r.v.median_rent) ? r.v.median_rent * 12 : null), domain: [0.1, 0.3], ref: [0.1, 0.2, 0.3].map((k) => ({ k, label: pct(k, 0) })), fmt: (v) => pct(+v), legendFmt: (v) => pct(v, 0) };
 
   el.insertAdjacentHTML("beforeend", tiles([
     { label: t("adv.pros.medianIncome"), value: dollars(n.median_income), sub: t("adv.pros.perHousehold") },
-    { label: t("adv.pros.medianHome"), value: money(n.home_value), sub: fin(n.home_value / n.median_income) ? t("adv.pros.timesIncome", { x: fixed(n.home_value / n.median_income, 1) }) : "" },
+    byHome
+      ? { label: t("adv.pros.medianHome"), value: money(n.home_value), sub: fin(n.home_value / n.median_income) ? t("adv.pros.timesIncome", { x: fixed(n.home_value / n.median_income, 1) }) : "" }
+      : { label: t("adv.pros.medianRent"), value: t("adv.perMonth", { v: dollars(n.median_rent) }), sub: fin(n.rent_burden) ? t("adv.pros.ofIncome", { share: pct(n.rent_burden) }) : "" },
     { label: t("adv.f.unemployment.tile"), value: pct(n.unemployment), sub: data.vintageOf("unemployment") },
   ]));
 
-  // --- income vs home value -------------------------------------------------------------------------------------
-  const aBody = section(el, { title: t("adv.pros.afford.title"), note: t("adv.pros.afford.note") });
+  // --- income vs home value (or yearly rent) --------------------------------------------------------------------
+  const aBody = section(el, { title: t(byHome ? "adv.pros.afford.title" : "adv.pros.rentAfford.title"), note: t(byHome ? "adv.pros.afford.note" : "adv.pros.rentAfford.note") });
   const aCtl = document.createElement("div");
   aCtl.className = "adv-row";
   aBody.appendChild(aCtl);
@@ -33,18 +41,17 @@ export function mount(ctx) {
     const b = lensButton(app, id, label);
     if (b) aCtl.appendChild(b);
   }
-  const ratioDomain = [2, 10];
-  const ratioColor = colorScale({ type: "seq", domain: ratioDomain, ramp: RAMPS.heat });
+  const ratioColor = colorScale({ type: "seq", domain: cost.domain, ramp: RAMPS.heat });
   const lv = () => data.levels[level];
   const inc = (r) => (level === "counties" ? r.v.income : r.v.median_income);
-  const ratioOf = (r) => (fin(r.v.home_value) && fin(inc(r)) && inc(r) > 0 ? r.v.home_value / inc(r) : null);
+  const ratioOf = (r) => (fin(cost.of(r)) && fin(inc(r)) && inc(r) > 0 ? cost.of(r) / inc(r) : null);
   const scatter = createScatter(aBody, {
     height: 310, points: [],
     x: { label: t("adv.pros.x"), fmt: money, log: true },
-    y: { label: t("adv.pros.y"), fmt: money, log: true },
+    y: { label: t(byHome ? "adv.pros.y" : "adv.pros.yRent"), fmt: money, log: true },
     size: { label: t("adv.population"), fmt: count3, max: 14, min: 1.4 },
-    refLines: [{ k: 3, label: "3×" }, { k: 5, label: "5×" }, { k: 8, label: "8×" }],
-    color: (c) => ratioColor(c), colorLabel: t("adv.pros.homeIncome"), colorFmt: (v) => times(+v, 1),
+    refLines: cost.ref,
+    color: (c) => ratioColor(c), colorLabel: t(byHome ? "adv.pros.homeIncome" : "adv.pros.rentIncome"), colorFmt: cost.fmt,
     onHover: (p) => { link.hover(p ? rowsHighlight(lv(), [p.row]) : null); affTable.setHot(p ? p.key : null, false); },
     onClick: (p) => lv().focus(p.row),
     onBrush: (set) => {
@@ -54,7 +61,7 @@ export function mount(ctx) {
       selInfo.innerHTML = sel.length ? `${t("adv.selected", { n: int(sel.length), what: esc(lv().label.toLowerCase()), people: count3(sel.reduce((a, r) => a + (r.v.population || 0), 0)) })} ${frameBtn()}<button type="button" class="adv-mini" data-clear>${t("adv.clear")}</button>` : "";
     },
   });
-  aBody.insertAdjacentHTML("beforeend", rampLegend({ ramp: RAMPS.heat, domain: ratioDomain, fmt: (v) => `×${v}`, label: t("adv.pros.homeValueIncome") }));
+  aBody.insertAdjacentHTML("beforeend", rampLegend({ ramp: RAMPS.heat, domain: cost.domain, fmt: cost.legendFmt, label: t(byHome ? "adv.pros.homeValueIncome" : "adv.pros.rentIncome") }));
   const selInfo = document.createElement("div");
   selInfo.className = "adv-brushinfo";
   aBody.appendChild(selInfo);
@@ -62,12 +69,12 @@ export function mount(ctx) {
   selInfo.addEventListener("click", (e) => { if (e.target.closest("[data-clear]")) clearSel(); });
   aBody.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${t("adv.pros.affTable")}</h4>`);
   const affTable = createTable(aBody, {
-    caption: t("adv.pros.affCaption"), rank: true, maxHeight: 260, rows: [], search: t("adv.searchPlaces"),
+    caption: t(byHome ? "adv.pros.affCaption" : "adv.pros.rentAffCaption"), rank: true, maxHeight: 260, rows: [], search: t("adv.searchPlaces"),
     columns: [
       { key: "name", label: t("adv.place"), align: "l", value: (r) => r.name, html: (r) => `${esc(r.name)} <span class="sub">${esc(r.sub)}</span>` },
       { key: "inc", label: t("adv.income"), value: inc, text: (r) => money(inc(r)) },
-      { key: "home", label: t("adv.home"), value: (r) => r.v.home_value, text: (r) => money(r.v.home_value) },
-      { key: "ratio", label: t("adv.ratio"), value: (r) => ratioOf(r), html: (r) => fin(ratioOf(r)) ? `<span class="dot" style="background:${ratioColor(ratioOf(r))}"></span>${times(ratioOf(r), 1)}` : "–" },
+      { key: "home", label: t(byHome ? "adv.home" : "adv.pros.rentYear"), value: cost.of, text: (r) => money(cost.of(r)) },
+      { key: "ratio", label: t("adv.ratio"), value: (r) => ratioOf(r), html: (r) => fin(ratioOf(r)) ? `<span class="dot" style="background:${ratioColor(ratioOf(r))}"></span>${cost.fmt(ratioOf(r))}` : "–" },
     ],
     sort: { key: "ratio", dir: "desc" },
     onHover: (r) => { link.hover(r ? rowsHighlight(lv(), [r]) : null); scatter.setHot(r ? r.key : null); },
@@ -77,7 +84,7 @@ export function mount(ctx) {
     clearSel();
     const rows = lv().rows.filter((r) => fin(ratioOf(r)));
     scatter.update({
-      points: rows.map((r) => ({ key: r.key, x: inc(r), y: r.v.home_value, s: r.v.population, c: ratioOf(r), label: r.name, sub: r.sub, row: r })),
+      points: rows.map((r) => ({ key: r.key, x: inc(r), y: cost.of(r), s: r.v.population, c: ratioOf(r), label: r.name, sub: r.sub, row: r })),
       labels: topBy(rows, (r) => r.v.population, { n: 6 }).map((x) => x.r.key),
     });
     affTable.setRows(rows);
