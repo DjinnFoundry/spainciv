@@ -17,9 +17,10 @@ from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..sources.es.provinces import PROVINCES, display_name
 from .resources import Placer, _cluster_name, _settle, _t, _tidy, summarize
 from .spain_wonders import municipality_finder
+from .states import energy_by_state
 from .texts_es import num
 
-REQUIRES = ["_world", "power_plants_es", "igme_minas", "siane", "cities.json", "world.json"]
+REQUIRES = ["states.json", "_world", "power_plants_es", "igme_minas", "siane", "cities.json", "world.json"]
 PRODUCES = ["resources.json"]
 COUNTRIES = ("es",)
 
@@ -30,6 +31,8 @@ SRC = "power_plants_es"
 PER_HEX = "Las centrales de este tipo en un mismo hexágono se suman y se muestran como un solo sitio."
 SUMMARY_NOTE = ("Totales de los sitios del mapa: cada tipo de central tiene un umbral de tamaño (ver su descripción), así "
                 "que no son la potencia total de una provincia ni de España. Las minas se cuentan, sin valor.")
+ENERGY_NOTE = ("Solo cuentan las centrales y las agrupaciones eólicas, solares y de baterías del mapa, cada una por encima "
+               "del umbral de su tipo: no es la potencia total instalada en la provincia.")
 UNIT = re.compile(r"\s+(\d+|[IVX]+|Phase)$")  # 'Almaraz 1' and 'Almaraz 2' are units of 'Almaraz'
 TYPE_OF = {"coal": "coal_plant", "gas": "gas_plant", "oil": "oil_plant"}
 MINE_SRC = "igme_minas"
@@ -184,6 +187,13 @@ def build() -> None:
     types = [t for t in TYPES if t["id"] in present]
     summary = summarize(items, types) | {"note": SUMMARY_NOTE}
     write_web("resources.json", {"types": types, "items": items, "summary": summary})
+    # Provinces' mapped power (states.json `energy`, as the US states have it). spain.py writes states.json before
+    # this builder can run (resources need its cities), so the field is filled in here.
+    energy = energy_by_state(ENERGY_NOTE)
+    provinces = load_web("states.json")
+    for p in provinces:
+        p["energy"] = dict(energy.get(p["abbr"]) or energy[""])
+    write_web("states.json", provinces)
     counts = defaultdict(int)
     for it in items:
         counts[it["type"]] += 1

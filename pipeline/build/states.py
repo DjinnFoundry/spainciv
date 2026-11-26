@@ -128,7 +128,7 @@ def land_shares(world: dict, s: int) -> dict | None:
     return {k: round(sum(pct[k][i] for i in cells) / len(cells) / 100, 3) for k in PCT_KEYS}
 
 
-def energy_by_state() -> dict[str, dict] | None:
+def energy_by_state(note: str = ENERGY_NOTE) -> dict[str, dict] | None:
     """abbr → {unit, total, by_type, sites, note} summed from resources.json items of every MW type
     (states without a mapped site get zeros under "", the default row); None if resources.json is not built."""
     res = load_web("resources.json", optional=True)
@@ -145,7 +145,7 @@ def energy_by_state() -> dict[str, dict] | None:
     for abbr in ["", *mw]:
         by_type = {k: round(v) for k, v in mw.get(abbr, dict.fromkeys(mw_types, 0)).items()}
         out[abbr] = {"unit": "MW", "total": sum(by_type.values()), "by_type": by_type,
-                     "sites": sites.get(abbr, dict.fromkeys(mw_types, 0)), "note": ENERGY_NOTE}
+                     "sites": sites.get(abbr, dict.fromkeys(mw_types, 0)), "note": note}
     return out
 
 
