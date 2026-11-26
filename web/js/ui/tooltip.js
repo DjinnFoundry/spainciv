@@ -7,6 +7,9 @@ const el = () => document.getElementById("tooltip");
 
 const nameOf = (table, id) => table.find((t) => t.id === id)?.name;
 
+// A lens with `names` and per-hex `labels` (indices into names) lists what covers the hex, up to this many.
+const LABELS_SHOWN = 8;
+
 export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
   const raw = w.raw;
   const lines = [];
@@ -28,6 +31,11 @@ export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
     const county = raw.county[i] >= 0 ? raw.counties[raw.county[i]].name + ", " : "";
     lines.push(`${esc(county)}${esc(raw.states[o].name)}`);
     if (lens) lines.push(`${glyph(lens, 13)} ${esc(lens.name)}: <b>${formatLensValue(lens, lens.values[i])}</b>`);
+    const named = lens?.labels?.[i];
+    if (named?.length) {
+      const shown = named.slice(0, LABELS_SHOWN).map((k) => esc(lens.names[k])).join(" · ");
+      lines.push(`<span class="muted">${shown}${named.length > LABELS_SHOWN ? ` +${named.length - LABELS_SHOWN} more` : ""}</span>`);
+    }
   } else if (o === FOREIGN) {
     lines.push(`<span class="muted">Beyond the borders (not mapped)</span>`);
   }

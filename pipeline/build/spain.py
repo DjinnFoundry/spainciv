@@ -24,6 +24,7 @@ import math
 import re
 import unicodedata
 
+from ..core.geo import Shape, ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
@@ -33,7 +34,8 @@ from .lenses import COUNTY_LENSES, DOMAIN_NOTE, GROUPS, land_lenses, percentile_
 from .states import label_anchor, land_shares
 from .yields import YIELDS
 
-REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es"]
+REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
+            "calidad_diferenciada"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -211,7 +213,7 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
     }
 
 
-ES_GROUPS = [{"id": "heritage", "name": "Heritage"}]
+ES_GROUPS = [{"id": "heritage", "name": "Heritage"}, {"id": "food", "name": "Food & drink"}]
 
 
 def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -228,6 +230,35 @@ def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
         "description": "Bienes de Interés Cultural (Spain's highest heritage protection: monuments, sites, historic "
         "quarters) in each hex, as Wikidata locates them.",
         "values": values,
+    }
+
+
+def food_lens(names: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
+    """Protected food and drink names (DOP, IGP, wine denominations) whose area holds each land hex's centre. A name
+    whose area holds no hex centre (a small vino de pago) goes to the land hex nearest its area's centre. The lens
+    carries the names (`names`) and, per hex, the indices of those that cover it (`labels`), for the tooltip."""
+    centres = {c: grid.center(*grid.col_row(c)) for c in range(grid.size) if owner[c] >= 0}
+    labels: list[list[int] | None] = [[] if o >= 0 else None for o in owner]
+    for k, n in enumerate(names):
+        shape = Shape([[proj(lon, lat) for lon, lat in ring] for ring in n["rings"] if len(ring) >= 3])
+        x0, y0, x1, y1 = shape.bbox
+        cells = [c for c, (x, y) in centres.items() if x0 <= x <= x1 and y0 <= y <= y1 and shape.contains(x, y)]
+        if not cells:
+            x, y = proj(*ring_centroid(max(n["rings"], key=lambda r: abs(ring_area(r)))))
+            cells = [nearest_land(grid, owner, max(grid.cell_at(x, y), 0), x, y, -1)]
+        for c in cells:
+            if c >= 0:
+                labels[c].append(k)
+    return {
+        "id": "food", "group": "food", "name": "Food & drink", "icon": "l-food", "emoji": "🍷",
+        "unit": "protected names (DOP, IGP, wine)", "format": "int", "scale": "linear", "higher_is": "neutral",
+        "ramp": ["#2b1320", "#5c1f3a", "#8e3049", "#c25a4a", "#e89a5a", "#ffe0a0"], "source": "calidad_diferenciada",
+        "description": f"How many of Spain's {len(names)} mapped protected food and drink names (DOP, IGP, vinos de "
+        "pago and quality wines: Rioja, Jamón de Teruel, Queso Manchego…) include each hex in their area, as the "
+        "Ministry of Agriculture maps them. Hover a hex for the names.",
+        "values": [len(v) if v is not None else None for v in labels],
+        "names": [n["name"] for n in names],
+        "labels": labels,
     }
 
 
@@ -323,7 +354,8 @@ def build() -> None:
         "its hexes in proportion to how much of the municipality each hex covers.",
         "values": density,
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
-        heritage_lens(load_interim("wikidata_es")["bic"], proj, grid, owner)] + land_lenses(world, "corine")
+        heritage_lens(load_interim("wikidata_es")["bic"], proj, grid, owner),
+        food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner)] + land_lenses(world, "corine")
     for lens in lenses:
         lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
         lens["description"] += DOMAIN_NOTE

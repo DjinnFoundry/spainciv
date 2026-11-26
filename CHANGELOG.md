@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Capa «Food & drink»: las 292 denominaciones de calidad con zona (DOP, IGP, vinos de pago y de calidad) que cubren
+  cada hexágono, con sus nombres al pasar el ratón (MAPA; España tiene 398 nombres en el registro de la UE).
 - Recursos: centrales eléctricas en servicio (nucleares, hidráulicas, bombeo, ciclos combinados, carbón, fuel de
   las islas, y eólica, solar y baterías sumadas por hexágono), de powerplantmatching y, en Canarias, de OpenStreetMap.
 - Universidades: las 20 presenciales con más alumnos (SIIU, curso 2024-25) como maravillas, en el municipio donde

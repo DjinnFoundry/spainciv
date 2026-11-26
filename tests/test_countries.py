@@ -567,3 +567,28 @@ class SpainPowerTest(unittest.TestCase):
         p = lambda name, mw: ({"name": name, "mw": mw, "year": 1983, "offshore": False, "source": "ppm"}, 0.0, 0.0)
         s = site("nuclear", [p("Almaraz 1", 1049), p("Almaraz 2", 1044)], 7)
         self.assertEqual((s["name"], s["value"], s["cell"]), ("Almaraz", 2093, 7))
+
+
+class SpainFoodTest(unittest.TestCase):
+    def test_label_kinds(self):
+        from pipeline.sources.es.food import label
+
+        self.assertEqual(label("Rioja", "Denominación de Origen Calificada"), "Rioja (DOP)")
+        self.assertEqual(label("Orujo de Galicia", "Indicación Geográfica Protegida Bebida Espirituosa"),
+                         "Orujo de Galicia (IGP)")
+        self.assertEqual(label("Dehesa del Carrizal", "Vino de Pago"), "Dehesa del Carrizal (Vino de pago)")
+
+    def test_food_lens_counts_and_small_areas(self):
+        from pipeline.build.spain import food_lens
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=10.0, cols=4, rows=4)
+        owner = [0] * grid.size
+        cx, cy = grid.center(*grid.col_row(5))
+        big = [[(-100, -100), (1000, -100), (1000, 1000), (-100, 1000)]]
+        tiny = [[(cx - 1, cy - 1), (cx - 0.5, cy - 1), (cx - 0.5, cy - 0.5)]]
+        lens = food_lens([{"name": "A (DOP)", "rings": big}, {"name": "B (IGP)", "rings": tiny}],
+                         lambda lon, lat: (lon, lat), grid, owner)
+        self.assertEqual(lens["values"][5], 2)
+        self.assertEqual([lens["names"][k] for k in lens["labels"][5]], ["A (DOP)", "B (IGP)"])
+        self.assertEqual(sum(lens["values"]), grid.size + 1)
