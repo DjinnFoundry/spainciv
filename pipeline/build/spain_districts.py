@@ -70,6 +70,8 @@ CATALOG = [
        "Utilities: electricity and gas, and water collection and supply."),
 ]
 BY_ID = {d["id"]: d for d in CATALOG}
+# City types named by hand where the CNAE division is broader than what the city is known for (DECISIONS E20).
+BADGE_LABELS = {"26089": "Red wine town"}  # Logroño: its beverages division is Rioja wine
 assert [d["id"] for d in CATALOG] == [d["id"] for d in US_CATALOG if d["id"] != "encampment"]
 
 RULE_TEXT = (
@@ -144,6 +146,8 @@ def build() -> None:
             "districts": dists,
             "badge": badge_for(badge_district(dists), bool(c.get("capital")), False, BY_ID, "census"),
         }
+        if out_cities[c["id"]]["badge"] and c["id"] in BADGE_LABELS:
+            out_cities[c["id"]]["badge"]["label"] = BADGE_LABELS[c["id"]]
 
     catalog = [dict(d, naics=list(d["naics"])) for d in CATALOG]
     write_web("districts.json", {

@@ -63,6 +63,7 @@ Quién: **David** = decidida por David; **Claude** = tomada en autónomo, pendie
 | 2026-11-26 | E17 | Carreteras de España: clase 0 = autovías y autopistas (Natural Earth «Major Highway» con `expressway`), clase 1 = otras carreteras de rango de escala ≤ 7; ferrocarril con los niveles de EE UU. Puertos y aeropuertos vacíos hasta tener AENA y Puertos del Estado | Mismo dibujo que EE UU; Natural Earth no rellena el país fuera de Norteamérica, así que se recorta por las fronteras | Claude |
 | 2026-11-26 | E18 | Maravillas: los 16 Parques Nacionales, todos, ordenados por superficie oficial (sin visitantes: no hay tabla descargable); los marítimo-terrestres como «coastal» | Son pocos y todos notables; el ranking por visitas de EE UU no es replicable aún | Claude |
 | 2026-11-26 | E19 | Maravillas = todos los sitios de Patrimonio Mundial (Wikidata agrupado por número UNESCO), los 16 Parques Nacionales y todas las catedrales que no estén ya en un sitio UNESCO; cada una con el motivo de dibujo que corresponde a lo que es | Petición de David («catedrales, la Alhambra»); en España la herencia cultural pesa más que los parques. Sustituye a E18 en el alcance | David |
+| 2026-11-26 | E20 | Logroño se rotula «Red wine town» a mano: su especialidad es la división CNAE 11 (bebidas), que en Logroño es el vino de Rioja; el rótulo genérico de la división sigue siendo «Drinks town» | Petición de David; la división es más amplia que el vino | David |
 
 ## Fuentes
 
