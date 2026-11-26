@@ -17,6 +17,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   (`pipeline/card.py`, Python puro): el mapa de hexágonos con su terreno, provincias, ríos, el recuadro de Canarias y
   las ciudades mayores, con el nombre, el título de la tarjeta, la dirección y la atribución del IGN. Sustituye al
   recorte de captura, que tenía los textos en inglés.
+- El rendimiento de Ciencia es ahora el personal en I+D (en equivalencia a jornada completa) de la Estadística sobre
+  actividades de I+D del INE, 2025: 310.336 personas en España en lugar de 1,9 M de ocupados en J + M. El INE lo da por
+  comunidad; provincias y ciudades reciben su parte según sus ocupados en J + M (Censo). Gipuzkoa sube del puesto 16 al
+  8 y Navarra del 21 al 12; Ceuta y Melilla quedan sin dato (secreto estadístico). Fuente nueva `ine_imasd`.
 - Capa «Platos regionales»: 577 platos, embutidos, quesos, dulces y vinos de las categorías de gastronomía por
   provincia de la Wikipedia en español, filtrados con Wikidata, listados en cada hexágono de su provincia.
 - Interfaz de spainciv en castellano: tablas `web/js/i18n/<lang>/`, `t()`, números en es-ES (Intl) y textos de los

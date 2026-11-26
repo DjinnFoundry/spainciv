@@ -27,8 +27,9 @@ lists the public data behind the map.
   SIANE, rivers, motorways and railways.
 - **Cities** are the 86 large urban areas of the Atlas Digital de las Áreas Urbanas (Madrid's has 52 municipalities and
   6.6 million people), like the US map's metro areas.
-- **Yields**: Food, Production, Science and Culture count employed residents by CNAE section (INE Annual Population
-  Census); Gold is GDP (INE regional accounts), published down to provinces only.
+- **Yields**: Food, Production and Culture count employed residents by CNAE section (INE Annual Population Census);
+  Science is R&D personnel (INE R&D statistic, by autonomous community, shared below it by the census Science
+  workers); Gold is GDP (INE regional accounts), published down to provinces only.
 - **Districts and city types** come from each city's industry specialisation against the national share: Castelló is a
   Ceramics city, Vigo and Valladolid are Motor cities.
 - **Lenses**: population density, income (INE household income atlas) and land cover.

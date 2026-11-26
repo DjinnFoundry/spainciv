@@ -1,7 +1,7 @@
 import { css } from "../color.js";
 import { esc, popShort } from "../format.js";
 import { isCapital } from "../world.js";
-import { yieldGrid, amenities, industries, gdpRow, gdpSource, popLine, growthSpan, showPanel } from "./infoPanel.js";
+import { yieldGrid, amenities, industries, gdpRow, extraSources, popLine, growthSpan, showPanel } from "./infoPanel.js";
 import { country } from "../app/country.js";
 import { t } from "../i18n.js";
 
@@ -48,7 +48,7 @@ export function openStatePanel(idx, ctx) {
       { title: t("core.panel.biggestCities"), html: cityRows },
       !hasEcon && { title: t("core.panel.data"), html: `<p class="muted">${t("core.panel.noStates")}</p>` },
     ],
-    foot: t("core.panel.stateFoot", { vintage: esc(nation.vintage), gdp: gdpSource(nation), count, levels: R.many.toLowerCase() }),
+    foot: t("core.panel.stateFoot", { vintage: esc(nation.vintage), gdp: extraSources(nation), count, levels: R.many.toLowerCase() }),
     onClose: ctx.onClose,
     onPedia: ctx.onPedia,
     wire(panel) {

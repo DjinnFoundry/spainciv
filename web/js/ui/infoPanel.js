@@ -84,8 +84,11 @@ export const gdpRow = (o) =>
         o.population ? `<span class="cmp">${t("core.panel.perPerson", { value: money(o.gdp / o.population) })}</span>` : ""}</span></div>`
     : "";
 
-/** "; GDP: <vintage>" for a panel's source line, or "". */
-export const gdpSource = (nation) => (nation.gdp_vintage ? t("core.panel.gdpSource", { vintage: esc(nation.gdp_vintage) }) : "");
+/** The end of a panel's source line: "; GDP: <vintage>" and "; <yield>: <vintage>" for each yield with a source of its
+ * own (Spain's Science), or "". */
+export const extraSources = (nation) =>
+  (nation.gdp_vintage ? t("core.panel.gdpSource", { vintage: esc(nation.gdp_vintage) }) : "") +
+  (nation.yields || []).filter((y) => y.vintage).map((y) => t("core.panel.yieldSource", { label: esc(y.label), vintage: esc(y.vintage) })).join("");
 
 // " · ▲ 3.4% since 2021" from growth / growth_years (cities and states), compared with the U.S. in the tooltip.
 // Empty when growth is missing (null means "not measured", never zero).

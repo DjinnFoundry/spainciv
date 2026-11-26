@@ -40,8 +40,9 @@ Almanac entry in `texts_es.SOURCES`.
 | `gastronomia_es` | Spanish Wikipedia provincial cuisine categories, filtered to foods and drinks with Wikidata | CC BY-SA 4.0 (titles); CC0 | Regional dishes lens |
 | `ine_padron` | INE table 29005 (Padrón revision by municipality) | CC BY 4.0, citing INE | Population, growth, density lens |
 | `ine_pib` | INE table 80109 (Contabilidad Regional, GDP by province) | CC BY 4.0, citing INE | Gold (GDP) by province |
-| `ine_censo_ocupados` | INE Annual Population Census, employed residents by CNAE section (tables 69962 and 69992) | CC BY 4.0, citing INE | Food, Production, Science, Culture yields, jobs and employed of cities, provinces and Spain |
+| `ine_censo_ocupados` | INE Annual Population Census, employed residents by CNAE section (tables 69962 and 69992) | CC BY 4.0, citing INE | Food, Production, Culture yields, jobs and employed of cities, provinces and Spain; the split of Science below the community |
 | `ine_censo_divisiones` | INE Annual Population Census, employed residents by CNAE division (tables 69960 and 69980: Spain, provinces, 151 main cities) | CC BY 4.0, citing INE | Districts and city types |
+| `ine_imasd` | INE R&D statistic (Estadística sobre actividades de I+D), all sectors: intramural R&D spending and R&D personnel (FTE) by autonomous community (table 82978; year from the national series, table 82944) | CC BY 4.0, citing INE | Science yield: R&D personnel, shared among a community's provinces and cities by their census J + M workers (DECISIONS F16) |
 | `ine_adrh` | INE table 30824 (Atlas de Distribución de Renta de los Hogares) | CC BY 4.0, citing INE | Income lens (mean net income per person, 2024) |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).

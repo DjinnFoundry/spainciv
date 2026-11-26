@@ -12,14 +12,15 @@ import io
 import re
 
 from ...core.source import Source, SourceInfo
-from .provinces import PROVINCES, display_name
+from .provinces import COMMUNITIES, PROVINCES, display_name
 
 CSV = "https://www.ine.es/jaxiT3/files/t/csv_bdsc/{table}.csv"
+TPX_CSV = "https://www.ine.es/jaxi/files/tpx/es/csv_bdsc/{table}.csv"  # the "tpx" tables of the yearly results
 LICENSE = ("CC BY 4.0 (INE legal notice): commercial and non-commercial reuse, citing the source as \"Elaboración "
            "propia con datos del INE\"; INE does not endorse this map")
 
 # Autonomous communities with one province: INE publishes their provincial figures only as the community.
-UNIPROVINCIAL = {"03": "33", "04": "07", "06": "39", "13": "28", "14": "30", "15": "31", "17": "26", "18": "51", "19": "52"}
+UNIPROVINCIAL = {comm: provs[0] for comm, (_, provs) in COMMUNITIES.items() if len(provs) == 1}
 
 
 def number(text: str) -> float | None:
@@ -264,7 +265,8 @@ class IneCensoOcupados(CensoEmpleo):
         "(like the US map's ACS), from the Annual Population Census (Ocupación y actividad): Spain and the provinces "
         "(table 69962) and every municipality of 500 residents or more (table 69992). The sections are mapped to the map's "
         "industries; 'No consta' (not stated) counts in the total only.",
-        used_for=["Food, Production, Science and Culture yields", "Jobs by industry", "Employed residents"],
+        used_for=["Food, Production and Culture yields", "Split of the Science (R&D) yield among provinces and cities",
+                  "Jobs by industry", "Employed residents"],
     )
     TABLES = {"regions": 69962, "local": 69992}
     CODE = re.compile(r"([A-U]) ")
@@ -292,3 +294,71 @@ class IneCensoDivisiones(CensoEmpleo):
     )
     TABLES = {"regions": 69960, "local": 69980}
     CODE = re.compile(r"(\d\d) ")
+
+
+class IneImasd(Source):
+    """INE's R&D statistic (Estadística sobre actividades de I+D, all sectors) by autonomous community.
+
+    The community table of each yearly release (a "tpx" table) carries no year column: the year is the one whose
+    national R&D personnel in the national series table equals the community table's national row, so a release that
+    does not match the series fails instead of being labelled with a wrong year. Ceuta's and Melilla's figures are
+    protected by statistical secrecy ("..") and stay null.
+    """
+
+    info = SourceInfo(
+        id="ine_imasd",
+        title="R&D statistic (all sectors): intramural R&D spending and personnel by autonomous community, tables 82978 "
+        "and 82944",
+        publisher="Instituto Nacional de Estadística (INE)",
+        homepage="https://www.ine.es/jaxi/Tabla.htm?tpx=82978&L=0",
+        license=LICENSE,
+        description="Intramural R&D spending (euros) and R&D personnel in full-time equivalents (FTE), counted where the "
+        "R&D is done, for Spain and its 17 autonomous communities plus Ceuta and Melilla (table 82978; companies, public "
+        "administration, higher education and private non-profits together, Frascati manual). The year comes from the "
+        "national FTE series (table 82944). Ceuta's and Melilla's figures are confidential and stay null.",
+        used_for=["Science yield (R&D personnel) of provinces, cities and Spain"],
+    )
+    TABLES = {"communities": 82978, "series": 82944}
+    INDICATORS = {"Personal en EJC: Total": "personnel_fte", "Gasto en I+D interna (miles de euros)": "spending_eur"}
+    SCALE = {"personnel_fte": 1, "spending_eur": 1000}
+
+    def _file(self, table: int) -> str:
+        return f"{table}.csv"
+
+    def fetch(self, force=False):
+        for table in self.TABLES.values():
+            self.download(TPX_CSV.format(table=table), self._file(table), force=force)
+
+    def process(self):
+        geos: dict[str, dict[str, float | None]] = {}
+        for geo, indicator, value in (r[:3] for r in read_rows(self.raw_dir / self._file(self.TABLES["communities"]))
+                                      if len(r) >= 3):
+            key = self.INDICATORS.get(indicator.strip())
+            if not key:
+                continue
+            code, name = split_geo(geo)
+            v = number(value)
+            geos.setdefault(code or name, {})[key] = v * self.SCALE[key] if v is not None else None
+        nation = geos.pop("Total Nacional", None)
+        if not nation or nation.get("personnel_fte") is None:
+            raise RuntimeError(f"{self.id}: no national row in table {self.TABLES['communities']}")
+        if set(geos) != set(COMMUNITIES):
+            raise RuntimeError(f"{self.id}: communities {sorted(geos)} are not INE's 19")
+        series = [(label.strip(), year.strip(), number(value))
+                  for label, year, value in (r[:3] for r in read_rows(self.raw_dir / self._file(self.TABLES["series"]))
+                                             if len(r) >= 3)]
+        years = [int(year) for label, year, v in series
+                 if label == "Total (EJC)" and v is not None and abs(v - nation["personnel_fte"]) < 0.05]
+        if len(years) != 1:
+            raise RuntimeError(f"{self.id}: national R&D personnel {nation['personnel_fte']} matches years {years} of "
+                               f"table {self.TABLES['series']}")
+        known = sum(g["personnel_fte"] for g in geos.values() if g.get("personnel_fte") is not None)
+        if known > nation["personnel_fte"] + 0.5:
+            raise RuntimeError(f"{self.id}: the communities add up to more R&D personnel than Spain")
+        return {
+            "vintage": f"INE Estadística sobre actividades de I+D, {years[0]}",
+            "_files": [self._file(t) for t in self.TABLES.values()],
+            "year": years[0],
+            "nation": nation,
+            "communities": dict(sorted(geos.items())),
+        }

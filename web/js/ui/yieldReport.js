@@ -54,7 +54,7 @@ export function statDefs(nation) {
     yield: y,
     unit: y.unit,
     description: y.description || "",
-    source: y.key === "gold" ? nation.gdp_vintage || nation.vintage || "" : nation.vintage || "",
+    source: y.vintage || (y.key === "gold" ? nation.gdp_vintage || nation.vintage || "" : nation.vintage || ""),
     value: y.key === "gold" ? n.gdp ?? n.yields?.gold ?? null : n.yields?.[y.key] ?? null,
   }));
   return [

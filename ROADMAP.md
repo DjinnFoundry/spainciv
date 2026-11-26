@@ -9,7 +9,6 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Después
 
-2. I+D por comunidad (estadística de I+D del INE) para el rendimiento Science.
 4. Minas (IGME) como recursos.
 
 ## Huecos conocidos

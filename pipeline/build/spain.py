@@ -8,9 +8,18 @@ First cut (see docs/SPAIN.md):
   of under 500 residents, which INE does not publish by section (three areas, a few thousand residents).
 * **Gold** is GDP at market prices (INE Contabilidad Regional), which INE publishes down to provinces: provinces and
   the nation have it; cities don't (there is no official municipal GDP, and none is made up here).
-* **Food, Production, Science, Culture** count employed residents by CNAE section (INE Annual Population Census: cities,
+* **Food, Production, Culture** count employed residents by CNAE section (INE Annual Population Census: cities,
   provinces, Spain), mapped to the US industry keys so the US yield definitions apply unchanged. Median household
   income, rent, home value and unemployment stay null.
+* **Science** is R&D personnel in full-time equivalents (INE R&D statistic, all sectors), counted where the R&D is
+  done, where the US map counts Science workers (professional + information, ACS). INE publishes it by autonomous
+  community only, so below that a community's R&D personnel is shared among its provinces and municipalities in
+  proportion to their residents employed in the US Science industries (CNAE J + M, the same census): every place
+  gets its Science workers times its community's R&D personnel per Science worker. Provinces add up to their
+  community; cities add up their members, each at its own community's rate (an area can straddle two); Spain is
+  INE's national total. A community without a published figure (Ceuta and Melilla, statistical secrecy) leaves its
+  provinces and cities null. Science keeps no industry list, so the yield report shows no census breakdown that
+  would not add up to it.
 * **Growth** is Padrón population change from BASELINE_YEAR to the Padrón year, like the US rule (cap ±25%).
 * **Lenses**: population density (each municipality's Padrón population spread over its hexes, lenses.spread_population),
   income (INE ADRH mean net income per person, population-weighted over each hex's municipalities) and the land-cover
@@ -28,6 +37,7 @@ from ..core.geo import Shape, geojson_rings, ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
+from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
@@ -37,9 +47,8 @@ from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LA
 from .world import localized
 from .yields import YIELDS
 
-REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
-            "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
-            "gastronomia_es"]
+REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_imasd",
+            "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul", "gastronomia_es"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -52,7 +61,12 @@ YIELD_TEXT = {
     "sectores del mapa de EE. UU.",
     "gold": "Producto interior bruto a precios de mercado, en euros corrientes (Contabilidad Regional de España del INE). "
     "El INE lo publica hasta el nivel provincial, así que las ciudades no tienen oro propio.",
-    "science": WORKERS + ": información y comunicaciones (J) y actividades profesionales, científicas y técnicas (M).",
+    "science": "Personal en I+D en equivalencia a jornada completa, contado donde se hace la I+D (Estadística sobre "
+    "actividades de I+D del INE, {rd_year}: empresas, administración pública, enseñanza superior e instituciones sin fines "
+    "de lucro). El INE lo publica por comunidad autónoma; cada provincia y cada ciudad recibe la parte de su comunidad "
+    "que le corresponde por sus residentes ocupados en información y comunicaciones (J) y actividades profesionales, "
+    "científicas y técnicas (M) según el Censo anual de población ({year}). España es el total nacional del INE; Ceuta "
+    "y Melilla no tienen dato (secreto estadístico).",
     "culture": WORKERS + ": actividades artísticas, recreativas y de entretenimiento (R).",
 }
 # CNAE-2009 section → the industry key the map uses (yields.INDUSTRY_LINES), with the Spanish section's own label.
@@ -73,10 +87,21 @@ INDUSTRIES = {key: label for key, label in CNAE.values() if label}
 ECON_NULL = {"median_income": None, "median_rent": None, "home_value": None, "unemployment": None, "rent_burden": None}
 
 
-def yields_es(year: int | None = None) -> list[dict]:
-    """The US yield definitions (keys, icons, colours, industries) with Spain's names and sources; Gold is in euros."""
-    return [{**y, "label": YIELD_LABELS[y["key"]], "unit": "eur" if y["key"] == "gold" else y["unit"],
-             "description": YIELD_TEXT[y["key"]].format(year=year)} for y in YIELDS]
+SCIENCE_INDUSTRIES = next(y["industries"] for y in YIELDS if y["key"] == "science")  # the apportioning key (J + M)
+
+
+def yields_es(year: int | None = None, rd: dict | None = None) -> list[dict]:
+    """The US yield definitions (keys, icons, colours, industries) with Spain's names and sources; Gold is in euros.
+    Science is R&D personnel (`rd` = the ine_imasd payload): no industry list, and its own vintage."""
+    rd = rd or {}
+    out = []
+    for y in YIELDS:
+        e = {**y, "label": YIELD_LABELS[y["key"]], "unit": "eur" if y["key"] == "gold" else y["unit"],
+             "description": YIELD_TEXT[y["key"]].format(year=year, rd_year=(rd.get("data") or {}).get("year"))}
+        if y["key"] == "science":
+            e |= {"industries": [], "vintage": vintage(rd.get("vintage"))}
+        out.append(e)
+    return out
 
 
 def jobs_of(sections: dict[str, int] | None) -> dict[str, int | None] | None:
@@ -98,11 +123,41 @@ def total(jobs: dict | None, keys: list[str]) -> int | None:
     return sum(jobs[k] for k in keys)
 
 
-def econ(population: int | None, gdp: float | None, gdp_year: int | None, workers: dict[str, int] | None = None) -> dict:
+def rd_rates(rd: dict, provinces: dict[str, dict | None]) -> dict[str, float | None]:
+    """Community → its R&D personnel (FTE) per resident employed in the Science industries (census, all its provinces);
+    None where INE gives no R&D figure or a province's Science workers are unknown."""
+    out = {}
+    for comm, (_, provs) in COMMUNITIES.items():
+        fte = (rd["communities"].get(comm) or {}).get("personnel_fte")
+        workers = [total(jobs_of(provinces.get(p)), SCIENCE_INDUSTRIES) for p in provs]
+        out[comm] = None if fte is None or None in workers or not sum(workers) else fte / sum(workers)
+    return out
+
+
+def rd_science(rows: dict[str, dict | None], rates: dict[str, float | None]) -> int | None:
+    """Science (R&D personnel) of a place made of `rows` {INE code (province or municipality): census sections}: each
+    row's Science workers at its community's rate, summed. Rows INE does not publish (None) are left out, like the
+    rest of the area's employment; a row in a community without a rate, or with its Science workers unknown, makes the
+    whole place unknown."""
+    parts = []
+    for code, sections in rows.items():
+        if not sections:
+            continue
+        workers, rate_ = total(jobs_of(sections), SCIENCE_INDUSTRIES), rates.get(COMMUNITY_OF[code[:2]])
+        if workers is None or rate_ is None:
+            return None
+        parts.append(workers * rate_)
+    return round(sum(parts)) if parts else None
+
+
+def econ(population: int | None, gdp: float | None, gdp_year: int | None, workers: dict[str, int] | None = None,
+         science: float | None = None) -> dict:
+    """The economy block of a place; `science` is its R&D personnel (rd_science), not a census count."""
     jobs = jobs_of(workers)
+    special = {"gold": gdp, "science": science}
     return {
         "population": population, "employed": workers.get("total") if workers else None, "jobs": jobs or {}, **ECON_NULL,
-        "yields": {y["key"]: (gdp if y["key"] == "gold" else total(jobs, y["industries"])) for y in YIELDS},
+        "yields": {y["key"]: special[y["key"]] if y["key"] in special else total(jobs, y["industries"]) for y in YIELDS},
         "gdp": gdp, "gdp_year": gdp_year if gdp is not None else None,
     }
 
@@ -501,6 +556,8 @@ def build() -> None:
     pib_p = load_interim_payload("ine_pib")
     pib = pib_p["data"]
     ss = load_interim("ine_censo_ocupados")
+    rd_p = load_interim_payload("ine_imasd")
+    rates = rd_rates(rd_p["data"], ss["provinces"])
     proj = active().world_projection(world)
     grid = HexGrid(**world["grid"])
     owner = world["owner"]
@@ -533,7 +590,8 @@ def build() -> None:
             "id": code, "name": muni[code]["display"], "full": a["full"],
             "states": [regions[p]["abbr"] for p in provs], "metro": True, "capital": code == active().capital_city,
             "x": round(x, 1), "y": round(y, 1), "cell": cell,
-            **econ(series.get(str(year)), None, None, add_sections([ss["municipalities"].get(c) for c in members])),
+            **econ(series.get(str(year)), None, None, add_sections([ss["municipalities"].get(c) for c in members]),
+                   rd_science({c: ss["municipalities"].get(c) for c in members}, rates)),
             "growth": growth_of(series, years), "growth_years": years or None,
             "counties": sorted(members),
             "footprint": sorted(feet.get(code, set()) | {cell}),
@@ -548,7 +606,8 @@ def build() -> None:
         series = pp.get("pop", {})
         states.append({
             "fips": fips, "abbr": p["abbr"], "name": p["name"],
-            **econ(series.get(str(year)), pib["provinces"].get(fips), gdp_year, ss["provinces"].get(fips)),
+            **econ(series.get(str(year)), pib["provinces"].get(fips), gdp_year, ss["provinces"].get(fips),
+                   rd_science({fips: ss["provinces"].get(fips)}, rates)),
             "growth": growth_of(series, years), "growth_years": years or None,
             "ranks": {}, "label": label_anchor(grid, owner, i, p["name"]), "land": land_shares(world, i), "energy": None,
         })
@@ -564,9 +623,10 @@ def build() -> None:
     nat_series = padron["nation"]
     nation = {
         "vintage": vintage(padron_p["vintage"]), "year": year, "gdp_vintage": vintage(pib_p["vintage"]),
-        "nation": {**econ(nat_series.get(str(year)), pib["nation"], gdp_year, ss["nation"]), "growth": growth_of(nat_series, years),
+        "nation": {**econ(nat_series.get(str(year)), pib["nation"], gdp_year, ss["nation"],
+                          round(rd_p["data"]["nation"]["personnel_fte"])), "growth": growth_of(nat_series, years),
                    "growth_years": years or None},
-        "yields": yields_es(ss["year"]),
+        "yields": yields_es(ss["year"], rd_p),
         "industries": INDUSTRIES,
     }
 
