@@ -47,6 +47,7 @@ const PANEL_W = 394; // city panel width + margins (css #city-panel)
 const TOPBAR_H = 40;
 const CACHE_MARGIN = 160; // css px of map rendered beyond each edge of the viewport, so short pans are a blit
 const PAN_LEAD = 0.6; // a pan that runs off the cache re-renders it shifted this share of the margin ahead
+const ZOOM_LEAD = 0.6; // a zoom-out that runs off the cache re-renders it at this share of the scale (more ground)
 const DOUBLE_MS = 260;
 const SELECT_ANIM_MS = 33; // ~30 fps while a state's border highlight animates
 const isMobile = () => matchMedia("(max-width: 700px)").matches;
@@ -128,14 +129,17 @@ async function main() {
 
   // lead: [-1|0|1, -1|0|1], the direction a pan ran off the cache; the new cache reaches further that way (and less
   // the other way, same size), so a steady pan re-renders less often.
-  function renderStatic(lead = null) {
+  // zoom: the cache's scale as a share of the camera's (< 1 while a zoom-out runs: the cache covers the view grown
+  // about its centre, so the next frames of the zoom blit it instead of each re-rendering the whole map).
+  function renderStatic(lead = null, zoom = 1) {
     const t0 = performance.now();
-    const s = cam.scale;
+    const s = cam.scale * zoom;
     const v = cam.view();
     const m = CACHE_MARGIN / s;
+    const gx = ((v.x1 - v.x0) * (1 / zoom - 1)) / 2, gy = ((v.y1 - v.y0) * (1 / zoom - 1)) / 2;
     const ox = lead ? lead[0] * PAN_LEAD * m : 0, oy = lead ? lead[1] * PAN_LEAD * m : 0;
     const vp = {
-      x0: v.x0 - m + ox, y0: v.y0 - m + oy, x1: v.x1 + m + ox, y1: v.y1 + m + oy, s, dpr,
+      x0: v.x0 - gx - m + ox, y0: v.y0 - gy - m + oy, x1: v.x1 + gx + m + ox, y1: v.y1 + gy + m + oy, s, dpr,
       cssW: cam.w + 2 * CACHE_MARGIN, cssH: cam.h + 2 * CACHE_MARGIN,
     };
     const W = Math.ceil(vp.cssW * dpr), H = Math.ceil(vp.cssH * dpr);
@@ -226,7 +230,10 @@ async function main() {
       // A pure pan (same layer, same zoom) that ran off an edge: lead the new cache in that direction.
       const pan = sameKey && cam.scale === c.s && !gestureZoom
         ? [v.x0 < c.x0 ? -1 : v.x1 > c.x1 ? 1 : 0, v.y0 < c.y0 ? -1 : v.y1 > c.y1 ? 1 : 0] : null;
-      renderStatic(pan);
+      // A zoom-out (wheel, pinch or flight) that ran off the cache: render further out than the camera, blitted a
+      // little soft until the zoom settles and renders at the true scale. Without the lead every frame re-rendered.
+      const zoomOut = settling && sameKey && !covers && ratio < 1;
+      renderStatic(pan, zoomOut ? ZOOM_LEAD : 1);
       if (!settling) scheduleWarm();
     }
 
