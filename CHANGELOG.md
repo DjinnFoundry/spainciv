@@ -6,6 +6,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Lentes de fiesta. **Fiestas de interés turístico**: las 90 Internacionales y 164 Nacionales de la Secretaría de Estado de Turismo, con su nombre al pasar el ratón (Murcia tiene cuatro Internacionales: Semana Santa, Bando de la Huerta, Entierro de la Sardina y Moros y Cristianos). **Bares**: bares y pubs de OpenStreetMap por 1.000 habitantes (Benidorm, 5,3; Donostia y Salamanca, 2,5; Madrid, 0,7), con el aviso de que OSM cubre mucho mejor las ciudades que los pueblos. **Viviendas turísticas** por 1.000 habitantes, de la estadística experimental del INE (mayo de 2026: La Oliva 133, Roses 124, Nerja 123; España 6,9). **Índice de fiesta**, propio de este mapa: la media de los percentiles de fiestas, bares y viviendas turísticas (La Alberca, Llanes y Villajoyosa arriba). El grupo «Comida y bebida» pasa a «Comida, bebida y fiestas».
+- Lentes de **castillos** (3.009) y **plazas de toros** (650) de Wikidata en el grupo de patrimonio, con sus nombres al pasar el ratón.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido

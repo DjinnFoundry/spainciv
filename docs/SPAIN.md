@@ -28,7 +28,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `corine` | Copernicus CLC 2018, read from the IGN/IDEE land-cover WMS by legend colour | CC BY 4.0 (IDEE); Copernicus free, full and open data policy | Land cover |
 | `audes` | Ministerio de Vivienda y Agenda Urbana, Atlas Digital de las Áreas Urbanas: large urban areas 2025 and their municipalities | Public-sector information, reuse citing the source (Ley 37/2007) | Cities (urban areas) and their members |
 | `oapn_parques` | OAPN (Red de Parques Nacionales), boundaries via its WFS | Public-sector information, reuse citing the source (Ley 37/2007) | National Park wonders, protected land |
-| `wikidata_es` | Wikidata SPARQL: World Heritage sites, cathedrals, Bienes de Interés Cultural | CC0 | World Heritage and cathedral wonders |
+| `wikidata_es` | Wikidata SPARQL: World Heritage sites, cathedrals, museums, Bienes de Interés Cultural, castles (Q23413 and subclasses) and bullrings (Q1193438 and subclasses), without the demolished (P576) | CC0 | World Heritage and cathedral wonders; heritage, museums, castles and bullrings lenses (named in the tooltip) |
 | `aena_airports` | AENA traffic 2025 (XLSX) + OurAirports positions (public domain) | Aena legal notice; OurAirports public domain | Airports |
 | `puertos_estado` | Puertos del Estado: traffic 2025 by Port Authority (XLSX) + service areas (WFS, CC BY 4.0) | Puertos del Estado legal notice; WFS CC BY 4.0 | Ports |
 | `siiu_universidades` | SIIU (Ministerio de Ciencia, Innovación y Universidades): students by centre 2024-25 and centre municipalities (XLSX) | Reuse citing the Ministry | Great-university wonders |
@@ -39,6 +39,9 @@ Almanac entry in `texts_es.SOURCES`.
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
 | `bandera_azul` | ADEAC Blue Flag 2026-27 list (PDF read into a CSV in the repo by `tools/bandera_azul_pdf.py`) | © ADEAC, cited | Blue Flag beaches lens |
 | `gastronomia_es` | Spanish Wikipedia provincial cuisine categories, filtered to foods and drinks with Wikidata | CC BY-SA 4.0 (titles); CC0 | Regional dishes lens |
+| `fiestas_interes_turistico` | Secretaría de Estado de Turismo: the Fiestas de Interés Turístico Internacional and Nacional pages of turismo.gob.es, placed in their municipalities by `pipeline/sources/es/data/fiestas_interes_turistico.csv` | Public-sector information, reuse citing the source (Ley 37/2007) | Fiestas lens (90 Internacional, 164 Nacional; a fiesta on both lists counts once, as Internacional), party index |
+| `ine_viviendas_turisticas` | INE table 39363 (experimental statistic on tourist dwellings, latest period: May 2026) | CC BY 4.0, citing INE | Tourist dwellings per 1,000 inhabitants lens, party index |
+| `osm_bares` | OpenStreetMap amenity=bar and amenity=pub (no cafés), one cached Overpass query, `out center` | ODbL 1.0 | Bars per 1,000 inhabitants lens (coverage uneven: cities and coasts far better mapped than villages), party index |
 | `ine_padron` | INE table 29005 (Padrón revision by municipality) | CC BY 4.0, citing INE | Population, growth, density lens |
 | `ine_pib` | INE table 80109 (Contabilidad Regional, GDP by province) | CC BY 4.0, citing INE | Gold (GDP) by province |
 | `ine_censo_ocupados` | INE Annual Population Census, employed residents by CNAE section (tables 69962 and 69992) | CC BY 4.0, citing INE | Food, Production, Culture yields, jobs and employed of cities, provinces and Spain; the split of Science below the community |

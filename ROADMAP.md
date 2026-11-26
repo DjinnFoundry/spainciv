@@ -29,6 +29,12 @@ decisiones que salgan van a `DECISIONS.md`.
 - Lenguas: falta el aragonés y el catalán de Aragón (sin lista publicada de municipios) y los dialectos (sin
   delimitación oficial).
 - Bandera Azul: cada playa va a la costa de su municipio, no a su posición; se podría afinar con las playas de Wikidata.
+- Bares: OpenStreetMap no es un censo (42.122 bares y pubs); en los pueblos poco mapeados un cero puede ser un bar sin
+  mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
+- Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
+  Faltan las fiestas de interés turístico autonómicas.
+- Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
+  temporada (F21).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
 - Rendimiento: arrastrar y el primer dibujado tras cambiar de zoom siguen bloqueando 40–115 ms con la CPU frenada
   ×4 (opciones: relieve desde 8 px, lienzo más ancho hacia el arrastre, teselas o worker).
