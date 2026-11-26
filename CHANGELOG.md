@@ -44,6 +44,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Arrastrar el mapa se engancha menos: al entrar terreno nuevo se pinta solo la franja que aparece, no el
+  mapa entero (con la CPU frenada ×4, de 104 a 22 ms por repintado a ×2,5; A18).
 - Los reyes guanches de Tenerife salen como «mencey» en vez de «monarca», con el cargo que les da Wikidata; un guanarteme de Gran Canaria saldría igual con el suyo.
 - Mayúsculas de los nombres como se escriben en castellano: «Palma de Mallorca», «Jerez de la Frontera», «Torre de Garay», «FGL Granada-Jaén», en aeropuertos, centrales, minas y lugares de Wikidata. Los aeropuertos pierden las marcas de nota de AENA («(**)») y los helipuertos salen como «Ceuta (helipuerto)».
 - Museos y castillos sin nombre en castellano toman el gallego, catalán o euskera antes que el inglés (antes salían 19 en inglés; quedan 12, que Wikidata solo nombra en inglés).

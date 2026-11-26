@@ -15,7 +15,7 @@ import { icon } from "./ui/icon.js";
 import { initSearch } from "./app/search.js";
 import { createEmitter, createHashState, createModes, createUi, createMapToggles } from "./app/api.js";
 import { drawHighlight, drawOverlays, invalidateHighlight, highlightBounds } from "./render/overlays.js";
-import { resourceFilterSig, layerActive, layerError, Z as LAYER_Z } from "./render/map.js";
+import { resourceFilterSig, layerActive, layerError, regionPad, shiftRegions, Z as LAYER_Z } from "./render/map.js";
 import { installExtensions } from "./ext/index.js";
 import { initShare } from "./app/share.js";
 import { setCountry, applyCountryChrome, country } from "./app/country.js";
@@ -111,8 +111,16 @@ async function main() {
   // --- static layer cache ----------------------------------------------------------------------------------------
   // Tiles, glyphs, rivers, borders, labels and resources are rendered into an offscreen canvas covering the view
   // plus a margin. Panning blits it; zooming blits it scaled and re-renders once the camera settles.
-  const cache = { cv: document.createElement("canvas"), key: null, vp: null, hits: { resources: [] } };
+  // `base` keeps a copy of the cache without the top steps, which declutter against the whole view (resources, state
+  // names, layers from Z.RESOURCES up). The other steps are local, so a pan that runs off the cache copies the base
+  // shifted by whole device pixels, paints only the strip that came into view (drawStatic region) and draws the top
+  // steps again: the pixels of a full render for a fraction of its cost.
+  const cache = {
+    cv: document.createElement("canvas"), base: document.createElement("canvas"), baseOk: false,
+    key: null, vp: null, hits: { resources: [] },
+  };
   const cctx = cache.cv.getContext("2d");
+  const bctx = cache.base.getContext("2d");
   // Each registered layer's id, visibility and own sig() are part of the key, so toggling or restyling a layer
   // re-renders the cache (and nothing else does).
   const layersSig = () => staticLayers.map((l) => {
@@ -146,18 +154,43 @@ async function main() {
     };
     const W = Math.ceil(vp.cssW * dpr), H = Math.ceil(vp.cssH * dpr);
     if (cache.cv.width !== W || cache.cv.height !== H) {
-      cache.cv.width = W;
-      cache.cv.height = H;
+      cache.cv.width = cache.base.width = W;
+      cache.cv.height = cache.base.height = H;
+      cache.baseOk = false;
     }
-    const hitsOut = {};
-    drawStatic(cctx, vp, w, {
-      lens: state.lens, showResources: state.showResources, resourceFilter: state.resourceFilter, selectedCity: state.selectedCity, hits: hitsOut,
+    const key = cacheKey();
+    const c = cache.vp, k = s * dpr;
+    // A pan at the same zoom: the new cache starts a whole number of device pixels from the old one.
+    const pan = cache.baseOk && cache.key === key && c.s === s;
+    const dx = pan ? Math.round((vp.x0 - c.x0) * k) : 0, dy = pan ? Math.round((vp.y0 - c.y0) * k) : 0;
+    const regions = pan && shiftRegions(W, H, dx, dy, Math.ceil(regionPad(w.grid, s) * k));
+    const o = {
+      lens: state.lens, showResources: state.showResources, resourceFilter: state.resourceFilter, selectedCity: state.selectedCity,
       layers: staticLayers, app,
-    });
+    };
+    if (regions) {
+      vp.x0 = c.x0 + dx / k; vp.x1 = c.x1 + dx / k;
+      vp.y0 = c.y0 + dy / k; vp.y1 = c.y1 + dy / k;
+      blit(cctx, cache.base, -dx, -dy);
+      for (const region of regions) drawStatic(cctx, vp, w, { ...o, pass: "base", region });
+    } else {
+      drawStatic(cctx, vp, w, { ...o, pass: "base" });
+    }
+    blit(bctx, cache.cv, 0, 0);
+    const hitsOut = {};
+    drawStatic(cctx, vp, w, { ...o, pass: "top", hits: hitsOut });
     cache.hits = { resources: hitsOut.resources || [] };
     cache.vp = vp;
-    cache.key = cacheKey();
+    cache.key = key;
+    cache.baseOk = true;
     record(perf.static, performance.now() - t0);
+  }
+  // Copy a canvas onto another, pixel for pixel, at a whole device-pixel offset.
+  function blit(dst, src, x, y) {
+    dst.setTransform(1, 0, 0, 1, 0, 0);
+    dst.globalCompositeOperation = "copy";
+    dst.drawImage(src, x, y);
+    dst.globalCompositeOperation = "source-over";
   }
 
   // --- sprite warm-up ----------------------------------------------------------------------------------------
