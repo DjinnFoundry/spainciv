@@ -514,7 +514,8 @@ function bboxOf(xs, ys, a, b) {
   return [x0, y0, x1, y1];
 }
 
-const outside = (bb, view, pad) => bb[2] < view[0] - pad || bb[0] > view[2] + pad || bb[3] < view[1] - pad || bb[1] > view[3] + pad;
+/** True when box bb [x0, y0, x1, y1] lies more than `pad` beyond one side of view [x0, y0, x1, y1]. */
+export const outside = (bb, view, pad) => bb[2] < view[0] - pad || bb[0] > view[2] + pad || bb[3] < view[1] - pad || bb[1] > view[3] + pad;
 
 /** Add a chunk's points to path P, pushed `off` km toward the water. */
 function traceChunk(P, c, off = 0) {
@@ -555,7 +556,7 @@ export function drawShore(ctx, w, cells, opts = {}) {
   const px = (v) => v / s;
   const near = atLeast(lod, "near"), close = lod === "close";
   const K = grid.corners;
-  const view = visibleRect(ctx);
+  const view = opts.view ?? visibleRect(ctx);
 
   // 1. Lobes: wedges (cell centre → shore edge) in the neighbour's colour, clipped to the region they change to.
   if (Rpx >= 4) {
@@ -802,17 +803,18 @@ function ribbon(P, p, halfWidth) {
   P.closePath();
 }
 
-export function drawRivers(ctx, w, { s, Rpx, lod, lens = false }) {
+// opts.view: [x0, y0, x1, y1] km to cull rivers and shore strokes to (default, or null: the canvas).
+export function drawRivers(ctx, w, { s, Rpx, lod, lens = false, view }) {
+  view ??= visibleRect(ctx);
   const R = w.grid?.R ?? (Rpx && s ? Rpx / s : 25);
   Rpx = Rpx ?? R * s;
   lod = lod ?? lodFor(Rpx);
   // The shore queued by drawWater() goes first: it must follow the land tiles, and the rivers run over it.
   if (pendingShore && pendingShore.w === w) {
     const q = pendingShore;
-    drawShore(ctx, w, q.cells, { ...q.opts, s, Rpx, lod, lens });
+    drawShore(ctx, w, q.cells, { ...q.opts, s, Rpx, lod, lens, view });
   }
   const rivers = prepRivers(w);
-  const view = visibleRect(ctx);
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
 
@@ -878,10 +880,25 @@ function strokePolyline(ctx, p) {
   ctx.stroke();
 }
 
-/** Stroke flat [x0, y0, x1, y1, ...] segment pairs in one path. */
-export function strokeSegs(ctx, segs, style, width) {
+/** The bounding box of the n/2 points at segs[k..k+n) (one shared array: use it before the next call). */
+const box = [0, 0, 0, 0];
+export function segBox(segs, k, n) {
+  box[0] = box[1] = Infinity;
+  box[2] = box[3] = -Infinity;
+  for (let j = k; j < k + n; j += 2) {
+    if (segs[j] < box[0]) box[0] = segs[j];
+    if (segs[j] > box[2]) box[2] = segs[j];
+    if (segs[j + 1] < box[1]) box[1] = segs[j + 1];
+    if (segs[j + 1] > box[3]) box[3] = segs[j + 1];
+  }
+  return box;
+}
+
+/** Stroke flat [x0, y0, x1, y1, ...] segment pairs in one path; with `view` ([x0, y0, x1, y1]), only those near it. */
+export function strokeSegs(ctx, segs, style, width, view = null) {
   ctx.beginPath();
   for (let k = 0; k < segs.length; k += 4) {
+    if (view && outside(segBox(segs, k, 4), view, width)) continue;
     ctx.moveTo(segs[k], segs[k + 1]);
     ctx.lineTo(segs[k + 2], segs[k + 3]);
   }

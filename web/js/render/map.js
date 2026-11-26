@@ -15,7 +15,7 @@ import { LABEL_FONT, LABEL_SPACING, stateIndex, stateOutline } from "../world.js
 import { drawIcon, hasIcon } from "../icons.js";
 import { drawTerrainGlyphs, GLYPHS_MIN_RPX } from "./art/terrain.js";
 import { drawCityTile, cityTileVisible, cityIsDot, metroSpill } from "./art/city.js";
-import { drawWater, drawRivers, strokeSegs } from "./art/water.js";
+import { drawWater, drawRivers, strokeSegs, outside, segBox } from "./art/water.js";
 import { lodFor } from "./art/lod.js";
 
 export const OCEAN_BG = OCEAN_DEEP_CSS;
@@ -88,6 +88,11 @@ function layerOpts(ctx, vp, w, opts, extra) {
  *                   app.registerStaticLayer in main.js), drawn at their z among the steps below (see Z)
  *   app             handed to the layers as o.app
  *   snapshot        true when drawing a share image (layers see o.snapshot)
+ *   pass = "all"    "base" draws the steps below Z.RESOURCES (and the layers under that z), "top" the rest over an
+ *                   existing base. A base pass followed by a top pass gives the same pixels as "all".
+ *   region          base pass only: {x0, y0, x1, y1} in device px of ctx.canvas. Only that rectangle is painted, with
+ *                   what a full base pass paints there (up to the anti-aliasing noise of a clip), so main.js can
+ *                   repaint its cached map a strip or a band at a time.
  *
  * A layer's draw(ctx, vp, w, o) starts in world units (km; o.screen() / o.world() switch transforms) with ctx saved
  * and restored around it. o = {Rpx, s, dpr, lod, lens, selectedCity, showResources, snapshot, app, cells, range,
@@ -100,7 +105,14 @@ export function drawStatic(ctx, vp, w, opts) {
   const Rpx = R * s;
   const lod = lodFor(Rpx);
   const W = w.raw.width, H = w.raw.height;
-  const { r0, r1, c0, c1 } = grid.range(vp.x0, vp.y0, vp.x1, vp.y1);
+  const pass = opts.pass || "all";
+  const base = pass !== "top", top = pass !== "base";
+  const full = grid.range(vp.x0, vp.y0, vp.x1, vp.y1);
+  const rg = base ? opts.region : null;
+  // A region's rectangle in km, for the steps that cull by the view rather than by cell (rivers, borders).
+  const kmPx = dpr * s; // device px per km
+  const view = rg ? [vp.x0 + rg.x0 / kmPx, vp.y0 + rg.y0 / kmPx, vp.x0 + rg.x1 / kmPx, vp.y0 + rg.y1 / kmPx] : null;
+  const { r0, r1, c0, c1 } = rg ? regionRange(grid, view, full, s) : full;
   const worldT = () => ctx.setTransform(dpr * s, 0, 0, dpr * s, -vp.x0 * dpr * s, -vp.y0 * dpr * s);
 
   const T = opts.timings; // optional {section: ms} for profiling
@@ -112,8 +124,16 @@ export function drawStatic(ctx, vp, w, opts) {
     tMark = t;
   };
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = OCEAN_BG;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (rg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rg.x0, rg.y0, rg.x1 - rg.x0, rg.y1 - rg.y0);
+    ctx.clip();
+  }
+  if (base) {
+    ctx.fillStyle = OCEAN_BG;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
   worldT();
 
   // Visible cells, row by row.
@@ -122,7 +142,8 @@ export function drawStatic(ctx, vp, w, opts) {
 
   // Registered static layers, by z (stable), drawn by upTo(z) before each built-in step.
   const layers = (opts.layers || []).filter((l) => layerActive(l, Rpx)).sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
-  let nextLayer = 0;
+  let nextLayer = base ? 0 : layers.findIndex((l) => (l.z ?? 0) >= Z.RESOURCES);
+  if (nextLayer < 0) nextLayer = layers.length;
   let lo = null;
   const upTo = (z) => {
     while (nextLayer < layers.length && (layers[nextLayer].z ?? 0) < z) {
@@ -140,88 +161,125 @@ export function drawStatic(ctx, vp, w, opts) {
     }
     worldT();
   };
-  upTo(Z.WATER);
 
-  // Corners grown by ~0.7px so neighbouring fills overlap (no seams).
-  const grow = (R + 0.7 / s) / R;
-  const K = grid.corners.map(([x, y]) => [x * grow, y * grow]);
-  const tile = (i) => {
-    const x = grid.cx(i), y = grid.cy(i);
-    ctx.beginPath();
-    ctx.moveTo(x + K[0][0], y + K[0][1]);
-    for (let k = 1; k < 6; k++) ctx.lineTo(x + K[k][0], y + K[k][1]);
-    ctx.fillStyle = w.colors[i];
-    ctx.fill();
-  };
+  if (base) {
+    upTo(Z.WATER);
 
-  // 1. Water tiles, then the water art (texture, per-cell decoration, coast foam).
-  for (const i of cells) if (w.water[i]) tile(i);
-  drawWater(ctx, vp, w, cells, { Rpx, s, lod });
-  lap("water");
-
-  // 2. Land tiles.
-  upTo(Z.LAND);
-  for (const i of cells) if (!w.water[i]) tile(i);
-  lap("land");
-  if (w.dim) drawBandEdge(ctx, w, r0, r1, c0, c1, s);
-
-  // 3. Hex grid lines once hexes are big enough to read.
-  upTo(Z.GRID);
-  if (Rpx > 11) {
-    ctx.beginPath();
-    for (const i of cells) {
-      if (w.water[i]) continue; // open water and lakes read as one surface, without the grid
+    // Corners grown by ~0.7px so neighbouring fills overlap (no seams).
+    const grow = (R + 0.7 / s) / R;
+    const K = grid.corners.map(([x, y]) => [x * grow, y * grow]);
+    const tile = (i) => {
       const x = grid.cx(i), y = grid.cy(i);
-      // Each cell draws its NE, E-side and SE edges (corners 5→0→1→2); together they cover every edge once.
-      ctx.moveTo(x + grid.corners[5][0], y + grid.corners[5][1]);
-      for (const k of [0, 1, 2]) ctx.lineTo(x + grid.corners[k][0], y + grid.corners[k][1]);
+      ctx.beginPath();
+      ctx.moveTo(x + K[0][0], y + K[0][1]);
+      for (let k = 1; k < 6; k++) ctx.lineTo(x + K[k][0], y + K[k][1]);
+      ctx.fillStyle = w.colors[i];
+      ctx.fill();
+    };
+
+    // 1. Water tiles, then the water art (texture, per-cell decoration, coast foam).
+    for (const i of cells) if (w.water[i]) tile(i);
+    drawWater(ctx, vp, w, cells, { Rpx, s, lod });
+    lap("water");
+
+    // 2. Land tiles.
+    upTo(Z.LAND);
+    for (const i of cells) if (!w.water[i]) tile(i);
+    lap("land");
+    if (w.dim) drawBandEdge(ctx, w, r0, r1, c0, c1, s);
+
+    // 3. Hex grid lines once hexes are big enough to read.
+    upTo(Z.GRID);
+    if (Rpx > 11) {
+      ctx.beginPath();
+      for (const i of cells) {
+        if (w.water[i]) continue; // open water and lakes read as one surface, without the grid
+        const x = grid.cx(i), y = grid.cy(i);
+        // Each cell draws its NE, E-side and SE edges (corners 5→0→1→2); together they cover every edge once.
+        ctx.moveTo(x + grid.corners[5][0], y + grid.corners[5][1]);
+        for (const k of [0, 1, 2]) ctx.lineTo(x + grid.corners[k][0], y + grid.corners[k][1]);
+      }
+      ctx.lineJoin = "miter";
+      ctx.lineCap = "butt";
+      ctx.strokeStyle = `rgba(0,0,0,${Math.min(0.14, (Rpx - 11) * 0.012)})`;
+      ctx.lineWidth = 1 / s;
+      ctx.stroke();
     }
-    ctx.lineJoin = "miter";
-    ctx.lineCap = "butt";
-    ctx.strokeStyle = `rgba(0,0,0,${Math.min(0.14, (Rpx - 11) * 0.012)})`;
-    ctx.lineWidth = 1 / s;
-    ctx.stroke();
+
+    // 4. Biome + relief glyphs (terrain view only, readable sizes only).
+    lap("grid");
+    upTo(Z.GLYPHS);
+    if (!opts.lens && Rpx > GLYPHS_MIN_RPX) drawTerrainGlyphs(ctx, cells, w, { Rpx, s, lod });
+    lap("glyphs");
+
+    // 5. Rivers and borders, clipped to the world rectangle.
+    upTo(Z.RIVERS_BORDERS);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.clip();
+    drawRivers(ctx, w, { s, Rpx, lod, lens: !!opts.lens, view });
+    drawBorders(ctx, w, s, Rpx, !!opts.lens, view);
+    ctx.restore();
+
+    // 6. City tiles.
+    lap("rivers+borders");
+    upTo(Z.CITIES);
+    drawCityTiles(ctx, w, Rpx, s, lod, opts.selectedCity || null, vp);
+    lap("cities");
+
+    // 7. Sea mist around the edges of the known world.
+    upTo(Z.FOG);
+    if (opts.edgeFog !== false) drawEdgeFog(ctx, vp, W, H);
+    lap("fog");
+    upTo(Z.RESOURCES);
   }
+  if (rg) ctx.restore();
 
-  // 4. Biome + relief glyphs (terrain view only, readable sizes only).
-  lap("grid");
-  upTo(Z.GLYPHS);
-  if (!opts.lens && Rpx > GLYPHS_MIN_RPX) drawTerrainGlyphs(ctx, cells, w, { Rpx, s, lod });
-  lap("glyphs");
-
-  // 5. Rivers and borders, clipped to the world rectangle.
-  upTo(Z.RIVERS_BORDERS);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, W, H);
-  ctx.clip();
-  drawRivers(ctx, w, { s, Rpx, lod, lens: !!opts.lens });
-  drawBorders(ctx, w, s, Rpx, !!opts.lens);
-  ctx.restore();
-
-  // 6. City tiles.
-  lap("rivers+borders");
-  upTo(Z.CITIES);
-  drawCityTiles(ctx, w, Rpx, s, lod, opts.selectedCity || null, vp);
-  lap("cities");
-
-  // 7. Sea mist around the edges of the known world.
-  upTo(Z.FOG);
-  if (opts.edgeFog !== false) drawEdgeFog(ctx, vp, W, H);
-  lap("fog");
-
-  // 8. Screen-space bits: resources, then the big state names.
-  upTo(Z.RESOURCES);
+  if (top) {
+    // 8. Screen-space bits: resources, then the big state names. They declutter against everything in the view, so
+    // they are always drawn over the whole canvas. The layers under Z.RESOURCES went with the base steps.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const placed = opts.showResources && w.resources ? drawResources(ctx, vp, w, full.r0, full.r1, full.c0, full.c1, Rpx, opts.resourceFilter) : [];
+    if (opts.hits) opts.hits.resources = placed;
+    lap("resources");
+    upTo(Z.LABELS);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (opts.labels !== false) drawStateLabels(ctx, vp, w, Rpx);
+    lap("labels");
+    upTo(Infinity);
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const placed = opts.showResources && w.resources ? drawResources(ctx, vp, w, r0, r1, c0, c1, Rpx, opts.resourceFilter) : [];
-  if (opts.hits) opts.hits.resources = placed;
-  lap("resources");
-  upTo(Z.LABELS);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (opts.labels !== false) drawStateLabels(ctx, vp, w, Rpx);
-  lap("labels");
-  upTo(Infinity);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// Cells a base pass over a region (`view`, km) must draw: those whose art can reach it, and only those a full pass
+// draws, so the region gets exactly the pixels of a full render.
+function regionRange(grid, view, full, s) {
+  const pad = regionPad(grid, s);
+  const r = grid.range(view[0] - pad, view[1] - pad, view[2] + pad, view[3] + pad);
+  return {
+    r0: Math.max(r.r0, full.r0), r1: Math.min(r.r1, full.r1), c0: Math.max(r.c0, full.c0), c1: Math.min(r.c1, full.c1),
+  };
+}
+
+/** How far (km) a cell's base art can reach beyond its hex: a city tile's skyline 3R, a few css px more when small. */
+export const regionPad = (grid, s) => Math.max(3 * grid.R, 24 / s);
+
+/**
+ * The device-px rectangles of a W×H cache to repaint after shifting it by (dx, dy) device px (the new cache starts dx
+ * to the right of and dy below the old one): the strips that came into view, widened by `pad` into the old part,
+ * whose edge lacks the art of the cells beyond it. null when a full render is no dearer (nothing would be kept).
+ */
+export function shiftRegions(W, H, dx, dy, pad) {
+  const ax = dx ? Math.abs(dx) + pad : 0, ay = dy ? Math.abs(dy) + pad : 0;
+  if (ax >= W || ay >= H) return null;
+  const out = [];
+  // Columns over the whole height, then rows over what the columns left.
+  const cx0 = dx > 0 ? W - ax : 0, cx1 = dx > 0 ? W : ax;
+  if (ax) out.push({ x0: cx0, y0: 0, x1: cx1, y1: H });
+  const rx0 = dx > 0 ? 0 : ax, rx1 = dx > 0 ? W - ax : W;
+  if (ay) out.push({ x0: rx0, y0: dy > 0 ? H - ay : 0, x1: rx1, y1: dy > 0 ? H : ay });
+  return out;
 }
 
 function drawCityTiles(ctx, w, Rpx, s, lod, selectedCity, vp) {
@@ -319,11 +377,13 @@ function drawEdgeFog(ctx, vp, W, H) {
 }
 
 
-function drawBorders(ctx, w, s, Rpx, lens) {
+// view: [x0, y0, x1, y1] km to cull to (a drawStatic region), or null for everything.
+function drawBorders(ctx, w, s, Rpx, lens, view) {
   // Inner colour band per state (Civ-style), then the edge lines.
   for (const [st, segs] of w.bands) {
     ctx.beginPath();
     for (let k = 0; k < segs.length; k += 8) {
+      if (view && outside(segBox(segs, k, 8), view, 0)) continue;
       ctx.moveTo(segs[k], segs[k + 1]);
       ctx.lineTo(segs[k + 2], segs[k + 3]);
       ctx.lineTo(segs[k + 6], segs[k + 7]);
@@ -335,9 +395,9 @@ function drawBorders(ctx, w, s, Rpx, lens) {
   }
   // The smoothed shore (render/art/water.js drawShore) draws the waterline; a stroke along the hex edges here would
   // bring the hex staircase back, so it is only drawn when hexes are too small for the shore pass's lobes.
-  if (Rpx < 4) strokeSegs(ctx, w.coastLines, "rgba(240,226,180,.5)", 1.1 / s);
-  strokeSegs(ctx, w.stateLines, "rgba(15,10,5,.55)", Math.max(0.8, Math.min(2, Rpx * 0.08)) / s);
-  strokeSegs(ctx, w.nationLines, "rgba(255,232,160,.85)", Math.max(1.2, Math.min(3, Rpx * 0.12)) / s);
+  if (Rpx < 4) strokeSegs(ctx, w.coastLines, "rgba(240,226,180,.5)", 1.1 / s, view);
+  strokeSegs(ctx, w.stateLines, "rgba(15,10,5,.55)", Math.max(0.8, Math.min(2, Rpx * 0.08)) / s, view);
+  strokeSegs(ctx, w.nationLines, "rgba(255,232,160,.85)", Math.max(1.2, Math.min(3, Rpx * 0.12)) / s, view);
 }
 
 
