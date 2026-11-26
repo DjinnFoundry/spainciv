@@ -1,7 +1,8 @@
 // The country the loaded data describes: world.json `country` (pipeline/countries), with the original usaciv values
 // for data that predates the block, and the page's own settings on top (<script id="country-page">, written by
-// pipeline/site.py when the site is served or packaged: site_url, data_credit, notices). main.js calls
-// setCountry(world) once; everything else reads country().
+// pipeline/site.py when the site is served or packaged: lang, site_url, data_credit, notices). The page's settings
+// apply from the start, so the interface language is known before the data loads; main.js calls setCountry(world)
+// once; everything else reads country().
 
 const US = {
   id: "us", name: "United States", product: "usaciv", site_url: "karpathy.ai/usaciv", lang: "en", locale: "en-US",
@@ -9,8 +10,6 @@ const US = {
   levels: { region: { one: "State", many: "States" }, unit: { one: "County", many: "Counties" }, metro: { one: "Metro", many: "Metros" } },
   data_credit: "Data: Census ACS, BEA, NOAA, USGS/MRLC, EIA, Natural Earth", notices: [],
 };
-
-let current = US;
 
 function pageSettings(doc) {
   try {
@@ -20,6 +19,8 @@ function pageSettings(doc) {
     return {};
   }
 }
+
+let current = { ...US, ...pageSettings(globalThis.document) };
 
 export function setCountry(world, doc = globalThis.document) {
   current = { ...US, ...(world && world.country), ...pageSettings(doc) };

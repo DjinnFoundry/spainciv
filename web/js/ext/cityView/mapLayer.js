@@ -4,6 +4,7 @@
 // city's own (see drawMarks). Share images get both (snapshot: true).
 import { drawIcon, hasIcon } from "../../icons.js";
 import { compact } from "./fmt.js";
+import { fixed, pct } from "../../format.js";
 import { css } from "../../color.js";
 import { LAND, resourceValue } from "./model.js";
 
@@ -187,7 +188,7 @@ export function createMapLayer(app, { focusRect = () => null } = {}) {
       let txt = "", tw = 0;
       if (label) {
         ctx.font = `600 ${Math.round(Math.min(11, Math.max(9, r * 0.32)))}px ${SANS}`;
-        txt = `${clip(d.short || "", 18)}${d.lq != null ? ` ×${d.lq.toFixed(1)}` : ""}`;
+        txt = `${clip(d.short || "", 18)}${d.lq != null ? ` ×${fixed(d.lq, 1)}` : ""}`;
         tw = ctx.measureText(txt).width + 10;
       }
       const rect = label
@@ -245,7 +246,7 @@ export function createMapLayer(app, { focusRect = () => null } = {}) {
     const plaqueRects = plaques.map(([d, sx, sy, r, label]) => {
       if (!label) return { x: sx - r, y: sy - r, w: 2 * r, h: 2 * r };
       ctx.font = `600 ${Math.round(Math.min(11, Math.max(9, r * 0.32)))}px ${SANS}`;
-      const tw = ctx.measureText(`${clip(d.short || "", 18)}${d.lq != null ? ` ×${d.lq.toFixed(1)}` : ""}`).width + 10;
+      const tw = ctx.measureText(`${clip(d.short || "", 18)}${d.lq != null ? ` ×${fixed(d.lq, 1)}` : ""}`).width + 10;
       return { x: Math.min(sx - r, sx - tw / 2), y: sy - r, w: Math.max(2 * r, tw), h: r * 0.98 + 7 + r };
     });
 
@@ -323,7 +324,7 @@ export function createMapLayer(app, { focusRect = () => null } = {}) {
     const h = full ? 16 : 13;
     ctx.font = `600 ${full ? 10 : 9}px ${SANS}`;
     const resTxt = t.residents != null ? `≈${compact(t.residents)}` : "–";
-    const landTxt = t.land && full ? `${Math.round(t.land.share * 100)}%` : "";
+    const landTxt = t.land && full ? pct(t.land.share, 0) : "";
     const ic = h - 4;
     const wRes = ic + 2 + ctx.measureText(resTxt).width;
     const wLand = t.land ? ic + (landTxt ? 2 + ctx.measureText(landTxt).width : 0) : 0;
@@ -335,7 +336,7 @@ export function createMapLayer(app, { focusRect = () => null } = {}) {
     const fs = full ? 10 : 9;
     ctx.font = `600 ${fs}px ${SANS}`;
     const resTxt = t.residents != null ? `≈${compact(t.residents)}` : "–";
-    const landTxt = t.land && full ? `${Math.round(t.land.share * 100)}%` : "";
+    const landTxt = t.land && full ? pct(t.land.share, 0) : "";
     const ic = h - 4;
     const wRes = ic + 2 + ctx.measureText(resTxt).width;
     const wLand = t.land ? ic + (landTxt ? 2 + ctx.measureText(landTxt).width : 0) : 0;

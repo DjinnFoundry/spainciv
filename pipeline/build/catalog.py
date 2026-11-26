@@ -8,6 +8,10 @@ from ..core.fetch import read_manifest
 from ..core.store import load_interim_payload, write_web
 from ..countries import active
 from ..sources import sources_for
+from . import texts_es
+
+# A country whose interface is not in English gives its sources' Almanac texts in its language (by source id).
+LOCAL = {"es": texts_es.source}
 
 REQUIRES: list[str] = []
 PRODUCES = ["sources.json"]
@@ -32,5 +36,6 @@ def build() -> None:
             for m in [manifest[name]]
         ]
         vintage = payload.get("vintage")
-        out.append({**s.info.to_dict(), "vintage": vintage, "files": files})
+        entry = {**s.info.to_dict(), "vintage": vintage, "files": files}
+        out.append(LOCAL.get(active().id, lambda e: e)(entry))
     write_web("sources.json", out)

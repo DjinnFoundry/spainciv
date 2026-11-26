@@ -6,6 +6,7 @@ import { createTable } from "../core/table.js";
 import { section, tiles, chips, sourcesHtml } from "../core/view.js";
 import { frameBox, focusPoint } from "../core/frame.js";
 import { glyph } from "../../../ui/icon.js";
+import { t } from "../../../i18n.js";
 
 const GROUPS = [
   { id: "thermal", label: "Power plants", types: ["nuclear", "coal_plant", "gas_plant", "oil_plant", "geothermal"] },
@@ -19,7 +20,7 @@ export function mount(ctx) {
   const { app, data, el, link } = ctx;
   const res = app.data.resources;
   if (!res) {
-    el.innerHTML = `<p class="adv-empty pad">resources.json is not built, so there is nothing to show here.</p>`;
+    el.innerHTML = `<p class="adv-empty pad">${t("adv.energy.none")}</p>`;
     return {};
   }
   const types = res.types;

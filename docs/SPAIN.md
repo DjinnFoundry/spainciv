@@ -7,6 +7,16 @@ the other is in `pipeline/countries/` (projection, hex size, levels, currency, o
 
 Decisions (and why) are in `DECISIONS.md`, what is missing in `ROADMAP.md`, what changed in `CHANGELOG.md`.
 
+## Language
+
+The interface follows the country's `lang` (`es`): its strings are in `web/js/i18n/<lang>/*.js` (`t(key)` in
+`web/js/i18n.js`, English as the fallback) and its numbers in `country.locale` (`web/js/format.js`: "1,6 M", "35.000 €",
+"12,3 %"). Spain's builders write their texts in Spanish: the Spain-only catalogs where they are defined, and the tables
+shared with the US builders (yield names, lens groups, land lenses, world.json tables, badge texts, the Almanac's source
+entries and vintages) from `pipeline/build/texts_es.py`, so the US output stays in English and unchanged. A new string
+in the interface goes into every language's table (`tests/test_i18n.py` checks it); a new Spanish source gets its
+Almanac entry in `texts_es.SOURCES`.
+
 ## Sources
 
 | Source id | Publisher | Licence | Used for |

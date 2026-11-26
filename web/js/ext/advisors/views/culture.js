@@ -1,19 +1,32 @@
 // Culture advisor ("Keeper of Wonders"): wonders by published rule (wonders.json), the Faith and Amenities lenses with
 // their caveats (counties.json columns), and disasters (disasters.json: FEMA declarations, NOAA billion-dollar events).
 import { esc, fin, el as mk, colorScale } from "../core/util.js";
-import { int, pct, money, count3 } from "../core/fmt.js";
+import { int, pct, money, count3, fixed } from "../core/fmt.js";
 import { barList, shareBar, histogram } from "../core/charts.js";
 import { createTable } from "../core/table.js";
 import { section, tiles, segmented, mapPicker, sourcesHtml } from "../core/view.js";
 import { rowsHighlight } from "../core/data.js";
 import { frameBox, focusPoint } from "../core/frame.js";
+import { t } from "../../../i18n.js";
 
+// Labels are read when shown (i18n: the language is known once the data has loaded).
 const KIND = {
-  natural: { label: "Nature", color: "#6aa84f" },
-  university: { label: "Universities", color: "#4a86d6" },
-  landmark: { label: "Landmarks", color: "#e0b54c" },
+  natural: { get label() { return t("adv.cult.kind.natural"); }, color: "#6aa84f" },
+  university: { get label() { return t("adv.cult.kind.university"); }, color: "#4a86d6" },
+  landmark: { get label() { return t("adv.cult.kind.landmark"); }, color: "#e0b54c" },
 };
-const RULE_TITLE = { national_park: "National parks", park_unit: "Other park units", research_university: "Research universities", great_university: "Great universities", landmark: "Landmarks" };
+const RULE_TITLE = {
+  national_park: "adv.cult.rule.national_park", park_unit: "adv.cult.rule.park_unit", research_university: "adv.cult.rule.research_university",
+  landmark: "adv.cult.rule.landmark", world_heritage: "adv.cult.rule.world_heritage", cathedral: "adv.cult.rule.cathedral",
+  great_university: "adv.cult.rule.great_university",
+};
+const ruleTitle = (id) => (RULE_TITLE[id] ? t(RULE_TITLE[id]) : null);
+// The headline's count of wonders per rule, for wonder sets other than the original parks / universities / landmarks.
+const RULE_COUNT = {
+  world_heritage: "adv.cult.count.world_heritage", national_park: "adv.cult.count.national_park",
+  great_university: "adv.cult.count.great_university", cathedral: "adv.cult.count.cathedral",
+};
+const ORIGINAL_RULES = new Set(["national_park", "park_unit", "research_university", "landmark"]);
 const DIS_COLOR = { hurricane: "#4f9ad6", flood: "#2fa4b8", fire: "#e8774a", severe_storm: "#9a7bc9", winter: "#c9dcef", other: "#9a9aa8" };
 
 export async function mount(ctx) {
@@ -37,13 +50,21 @@ export async function mount(ctx) {
   el.appendChild(tileEl);
   const drawTiles = (dis) => {
     tileEl.innerHTML = tiles([
-      { label: "Wonders", value: int(wonders.length), sub: (() => { const byRule = (...ids) => wonders.filter((w) => ids.includes(w.rule)).length; return `${byRule("national_park", "park_unit")} park units · ${byRule("research_university", "great_university")} universities · ${byRule("landmark")} landmarks`; })() },
-      { label: "Park visits", value: count3(won?.national?.park_visits), sub: `all NPS units, ${won?.national?.park_visits_year || ""}` },
-      dis?.noaa?.national
-        ? { label: "$1B+ disasters", value: int(dis.noaa.national.events), sub: `${dis.noaa.years?.join("–") || ""} · ${money(dis.noaa.national.cost_usd)}` }
-        : { label: "Adherents ≈", value: fin(adherents) ? `${adherents.toFixed(0)} / 100` : "–", sub: "residents, 2020 congregations" },
+      { label: t("adv.cult.wonders"), value: int(wonders.length), sub: wondersSub() },
+      ...(fin(won?.national?.park_visits) ? [{ label: t("adv.cult.parkVisits"), value: count3(won.national.park_visits), sub: t("adv.cult.parkVisitsSub", { year: won.national.park_visits_year || "" }) }] : []),
+      ...(dis?.noaa?.national
+        ? [{ label: t("adv.cult.billion"), value: int(dis.noaa.national.events), sub: `${dis.noaa.years?.join("–") || ""} · ${money(dis.noaa.national.cost_usd)}` }]
+        : counties ? [{ label: t("adv.cult.adherents"), value: fin(adherents) ? t("adv.cult.per100", { v: fixed(adherents, 0) }) : "–", sub: t("adv.cult.adherentsSub") }] : []),
     ]);
   };
+  function wondersSub() {
+    const byRule = (...ids) => wonders.filter((w) => ids.includes(w.rule)).length;
+    const rules = (won?.rules || []).map((r) => r.id);
+    if (rules.every((id) => ORIGINAL_RULES.has(id))) {
+      return t("adv.cult.wondersSub", { parks: byRule("national_park", "park_unit"), unis: byRule("research_university"), landmarks: byRule("landmark") });
+    }
+    return rules.map((id) => (RULE_COUNT[id] ? t(RULE_COUNT[id], { n: int(byRule(id)) }) : `${int(byRule(id))} ${id}`)).join(" · ");
+  }
   drawTiles(null);
 
   // --- map colour -----------------------------------------------------------------------------------------------
@@ -52,11 +73,11 @@ export async function mount(ctx) {
   const picker = mapPicker(ctx, mapRow, {
     value: "terrain",
     options: [
-      { value: "terrain", label: "Terrain", lens: () => null },
-      ...(lensFaith ? [{ value: "faith", label: "Faith", lens: () => "faith" }] : []),
-      ...(lensTrad ? [{ value: "trad", label: "Tradition", lens: () => "faith_tradition" }] : []),
-      ...(lensAmen ? [{ value: "amen", label: "Amenities", lens: () => "amenities" }] : []),
-      ...(lensDis ? [{ value: "dis", label: "Disasters", lens: () => "disasters" }] : []),
+      { value: "terrain", label: t("adv.terrain"), lens: () => null },
+      ...(lensFaith ? [{ value: "faith", label: t("adv.cult.faith"), lens: () => "faith" }] : []),
+      ...(lensTrad ? [{ value: "trad", label: t("adv.cult.tradition"), lens: () => "faith_tradition" }] : []),
+      ...(lensAmen ? [{ value: "amen", label: t("adv.cult.amenities"), lens: () => "amenities" }] : []),
+      ...(lensDis ? [{ value: "dis", label: t("adv.cult.disasters"), lens: () => "disasters" }] : []),
     ],
   });
 
@@ -64,16 +85,16 @@ export async function mount(ctx) {
   let wonderBars = [];
   const bubbles = ctx.bubbles("wonders", {
     rMax: 9, minR: 9, alpha: 0.28,
-    tip: (b) => `<b>${esc(b.it.name)}</b><br>${esc(RULE_TITLE[b.it.rule] || b.it.kind)} #${b.it.rank} · ${esc(metricText(b.it))}${b.it.curated ? `<br><span class="sub">hand-picked, not ranked by data</span>` : ""}`,
+    tip: (b) => `<b>${esc(b.it.name)}</b><br>${esc(ruleTitle(b.it.rule) || b.it.kind)} #${b.it.rank} · ${esc(metricText(b.it))}${b.it.curated ? `<br><span class="sub">${t("adv.cult.handPicked")}</span>` : ""}`,
     onHover: (b) => { for (const w of wonderBars) w.setHot(b ? b.key : null); },
     onClick: (b) => flyTo(b.it),
   });
   if (won && wonders.length) {
-    const wBody = section(el, { title: "Wonders", kicker: "Each chosen by a published rule", note: "Hover a wonder to find it on the map; click to fly there. Parks are ranked by recreation visits, universities by research spending; landmarks are a hand-picked list." });
+    const wBody = section(el, { title: t("adv.cult.wonders"), kicker: t("adv.cult.kicker"), note: t("adv.cult.note") });
     let kind = "all";
     segmented(wBody, {
-      label: "Kind", value: kind,
-      options: [{ value: "all", label: "All" }, ...Object.entries(KIND).filter(([k]) => byKind(k)).map(([k, v]) => ({ value: k, label: v.label }))],
+      label: t("adv.cult.kind"), value: kind,
+      options: [{ value: "all", label: t("adv.all") }, ...Object.entries(KIND).filter(([k]) => byKind(k)).map(([k, v]) => ({ value: k, label: v.label }))],
       onChange: (v) => { kind = v; drawWonders(); },
     });
     const wHost = mk("div");
@@ -85,12 +106,12 @@ export async function mount(ctx) {
       for (const rule of won.rules || []) {
         const list = vis.filter((w) => w.rule === rule.id);
         if (!list.length) continue;
-        wHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${esc(RULE_TITLE[rule.id] || rule.id)}</h4><p class="adv-note adv-rule">${esc(rule.text)}</p>`);
+        wHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${esc(ruleTitle(rule.id) || rule.id)}</h4><p class="adv-note adv-rule">${esc(rule.text)}</p>`);
         const host = mk("div");
         wHost.appendChild(host);
         const val = (w) => (w.kind === "university" ? w.metrics?.rd_usd ?? w.metrics?.students : w.kind === "natural" ? w.metrics?.visits : null);
         wonderBars.push(barList(host, {
-          rank: !rule.curated, compact: true, ariaLabel: RULE_TITLE[rule.id] || rule.id,
+          rank: !rule.curated, compact: true, ariaLabel: ruleTitle(rule.id) || rule.id,
           rows: list.map((w) => ({ key: w.key, label: w.short || w.name, full: w.name, sub: w.state, value: val(w), text: metricText(w), color: KIND[w.kind]?.color })),
           onHover: (r) => {
             const w = r ? wonders.find((x) => x.key === r.key) : null;
@@ -103,8 +124,8 @@ export async function mount(ctx) {
       bubbles.set(vis.filter((w) => fin(w.x) && fin(w.y)).map((w) => ({ key: w.key, x: w.x, y: w.y, value: 1, color: KIND[w.kind]?.color || "#ccc", it: w })), { vMax: 1 });
     }
     drawWonders();
-    wBody.insertAdjacentHTML("beforeend", `<p class="adv-note">Map markers: <i class="dot" style="background:${KIND.natural.color}"></i>natural · <i class="dot" style="background:${KIND.university.color}"></i>university · <i class="dot" style="background:${KIND.landmark.color}"></i>landmark.</p>`);
-  } else el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">wonders.json is not built.</p>`);
+    wBody.insertAdjacentHTML("beforeend", `<p class="adv-note">${t("adv.cult.markers", { natural: KIND.natural.color, university: KIND.university.color, landmark: KIND.landmark.color })}</p>`);
+  } else el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">${t("adv.cult.noWonders")}</p>`);
   function flyTo(w) {
     if (!w) return;
     if (w.cells && w.cells.length > 2) {
@@ -186,18 +207,18 @@ export async function mount(ctx) {
   }
 
   // --- disasters (lazy) -----------------------------------------------------------------------------------------
-  const dSec = section(el, { title: "Disasters", kicker: "FEMA declarations · NOAA billion-dollar events" });
-  dSec.innerHTML = `<p class="adv-loading">Reading the disaster records…</p>`;
+  const dSec = section(el, { title: t("adv.cult.disasters"), kicker: lensDis ? t("adv.cult.disKicker") : "" });
+  dSec.innerHTML = `<p class="adv-loading">${t("adv.cult.disLoading")}</p>`;
   const srcEl = mk("div");
   el.appendChild(srcEl);
   const drawSources = (dis) => {
     srcEl.innerHTML = sourcesHtml(data, [...(won?.sources || []), "usrc_2020", "cdc_places", ...(dis?.sources || ["fema_declarations", "noaa_billions"])], [
-      `Faith: ${esc(lensFaith?.note || "counts adherents of congregations where they worship, not residents' beliefs.")}`,
-      `Amenities: ${esc(lensAmen?.note || "model-based estimates, not a happiness survey.")}`,
-      "A FEMA declaration is an administrative act that unlocks federal aid, not a measure of damage; Connecticut's planning regions count a disaster declared for any old county they overlap, which can overstate them.",
-      "NOAA billion-dollar events span several states: a state's cost is its share of the events that touched it, and state figures must not be added up.",
-      "Park visits are counted differently by unit type, so parks are ranked only within their own rule. Landmarks are an editorial choice.",
-      "University R&D includes medical schools; a few universities report together with their medical centre.",
+      // Each caveat only where its data is on this map (the US map has them all).
+      ...(lensFaith ? [t("adv.cult.c.faith", { note: esc(lensFaith.note || t("adv.cult.c.faithDefault")) })] : []),
+      ...(lensAmen ? [t("adv.cult.c.amen", { note: esc(lensAmen.note || t("adv.cult.c.amenDefault")) })] : []),
+      ...(lensDis ? [t("adv.cult.c.fema"), t("adv.cult.c.noaa")] : []),
+      ...(fin(won?.national?.park_visits) ? [t("adv.cult.c.parks")] : []),
+      ...(wonders.some((w) => w.kind === "university") ? [t("adv.cult.c.unis")] : []),
     ]);
   };
   drawSources(null);
@@ -205,7 +226,7 @@ export async function mount(ctx) {
   // The disaster records arrive after the rest of the dashboard is up (the view may be gone by then).
   disastersP.then((dis) => {
     if (!active()) return;
-    if (!dis) dSec.innerHTML = `<p class="adv-empty">disasters.json is not built.</p>`;
+    if (!dis) dSec.innerHTML = `<p class="adv-empty">${t("adv.cult.noDisasters")}</p>`;
     else drawDisasters(dis);
     drawTiles(dis);
     drawSources(dis);
@@ -342,10 +363,12 @@ export async function mount(ctx) {
 
 function metricText(w) {
   const m = w.metrics || {};
-  if (w.kind === "university") return fin(m.rd_usd) ? `${money(m.rd_usd)} R&D` : fin(m.students) ? `${count3(m.students)} students` : "–";
-  if (w.kind === "natural") return fin(m.visits) ? `${count3(m.visits)} visits` : "–";
-  if (fin(m.visits)) return `${count3(m.visits)} visits`;
-  return fin(m.designated) ? `landmark since ${m.designated}` : "landmark";
+  if (w.kind === "university") {
+    return fin(m.rd_usd) ? t("adv.cult.rd", { v: money(m.rd_usd) }) : fin(m.students) ? t("adv.cult.students", { v: count3(m.students) }) : "–";
+  }
+  if (w.kind === "natural") return fin(m.visits) ? t("adv.cult.visits", { v: count3(m.visits) }) : "–";
+  if (fin(m.visits)) return t("adv.cult.visits", { v: count3(m.visits) });
+  return fin(m.designated) ? t("adv.cult.landmarkSince", { year: m.designated }) : t("adv.cult.landmarkWord");
 }
 
 const titleCase = (s) => String(s || "").toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase()).replace(/\b(And|Of|The|In)\b/g, (w) => w.toLowerCase());

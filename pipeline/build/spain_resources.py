@@ -12,7 +12,8 @@ import re
 from collections import defaultdict
 
 from ..core.store import load_interim, load_interim_payload, load_web, write_web
-from .resources import Placer, _cluster_name, _fmt, _n, _settle, _t, _tidy, summarize
+from .resources import Placer, _cluster_name, _settle, _t, _tidy, summarize
+from .texts_es import num
 
 REQUIRES = ["_world", "power_plants_es", "cities.json", "world.json"]
 PRODUCES = ["resources.json"]
@@ -22,35 +23,36 @@ PLANT_MIN = {"hydro": 200, "pumped_storage": 400, "coal": 500, "gas": 750, "oil"
 CLUSTER_MIN = {"wind": 150, "solar": 150, "battery": 50}
 OFFSHORE_RINGS = 3
 SRC = "power_plants_es"
-PER_HEX = "Plants of this type in one hex are summed and shown as one site."
-SUMMARY_NOTE = ("Totals of the mapped sites only: each type has a size threshold (see its description), so these are "
-                "not a province's or Spain's full capacity.")
+PER_HEX = "Las centrales de este tipo en un mismo hexágono se suman y se muestran como un solo sitio."
+SUMMARY_NOTE = ("Totales de los sitios del mapa: cada tipo tiene un umbral de tamaño (ver su descripción), así que no son "
+                "la potencia total de una provincia ni de España.")
 UNIT = re.compile(r"\s+(\d+|[IVX]+|Phase)$")  # 'Almaraz 1' and 'Almaraz 2' are units of 'Almaraz'
 TYPE_OF = {"coal": "coal_plant", "gas": "gas_plant", "oil": "oil_plant"}
 
 TYPES = [
-    _t("nuclear", "Nuclear plant", "energy", "☢️", "#e8d44d", "MW",
-       "Every nuclear power plant in service (powerplantmatching): Almaraz, Ascó, Cofrentes, Vandellós and Trillo. "
-       "Value is the plant's capacity; retired plants (Garoña, Zorita, Vandellós I) are not shown.", SRC),
-    _t("hydro", "Hydroelectric dam", "energy", "💧", "#3fa7d6", "MW",
-       f"Hydro plants (reservoir or run-of-river) of at least {PLANT_MIN['hydro']} MW. {PER_HEX}", SRC),
-    _t("coal_plant", "Coal power plant", "energy", "🏭", "#5a5a5a", "MW",
-       f"Coal plants of at least {PLANT_MIN['coal']} MW not yet retired in powerplantmatching. {PER_HEX}", SRC),
-    _t("gas_plant", "Gas power plant", "energy", "⚡", "#f08a24", "MW",
-       f"Gas plants (mostly combined cycle) of at least {PLANT_MIN['gas']} MW. {PER_HEX}", SRC),
-    {**_t("oil_plant", "Oil-fired power plant", "energy", "🛢️", "#3a2f2a", "MW",
-          f"Fuel-oil and diesel plants of at least {PLANT_MIN['oil']} MW: the island grids (Canary Islands from "
-          f"OpenStreetMap, the Balearics, Ceuta and Melilla). {PER_HEX}", SRC), "icon": "r-oil"},
-    _t("pumped_storage", "Pumped-storage hydro", "energy", "🔄", "#2f7fb8", "MW",
-       f"Pumped-storage plants of at least {PLANT_MIN['pumped_storage']} MW: grid batteries made of two reservoirs. "
+    _t("nuclear", "Central nuclear", "energy", "☢️", "#e8d44d", "MW",
+       "Todas las centrales nucleares en servicio (powerplantmatching): Almaraz, Ascó, Cofrentes, Vandellós y Trillo. "
+       "El valor es la potencia de la central; las cerradas (Garoña, Zorita, Vandellós I) no salen.", SRC),
+    _t("hydro", "Central hidroeléctrica", "energy", "💧", "#3fa7d6", "MW",
+       f"Centrales hidráulicas (de embalse o fluyentes) de {PLANT_MIN['hydro']} MW o más. {PER_HEX}", SRC),
+    _t("coal_plant", "Central de carbón", "energy", "🏭", "#5a5a5a", "MW",
+       f"Centrales de carbón de {PLANT_MIN['coal']} MW o más que powerplantmatching aún no da por cerradas. {PER_HEX}",
+       SRC),
+    _t("gas_plant", "Central de gas", "energy", "⚡", "#f08a24", "MW",
+       f"Centrales de gas (sobre todo ciclos combinados) de {PLANT_MIN['gas']} MW o más. {PER_HEX}", SRC),
+    {**_t("oil_plant", "Central de fuel", "energy", "🛢️", "#3a2f2a", "MW",
+          f"Centrales de fuel y diésel de {PLANT_MIN['oil']} MW o más: los sistemas eléctricos insulares (Canarias, "
+          f"según OpenStreetMap; Baleares, Ceuta y Melilla). {PER_HEX}", SRC), "icon": "r-oil"},
+    _t("pumped_storage", "Central de bombeo", "energy", "🔄", "#2f7fb8", "MW",
+       f"Centrales de bombeo de {PLANT_MIN['pumped_storage']} MW o más: baterías de la red hechas con dos embalses. "
        f"{PER_HEX}", SRC),
-    _t("wind", "Wind farms", "energy", "🌬️", "#9fd8cb", "MW",
-       f"Wind capacity, shown where a hex totals at least {CLUSTER_MIN['wind']} MW. {PER_HEX}", SRC),
-    _t("solar", "Solar farms", "energy", "☀️", "#ffc93c", "MW",
-       f"Solar capacity (photovoltaic and solar thermal), shown where a hex totals at least {CLUSTER_MIN['solar']} MW "
-       f"(rooftop solar is not included). {PER_HEX}", SRC),
-    _t("battery", "Battery storage", "energy", "🔋", "#7bc96f", "MW",
-       f"Battery-storage capacity, shown where a hex totals at least {CLUSTER_MIN['battery']} MW. {PER_HEX}", SRC),
+    _t("wind", "Parques eólicos", "energy", "🌬️", "#9fd8cb", "MW",
+       f"Potencia eólica, donde un hexágono suma {CLUSTER_MIN['wind']} MW o más. {PER_HEX}", SRC),
+    _t("solar", "Plantas solares", "energy", "☀️", "#ffc93c", "MW",
+       f"Potencia solar (fotovoltaica y termosolar), donde un hexágono suma {CLUSTER_MIN['solar']} MW o más (sin el "
+       f"autoconsumo en tejados). {PER_HEX}", SRC),
+    _t("battery", "Baterías", "energy", "🔋", "#7bc96f", "MW",
+       f"Almacenamiento en baterías, donde un hexágono suma {CLUSTER_MIN['battery']} MW o más. {PER_HEX}", SRC),
 ]
 RANK = {t["id"]: i for i, t in enumerate(TYPES)}
 
@@ -72,16 +74,16 @@ def site(type_id: str, group: list[tuple[dict, float, float]], cell: int) -> dic
     x = sum(gx * p["mw"] for p, gx, _ in group) / mw
     y = sum(gy * p["mw"] for p, _, gy in group) / mw
     years = sorted(p["year"] for p, _, _ in group if p["year"])
-    online = "" if not years else f", online {years[0]}" + (f"–{years[-1]}" if years[-1] != years[0] else "")
+    online = "" if not years else f", en servicio desde {years[0]}" + (f"–{years[-1]}" if years[-1] != years[0] else "")
     if len(group) == 1:
-        name, detail = lead["name"], f"{_fmt(mw)} MW{online}"
+        name, detail = lead["name"], f"{num(mw)} MW{online}"
     else:
         bases = {UNIT.sub("", p["name"]) for p, _, _ in group}
         name = (bases.pop() if len(bases) == 1 else None) \
             or _cluster_name([(p["name"], p["mw"]) for p, _, _ in group]) or f"{_tidy(lead['name'])} (+{len(group) - 1})"
-        detail = f"{_n(len(group), 'plant')} incl. {lead['name']} ({_fmt(lead['mw'])} MW){online}"
+        detail = f"{len(group)} centrales, entre ellas {lead['name']} ({num(lead['mw'])} MW){online}"
     if any(p["offshore"] for p, _, _ in group):
-        detail += "; offshore, shown on the nearest coast hex"
+        detail += "; marina, en el hexágono de costa más cercano"
     if any(p["source"] == "osm" for p, _, _ in group):
         detail += "; OpenStreetMap"
     return {"type": type_id, "name": _tidy(name), "x": x, "y": y, "cell": cell, "value": round(mw), "detail": detail}

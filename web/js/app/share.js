@@ -2,6 +2,7 @@
 import { drawIcon, hasIcon } from "../icons.js";
 import { icon } from "../ui/icon.js";
 import { country } from "./country.js";
+import { t } from "../i18n.js";
 
 // The address printed on shared images: the country's site_url (see app/country.js); when
 // empty, the page's own host and path are used, except on a local dev server, where the product name is printed.
@@ -132,10 +133,23 @@ export function composeImage(info, { height = IMG_H } = {}) {
   spaced(ctx, 0);
   ctx.fillStyle = "#b9ab88";
   ctx.font = `italic 17px ${SERIF}`;
-  ctx.fillText("A strategy-map atlas of the real economy", 114, cy + 28);
+  ctx.fillText(t("share.tagline"), 114, cy + 28);
+
+  // The data credit, right-aligned under the selection: a long one (Spain's) takes a smaller font and shortens the
+  // legend ramp so the two never overlap.
+  const rx = IMG_W - 44;
+  const mx = 640;
+  const credit = country().data_credit;
+  let creditFont = `14px ${SANS}`;
+  ctx.font = creditFont;
+  let creditW = ctx.measureText(credit).width;
+  if (creditW > rx - (mx + 50 + 330) - 24) {
+    creditFont = `12px ${SANS}`;
+    ctx.font = creditFont;
+    creditW = ctx.measureText(credit).width;
+  }
 
   // Lens + legend ramp
-  const mx = 640;
   const lens = info.lens;
   const iconOk = (id) => id && hasIcon(id);
   const lensIcon = lens ? (iconOk(lens.icon) ? lens.icon : null) : "terrain";
@@ -143,10 +157,11 @@ export function composeImage(info, { height = IMG_H } = {}) {
   ctx.fillStyle = "#ecd08e";
   ctx.font = `24px ${SERIF}`;
   spaced(ctx, 1.5);
-  ctx.fillText((lens ? lens.name : "Terrain").toUpperCase() + (lens ? " LENS" : ""), mx + 50, cy - 8);
+  ctx.fillText(lens ? t("share.lens", { name: lens.name.toUpperCase() }) : t("share.terrain").toUpperCase(), mx + 50, cy - 8);
   spaced(ctx, 0);
   if (lens?.ramp?.length) {
-    const rx = mx + 50, ry = cy + 4, rw = 330, rh = 12;
+    const rx = mx + 50, ry = cy + 4, rh = 12;
+    const rw = Math.max(200, Math.min(330, IMG_W - 44 - creditW - 24 - rx));
     const rg = ctx.createLinearGradient(rx, 0, rx + rw, 0);
     lens.ramp.forEach((c, i) => rg.addColorStop(i / (lens.ramp.length - 1), c));
     ctx.fillStyle = "rgba(0,0,0,.6)";
@@ -163,26 +178,25 @@ export function composeImage(info, { height = IMG_H } = {}) {
   } else {
     ctx.font = `15px ${SANS}`;
     ctx.fillStyle = "#b9ab88";
-    ctx.fillText("Land cover, relief, rivers and resources", mx + 50, cy + 16);
+    ctx.fillText(t("share.terrainLine"), mx + 50, cy + 16);
   }
 
   // Selection, credits, site
-  const rx = IMG_W - 44;
   ctx.textAlign = "right";
   const sel = info.selection;
   if (sel?.name) {
     ctx.font = `13px ${SANS}`;
     ctx.fillStyle = "#b9ab88";
     spaced(ctx, 2);
-    ctx.fillText(sel.kind === "state" ? "STATE" : "CITY", rx, cy - 30);
+    ctx.fillText((sel.kind === "state" ? country().levels.region.one : t("share.city")).toUpperCase(), rx, cy - 30);
     spaced(ctx, 0);
     ctx.font = `bold 24px ${SERIF}`;
     ctx.fillStyle = "#f3e6c4";
     ctx.fillText(fit(ctx, sel.name, 460), rx, cy - 6);
   }
-  ctx.font = `14px ${SANS}`;
+  ctx.font = creditFont;
   ctx.fillStyle = "#b9ab88";
-  ctx.fillText(country().data_credit, rx, cy + 20);
+  ctx.fillText(credit, rx, cy + 20);
   ctx.font = `bold 17px ${SERIF}`;
   ctx.fillStyle = "#c9a45c";
   spaced(ctx, 1);
@@ -226,11 +240,11 @@ export function initShare(opts) {
   let restore = null;
 
   pop.innerHTML = `
-    <div class="sp-title">Share this view</div>
-    <button class="sp-item" data-act="copy">${icon("share", "🔗", { size: 16 })}<span>Copy link</span></button>
-    <button class="sp-item" data-act="image">${icon("terrain", "🖼️", { size: 16 })}<span>Download image <span class="muted">1600×900 PNG</span></span></button>
+    <div class="sp-title">${t("share.title")}</div>
+    <button class="sp-item" data-act="copy">${icon("share", "🔗", { size: 16 })}<span>${t("share.copy")}</span></button>
+    <button class="sp-item" data-act="image">${icon("terrain", "🖼️", { size: 16 })}<span>${t("share.image")} <span class="muted">1600×900 PNG</span></span></button>
     <div class="sp-status" role="status" aria-live="polite"></div>
-    <input class="sp-url" type="text" readonly hidden aria-label="Link to this view">`;
+    <input class="sp-url" type="text" readonly hidden aria-label="${t("share.urlLabel")}">`;
   const status = pop.querySelector(".sp-status");
   const urlBox = pop.querySelector(".sp-url");
 
@@ -268,17 +282,17 @@ export function initShare(opts) {
       opts.beforeCopy?.();
       const link = location.href;
       if (await copyText(link)) {
-        status.textContent = "Link copied to the clipboard";
-        opts.onToast?.("Link copied");
+        status.textContent = t("share.copied");
+        opts.onToast?.(t("share.copiedToast"));
       } else {
-        status.textContent = "Copy this link:";
+        status.textContent = t("share.copyThis");
         urlBox.hidden = false;
         urlBox.value = link;
         urlBox.focus();
         urlBox.select();
       }
     } else if (b.dataset.act === "image") {
-      status.textContent = "Drawing the map…";
+      status.textContent = t("share.drawing");
       await new Promise((r) => setTimeout(r, 30)); // let the status paint
       try {
         const cv = composeImage(opts.getInfo());
@@ -291,10 +305,10 @@ export function initShare(opts) {
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        status.textContent = `Saved ${a.download}`;
+        status.textContent = t("share.saved", { name: a.download });
       } catch (err) {
         console.warn(err);
-        status.textContent = "Could not create the image in this browser.";
+        status.textContent = t("share.failed");
       }
     }
   });

@@ -5,6 +5,10 @@ import { shareBar, barList, donut, smallMultiples } from "../core/charts.js";
 import { createTable } from "../core/table.js";
 import { section, tiles, segmented, lensButton, sourcesHtml, topBy, frameBtn } from "../core/view.js";
 import { LAND_KEYS, LAND_LABEL, LAND_COLOR, rowsHighlight } from "../core/data.js";
+import { t } from "../../../i18n.js";
+
+const SHORT = { forest: "adv.landShort.forest", crop: "adv.landShort.crop", pasture: "adv.landShort.pasture", grass: "adv.landShort.grass",
+  shrub: "adv.landShort.shrub", wetland: "adv.landShort.wetland", developed: "adv.landShort.developed" };
 
 const LENS_OF = { forest: "forest", crop: "farmland", pasture: "farmland", developed: "developed" };
 
@@ -15,7 +19,7 @@ export function mount(ctx) {
   const owner = w.raw.owner;
   const { states } = data.levels;
   if (!P) {
-    el.innerHTML = `<p class="adv-empty pad">world.json has no land-cover shares.</p>`;
+    el.innerHTML = `<p class="adv-empty pad">${t("adv.land.noCover")}</p>`;
     return {};
   }
 
@@ -40,15 +44,15 @@ export function mount(ctx) {
   const other = Math.max(0, 1 - LAND_KEYS.reduce((a, k) => a + share[k], 0));
 
   el.insertAdjacentHTML("beforeend", tiles([
-    { label: "Forest", value: pct(share.forest, 0), sub: "of the land", color: LAND_COLOR.forest },
-    { label: "Farmland", value: pct(share.crop + share.pasture, 0), sub: "crops + pasture", color: LAND_COLOR.crop },
-    { label: "Built-up", value: pct(share.developed, 1), sub: "developed land", color: LAND_COLOR.developed },
+    { label: t("adv.land.forestTile"), value: pct(share.forest, 0), sub: t("adv.land.ofLand"), color: LAND_COLOR.forest },
+    { label: t("adv.land.farmland"), value: pct(share.crop + share.pasture, 0), sub: t("adv.land.cropsPasture"), color: LAND_COLOR.crop },
+    { label: t("adv.land.builtUp"), value: pct(share.developed, 1), sub: t("adv.land.developedLand"), color: LAND_COLOR.developed },
   ]));
 
   // --- composition ----------------------------------------------------------------------------------------------
-  const cBody = section(el, { title: "What covers the country", kicker: "Lower 48", note: "Share of the land in each cover type (NLCD 2021, averaged over every hex). Hover a type to light up the hexes where it is the largest cover; click to keep them lit." });
+  const cBody = section(el, { title: t("adv.land.title"), kicker: t("adv.land.kicker"), note: t("adv.land.note") });
   let pinned = null;
-  const parts = [...LAND_KEYS.map((k) => ({ key: k, label: LAND_LABEL[k], value: share[k], color: LAND_COLOR[k], text: pct(share[k]) })), { key: "other", label: "Other (barren rock, sand, ice)", value: other, color: "#6c6358", text: pct(other) }].sort((a, b) => (a.key === "other") - (b.key === "other") || b.value - a.value);
+  const parts = [...LAND_KEYS.map((k) => ({ key: k, label: LAND_LABEL[k], value: share[k], color: LAND_COLOR[k], text: pct(share[k]) })), { key: "other", label: t("adv.land.other"), value: other, color: "#6c6358", text: pct(other) }].sort((a, b) => (a.key === "other") - (b.key === "other") || b.value - a.value);
   const domHighlight = (k, dim = true) => (dominant.has(k) ? { cells: new Set(dominant.get(k)), dimOthers: dim, color: LAND_COLOR[k] } : null);
   const sb = shareBar(cBody, {
     parts,
@@ -60,7 +64,7 @@ export function mount(ctx) {
   cBody.appendChild(pinInfo);
   const lensRow = document.createElement("div");
   lensRow.className = "adv-row";
-  for (const [id, label] of [["forest", "Forest lens"], ["farmland", "Farmland lens"], ["developed", "Built-up lens"]]) {
+  for (const [id, label] of [["forest", t("adv.land.forestLens")], ["farmland", t("adv.land.farmLens")], ["developed", t("adv.land.builtLens")]]) {
     const b = lensButton(app, id, label);
     if (b) lensRow.appendChild(b);
   }
@@ -72,8 +76,8 @@ export function mount(ctx) {
     if (!k) { pinInfo.innerHTML = ""; return; }
     const n = dominant.get(k).length;
     const lens = LENS_OF[k] && app.lensById.get(LENS_OF[k]);
-    pinInfo.innerHTML = `<b>${esc(LAND_LABEL[k])}</b> is the largest cover on <b>${int(n)}</b> hexes (${pct(n / cells, 0)} of the land hexes) and covers ${pct(share[k])} of all land.
-      ${lens ? `<button type="button" class="adv-mini" data-lens="${lens.id}">Show the ${esc(lens.name)} lens</button>` : ""}${frameBtn()}<button type="button" class="adv-mini" data-clear>Clear</button>`;
+    pinInfo.innerHTML = `${t("adv.land.pinned", { cover: esc(LAND_LABEL[k]), n: int(n), share: pct(n / cells, 0), all: pct(share[k]) })}
+      ${lens ? `<button type="button" class="adv-mini" data-lens="${lens.id}">${t("adv.land.showLens", { name: esc(lens.name) })}</button>` : ""}${frameBtn()}<button type="button" class="adv-mini" data-clear>${t("adv.clear")}</button>`;
   }
   pinInfo.addEventListener("click", (e) => {
     if (e.target.closest("[data-clear]")) pin(null);
@@ -82,7 +86,7 @@ export function mount(ctx) {
   });
 
   // --- per state ------------------------------------------------------------------------------------------------
-  const sBody = section(el, { title: "The states' make-up", note: "Each state's land by cover type. Sort by any cover; hover a state to outline it, click to open it." });
+  const sBody = section(el, { title: t("adv.land.states.title"), note: t("adv.land.states.note") });
   const stRows = states.rows.filter((r) => LAND_KEYS.some((k) => fin(r.v[`land_${k}`])));
   const comp = (r) => `<span class="adv-minibar">${LAND_KEYS.map((k) => {
     const v = r.v[`land_${k}`];
@@ -91,26 +95,26 @@ export function mount(ctx) {
   const domOf = (r) => LAND_KEYS.reduce((b, k) => ((r.v[`land_${k}`] ?? -1) > (r.v[`land_${b}`] ?? -1) ? k : b), LAND_KEYS[0]);
   let sortKey = "forest";
   const colsFor = (k) => [
-    { key: "name", label: "State", align: "l", width: "minmax(0,1.1fr)", value: (r) => r.name, text: (r) => r.name },
-    { key: "comp", label: "Land", align: "l", width: "minmax(0,1.6fr)", value: (r) => r.v[`land_${k}`], html: comp, title: `Sort by ${LAND_LABEL[k].toLowerCase()}` },
+    { key: "name", label: states.field("name").label, align: "l", width: "minmax(0,1.1fr)", value: (r) => r.name, text: (r) => r.name },
+    { key: "comp", label: t("adv.land.col.land"), align: "l", width: "minmax(0,1.6fr)", value: (r) => r.v[`land_${k}`], html: comp, title: t("adv.table.sortBy", { label: LAND_LABEL[k].toLowerCase() }) },
     { key: "share", label: LAND_LABEL[k], value: (r) => r.v[`land_${k}`], html: (r) => `<span class="dot" style="background:${LAND_COLOR[k]}"></span>${pct(r.v[`land_${k}`], 0)}` },
-    { key: "dom", label: "Largest", align: "l", width: "minmax(0,.9fr)", value: (r) => LAND_LABEL[domOf(r)], text: (r) => LAND_LABEL[domOf(r)] },
+    { key: "dom", label: t("adv.land.col.largest"), align: "l", width: "minmax(0,.9fr)", value: (r) => LAND_LABEL[domOf(r)], text: (r) => LAND_LABEL[domOf(r)] },
   ];
   const sortSeg = document.createElement("div");
   sortSeg.className = "adv-row";
   sBody.appendChild(sortSeg);
   segmented(sortSeg, {
-    label: "Sort by", value: sortKey,
-    options: LAND_KEYS.map((k) => ({ value: k, label: LAND_LABEL[k].replace(" & hay", "").replace(" & desert", "") })),
+    label: t("adv.sortBy"), value: sortKey,
+    options: LAND_KEYS.map((k) => ({ value: k, label: t(SHORT[k]) })),
     onChange: (k) => { sortKey = k; table.setColumns(colsFor(k), { key: "share", dir: "desc" }); drawShape(); },
   });
   let shape = "table";
-  segmented(sortSeg, { label: "Show as", value: shape, options: [{ value: "table", label: "Table" }, { value: "grid", label: "Grid" }], onChange: (v) => { shape = v; drawShape(); } });
+  segmented(sortSeg, { label: t("adv.showAs"), value: shape, options: [{ value: "table", label: t("adv.table.tab") }, { value: "grid", label: t("adv.grid") }], onChange: (v) => { shape = v; drawShape(); } });
   const tableHost = document.createElement("div");
   const gridHost = document.createElement("div");
   sBody.append(tableHost, gridHost);
   const table = createTable(tableHost, {
-    caption: "Land cover by state", rank: true, maxHeight: 320, rows: stRows, columns: colsFor(sortKey), sort: { key: "share", dir: "desc" },
+    caption: t("adv.land.caption"), rank: true, maxHeight: 320, rows: stRows, columns: colsFor(sortKey), sort: { key: "share", dir: "desc" },
     onHover: (r) => link.hover(r ? rowsHighlight(states, [r]) : null),
     onClick: (r) => states.focus(r),
   });
@@ -139,29 +143,29 @@ export function mount(ctx) {
 
   // --- who works the land ---------------------------------------------------------------------------------------
   const food = app.data.nation.yields?.find((y) => y.key === "food");
-  const fBody = section(el, { title: "Who works the land", note: `${esc(food?.description || "Workers in agriculture, forestry, fishing & hunting.")} Ranked by share of the employed.` });
+  const fBody = section(el, { title: t("adv.land.food.title"), note: t("adv.land.food.note", { desc: esc(food?.description || t("adv.land.food.fallback")) }) });
   const fHost = document.createElement("div");
   let fLevel = "states";
-  segmented(fBody, { label: "Areas", value: fLevel, options: [{ value: "states", label: "States" }, { value: "metros", label: "Metros" }], onChange: (v) => { fLevel = v; drawFood(); } });
+  segmented(fBody, { label: t("adv.areas"), value: fLevel, options: [{ value: "states", label: states.label }, { value: "metros", label: data.levels.metros.label }], onChange: (v) => { fLevel = v; drawFood(); } });
   fBody.appendChild(fHost);
   function drawFood() {
     fHost.innerHTML = "";
     const lv = data.levels[fLevel];
     const list = topBy(lv.rows, (r) => ratio(r.v.y_food, r.v.employed), { n: 10, min: fLevel === "metros" ? 100000 : 0 });
     barList(fHost, {
-      rank: true, ariaLabel: "Farm, forestry and fishing workers",
-      rows: list.map((x) => ({ key: x.r.key, label: x.r.name, sub: `${count3(x.r.v.y_food)} workers`, value: x.v, text: pct(x.v), color: food?.color, row: x.r })),
+      rank: true, ariaLabel: t("adv.land.food.aria"),
+      rows: list.map((x) => ({ key: x.r.key, label: x.r.name, sub: t("adv.nWorkers", { n: count3(x.r.v.y_food) }), value: x.v, text: pct(x.v), color: food?.color, row: x.r })),
       onHover: (r) => link.hover(r ? rowsHighlight(lv, [r.row]) : null),
       onClick: (r) => lv.focus(r.row),
     });
-    if (fLevel === "metros") fHost.insertAdjacentHTML("beforeend", `<p class="adv-note">Metros of 100K+ people.</p>`);
+    if (fLevel === "metros") fHost.insertAdjacentHTML("beforeend", `<p class="adv-note">${t("adv.land.food.metroMin")}</p>`);
   }
   drawFood();
 
   el.insertAdjacentHTML("beforeend", sourcesHtml(data, ["nlcd", "acs_1yr"], [
-    "Land cover is NLCD 2021 resampled to about 2 km, so small features (a river valley's farms, a small town) blur into their surroundings.",
-    "Grassland includes lawns and parks (NLCD developed open space); built-up counts only low to high-intensity development.",
-    "Farm workers are counted where they live (ACS) and include forestry and fishing.",
+    t("adv.land.c1"),
+    t("adv.land.c2"),
+    t("adv.land.c3"),
   ]));
 
   return {

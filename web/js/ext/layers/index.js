@@ -9,14 +9,16 @@
 import { createModel } from "./model.js";
 import { makeLayers } from "./layers.js";
 import { tips } from "./tips.js";
+import { t } from "../../i18n.js";
 
+// label and title are i18n keys (layers.<id> and layers.<id>.title).
 const TOGGLES = [
-  { id: "roads", label: "Roads", icon: "t-road", def: true, title: "Interstates and major highways (Natural Earth, as map art)", layers: ["roads"] },
-  { id: "rail", label: "Railroads", icon: "t-rail", def: true, title: "Main and secondary rail lines (Natural Earth, as map art)", layers: ["rail"] },
-  { id: "hubs", label: "Ports & airports", icon: "d-harbor", def: true, title: "USACE principal ports by tonnage, FAA primary and cargo airports", layers: ["hubs"] },
-  { id: "military", label: "Military", icon: "m-army", def: true, title: "DoD installations as forts, the largest ranges as restricted ground", layers: ["forts", "restricted", "plates"] },
-  { id: "wonders", label: "Wonders", icon: "w-landmark", def: true, title: "Most-visited parks, top research universities and curated landmarks", layers: ["wonders", "protected", "plates"] },
-  { id: "trade", label: "Trade routes", icon: "t-trade", def: false, title: "The 40 largest freight flows between states (FAF5 estimates)", layers: ["trade"] },
+  { id: "roads", label: "layers.roads", icon: "t-road", def: true, title: "layers.roads.title", layers: ["roads"] },
+  { id: "rail", label: "layers.rail", icon: "t-rail", def: true, title: "layers.rail.title", layers: ["rail"] },
+  { id: "hubs", label: "layers.hubs", icon: "d-harbor", def: true, title: "layers.hubs.title", layers: ["hubs"] },
+  { id: "military", label: "layers.military", icon: "m-army", def: true, title: "layers.military.title", layers: ["forts", "restricted", "plates"] },
+  { id: "wonders", label: "layers.wonders", icon: "w-landmark", def: true, title: "layers.wonders.title", layers: ["wonders", "protected", "plates"] },
+  { id: "trade", label: "layers.trade", icon: "t-trade", def: false, title: "layers.trade.title", layers: ["trade"] },
 ];
 
 export function install(app) {
@@ -25,12 +27,12 @@ export function install(app) {
   const layers = makeLayers(model, on, { tips, app });
   for (const l of layers) app.registerStaticLayer(l);
 
-  for (const t of TOGGLES) {
+  for (const tg of TOGGLES) {
     app.ui.addMapToggle({
-      id: t.id, label: t.label, icon: t.icon, title: t.title, default: t.def,
-      get: () => on[t.id],
+      id: tg.id, label: t(tg.label), icon: tg.icon, title: t(tg.title), default: tg.def,
+      get: () => on[tg.id],
       set: (v) => {
-        on[t.id] = !!v;
+        on[tg.id] = !!v;
         app.requestDraw();
       },
     });

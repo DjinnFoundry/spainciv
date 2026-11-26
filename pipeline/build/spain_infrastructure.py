@@ -16,8 +16,10 @@ from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
-from .infrastructure import HUBS, RAIL_MAIN_SCALERANK, RAIL_MAX_SCALERANK, RAIL_TIERS, SAMPLE_KM, build_rail, build_roads
+from .infrastructure import RAIL_MAIN_SCALERANK, RAIL_MAX_SCALERANK, RAIL_TIERS, SAMPLE_KM, build_rail, build_roads
 from .spain_wonders import Placer
+from .texts_es import HUBS, num
+from .texts_es import RAIL_TIERS as RAIL_TIER_NAMES
 
 REQUIRES = ["_world", "natural_earth_roads_es", "natural_earth_es", "aena_airports", "puertos_estado", "cities.json",
             "world.json"]
@@ -25,19 +27,21 @@ PRODUCES = ["infrastructure.json"]
 COUNTRIES = ("es",)
 
 MAIN_MAX_SCALERANK = 7
-ROAD_CLASSES = [{"id": "interstate", "name": "Motorway (autovía, autopista)"}, {"id": "major", "name": "Main road"}]
+ROAD_CLASSES = [{"id": "interstate", "name": "Autovía o autopista"}, {"id": "major", "name": "Carretera principal"}]
 RULES = {
-    "roads": f"Natural Earth 1:10m roads in Spain, sampled every {SAMPLE_KM:g} km and snapped to hex-centre links. Class 0: "
-             "every motorway (Natural Earth major highways marked as expressways: autovías and autopistas). Class 1: "
-             f"other roads at Natural Earth scale rank {MAIN_MAX_SCALERANK} or less, where no motorway already joins the "
-             "same two hexes. Lines over neighbouring countries are dropped.",
-    "rail": f"Natural Earth 1:10m railroads at scale rank {RAIL_MAX_SCALERANK} or less, sampled every {SAMPLE_KM:g} km and "
-            f"snapped to hex-centre links; tier 0 (main line) is scale rank {RAIL_MAIN_SCALERANK} or less. Natural Earth "
-            "holds only the main lines and no traffic data.",
-    "ports": "The 28 Port Authorities of Puertos del Estado by total freight traffic, each at the land service area of "
-             "its largest port.",
-    "airports": "Every airport and heliport of the AENA network, classed like the FAA hubs by its share of Spain's "
-                "passengers (large 1% or more, medium 0.25%, small 0.05%, the rest nonhub).",
+    "roads": f"Carreteras de Natural Earth 1:10m en España, muestreadas cada {num(SAMPLE_KM)} km y ajustadas a enlaces entre "
+             "centros de hexágono. Clase 0: todas las autovías y autopistas (las carreteras principales de Natural Earth "
+             f"marcadas como vías rápidas). Clase 1: las demás carreteras de rango de escala {MAIN_MAX_SCALERANK} o menos de "
+             "Natural Earth, donde ninguna autovía une ya los mismos dos hexágonos. Los tramos sobre países vecinos se "
+             "descartan.",
+    "rail": f"Ferrocarriles de Natural Earth 1:10m de rango de escala {RAIL_MAX_SCALERANK} o menos, muestreados cada "
+            f"{num(SAMPLE_KM)} km y ajustados a enlaces entre centros de hexágono; el nivel 0 (línea principal) es el rango "
+            f"de escala {RAIL_MAIN_SCALERANK} o menos. Natural Earth solo recoge las líneas principales y no trae datos de "
+            "tráfico.",
+    "ports": "Las 28 Autoridades Portuarias de Puertos del Estado por tráfico total de mercancías, cada una en la zona de "
+             "servicio terrestre de su puerto más grande.",
+    "airports": "Todos los aeropuertos y helipuertos de la red de AENA, clasificados como los hubs de la FAA según su "
+                "cuota de los pasajeros de España (grande, 1 % o más; mediano, 0,25 %; pequeño, 0,05 %; el resto, no hub).",
 }
 
 
@@ -90,7 +94,7 @@ def build() -> None:
         "sources": ["natural_earth_roads_es", "aena_airports", "puertos_estado"],
         "rules": RULES,
         "road_classes": ROAD_CLASSES,
-        "rail_tiers": RAIL_TIERS,
+        "rail_tiers": [{**t, "name": RAIL_TIER_NAMES[t["id"]]} for t in RAIL_TIERS],
         "hubs": HUBS,
         "roads": roads,
         "rail": rail,

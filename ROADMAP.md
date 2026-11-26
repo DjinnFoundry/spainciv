@@ -11,10 +11,10 @@ decisiones que salgan van a `DECISIONS.md`.
 
 2. I+D por comunidad (estadística de I+D del INE) para el rendimiento Science.
 4. Minas (IGME) como recursos.
-6. **i18n en/es**: pasada completa de la interfaz (unas 550 líneas en inglés en el JS), en un subagente en paralelo.
 
 ## Huecos conocidos
 
+- Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
 - El oro de las ciudades queda vacío: no hay PIB municipal oficial.
 - Mediana de renta por hogar, alquiler, valor de la vivienda y paro de las ciudades: sin fuente municipal todavía.
 - Los ciudadanos de la City View y los ejércitos, el comercio y los desastres siguen siendo solo de EE UU.

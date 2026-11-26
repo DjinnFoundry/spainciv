@@ -1,8 +1,32 @@
 import { country } from "./app/country.js";
 
+// Numbers follow the country's locale (world.json country.locale). The original en-US formats stay exactly as usaciv
+// wrote them ("1.2K", "$3.4B", "12.5%"); any other locale goes through Intl, which for es-ES gives "1,2 mil", "35 M",
+// "16 mil M €", "1,5 B €" (billón = 10¹²), "12,5 %" and "35.000 €" (four-digit numbers ungrouped, as the RAE asks).
+const ORIGINAL = "en-US";
+const locale = () => country().locale || ORIGINAL;
+const original = () => locale() === ORIGINAL;
+const formats = new Map();
+function nf(opts) {
+  const key = locale() + JSON.stringify(opts);
+  let f = formats.get(key);
+  if (!f) formats.set(key, (f = new Intl.NumberFormat(locale(), opts)));
+  return f;
+}
+
+/** x with d decimals in the country's locale: "3.5" (en-US), "3,5" (es-ES). */
+export const fixed = (x, d = 0) => (original() ? x.toFixed(d) : nf({ minimumFractionDigits: d, maximumFractionDigits: d }).format(x));
+
+/** x in its shortest form: "0.03" (en-US), "0,03" (es-ES). */
+export const plain = (x) => (original() ? String(x) : nf({ maximumFractionDigits: 20 }).format(x));
+
+/** x.toLocaleString() as usaciv printed it (the browser's locale) for en-US, else in the country's locale. */
+export const localeNum = (x) => (original() ? x.toLocaleString() : x.toLocaleString(locale()));
+
 export function compact(n) {
   if (n == null || Number.isNaN(n)) return "–";
   const a = Math.abs(n);
+  if (!original()) return nf({ notation: "compact", maximumFractionDigits: 1 }).format(n);
   if (a >= 1e12) return (n / 1e12).toFixed(a >= 1e13 ? 1 : 2) + "T";
   if (a >= 1e9) return (n / 1e9).toFixed(a >= 1e11 ? 0 : 1) + "B";
   if (a >= 1e6) return (n / 1e6).toFixed(a >= 1e8 ? 0 : 1) + "M";
@@ -13,18 +37,43 @@ export function compact(n) {
 const SYMBOL = { USD: "$", EUR: "€" };
 /** The country's currency symbol (world.json country.currency). */
 export const currency = () => SYMBOL[country().currency] ?? country().currency + " ";
+/** A formatted amount with the currency symbol where the locale puts it: "$12K" (en-US), "12 mil €" (es-ES). */
+export const withCurrency = (s) => (original() ? currency() + s : `${s} ${currency().trim()}`);
 /** True for a money unit or format: "usd" (the original data) or "eur". */
 export const isMoney = (unit) => unit === "usd" || unit === "eur";
-export const money = (n) => (n == null ? "–" : currency() + compact(n));
-export const dollars = (n) => (n == null ? "–" : currency() + Math.round(n).toLocaleString("en-US"));
-export const int = (n) => (n == null ? "–" : Math.round(n).toLocaleString("en-US"));
-export const pct = (x, d = 1) => (x == null ? "–" : (x * 100).toFixed(d) + "%");
+export const money = (n) => (n == null ? "–" : withCurrency(compact(n)));
+export const dollars = (n) => (n == null ? "–" : withCurrency(Math.round(n).toLocaleString(locale())));
+export const int = (n) => (n == null ? "–" : Math.round(n).toLocaleString(locale()));
+export const pct = (x, d = 1) => (x == null ? "–" : original() ? (x * 100).toFixed(d) + "%" : nf({ style: "percent", minimumFractionDigits: d, maximumFractionDigits: d }).format(x));
+
+/** x with at most d decimals, trailing zeros dropped: "12.5" (en-US), "12,5" (es-ES). */
+export const trimmed = (x, d) => (original() ? String(+x.toFixed(d)) : nf({ maximumFractionDigits: d }).format(x));
+/** x to three significant figures: "0.123" (en-US), "0,123" (es-ES). */
+export const sig3 = (x) => (original() ? String(+x.toPrecision(3)) : nf({ maximumSignificantDigits: 3 }).format(x));
+/** A formatted number with the percent sign where the locale puts it: "12%" (en-US), "12 %" (es-ES). */
+export const withPct = (s) => (original() ? `${s}%` : `${s}\u00a0%`);
+/** A growth rate with its sign: "+2.1%", "−0.4%" (en-US); "+2,1 %" (es-ES). */
+export const signedPct = (g, d = 1) => (Number.isFinite(g) ? `${g >= 0 ? "+" : "−"}${pct(Math.abs(g), d)}` : "–");
+
+// Counts to three significant figures (1.12M vs 1.11M rather than 1.1M twice); es-ES: "1,12 M", "12,3 mil".
+export function count3(n) {
+  if (!Number.isFinite(n)) return "–";
+  const a = Math.abs(n);
+  if (!original()) return a >= 1e4 ? nf({ notation: "compact", maximumSignificantDigits: 3 }).format(n) : int(n);
+  const sig = (d, unit) => (n / d).toFixed(a / d >= 100 ? 0 : a / d >= 10 ? 1 : 2) + unit;
+  if (a >= 1e12) return sig(1e12, "T");
+  if (a >= 1e9) return sig(1e9, "B");
+  if (a >= 1e6) return sig(1e6, "M");
+  if (a >= 1e4) return sig(1e3, "K");
+  return int(n);
+}
 
 export function yieldValue(y, v) {
   return isMoney(y.unit) ? money(v) : compact(v);
 }
 
 export function popShort(n) {
+  if (!original()) return nf({ notation: "compact", maximumFractionDigits: n >= 1e6 && n < 1e7 ? 1 : 0 }).format(n);
   if (n >= 1e7) return Math.round(n / 1e6) + "M";
   if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
   return Math.round(n / 1e3) + "K";

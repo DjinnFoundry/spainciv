@@ -1,6 +1,7 @@
 // Layout helpers shared by the advisor views: sections, controls, stat tiles, sources and caveats.
 import { esc, el, fin } from "./util.js";
 import { icon } from "../../../ui/icon.js";
+import { t } from "../../../i18n.js";
 
 /** Append a titled section; returns its body element. opts: {title, note, kicker, collapsed, cls} */
 export function section(parent, { title, note = "", kicker = "", cls = "", open = true } = {}) {
@@ -16,8 +17,8 @@ export function section(parent, { title, note = "", kicker = "", cls = "", open 
 
 /** Headline tiles: [{label, value, sub, color}] → html */
 export function tiles(items) {
-  return `<div class="adv-tiles">${items.map((t) => `<div class="adv-tile"${t.color ? ` style="--tc:${esc(t.color)}"` : ""}>
-    <span class="k">${esc(t.label)}</span><b title="${esc(t.value)}">${esc(t.value)}</b>${t.sub ? `<span class="s" title="${esc(t.sub)}">${esc(t.sub)}</span>` : ""}</div>`).join("")}</div>`;
+  return `<div class="adv-tiles">${items.map((it) => `<div class="adv-tile"${it.color ? ` style="--tc:${esc(it.color)}"` : ""}>
+    <span class="k">${esc(it.label)}</span><b title="${esc(it.value)}">${esc(it.value)}</b>${it.sub ? `<span class="s" title="${esc(it.sub)}">${esc(it.sub)}</span>` : ""}</div>`).join("")}</div>`;
 }
 
 /** A segmented control. options: [{value, label}] */
@@ -97,7 +98,7 @@ export function lensButton(app, lensId, label) {
   const sync = () => {
     const on = app.state.lens?.id === lensId;
     b.setAttribute("aria-pressed", String(on));
-    b.innerHTML = `${icon(lens.icon || "layers", lens.emoji || "🗺️", { size: 14 })}<span>${esc(on ? `Showing ${lens.name} lens` : label || `Show ${lens.name} lens on map`)}</span>`;
+    b.innerHTML = `${icon(lens.icon || "layers", lens.emoji || "🗺️", { size: 14 })}<span>${esc(on ? t("adv.lens.showing", { name: lens.name }) : label || t("adv.lens.show", { name: lens.name }))}</span>`;
   };
   sync();
   b.addEventListener("click", () => {
@@ -113,7 +114,7 @@ export function lensButton(app, lensId, label) {
  * ctx.setLens). options: [{value, label, lens: () => lens id | lens object | null}]. Follows lens changes made
  * elsewhere (the lens dock, L): when the map shows none of the options, no button is pressed.
  */
-export function mapPicker(ctx, parent, { options, value, label = "Map" }) {
+export function mapPicker(ctx, parent, { options, value, label = t("adv.map") }) {
   const row = el("div", "adv-mappick");
   row.innerHTML = `<span class="k">${icon("layers", "▤", { size: 13 })}${esc(label)}</span>`;
   const resolve = (o) => {
@@ -126,7 +127,7 @@ export function mapPicker(ctx, parent, { options, value, label = "Map" }) {
     busy = true;
     try { ctx.setLens(resolve(o)); } finally { busy = false; }
   };
-  const seg = segmented(row, { label: `${label} colour`, options, value, onChange: (v) => pick(v) });
+  const seg = segmented(row, { label: t("adv.mapColour", { label }), options, value, onChange: (v) => pick(v) });
   const sync = (lens) => {
     const o = options.find((x) => resolve(x) === (lens || null));
     seg.set(o ? o.value : "__none");
@@ -145,16 +146,16 @@ export function mapPicker(ctx, parent, { options, value, label = "Map" }) {
 }
 
 /** A "Frame on map" button for a selection (handled by the advisors shell: flies to the view's highlight). */
-export const frameBtn = () => `<button type="button" class="adv-mini adv-framebtn" data-frame title="Fly the map to the selection"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>Frame on map</button>`;
+export const frameBtn = () => `<button type="button" class="adv-mini adv-framebtn" data-frame title="${t("adv.frame.title")}"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>${t("adv.frame")}</button>`;
 
 /** Sources and caveats footer. ids: source ids from sources.json; caveats: [string] */
 export function sourcesHtml(data, ids, caveats = []) {
   const list = [...new Set(ids)].map((id) => data.source(id)).filter(Boolean);
   return `<footer class="adv-sources">
-    ${caveats.length ? `<h4>Read with care</h4><ul class="adv-caveats">${caveats.map((c) => `<li>${c}</li>`).join("")}</ul>` : ""}
-    <h4>Sources</h4>
+    ${caveats.length ? `<h4>${t("adv.readWithCare")}</h4><ul class="adv-caveats">${caveats.map((c) => `<li>${c}</li>`).join("")}</ul>` : ""}
+    <h4>${t("adv.sources")}</h4>
     <ul>${list.map((s) => `<li><b>${esc(s.title)}</b>, ${esc(s.publisher || "")}${s.vintage ? ` <span class="v">${esc(s.vintage)}</span>` : ""}</li>`).join("")}</ul>
-    <button type="button" class="adv-link" data-pedia="Sources">All sources, files and checksums in the Almanac</button>
+    <button type="button" class="adv-link" data-pedia="Sources">${t("adv.allSources")}</button>
   </footer>`;
 }
 

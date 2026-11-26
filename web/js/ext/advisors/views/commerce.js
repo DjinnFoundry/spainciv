@@ -6,6 +6,7 @@ import { barList, shareBar, stackedBars, swatchLegend, sizeLegend } from "../cor
 import { createTable } from "../core/table.js";
 import { section, tiles, segmented, sourcesHtml } from "../core/view.js";
 import { frameBox, focusPoint } from "../core/frame.js";
+import { t } from "../../../i18n.js";
 
 // Route colours by FAF mode (original palette: ochre road, iron rail, blue water, lilac air, sea-green mixed,
 // dark copper pipeline drawn dashed).
@@ -17,7 +18,7 @@ export async function mount(ctx) {
   const { app, el, link, data } = ctx;
   const [trade, infra] = await Promise.all([app.loadData("trade"), app.loadData("infrastructure")]);
   if (!trade && !infra) {
-    el.innerHTML = `<p class="adv-empty pad">trade.json and infrastructure.json are not built, so the Master of Trade has nothing to report.</p>`;
+    el.innerHTML = `<p class="adv-empty pad">${t("adv.com.none")}</p>`;
     return {};
   }
   const grid = app.w.grid;
@@ -29,9 +30,10 @@ export async function mount(ctx) {
   const nm = trade?.national_musd || {};
   const topPort = infra?.ports?.[0], topAir = infra?.airports?.[0];
   el.insertAdjacentHTML("beforeend", tiles([
-    { label: "Domestic freight", value: fin(nm.domestic) ? money(nm.domestic * MUSD) : "–", sub: `${esc(trade?.vintage || "FAF")} · by value` },
-    { label: "Busiest port", value: topPort ? `${count3(topPort.tons)} t` : "–", sub: topPort ? topPort.name : "" },
-    { label: "Busiest airport", value: topAir ? count3(topAir.enplanements) : "–", sub: topAir ? `${topAir.id} boardings ${topAir.year}` : "" },
+    // A headline only for what this map has (the US map has all three).
+    ...(trade ? [{ label: t("adv.com.freight"), value: fin(nm.domestic) ? money(nm.domestic * MUSD) : "–", sub: t("adv.com.byValue", { vintage: esc(trade?.vintage || "FAF") }) }] : []),
+    ...(topPort ? [{ label: t("adv.com.busiestPort"), value: t("adv.tons", { v: count3(topPort.tons) }), sub: topPort.name }] : []),
+    ...(topAir ? [{ label: t("adv.com.busiestAirport"), value: count3(topAir.enplanements), sub: t("adv.com.boardings", { id: topAir.id, year: topAir.year }) }] : []),
   ]) + (trade ? `<p class="adv-callout">Freight values are model estimates from the Freight Analysis Framework, in current dollars: what moves between places, not what each place produces. Imports ${money(nm.import * MUSD)} and exports ${money(nm.export * MUSD)} are counted separately.</p>` : ""));
 
   // --- trade routes ---------------------------------------------------------------------------------------------
@@ -259,26 +261,27 @@ export async function mount(ctx) {
   let portBars = null, airBars = null, portBubbles = null, airBubbles = null;
   if (infra) {
     const v = infra.vintage || {};
-    const pBody = section(el, { title: "Ports", kicker: esc(v.ports || ""), note: `${esc(infra.rules?.ports || "")} Bars split each port's tonnage into domestic, imports and exports.` });
+    const ports_ = infra.ports || [];
+    const pBody = section(el, { title: t("adv.com.ports"), kicker: esc(v.ports || ""), note: ports_.length ? t("adv.com.portsNote", { rule: esc(infra.rules?.ports || "") }) : esc(infra.rules?.ports || "") });
     const ports = (infra.ports || []).map((p) => ({ ...p, key: `p${p.id}` }));
-    const PK = [{ key: "domestic", label: "Domestic", color: "#8fcbb8" }, { key: "imports", label: "Imports", color: "#4f9ad6" }, { key: "exports", label: "Exports", color: "#d9a457" }];
+    const PK = [{ key: "domestic", label: t("adv.com.domestic"), color: "#8fcbb8" }, { key: "imports", label: t("adv.com.imports"), color: "#4f9ad6" }, { key: "exports", label: t("adv.com.exports"), color: "#d9a457" }];
     const portHover = (p) => {
       link.hover(p ? { cells: new Set(p.cell != null ? [p.cell] : []), label: p.name } : null);
       portBubbles?.setHot(p ? p.key : null);
     };
     portBars = stackedBars(pBody, {
-      rows: ports.slice(0, 15).map((p) => ({ key: p.key, label: p.name, sub: p.state, parts: { domestic: p.domestic, imports: p.imports, exports: p.exports }, total: p.tons, text: `${count3(p.tons)} t` })),
-      keys: PK, fmt: (x) => `${count3(x)} t`, ariaLabel: "Busiest ports by tonnage",
+      rows: ports.slice(0, 15).map((p) => ({ key: p.key, label: p.name, sub: p.state, parts: { domestic: p.domestic, imports: p.imports, exports: p.exports }, total: p.tons, text: t("adv.tons", { v: count3(p.tons) }) })),
+      keys: PK, fmt: (x) => t("adv.tons", { v: count3(x) }), ariaLabel: t("adv.com.portsAria"),
       onHover: (x) => portHover(x ? ports.find((p) => p.key === x.row.key) : null),
       onClick: (x) => flyTo(ports.find((p) => p.key === x.row.key)),
     });
-    pBody.insertAdjacentHTML("beforeend", swatchLegend(PK) + `<p class="adv-note">Top 15 of ${int(ports.length)} principal ports in the lower 48 (short tons).</p>`);
+    if (ports.length) pBody.insertAdjacentHTML("beforeend", swatchLegend(PK) + `<p class="adv-note">${t("adv.com.top15", { n: int(ports.length) })}</p>`);
 
-    const aBody = section(el, { title: "Airports", kicker: esc(v.airports || ""), note: esc(infra.rules?.airports || "") });
+    const aBody = section(el, { title: t("adv.com.airports"), kicker: esc(v.airports || ""), note: esc(infra.rules?.airports || "") });
     const airports = (infra.airports || []).map((a) => ({ ...a, key: `a${a.id}` }));
     let aMode = "pax";
     const aHost = mk("div");
-    segmented(aBody, { label: "Rank by", value: aMode, options: [{ value: "pax", label: "Passengers" }, { value: "cargo", label: "Cargo" }], onChange: (x) => { aMode = x; drawAir(); } });
+    segmented(aBody, { label: t("adv.rankBy"), value: aMode, options: [{ value: "pax", label: t("adv.com.passengers") }, { value: "cargo", label: t("adv.com.cargo") }], onChange: (x) => { aMode = x; drawAir(); } });
     aBody.appendChild(aHost);
     const airHover = (a) => {
       link.hover(a ? { cells: new Set(a.cell != null ? [a.cell] : []), label: `${a.id} · ${a.name}` } : null);
@@ -289,42 +292,42 @@ export async function mount(ctx) {
       const k = aMode === "pax" ? "enplanements" : "cargo_lbs";
       const list = airports.filter((a) => fin(a[k])).sort((a, b) => b[k] - a[k]).slice(0, 15);
       airBars = barList(aHost, {
-        rank: true, ariaLabel: aMode === "pax" ? "Busiest airports by boardings" : "Busiest cargo airports",
+        rank: true, ariaLabel: aMode === "pax" ? t("adv.com.airAriaPax") : t("adv.com.airAriaCargo"),
         rows: list.map((a) => {
           const ch = aMode === "pax" && fin(a.enplanements_prev) && a.enplanements_prev > 0 ? a.enplanements / a.enplanements_prev - 1 : null;
           return {
             key: a.key, label: `${a.id} ${a.city || a.name}`, full: a.name, value: a[k],
-            text: aMode === "pax" ? count3(a[k]) : `${count3(a[k])} lb`,
-            sub: aMode === "pax" ? (fin(ch) ? `${signedPct(ch)} on ${a.year - 1}` : "") : `${a.state}`,
+            text: aMode === "pax" ? count3(a[k]) : t("adv.com.lb", { v: count3(a[k]) }),
+            sub: aMode === "pax" ? (fin(ch) ? t("adv.com.onYear", { change: signedPct(ch), year: a.year - 1 }) : "") : `${a.state}`,
             tone: fin(ch) ? (ch >= 0 ? "good" : "bad") : undefined, color: AIR_COLOR,
           };
         }),
         onHover: (r) => airHover(r ? airports.find((a) => a.key === r.key) : null),
         onClick: (r) => flyTo(airports.find((a) => a.key === r.key)),
       });
-      aHost.insertAdjacentHTML("beforeend", `<p class="adv-note">${aMode === "pax" ? "Passenger boardings (enplanements) in the year; change on the year before." : "All-cargo landed weight in pounds, as the FAA publishes it (aircraft weight landed, not freight carried)."}</p>`);
+      if (airports.length) aHost.insertAdjacentHTML("beforeend", `<p class="adv-note">${aMode === "pax" ? t("adv.com.paxNote") : t("adv.com.cargoNote")}</p>`);
     }
     drawAir();
 
     // On the map: circles for ports (tons) and airports (boardings or cargo).
-    const mBody = section(el, { title: "On the map" });
+    const mBody = section(el, { title: t("adv.com.onMap") });
     let show = "both";
     segmented(mBody, {
-      label: "Show", value: show,
-      options: [{ value: "both", label: "Ports & airports" }, { value: "ports", label: "Ports" }, { value: "air", label: "Airports" }, { value: "none", label: "Routes only" }],
+      label: t("adv.com.show"), value: show,
+      options: [{ value: "both", label: t("adv.com.both") }, { value: "ports", label: t("adv.com.ports") }, { value: "air", label: t("adv.com.airports") }, { value: "none", label: t("adv.com.routesOnly") }],
       onChange: (x) => { show = x; drawSites(); },
     });
     const sizeBox = mk("div");
     mBody.appendChild(sizeBox);
     portBubbles = ctx.bubbles("ports", {
       rMax: 20, alpha: 0.5,
-      tip: (b) => `<b>${esc(b.it.name)}</b><br>Port · <b>${count3(b.it.tons)} t</b> (${b.it.year}) · rank ${b.it.rank}<br><span class="sub">domestic ${count3(b.it.domestic)} · imports ${count3(b.it.imports)} · exports ${count3(b.it.exports)}</span>`,
+      tip: (b) => `<b>${esc(b.it.name)}</b><br>${t("adv.com.portTip", { tons: t("adv.tons", { v: count3(b.it.tons) }), year: b.it.year, rank: b.it.rank, domestic: count3(b.it.domestic), imports: count3(b.it.imports), exports: count3(b.it.exports) })}`,
       onHover: (b) => portBars?.setHot(b ? b.key : null),
       onClick: (b) => { portBars?.setHot(b.key); flyTo(b.it); },
     });
     airBubbles = ctx.bubbles("airports", {
       rMax: 16, alpha: 0.5,
-      tip: (b) => `<b>${esc(b.it.id)} · ${esc(b.it.name)}</b><br>${esc(infra.hubs?.[b.it.hub] || "Cargo airport")} · <b>${count3(b.it.enplanements)}</b> boardings${fin(b.it.cargo_lbs) ? `<br><span class="sub">all-cargo ${count3(b.it.cargo_lbs)} lb landed</span>` : ""}`,
+      tip: (b) => `<b>${esc(b.it.id)} · ${esc(b.it.name)}</b><br>${t("adv.com.airTip", { hub: esc(infra.hubs?.[b.it.hub] || t("adv.com.cargoAirport")), n: count3(b.it.enplanements) })}${fin(b.it.cargo_lbs) ? `<br><span class="sub">${t("adv.com.airCargoTip", { v: count3(b.it.cargo_lbs) })}</span>` : ""}`,
       onHover: (b) => airBars?.setHot(b ? b.key : null),
       onClick: (b) => { airBars?.setHot(b.key); flyTo(b.it); },
     });
@@ -332,20 +335,20 @@ export async function mount(ctx) {
       const pMax = Math.max(1, ...ports.map((p) => p.tons || 0)), aMax = Math.max(1, ...airports.map((a) => a.enplanements || 0));
       portBubbles.set(show === "both" || show === "ports" ? ports.filter((p) => fin(p.tons)).map((p) => ({ key: p.key, x: p.x, y: p.y, value: p.tons, color: PORT_COLOR, it: p })) : [], { vMax: pMax });
       airBubbles.set(show === "both" || show === "air" ? airports.filter((a) => fin(a.enplanements) && a.hub && a.hub !== "N").map((a) => ({ key: a.key, x: a.x, y: a.y, value: a.enplanements, color: AIR_COLOR, it: a })) : [], { vMax: aMax });
-      sizeBox.innerHTML = (show === "both" || show === "ports" ? sizeLegend([10e6, 100e6], (x) => 20 * Math.sqrt(x / pMax), (x) => `${count3(x)} t`, "Ports (blue): tonnage") : "")
-        + (show === "both" || show === "air" ? sizeLegend([1e6, 20e6], (x) => 16 * Math.sqrt(x / aMax), (x) => count3(x), "Airports (gold): boardings, hubs only") : "");
+      sizeBox.innerHTML = (show === "both" || show === "ports" ? sizeLegend([10e6, 100e6], (x) => 20 * Math.sqrt(x / pMax), (x) => t("adv.tons", { v: count3(x) }), t("adv.com.portsLegend")) : "")
+        + (show === "both" || show === "air" ? sizeLegend([1e6, 20e6], (x) => 16 * Math.sqrt(x / aMax), (x) => count3(x), t("adv.com.airLegend")) : "");
     }
     drawSites();
 
     // Roads and rail: the counts and rules (the map-art layers draw them; switches live in the Map menu).
-    const nBody = section(el, { title: "Roads and rails", open: false });
+    const nBody = section(el, { title: t("adv.com.roadsRails"), open: false });
     const nRoad = [0, 0], nRail = [0, 0];
     for (const r of infra.roads || []) nRoad[r[2]] = (nRoad[r[2]] || 0) + 1;
     for (const r of infra.rail || []) nRail[r[2]] = (nRail[r[2]] || 0) + 1;
     const toggles = (() => { try { return app.ui.mapToggles?.() || []; } catch { return []; } })();
-    nBody.innerHTML = `<p class="adv-note">${(infra.road_classes || []).map((c, i) => `<b>${esc(c.name)}</b>: ${int(nRoad[i] || 0)} hex links`).join(" · ")}<br>${(infra.rail_tiers || []).map((c, i) => `<b>${esc(c.name)}</b>: ${int(nRail[i] || 0)} hex links`).join(" · ")}</p>
+    nBody.innerHTML = `<p class="adv-note">${(infra.road_classes || []).map((c, i) => t("adv.com.links", { name: esc(c.name), n: int(nRoad[i] || 0) })).join(" · ")}<br>${(infra.rail_tiers || []).map((c, i) => t("adv.com.links", { name: esc(c.name), n: int(nRail[i] || 0) })).join(" · ")}</p>
       <p class="adv-note">${esc(infra.rules?.roads || "")}</p><p class="adv-note">${esc(infra.rules?.rail || "")}</p>
-      ${toggles.length ? `<p class="adv-note">Switch the road, rail and site art on or off from the <b>Map</b> menu beside Resources.</p>` : ""}`;
+      ${toggles.length ? `<p class="adv-note">${t("adv.com.toggles")}</p>` : ""}`;
   }
   function flyTo(p) {
     if (!p) return;
@@ -353,11 +356,10 @@ export async function mount(ctx) {
   }
 
   el.insertAdjacentHTML("beforeend", sourcesHtml(data, [...(trade?.sources || []), ...(infra?.sources || [])], [
-    "FAF values are model estimates for 2024 in current dollars and thousand short tons; zones are whole metro areas or the rest of a state, so a route between two cities stands for everything moving between their regions.",
-    "Routes count only flows between zones in different states; the drawn line follows mapped highways as a drawing aid (FAF assigns no route). Pipeline routes carry crude oil or gas.",
-    "Rest-of-state zones are drawn from their largest city, though the flow comes from the whole region.",
-    "Port tonnage is calendar 2023 (USACE), two years older than the airport counts (FAA 2025). Port positions are port-area centroids, so long river ports are approximate.",
-    "Natural Earth roads and rails are map art, not statistics: an older, simplified alignment holding about half the real rail network.",
+    // Each caveat only where its data is on this map (the US map has them all).
+    ...(trade ? [t("adv.com.c.faf1"), t("adv.com.c.faf2"), t("adv.com.c.faf3")] : []),
+    ...(infra?.ports?.length || infra?.airports?.length ? [t("adv.com.c.ports")] : []),
+    t("adv.com.c.ne"),
   ]));
 
   return {

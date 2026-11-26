@@ -33,8 +33,11 @@ class CityViewSourceTest(unittest.TestCase):
                 render(el, model, { loadCounties: () => null });
                 const districts = districtsHtml(model, load(dir, 'districts'), null);
                 if (world.country?.id === 'es') {
-                    for (const label of ['Member municipalities', 'INE Annual Population Census', 'province level']) {
+                    for (const label of ['Municipios miembros', 'Censo anual de población del INE', 'nivel de provincia', 'Vista de ciudad']) {
                         assert.ok(el.innerHTML.includes(label), `Spanish City View omits ${label}`);
+                    }
+                    for (const english of ['City View', 'Workforce', 'Member ', 'Loading', 'Rent burden']) {
+                        assert.ok(!el.innerHTML.includes(english) && !districts.includes(english), `Spanish City View still says ${english}`);
                     }
                     const wrongSource = el.innerHTML.match(/\bUS [\d€]|\b(?:ACS|BEA|QCEW)\b|U\.S\.|current dollars|Census population estimates/);
                     assert.equal(wrongSource?.[0], undefined);

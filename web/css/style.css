@@ -247,6 +247,10 @@ button.chip:hover { background: rgba(201,164,92,.2); }
 }
 .cp-section h3::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
 .yield-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+/* Longer number words (es-ES "18,3 mil M €") wrap after the number instead of pushing the last tile out. */
+html:not([lang="en"]) .yield-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+html:not([lang="en"]) .yield-tile .val { font-size: 13px; }
+html:not([lang="en"]) .yield-tile .lbl { font-size: 9px; letter-spacing: 0; }
 .yield-tile { background: rgba(0,0,0,.25); border: 1px solid rgba(201,164,92,.25); border-radius: 5px; padding: 6px 2px; text-align: center; cursor: help; }
 .yield-tile .ico { display: flex; justify-content: center; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
 .yield-tile .val { font-weight: 700; font-size: 14px; margin-top: 2px; font-variant-numeric: tabular-nums; }

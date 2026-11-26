@@ -1,7 +1,8 @@
 // Shared building blocks for the city and state panels (both render into #city-panel).
-import { compact, dollars, esc, int, money, pct, yieldValue } from "../format.js";
+import { compact, dollars, esc, fixed, int, isMoney, money, pct, signedPct, yieldValue } from "../format.js";
 import { icon, glyph } from "./icon.js";
 import { country } from "../app/country.js";
+import { t } from "../i18n.js";
 
 // Industry → a "district" glyph: SVG icons i-<key> from icons.js; these emoji are only the fallback.
 export const DISTRICT_ICON = {
@@ -13,18 +14,18 @@ export const DISTRICT_ICON = {
 
 const panelEl = () => document.getElementById("city-panel");
 
-// Yield tiles; `ranks` (optional) adds "#3 of 49" under each.
+// Yield tiles; `ranks` (optional) adds "#3 of 49" under each. A long amount of money may wrap after its number ("18,3" / "mil M €").
 export function yieldGrid(nation, yields, ranks = null, rankOf = 0) {
   return nation.yields
     .map((y) => {
       const v = yields?.[y.key];
       const r = ranks?.[y.key];
-      const label = y.key === "gold" ? "GDP" : y.label;
-      return `<div class="yield-tile" title="${esc(y.label)}${y.key === "gold" ? " (GDP)" : ""}: ${esc(y.description || "")}">
+      const label = y.key === "gold" ? t("core.panel.gdpLabel") : y.label;
+      return `<div class="yield-tile" title="${esc(y.label)}${y.key === "gold" ? ` (${t("core.panel.gdpLabel")})` : ""}: ${esc(y.description || "")}">
         <div class="ico" style="color:${esc(y.color)}">${glyph(y, 20)}</div>
-        <div class="val" style="color:${esc(y.color)}">${yieldValue(y, v)}</div>
+        <div class="val" style="color:${esc(y.color)}">${isMoney(y.unit) ? yieldValue(y, v).replace("\u00a0", " ") : yieldValue(y, v)}</div>
         <div class="lbl">${esc(label)}</div>
-        ${r ? `<div class="rank" title="Rank among the ${rankOf} mapped ${country().levels.region.many.toLowerCase()} (1 = largest)">#${r} of ${rankOf}</div>` : ""}</div>`;
+        ${r ? `<div class="rank" title="${t("core.panel.rankTitle", { count: rankOf, levels: country().levels.region.many.toLowerCase() })}">${t("core.panel.rank", { rank: r, count: rankOf })}</div>` : ""}</div>`;
     })
     .join("");
 }
@@ -37,18 +38,18 @@ export function statRow(ic, fallback, label, v, nv, fmt, higherIsGood) {
     const cls = Math.abs(ratio - 1) < 0.03 || higherIsGood == null ? "" : (higherIsGood ? ratio >= 1 : ratio <= 1) ? "good" : "bad";
     // Within 3% of the U.S. value reads as level: no arrow, no colour (the colour uses the same band).
     const arrow = Math.abs(ratio - 1) < 0.03 ? "≈" : ratio > 1 ? "▲" : "▼";
-    cmp = `<span class="cmp ${cls}">${arrow} US ${fmt(nv)}</span>`;
+    cmp = `<span class="cmp ${cls}">${arrow} ${t("core.panel.nation", { value: fmt(nv) })}</span>`;
   }
   return `<div class="stat-row"><span class="sl">${icon(ic, fallback, { size: 14 })}${esc(label)}</span><span><b>${fmt(v)}</b>${cmp}</span></div>`;
 }
 
 export function amenities(o, n) {
   return `
-    ${statRow("unemployment", "😐", "Unemployment", o.unemployment, n.unemployment, (x) => pct(x), false)}
-    ${statRow("l-income", "💵", "Median household income", o.median_income, n.median_income, dollars, true)}
-    ${statRow("l-home", "🏠", "Median home value", o.home_value, n.home_value, dollars, null)}
-    ${statRow("l-homeownership", "🔑", "Median gross rent / mo", o.median_rent, n.median_rent, dollars, false)}
-    ${statRow(null, "⚖️", "Rent ÷ income", o.rent_burden, n.rent_burden, (x) => pct(x), false)}`;
+    ${statRow("unemployment", "😐", t("core.panel.unemployment"), o.unemployment, n.unemployment, (x) => pct(x), false)}
+    ${statRow("l-income", "💵", t("core.panel.income"), o.median_income, n.median_income, dollars, true)}
+    ${statRow("l-home", "🏠", t("core.panel.homeValue"), o.home_value, n.home_value, dollars, null)}
+    ${statRow("l-homeownership", "🔑", t("core.panel.rent"), o.median_rent, n.median_rent, dollars, false)}
+    ${statRow(null, "⚖️", t("core.panel.rentBurden"), o.rent_burden, n.rent_burden, (x) => pct(x), false)}`;
 }
 
 // Workforce by industry with location quotients vs. the nation ("specialisation"). limit = max rows (0 = all).
@@ -60,16 +61,16 @@ export function industries(o, nation, limit = 0) {
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1]);
   if (limit) rows = rows.slice(0, limit);
-  if (!rows.length) return `<p class="muted">No industry data.</p>`;
+  if (!rows.length) return `<p class="muted">${t("core.panel.noIndustries")}</p>`;
   const maxShare = rows[0][1] / total;
   return rows
     .map(([k, v]) => {
       const share = v / total;
       const nShare = (n.jobs?.[k] || 0) / nTotal;
       const lq = nShare > 0 ? share / nShare : 1;
-      const tip = `Share of jobs is ${lq.toFixed(1)}× the national share`;
-      const badge = lq >= 1.3 ? `<span class="lq hi" title="${tip}">×${lq.toFixed(1)}</span>`
-        : lq <= 0.6 ? `<span class="lq lo" title="${tip}">×${lq.toFixed(1)}</span>` : "";
+      const tip = t("core.panel.lqTip", { lq: fixed(lq, 1) });
+      const badge = lq >= 1.3 ? `<span class="lq hi" title="${tip}">×${fixed(lq, 1)}</span>`
+        : lq <= 0.6 ? `<span class="lq lo" title="${tip}">×${fixed(lq, 1)}</span>` : "";
       return `<div class="ind"><span aria-hidden="true">${icon(`i-${k}`, DISTRICT_ICON[k] || "•")}</span>
         <span>${esc(nation.industries?.[k] || k)}${badge}</span><span class="n">${compact(v)} · ${pct(share, 0)}</span>
         <div class="bar"><i style="width:${(share / maxShare) * 100}%;background:${lq >= 1.3 ? "#9fd76a" : "#c9a45c"}"></i></div></div>`;
@@ -79,26 +80,28 @@ export function industries(o, nation, limit = 0) {
 
 export const gdpRow = (o) =>
   o.gdp != null
-    ? `<div class="stat-row"><span class="sl">${icon("y-gold", "💰", { size: 14 })}GDP${o.gdp_year ? ` (${o.gdp_year})` : ""}</span><span><b>${money(o.gdp)}</b>${
-        o.population ? `<span class="cmp">${money(o.gdp / o.population)} per person</span>` : ""}</span></div>`
+    ? `<div class="stat-row"><span class="sl">${icon("y-gold", "💰", { size: 14 })}${o.gdp_year ? t("core.panel.gdpYear", { year: o.gdp_year }) : t("core.panel.gdpLabel")}</span><span><b>${money(o.gdp)}</b>${
+        o.population ? `<span class="cmp">${t("core.panel.perPerson", { value: money(o.gdp / o.population) })}</span>` : ""}</span></div>`
     : "";
+
+/** "; GDP: <vintage>" for a panel's source line, or "". */
+export const gdpSource = (nation) => (nation.gdp_vintage ? t("core.panel.gdpSource", { vintage: esc(nation.gdp_vintage) }) : "");
 
 // " · ▲ 3.4% since 2021" from growth / growth_years (cities and states), compared with the U.S. in the tooltip.
 // Empty when growth is missing (null means "not measured", never zero).
 export function growthSpan(o, n = null) {
   if (!Number.isFinite(o?.growth)) return "";
   const yrs = Array.isArray(o.growth_years) && o.growth_years.length === 2 ? o.growth_years : null;
-  const p = (g) => `${g >= 0 ? "+" : "−"}${Math.abs(g * 100).toFixed(1)}%`;
-  const period = yrs ? `${yrs[0]}–${yrs[1]}` : "the last few years";
-  const us = Number.isFinite(n?.growth) ? ` (U.S. ${p(n.growth)})` : "";
-  const tip = `Population change ${period}, Census population estimates: ${p(o.growth)}${us}`;
+  const period = yrs ? `${yrs[0]}–${yrs[1]}` : t("core.growth.lastYears");
+  const nation = Number.isFinite(n?.growth) ? t("core.growth.nation", { value: signedPct(n.growth) }) : "";
+  const tip = t("core.growth.tip", { period, value: signedPct(o.growth), nation });
   const cls = o.growth >= 0 ? "good" : "bad";
-  return ` · <span class="growth ${cls}" title="${esc(tip)}">${o.growth >= 0 ? "▲" : "▼"} ${Math.abs(o.growth * 100).toFixed(1)}%${
-    yrs ? ` <span class="since">since ${yrs[0]}</span>` : ""}</span>`;
+  return ` · <span class="growth ${cls}" title="${esc(tip)}">${o.growth >= 0 ? "▲" : "▼"} ${pct(Math.abs(o.growth))}${
+    yrs ? ` <span class="since">${t("core.growth.since", { year: yrs[0] })}</span>` : ""}</span>`;
 }
 
 export const popLine = (o, extra = "") =>
-  `<div class="cp-pop">${icon("pop", "👥", { size: 16 })} <b>${int(o.population)}</b> people · ${int(o.employed)} employed${extra}</div>`;
+  `<div class="cp-pop">${icon("pop", "👥", { size: 16 })} ${t("core.panel.pop", { pop: int(o.population), employed: int(o.employed), extra })}</div>`;
 
 /**
  * Fill and show the panel.
@@ -107,19 +110,20 @@ export const popLine = (o, extra = "") =>
 export function showPanel(spec) {
   const panel = panelEl();
   panel.dataset.kind = spec.kind;
-  panel.setAttribute("aria-label", `${spec.kind === "state" ? country().levels.region.one : "City"}: ${spec.title}`);
+  const kind = spec.kind === "state" ? country().levels.region.one : t("core.panel.city");
+  panel.setAttribute("aria-label", `${kind}: ${spec.title}`);
   panel.innerHTML = `
     <div class="sheet-grip" aria-hidden="true"></div>
     <div class="cp-head">
       <div class="stripe" style="background:${spec.stripe}"></div>
-      <button class="icon-btn cp-close" aria-label="Close panel (Esc)" title="Close (Esc)">${icon("close", "✕", { size: 13 })}</button>
-      <div class="cp-kind">${spec.kind === "state" ? country().levels.region.one : "City"}</div>
+      <button class="icon-btn cp-close" aria-label="${t("core.panel.close")}" title="${t("core.panel.closeTitle")}">${icon("close", "✕", { size: 13 })}</button>
+      <div class="cp-kind">${kind}</div>
       <h2 class="cp-name">${spec.titleHtml ?? esc(spec.title)}</h2>
       ${spec.sub ? `<div class="cp-full">${spec.sub}</div>` : ""}
       ${spec.headExtra || ""}
     </div>
     ${spec.sections.filter(Boolean).map((s) => `<section class="cp-section"><h3>${s.title}</h3>${s.html}</section>`).join("")}
-    <div class="cp-foot">${spec.foot || ""} <a href="#" data-pedia>Almanac ›</a></div>`;
+    <div class="cp-foot">${spec.foot || ""} <a href="#" data-pedia>${t("core.panel.almanac")}</a></div>`;
   panel.hidden = false;
   panel.scrollTop = 0;
   panel.classList.remove("dragging-sheet");

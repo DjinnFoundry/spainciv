@@ -364,7 +364,7 @@ class SpainDistrictsTest(unittest.TestCase):
         self.assertEqual(dists[0]["sub"], "23")
         self.assertIsNone(dists[0]["avg_pay"], "the census has no wages")
         badge = badge_for(badge_district(dists), False, False, SD.BY_ID, "census")
-        self.assertEqual((badge["label"], badge["basis"]), ("Ceramics city", "census"))
+        self.assertEqual((badge["label"], badge["basis"]), ("Ciudad de la cerámica", "census"))
         self.assertIsNone(m.industry(["23"], SD.ALL, ["99999"])["emp"], "a city without census divisions has no data")
 
 

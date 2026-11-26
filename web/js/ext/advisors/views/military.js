@@ -8,6 +8,7 @@ import { section, tiles, chips, segmented, mapPicker, sourcesHtml } from "../cor
 import { rowsHighlight, extendData } from "../core/data.js";
 import { countyLens, stateLens } from "../core/lenses.js";
 import { frameBox, focusPoint } from "../core/frame.js";
+import { t } from "../../../i18n.js";
 
 // Original colours per component (branch hues; reserve = lighter, Guard = gold tones).
 const COMP_COLOR = {
@@ -35,7 +36,7 @@ export async function mount(ctx) {
   await extendData(data, ["military"]);
   const mil = app.data.military;
   if (!mil) {
-    el.innerHTML = `<p class="adv-empty pad">military.json is not built, so the General has nothing to report.</p>`;
+    el.innerHTML = `<p class="adv-empty pad">${t("adv.military.none")}</p>`;
     return {};
   }
   const { states: stLevel, metros, counties } = data.levels;

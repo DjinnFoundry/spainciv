@@ -2,8 +2,9 @@
 // from and the caveat that matters for it (FAF values are model estimates; bases have no published headcount; the
 // trade arc is a drawing aid; curated landmarks are an editorial pick).
 import { esc, compact, int, pct } from "../../format.js";
-import { FORT_KINDS, fortKind, WONDER_KINDS } from "../../render/art/sites.js";
+import { FORT_KINDS, fortKind } from "../../render/art/sites.js";
 import { MODE_STYLE } from "../../render/art/improvements.js";
+import { t } from "../../i18n.js";
 
 const muted = (s) => `<span class="muted">${s}</span>`;
 const num = (n, d = 1) => (n == null || !Number.isFinite(n) ? "–" : compact(n));
@@ -20,6 +21,8 @@ function usd(n) {
 
 const HUB_NAME = { L: "Large hub", M: "Medium hub", S: "Small hub", N: "Nonhub primary airport" };
 const PORT_TYPE = { coastal: "Coastal port", great_lakes: "Great Lakes port", inland: "Inland river port" };
+const WONDER_KIND = { natural: "wonder.kind.natural", university: "wonder.kind.university", landmark: "wonder.kind.landmark" };
+const NATIONAL_PARK = new Set(["National Park", "Parque Nacional"]); // metrics.unit_type in the US and Spanish data
 
 export const tips = {
   port(p, m) {
@@ -70,23 +73,25 @@ export const tips = {
     ].join("<br>");
   },
   wonder(x, m) {
-    const k = WONDER_KINDS[x.kind]?.name || "Wonder";
+    const k = t(WONDER_KIND[x.kind] || "wonder.kind.other");
     const rule = m.data.wonders?.rules?.find((r) => r.id === x.rule);
     const mt = x.metrics || {};
     const lines = [`<b>${esc(x.name)}</b> ${muted(esc([x.state].filter(Boolean).join("")))}`];
     if (x.kind === "university") {
-      lines.push(`${esc(k)} · #${esc(x.rank)} by ${mt.rd_usd != null ? "research spending" : "students"}`);
+      lines.push(mt.rd_usd != null ? `${esc(k)} · #${esc(x.rank)} by research spending` : t("wonder.rankStudents", { kind: esc(k), rank: esc(x.rank) }));
       if (mt.rd_usd != null) lines.push(`R&amp;D ${usd(mt.rd_usd)} (FY${esc(mt.year)})${mt.federal_usd != null ? `, ${pct(mt.federal_usd / mt.rd_usd, 0)} federal` : ""}`);
-      if (mt.students != null) lines.push(`<b>${int(mt.students)}</b> students (${esc(mt.students_year)})${mt.municipality ? ` ${muted(esc(mt.municipality))}` : ""}`);
+      if (mt.students != null) lines.push(`${t("wonder.students", { n: int(mt.students), year: esc(mt.students_year) })}${mt.municipality ? ` ${muted(esc(mt.municipality))}` : ""}`);
       if (mt.enrollment != null) lines.push(`${int(mt.enrollment)} students (12-month headcount, ${esc(mt.enrollment_year)})`);
     } else if (x.curated) {
       lines.push(`${esc(k)} · hand-picked (curated, not ranked by data)`);
       if (mt.visits != null) lines.push(`${num(mt.visits)} recreation visits (${esc(mt.year)})`);
       if (mt.designated) lines.push(`National Historic Landmark since ${esc(mt.designated)}`);
     } else {
-      lines.push(`${esc(k)} · #${esc(x.rank)} by visits${mt.unit_type ? ` among ${esc(mt.unit_type === "National Park" ? "National Parks" : "other park units")}` : ""}`);
-      if (mt.visits != null) lines.push(`<b>${num(mt.visits)}</b> recreation visits (${esc(mt.year)})${mt.visits_of ? ` ${muted(`(${esc(mt.visits_of)})`)}` : ""}`);
+      const among = mt.unit_type ? t(NATIONAL_PARK.has(mt.unit_type) ? "wonder.amongParks" : "wonder.amongOther") : "";
+      lines.push(t("wonder.rank", { kind: esc(k), rank: esc(x.rank), among }));
+      if (mt.visits != null) lines.push(`${t("wonder.visits", { n: num(mt.visits), year: esc(mt.year) })}${mt.visits_of ? ` ${muted(`(${esc(mt.visits_of)})`)}` : ""}`);
       if (mt.area_km2 != null) lines.push(`${int(mt.area_km2)} km²`);
+      if (mt.unesco_id != null) lines.push(t("wonder.unesco", { id: esc(mt.unesco_id), n: mt.components ?? 1 }));
     }
     if (rule?.text) lines.push(muted(esc(rule.text)));
     return lines.join("<br>");

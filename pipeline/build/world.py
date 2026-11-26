@@ -47,6 +47,12 @@ LAND_MIN_ALT_M = -100  # ETOPO samples below this inside a land hex are treated 
 HILLS_STD_M, MOUNTAINS_STD_M = 85.0, 260.0  # tuned on 25 km hexes; other hex sizes set their own (pipeline/countries)
 
 
+def localized(rows: list[dict], texts: dict | None, **values) -> list[dict]:
+    """Rows of a table with the names and rules a country gives by row id (world_inputs texts), {…} filled from
+    `values`; rows it does not name are kept as they are."""
+    return [{**row, **{k: v.format(**values) for k, v in (texts or {}).get(row["id"], {}).items()}} for row in rows]
+
+
 def relief_table(hills: float = HILLS_STD_M, mountains: float = MOUNTAINS_STD_M) -> list[dict]:
     return [
         {"id": FLAT, "name": "Flat", "rule": f"Elevation standard deviation inside the hex under {hills:g} m."},
@@ -508,21 +514,20 @@ def build() -> None:
             if len(pts) >= 2:
                 rivers.append({"name": name, "rank": int(rank), "pts": [round(v, 1) for p in pts for v in p]})
 
-    cover_table = [{"id": 0, "key": "none", "name": "None", "rule": texts.get("cover_none_rule", "Water, foreign land, or no NLCD land pixels.")}] + [
+    cover_table = [{"id": 0, "key": "none", "name": "None", "rule": "Water, foreign land, or no NLCD land pixels."}] + [
         {"id": cid, "key": key, "name": name, "color": color, "nlcd": codes, "rule": rule}
         for cid, key, name, color, codes, rule in COVER
     ]
-    water_table = [dict(t) for t in WATER_TABLE]
-    if "water_land_rule" in texts:
-        water_table[LAND]["rule"] = texts["water_land_rule"]
+    hills, mountains = country.relief_std_m
+    notes = texts.get("notes", {})
     tables = {
-        "water": water_table,
-        "relief": relief_table(*country.relief_std_m),
-        "cover": cover_table,
+        "water": localized(WATER_TABLE, texts.get("water")),
+        "relief": localized(relief_table(hills, mountains), texts.get("relief"), hills=f"{hills:g}", mountains=f"{mountains:g}"),
+        "cover": localized(cover_table, texts.get("cover"), urban=URBAN_MIN_PCT),
         "notes": {
-            "water": texts.get("water_note", WATER_NOTE),
-            "relief": texts.get("relief_note", RELIEF_NOTE),
-            "cover": texts.get("cover_note", COVER_NOTE),
+            "water": notes.get("water", WATER_NOTE),
+            "relief": notes.get("relief", RELIEF_NOTE),
+            "cover": notes.get("cover", COVER_NOTE),
         },
     }
     states_out = [{"fips": s["fips"], "abbr": s["abbr"], "name": s["name"]} for s in states]

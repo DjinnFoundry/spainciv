@@ -85,12 +85,12 @@ class RenderTest(unittest.TestCase):
         es = countries.COUNTRIES["es"]
         html = site.render_index(TEMPLATE, es)
         h = Head(html)
-        self.assertIn("Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", h.credits)
+        self.assertIn("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", h.credits)
         self.assertIn(es.page.data_credit, h.credits)
         self.assertNotIn("EuroGeographics", html)  # GISCO boundaries were replaced by the IGN's SIANE
-        self.assertIn("usaciv by Andrej Karpathy", h.credits)
+        self.assertIn("Basado en usaciv, de Andrej Karpathy (MIT)", h.credits)
         self.assertIn('<a href="https://karpathy.ai/usaciv/"', html)
-        self.assertEqual(h.config, {"site_url": es.site_url, "data_credit": es.page.data_credit, "notices": list(es.page.notices)})
+        self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": es.page.data_credit, "notices": list(es.page.notices)})
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.
         self.assertLess(html.index('id="map-credits"'), html.index('id="lens-area"'))
 
@@ -176,7 +176,7 @@ class CountryJsTest(unittest.TestCase):
         world = {"country": {"id": "es", "site_url": "spainciv", "product": "spainciv"}}
         c = self.country(world, json.dumps(site.page_config(es)))
         self.assertEqual(c["site_url"], "spainciv.djinnfoundry.com")
-        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
         self.assertEqual(c["data_credit"], es.page.data_credit)
         self.assertEqual(c["product"], "spainciv")
 

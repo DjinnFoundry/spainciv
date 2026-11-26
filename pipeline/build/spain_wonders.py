@@ -34,17 +34,17 @@ COUNTRIES = ("es",)
 
 RULES = [
     {"id": "world_heritage", "kind": "landmark", "kinds": ["landmark", "natural"], "year": None,
-     "text": "Every UNESCO World Heritage site with a component in Spain (50, as Wikidata records them), in order of their "
-             "UNESCO number, roughly the order of inscription. Natural sites are natural wonders."},
+     "text": "Todos los sitios del Patrimonio Mundial de la UNESCO con algún elemento en España (50, según Wikidata), por "
+             "su número UNESCO, que sigue más o menos el orden de inscripción. Los sitios naturales son maravillas naturales."},
     {"id": "national_park", "kind": "natural", "kinds": ["natural", "coastal"], "year": None,
-     "text": "Every one of Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by their 2025 visitors "
-             "(OAPN's yearly report): the Teide first, with over 5 million."},
+     "text": "Los 16 Parques Nacionales de España (Red de Parques Nacionales, OAPN), ordenados por sus visitantes de 2025 "
+             "(informe anual del OAPN): el Teide, primero, con más de 5 millones."},
     {"id": "great_university", "kind": "university", "kinds": ["university"], "year": None,
-     "text": "The 20 universities teaching on site with the most degree, master's and doctoral students in 2024-25 "
-             "(SIIU, Ministerio de Ciencia, Innovación y Universidades), at the municipality where most of them study."},
+     "text": "Las 20 universidades presenciales con más estudiantes de grado, máster y doctorado en el curso 2024-25 "
+             "(SIIU, Ministerio de Ciencia, Innovación y Universidades), en el municipio donde estudian más de ellos."},
     {"id": "cathedral", "kind": "landmark", "kinds": ["landmark"], "year": None,
-     "text": "Every cathedral and co-cathedral in Spain that Wikidata records, alphabetically, except those that are part "
-             "of a World Heritage site (already a wonder)."},
+     "text": "Todas las catedrales y concatedrales de España que recoge Wikidata, por orden alfabético, salvo las que forman "
+             "parte de un sitio del Patrimonio Mundial (que ya es una maravilla)."},
 ]
 # What stands on the plinth (web/js/render/art/sites.js WONDER_MOTIFS), by words in the wonder's name.
 MOTIFS = [

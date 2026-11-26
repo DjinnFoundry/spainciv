@@ -31,8 +31,10 @@ from ..countries import active
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
-from .states import label_anchor, land_shares
 from .spain_wonders import place_key
+from .states import label_anchor, land_shares
+from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LABELS, num, vintage
+from .world import localized
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
@@ -42,35 +44,38 @@ COUNTRIES = ("es",)
 
 SERIES_FROM = 2020  # pop_series spans the same years as the US map's (the full Padrón series is in the interim)
 
-WORKERS = "Employed residents, counted where they live (INE Annual Population Census, 1 January {year})"
+WORKERS = "Residentes ocupados, contados donde viven (Censo anual de población del INE, 1 de enero de {year})"
 YIELD_TEXT = {
-    "food": WORKERS + ": agriculture, livestock, forestry and fishing (CNAE section A).",
-    "production": WORKERS + ": mining (B), manufacturing (C) and construction (F), the US map's three industries.",
-    "gold": "Gross domestic product at market prices, current euros (INE Contabilidad Regional de España). INE publishes "
-    "it down to provinces, so cities have no Gold of their own.",
-    "science": WORKERS + ": information & communication (J) and professional, scientific & technical services (M).",
-    "culture": WORKERS + ": arts, entertainment & recreation (R).",
+    "food": WORKERS + ": agricultura, ganadería, silvicultura y pesca (sección A de la CNAE).",
+    "production": WORKERS + ": industrias extractivas (B), industria manufacturera (C) y construcción (F), los tres "
+    "sectores del mapa de EE. UU.",
+    "gold": "Producto interior bruto a precios de mercado, en euros corrientes (Contabilidad Regional de España del INE). "
+    "El INE lo publica hasta el nivel provincial, así que las ciudades no tienen oro propio.",
+    "science": WORKERS + ": información y comunicaciones (J) y actividades profesionales, científicas y técnicas (M).",
+    "culture": WORKERS + ": actividades artísticas, recreativas y de entretenimiento (R).",
 }
 # CNAE-2009 section → the industry key the map uses (yields.INDUSTRY_LINES), with the Spanish section's own label.
 CNAE = {
-    "A": ("agriculture", "Agriculture, livestock, forestry & fishing"), "B": ("mining", "Mining & quarrying"),
-    "C": ("manufacturing", "Manufacturing"), "D": ("utilities", "Energy, water & waste"), "E": ("utilities", None),
-    "F": ("construction", "Construction"), "G": ("retail", "Wholesale & retail trade, motor-vehicle repair"),
-    "H": ("transportation", "Transportation & storage"), "I": ("accommodation", "Accommodation & food services"),
-    "J": ("information", "Information & communication"), "K": ("finance", "Finance & insurance"),
-    "L": ("real_estate", "Real estate"), "M": ("professional", "Professional, scientific & technical"),
-    "N": ("admin", "Administrative & support services"), "O": ("public_admin", "Public administration & defence"),
-    "P": ("education", "Education"), "Q": ("health", "Health & social work"), "R": ("arts", "Arts, entertainment & recreation"),
-    "S": ("other", "Other services, households as employers, extraterritorial bodies"), "T": ("other", None), "U": ("other", None),
+    "A": ("agriculture", "Agricultura, ganadería, silvicultura y pesca"), "B": ("mining", "Industrias extractivas"),
+    "C": ("manufacturing", "Industria manufacturera"), "D": ("utilities", "Energía, agua y residuos"), "E": ("utilities", None),
+    "F": ("construction", "Construcción"), "G": ("retail", "Comercio y reparación de vehículos"),
+    "H": ("transportation", "Transporte y almacenamiento"), "I": ("accommodation", "Hostelería"),
+    "J": ("information", "Información y comunicaciones"), "K": ("finance", "Actividades financieras y de seguros"),
+    "L": ("real_estate", "Actividades inmobiliarias"), "M": ("professional", "Actividades profesionales, científicas y técnicas"),
+    "N": ("admin", "Actividades administrativas y servicios auxiliares"), "O": ("public_admin", "Administración pública y defensa"),
+    "P": ("education", "Educación"), "Q": ("health", "Sanidad y servicios sociales"),
+    "R": ("arts", "Actividades artísticas, recreativas y de entretenimiento"),
+    "S": ("other", "Otros servicios, hogares como empleadores y organismos extraterritoriales"), "T": ("other", None),
+    "U": ("other", None),
 }
 INDUSTRIES = {key: label for key, label in CNAE.values() if label}
 ECON_NULL = {"median_income": None, "median_rent": None, "home_value": None, "unemployment": None, "rent_burden": None}
 
 
 def yields_es(year: int | None = None) -> list[dict]:
-    """The US yield definitions (keys, icons, colours, industries) with Spain's sources; Gold is in euros."""
-    return [{**y, "unit": "eur" if y["key"] == "gold" else y["unit"], "description": YIELD_TEXT[y["key"]].format(year=year)}
-            for y in YIELDS]
+    """The US yield definitions (keys, icons, colours, industries) with Spain's names and sources; Gold is in euros."""
+    return [{**y, "label": YIELD_LABELS[y["key"]], "unit": "eur" if y["key"] == "gold" else y["unit"],
+             "description": YIELD_TEXT[y["key"]].format(year=year)} for y in YIELDS]
 
 
 def jobs_of(sections: dict[str, int] | None) -> dict[str, int | None] | None:
@@ -205,16 +210,16 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
         values.append(round(sum(v * p for v, p in vals) / wsum) if wsum else None)
     meta = COUNTY_LENSES["income"][1]
     return {
-        "id": "income", **{k: meta[k] for k in ("group", "name", "icon", "emoji", "scale", "higher_is", "ramp")},
-        "unit": "net income per person, €", "format": "eur", "source": "ine_adrh",
-        "description": f"Mean net income per person of the municipalities in each hex, weighted by population (INE Atlas "
-        f"de Distribución de Renta de los Hogares, {adrh['year']}: tax records matched to the Padrón). A mean per person, "
-        "not the US map's median per household.",
+        "id": "income", **{k: meta[k] for k in ("group", "icon", "emoji", "scale", "higher_is", "ramp")}, "name": "Renta",
+        "unit": "renta neta por persona, €", "format": "eur", "source": "ine_adrh",
+        "description": f"Renta neta media por persona de los municipios de cada hexágono, ponderada por población (Atlas "
+        f"de Distribución de Renta de los Hogares del INE, {adrh['year']}: registros tributarios cruzados con el Padrón). "
+        "Es una media por persona, no la mediana por hogar del mapa de EE. UU.",
         "values": values,
     }
 
 
-ES_GROUPS = [{"id": "heritage", "name": "Heritage"}, {"id": "food", "name": "Food & drink"}]
+ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}, {"id": "food", "name": "Comida y bebida"}]
 
 
 def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -225,11 +230,11 @@ def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
         if c >= 0 and values[c] is not None:
             values[c] += 1
     return {
-        "id": "heritage", "group": "heritage", "name": "Heritage", "icon": "l-heritage", "emoji": "🏛️",
-        "unit": "protected monuments (BIC)", "format": "int", "scale": "log", "higher_is": "neutral",
+        "id": "heritage", "group": "heritage", "name": "Patrimonio", "icon": "l-heritage", "emoji": "🏛️",
+        "unit": "monumentos protegidos (BIC)", "format": "int", "scale": "log", "higher_is": "neutral",
         "ramp": ["#2a1a0e", "#5a3418", "#8f5a25", "#c48a3a", "#e8c070", "#fff1c4"], "source": "wikidata_es",
-        "description": "Bienes de Interés Cultural (Spain's highest heritage protection: monuments, sites, historic "
-        "quarters) in each hex, as Wikidata locates them.",
+        "description": "Bienes de Interés Cultural (la máxima protección del patrimonio en España: monumentos, sitios, "
+        "conjuntos históricos) de cada hexágono, según los sitúa Wikidata.",
         "values": values,
     }
 
@@ -254,26 +259,26 @@ def shore_cell(grid: HexGrid, owner: list[int], x: float, y: float) -> int:
 def museums_lens(museums: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
     """Museums per land hex, named in the tooltip (the most visited first, where Wikidata records visitors)."""
     return {
-        "id": "museums", "group": "heritage", "name": "Museums", "icon": "l-museums", "emoji": "🖼️",
-        "unit": "museums", "format": "int", "scale": "log", "higher_is": "neutral",
+        "id": "museums", "group": "heritage", "name": "Museos", "icon": "l-museums", "emoji": "🖼️",
+        "unit": "museos", "format": "int", "scale": "log", "higher_is": "neutral",
         "ramp": ["#141a2e", "#23365e", "#36598f", "#5b86b8", "#9cc0dc", "#e8f3fb"], "source": "wikidata_es",
-        "description": f"Museums in each hex: the {len(museums):,} museums, galleries, science centres and visitor "
-        "centres in Spain that Wikidata locates. Hover a hex for their names.",
+        "description": f"Museos de cada hexágono: los {num(len(museums))} museos, galerías, museos de ciencia y centros "
+        "de interpretación de España que Wikidata sitúa. Pasa el ratón por un hexágono para ver sus nombres.",
         **named_counts([m["label"] for m in museums], [[shore_cell(grid, owner, *proj(*m["coord"]))] for m in museums],
                        owner),
     }
 
 
 LANGUAGES = [
-    {"id": "spanish", "name": "Spanish only", "color": "#c9b99a"},
-    {"id": "catalan", "name": "Catalan (co-official)", "color": "#d9534f"},
-    {"id": "aranese", "name": "Aranese/Occitan and Catalan (co-official)", "color": "#9b5de5"},
-    {"id": "valencian", "name": "Valencian (co-official): Valencian-speaking area", "color": "#f0883e"},
-    {"id": "valencia_castilian", "name": "Valencian (co-official): Spanish-speaking area", "color": "#f3c98b"},
-    {"id": "galician", "name": "Galician (co-official)", "color": "#4f9fd9"},
-    {"id": "basque", "name": "Basque (co-official)", "color": "#2e8b57"},
-    {"id": "basque_mixed", "name": "Basque: Navarre's mixed zone", "color": "#9ad0a6"},
-    {"id": "asturian", "name": "Asturian (protected, not co-official)", "color": "#e8d44d"},
+    {"id": "spanish", "name": "Solo castellano", "color": "#c9b99a"},
+    {"id": "catalan", "name": "Catalán (cooficial)", "color": "#d9534f"},
+    {"id": "aranese", "name": "Aranés/occitano y catalán (cooficiales)", "color": "#9b5de5"},
+    {"id": "valencian", "name": "Valenciano (cooficial): zona valencianohablante", "color": "#f0883e"},
+    {"id": "valencia_castilian", "name": "Valenciano (cooficial): zona castellanohablante", "color": "#f3c98b"},
+    {"id": "galician", "name": "Gallego (cooficial)", "color": "#4f9fd9"},
+    {"id": "basque", "name": "Euskera (cooficial)", "color": "#2e8b57"},
+    {"id": "basque_mixed", "name": "Euskera: zona mixta de Navarra", "color": "#9ad0a6"},
+    {"id": "asturian", "name": "Asturiano (protegido, no cooficial)", "color": "#e8d44d"},
 ]
 # Province code → the language co-official (or protected) in all of it.
 LANGUAGE_OF_PROVINCE = {**dict.fromkeys(("08", "17", "25", "43", "07"), "catalan"),
@@ -326,16 +331,16 @@ def languages_lens(lenguas: dict, municipalities: list[dict], world: dict) -> di
     values = [index[language[world["counties"][ci]]] if o >= 0 and ci >= 0 and world["counties"][ci] in language else None
               for o, ci in zip(world["owner"], world["county"])]
     return {
-        "id": "languages", "group": "heritage", "name": "Languages", "icon": "l-languages", "emoji": "🗣️",
-        "unit": "official languages", "format": "category", "scale": "linear", "higher_is": "neutral",
+        "id": "languages", "group": "heritage", "name": "Lenguas", "icon": "l-languages", "emoji": "🗣️",
+        "unit": "lenguas oficiales", "format": "category", "scale": "linear", "higher_is": "neutral",
         "categories": LANGUAGES, "ramp": [c["color"] for c in LANGUAGES], "domain": [0, len(LANGUAGES) - 1],
         "source": "lenguas_es",
-        "description": "Where each regional language is official, municipality by municipality, as the laws set it: "
-        "co-official in all of Catalonia, the Balearic Islands, Galicia and the Basque Country; Aranese in Val d'Aran; "
-        "Navarre's Basque-speaking and mixed zones (Ley Foral 18/1986); in the Valencian Community, the "
-        "Spanish-speaking municipalities of Llei 4/1983 (Valencian is co-official there too); Asturian, protected "
-        "but not co-official. Aragonese and Catalan in Aragon have no published list of municipalities yet, so "
-        "Aragon shows Spanish only. Dialects (Andalusian, Canarian…) are not legal categories and are not mapped.",
+        "description": "Dónde es oficial cada lengua, municipio a municipio, según las leyes: cooficial en toda Cataluña, "
+        "Baleares, Galicia y el País Vasco; el aranés en el Valle de Arán; las zonas vascófona y mixta de Navarra "
+        "(Ley Foral 18/1986); en la Comunitat Valenciana, los municipios castellanohablantes de la Llei 4/1983 (donde "
+        "el valenciano también es cooficial); el asturiano, protegido pero no cooficial. El aragonés y el catalán de "
+        "Aragón aún no tienen una lista publicada de municipios, así que Aragón sale solo en castellano. Los dialectos "
+        "(andaluz, canario…) no son categorías legales y no se cartografían.",
         "values": values,
     }
 
@@ -388,11 +393,12 @@ def beaches_lens(beaches: list[dict], municipalities: list[dict], world: dict, g
         cells_of.append([options[used.get(town, 0) % len(options)]])
         used[town] = used.get(town, 0) + 1
     return {
-        "id": "beaches", "group": "heritage", "name": "Blue Flag beaches", "icon": "l-beaches", "emoji": "🏖️",
-        "unit": "Blue Flag beaches", "format": "int", "scale": "linear", "higher_is": "good", "domain": [0, 6],
+        "id": "beaches", "group": "heritage", "name": "Bandera Azul", "icon": "l-beaches", "emoji": "🏖️",
+        "unit": "playas con Bandera Azul", "format": "int", "scale": "linear", "higher_is": "good", "domain": [0, 6],
         "ramp": ["#0d2b45", "#134f74", "#1a77a3", "#2ea3c9", "#7fd1e3", "#e6f8fb"], "source": "bandera_azul",
-        "description": f"The {len(beaches)} beaches flying the Blue Flag in 2026-27, named in the tooltip. ADEAC lists "
-        "each beach's municipality, not its position, so a municipality's beaches are spread over its coastal hexes.",
+        "description": f"Las {len(beaches)} playas con Bandera Azul en 2026-27, con su nombre al pasar el ratón. ADEAC da "
+        "el municipio de cada playa, no su posición, así que las playas de un municipio se reparten por sus hexágonos "
+        "de costa.",
         **named_counts([f"{b['beach']} ({b['municipality']})" for b in beaches], cells_of, owner),
     }
 
@@ -429,14 +435,15 @@ def peoples_lens(peoples: list[dict], proj, grid: HexGrid, owner: list[int]) -> 
     categories = [{"id": peoples[k]["id"], "name": peoples[k]["name"], "color": PEOPLE_COLOURS[colour[i]]}
                   for i, k in enumerate(used)]
     return {
-        "id": "peoples", "group": "heritage", "name": "Ancient peoples", "icon": "l-peoples", "emoji": "🛡️",
-        "unit": "people of ancient Iberia", "format": "category", "scale": "linear", "higher_is": "neutral",
+        "id": "peoples", "group": "heritage", "name": "Pueblos prerromanos", "icon": "l-peoples", "emoji": "🛡️",
+        "unit": "pueblo de la Iberia antigua", "format": "category", "scale": "linear", "higher_is": "neutral",
         "categories": categories, "ramp": [c["color"] for c in categories], "domain": [0, max(len(categories) - 1, 1)],
         "source": "pleiades_iberia",
-        "description": f"The ancient people whose Pleiades location is nearest to each hex (within {PEOPLE_REACH_KM} km): "
-        "Vaccaei, Vascones, Cantabri, Ilergetes… and, in the south and east, the regions named after their peoples "
-        "(Turdetania, Bastetania, Contestania). The borders are nearest-point territories drawn by this map: Pleiades "
-        "gives each people a point, not a boundary.",
+        "description": f"El pueblo antiguo cuya ubicación en Pleiades está más cerca de cada hexágono (hasta "
+        f"{PEOPLE_REACH_KM} km): vacceos, vascones, cántabros, ilergetes… y, en el sur y el este, las regiones que llevan "
+        "el nombre de sus pueblos (Turdetania, Bastetania, Contestania). Las fronteras son territorios del punto más "
+        "cercano que dibuja este mapa: Pleiades da a cada pueblo un punto, no un límite. Los nombres van en latín o "
+        "griego, como en Pleiades.",
         "values": [index[k] if k is not None else None for k in nearest],
     }
 
@@ -455,12 +462,12 @@ def food_lens(names: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
             cells = [nearest_land(grid, owner, max(grid.cell_at(x, y), 0), x, y, -1)]
         cells_of.append(cells)
     return {
-        "id": "food", "group": "food", "name": "Food & drink", "icon": "l-food", "emoji": "🍷",
-        "unit": "protected names (DOP, IGP, wine)", "format": "int", "scale": "linear", "higher_is": "neutral",
+        "id": "food", "group": "food", "name": "Denominaciones de origen", "icon": "l-food", "emoji": "🍷",
+        "unit": "denominaciones (DOP, IGP, vinos)", "format": "int", "scale": "linear", "higher_is": "neutral",
         "ramp": ["#2b1320", "#5c1f3a", "#8e3049", "#c25a4a", "#e89a5a", "#ffe0a0"], "source": "calidad_diferenciada",
-        "description": f"How many of Spain's {len(names)} mapped protected food and drink names (DOP, IGP, vinos de "
-        "pago and quality wines: Rioja, Jamón de Teruel, Queso Manchego…) include each hex in their area, as the "
-        "Ministry of Agriculture maps them. Hover a hex for the names.",
+        "description": f"Cuántas de las {len(names)} denominaciones de calidad con zona cartografiada (DOP, IGP, vinos de "
+        "pago y vinos de calidad: Rioja, Jamón de Teruel, Queso Manchego…) incluyen cada hexágono en su zona, según "
+        "el Ministerio de Agricultura. Pasa el ratón por un hexágono para ver sus nombres.",
         **named_counts([n["name"] for n in names], cells_of, owner),
     }
 
@@ -535,7 +542,7 @@ def build() -> None:
     # --- nation ------------------------------------------------------------------------------------------------
     nat_series = padron["nation"]
     nation = {
-        "vintage": padron_p["vintage"], "year": year, "gdp_vintage": pib_p["vintage"],
+        "vintage": vintage(padron_p["vintage"]), "year": year, "gdp_vintage": vintage(pib_p["vintage"]),
         "nation": {**econ(nat_series.get(str(year)), pib["nation"], gdp_year, ss["nation"]), "growth": growth_of(nat_series, years),
                    "growth_years": years or None},
         "yields": yields_es(ss["year"]),
@@ -550,24 +557,26 @@ def build() -> None:
         if world["counties"][k] in centre else None
     )
     lenses = [{
-        "id": "density", "group": "people", "name": "Population", "icon": "l-people", "emoji": "👥",
-        "unit": "people / km²", "format": "int", "scale": "log",
+        "id": "density", "group": "people", "name": "Población", "icon": "l-people", "emoji": "👥",
+        "unit": "habitantes / km²", "format": "int", "scale": "log",
         "ramp": ["#1b1035", "#4b2377", "#9a3b8a", "#e0645e", "#f9b24a", "#fff3a8"], "higher_is": "neutral",
         "source": "ine_padron",
-        "description": f"Residents per km² of land. Each municipality's population (INE Padrón, {year}) is spread over "
-        "its hexes in proportion to how much of the municipality each hex covers.",
+        "description": f"Residentes por km² de tierra. La población de cada municipio (Padrón del INE, {year}) se reparte "
+        "entre sus hexágonos en proporción a la parte del municipio que cubre cada uno.",
         "values": density,
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
-        beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + land_lenses(world, "corine")
-    set_domains(lenses)
-    groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
+        beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + [
+        {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
+    set_domains(lenses, DOMAIN_NOTE)
+    groups = [g for g in localized(GROUPS, {k: {"name": v} for k, v in LENS_GROUPS.items()}) + ES_GROUPS
+              if any(l["group"] == g["id"] for l in lenses)]
 
     write_web("cities.json", cities)
     write_web("nation.json", nation)
     write_web("states.json", states)
-    write_web("lenses.json", {"vintage": padron_p["vintage"], "groups": groups, "lenses": lenses})
+    write_web("lenses.json", {"vintage": vintage(padron_p["vintage"]), "groups": groups, "lenses": lenses})
     print(f"    {len(cities)} cities (AUDES large urban areas), {len(states)} provinces; GDP {gdp_year}, Padrón {year}")

@@ -11,6 +11,7 @@ import { drawRoads, drawRail, drawPort, drawAirport, drawTradeRoutes, hitRoute, 
 import { drawFort, drawRestricted, drawProtected, drawWonder, drawPlaque } from "../../render/art/sites.js";
 import { visibleSites, siteSize, hitSites } from "./model.js";
 import { esc } from "../../format.js";
+import { t } from "../../i18n.js";
 
 const inVp = (it, vp, padKm) => it.x > vp.x0 - padKm && it.x < vp.x1 + padKm && it.y > vp.y0 - padKm && it.y < vp.y1 + padKm;
 
@@ -33,8 +34,8 @@ export function makeLayers(model, on, { tips = {}, app = null } = {}) {
   const moved = (it, html) => {
     if (!html || !it.nudged || typeof html !== "string") return html;
     const city = m.w.cityByCell.get(it.cell);
-    const where = city ? `${esc(city.name)}'s city hex` : "a city hex";
-    return `${html}<br><span class="muted">Drawn on the next hex so it stays visible; its true location falls in ${where}.</span>`;
+    const where = city ? t("layers.moved.city", { name: esc(city.name) }) : t("layers.moved.anyCity");
+    return `${html}<br><span class="muted">${t("layers.moved", { where })}</span>`;
   };
   const ver = () => `v${m.version}`;
   const grid = () => m.w.grid;

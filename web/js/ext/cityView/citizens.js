@@ -8,6 +8,7 @@
 // focused figure fills ("1 in 7 workers in San Jose is an engineer, coder or scientist (US: 1 in 14)"), and a thin
 // U.S. bar for comparison. A row Census left out is said so, never drawn as zeros.
 import { esc, int, pct } from "../../format.js";
+import { t } from "../../i18n.js";
 import { compact } from "./fmt.js";
 import { CATEGORY_COLOR, figureCanvas, loadPainter } from "./figures.js";
 
@@ -123,8 +124,8 @@ function specMap(city) {
 /** The Citizens rows. data = citizens.json (or null / undefined while loading). */
 export function citizensHtml(m, data) {
   const c = m.city;
-  if (data === undefined) return `<p class="muted cv-note">Loading the citizen mix…</p>`;
-  if (!data || !data.cities) return `<p class="muted cv-note">The citizen mix is not available.</p>`;
+  if (data === undefined) return `<p class="muted cv-note">${t("cv.cz.loading")}</p>`;
+  if (!data || !data.cities) return `<p class="muted cv-note">${t("cv.cz.none")}</p>`;
   const row0 = data.cities[c.id];
   if (!row0) {
     return `<p class="muted cv-note">Census published none of the citizen tables for ${esc(c.name)} in the ${esc(data.vintage || "ACS 1-year")} release (it leaves out small areas), so there are no citizen figures here.</p>`;

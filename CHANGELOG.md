@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Interfaz de spainciv en castellano: tablas `web/js/i18n/<lang>/`, `t()`, números en es-ES (Intl) y textos de los
+  datos de España en castellano (`texts_es.py`). El mapa de EE UU no cambia.
 - Capa «Blue Flag beaches»: las 677 playas con Bandera Azul 2026-27, en los hexágonos de costa de su municipio y
   nombradas en el tooltip. ADEAC solo publica un PDF: `tools/bandera_azul_pdf.py` lo lee y cuadra cada comunidad.
 - Capa «Languages»: dónde es oficial cada lengua, municipio a municipio según las leyes (catalán, aranés, valenciano

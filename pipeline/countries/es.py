@@ -46,7 +46,7 @@ COUNTRY = Country(
     # same land shares of flat / hills / mountains (26 / 56 / 18%) that the original 85 m / 260 m rule gives it on 25 km
     # hexes (calibrated on ETOPO1, see docs/SPAIN.md).
     relief_std_m=(32.0, 138.0),
-    # The interface is in English (DECISIONS A7); the social cards are in Spanish, for the people who share them.
+    # The page, its social cards, its credits and the interface (lang; web/js/i18n/es.js) are in Spanish.
     page=Page(
         title="spainciv — España como mapa de un juego de estrategia",
         card_title="España como mapa de un juego de estrategia",
@@ -55,9 +55,10 @@ COUNTRY = Country(
             " de población y renta, con datos públicos del INE, el IGN, Copernicus, la NOAA y Natural Earth."
         ),
         image_alt="Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
-        data_credit="Data: INE, IGN (SIANE, CORINE via IDEE), Ministerio de Vivienda (AUDES), NOAA ETOPO, Natural Earth",
+        data_credit="Datos: INE, IGN (SIANE, CORINE vía IDEE), Ministerio de Vivienda (AUDES), NOAA ETOPO, Natural Earth",
         # SIANE boundaries are CC BY 4.0: the attribution the IGN asks for stays visible on the map (docs/SPAIN.md).
-        notices=("Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",),
+        notices=("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",),
+        based_on="Basado en {usaciv}, de Andrej Karpathy (MIT)",
     ),
     interim_dir=_interim,
     web_data_dir=_web,

@@ -37,9 +37,12 @@ Quién: **David** = decidida por David; **Claude** = tomada en autónomo, pendie
 | 2026-11-26 | A4 | `world.json` sigue en `version: 2`; `country` es una clave opcional | Es aditivo: los datos antiguos siguen siendo válidos y la web asume EE UU sin el bloque | Claude |
 | 2026-11-26 | A5 | Los builders que solo valen para un país declaran `COUNTRIES`; `REQUIRES` puede ir por país | Registro único, filtrado por país | Claude |
 | 2026-11-26 | A6 | La cubierta del suelo de cualquier país se traduce a códigos NLCD | Una sola definición de las reglas de cubierta y de las tablas de `world.json` | Claude |
-| 2026-11-26 | A7 | Interfaz en inglés hasta una pasada de i18n completa (en/es) al final de las fases principales, en un subagente en paralelo | No bloquear los datos con la traducción | David |
+| 2026-11-26 | A7 | ~~Interfaz en inglés hasta una pasada de i18n completa (en/es)~~ Sustituida por A10–A12 | No bloquear los datos con la traducción | David |
 | 2026-11-26 | A8 | Título, tarjetas sociales, créditos y dirección de cada país salen de `Country.page` y se escriben al servir o empaquetar (`pipeline/site.py`); el `index.html` de EE UU queda intacto | Una sola fuente por país sin reconstruir datos | Claude (subagente) |
-| 2026-11-26 | A9 | La tarjeta social de España va en español; la interfaz sigue en inglés hasta la pasada de i18n (A7) | Quien comparte el enlace lo ve en su idioma | Claude (subagente) |
+| 2026-11-26 | A9 | ~~La tarjeta social de España va en español; la interfaz sigue en inglés~~ Sustituida por A10–A12 | Quien comparte el enlace lo ve en su idioma | Claude (subagente) |
+| 2026-11-26 | A10 | Un fichero de textos por idioma y zona de la interfaz (`web/js/i18n/<lang>/`), con `t()` y el inglés de respaldo; claves `.us` solo para contenido de EE UU | Una sola fuente por texto, comprobada por `tests/test_i18n.py` | Claude (subagente) |
+| 2026-11-26 | A11 | Números en es-ES según CLDR y la RAE: «mil», «M», «mil M», «B» = billón, € y % detrás con espacio, cuatro cifras sin punto | Es la norma; «B» puede confundirse con el *billion* inglés, revisable | Claude (subagente) |
+| 2026-11-26 | A12 | Las tablas que España comparte con EE UU se traducen en `pipeline/build/texts_es.py`; los catálogos propios de España se escriben en castellano donde se definen | La salida de EE UU queda intacta y los merges son fáciles | Claude (subagente) |
 
 ## Mapa de España
 

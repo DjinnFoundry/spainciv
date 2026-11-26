@@ -52,13 +52,14 @@ def nice(v: float, up: bool) -> float:
     return round((math.ceil if up else math.floor)(v / mag) * mag, 10)
 
 
-def set_domains(lenses: list[dict]) -> None:
-    """Give each lens the percentile domain of its values, unless it fixes its own (categorical, or a clamped scale)."""
+def set_domains(lenses: list[dict], note: str | None = None) -> None:
+    """Give each lens the percentile domain of its values, unless it fixes its own (categorical, or a clamped scale),
+    and say so in its description (`note`, in the map's language; English by default)."""
     for lens in lenses:
         if "domain" in lens:
             continue
         lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
-        lens["description"] += DOMAIN_NOTE
+        lens["description"] += DOMAIN_NOTE if note is None else note
 
 
 def percentile_domain(values: list, log: bool) -> list[float] | None:

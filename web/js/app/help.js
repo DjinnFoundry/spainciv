@@ -2,29 +2,30 @@
 import { icon } from "../ui/icon.js";
 import { country } from "./country.js";
 import { esc } from "../format.js";
+import { t } from "../i18n.js";
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
 const MOD = isMac ? "⌘" : "Ctrl";
 
-const ROWS = [
-  ["Move", [
-    [["Drag", "←↑→↓", "WASD"], "Pan the map"],
-    [["Scroll", "+", "–"], "Zoom in and out"],
-    [["Double-click"], "Zoom in on a spot"],
-    [["Two fingers"], "Pinch to zoom, drag to pan (touch)"],
-    [["Minimap"], "Click or drag to jump"],
+const rows = () => [
+  [t("core.help.move"), [
+    [[t("core.help.key.drag"), "←↑→↓", "WASD"], t("core.help.pan")],
+    [[t("core.help.key.scroll"), "+", "–"], t("core.help.zoom")],
+    [[t("core.help.key.doubleClick")], t("core.help.zoomSpot")],
+    [[t("core.help.key.twoFingers")], t("core.help.pinch")],
+    [[t("core.help.key.minimap")], t("core.help.jump")],
   ]],
-  ["Explore", [
-    [["Click city"], "Open the city screen"],
-    [["Click land"], "Open that state"],
-    [["/", `${MOD} K`], "Search cities and states"],
-    [["L", "Shift L"], "Next / previous lens"],
-    [["Legend"], "Hover or drag the scale to show only that range"],
-    [["R"], "Show or hide resources"],
+  [t("core.help.explore"), [
+    [[t("core.help.key.clickCity")], t("core.help.openCity")],
+    [[t("core.help.key.clickLand")], t("core.help.openState")],
+    [["/", `${MOD} K`], t("core.help.search")],
+    [["L", t("core.help.key.shiftL")], t("core.help.lens")],
+    [[t("core.help.key.legend")], t("core.lens.scaleHint")],
+    [["R"], t("core.help.resources")],
   ]],
-  ["Panels", [
-    [["?"], "This help"],
-    [["Esc"], "Close help, search, Almanac, then the panel"],
+  [t("core.help.panels"), [
+    [["?"], t("core.help.help")],
+    [["Esc"], t("core.help.esc")],
   ]],
 ];
 
@@ -34,16 +35,14 @@ export function initHelp() {
   const card = modal.querySelector(".help-card");
   let restore = null;
   card.innerHTML = `
-    <button class="icon-btn help-close" data-close aria-label="Close help">${icon("close", "✕", { size: 13 })}</button>
-    <h2 id="help-title">${icon("help", "?", { size: 22 })}<span>Controls</span></h2>
-    <div class="help-cols">${ROWS.map(([title, rows]) => `
-      <section><h3>${title}</h3>${rows.map(([keys, what]) => `
+    <button class="icon-btn help-close" data-close aria-label="${t("core.help.close")}">${icon("close", "✕", { size: 13 })}</button>
+    <h2 id="help-title">${icon("help", "?", { size: 22 })}<span>${t("core.help.title")}</span></h2>
+    <div class="help-cols">${rows().map(([title, items]) => `
+      <section><h3>${title}</h3>${items.map(([keys, what]) => `
         <div class="help-row"><span class="keys">${keys.map((k) => `<kbd>${k}</kbd>`).join("")}</span><span>${what}</span></div>`).join("")}
       </section>`).join("")}</div>
-    <p class="help-foot">Every number traces back to public data: open the <b>Almanac</b> for sources.
-      The link in the address bar always reopens this exact view.
-      Source code: <a href="${country().product}-source.zip" download>${country().product}-source.zip</a> (MIT; run it with uv, see its README).${country().product === "usaciv" ? "" : `
-      ${esc(country().product)} is based on <a href="https://karpathy.ai/usaciv/" target="_blank" rel="noopener">usaciv</a> by Andrej Karpathy (MIT licence, see LICENSE).`}</p>`;
+    <p class="help-foot">${t("core.help.foot", { zip: `<a href="${country().product}-source.zip" download>${country().product}-source.zip</a>` })}${country().product === "usaciv" ? "" : t("core.help.basedOn", {
+      product: esc(country().product), usaciv: '<a href="https://karpathy.ai/usaciv/" target="_blank" rel="noopener">usaciv</a>' })}</p>`;
 
   const close = () => {
     if (modal.hidden) return;
