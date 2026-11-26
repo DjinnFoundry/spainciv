@@ -6,6 +6,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Lentes de Conocimiento, Vida diaria, Fe y Riesgos para España, equivalentes a las de EE UU con datos oficiales
+  (E32–E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la
+  Transformación Digital, junio de 2025; España 97,9 %). **Trabajan fuera**: ocupados que trabajan en otro municipio
+  (Censo anual del INE, 2024; Madrid capital 28,6 %, el resto de su provincia 85,0 %). **Esperanza de vida** al nacer
+  (INE, 2024; de 80,3 años en La Línea de la Concepción a 87,1 en Majadahonda). **Bodas religiosas**, proporción de los matrimonios
+  (INE, 2025; España 16,1 %, de Girona 6,1 % a Jaén 38,5 %). **Incendios**: hectáreas quemadas por hexágono de 2016 a
+  2025 según los perímetros del EFFIS (1,28 M ha). Las tres del INE llevan dato propio en unos 150 municipios y el del
+  resto de su provincia en los demás. No hay lente de personas sin seguro médico: la sanidad pública es universal.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
