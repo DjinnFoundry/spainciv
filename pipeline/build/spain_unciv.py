@@ -7,15 +7,17 @@ Tiles are 25 km across, the hexes of the original usaciv map: 83 × 53 tiles (4,
 Huge preset (87 × 57), with some 950 tiles of Spanish land. Smaller tiles would make a map larger than any Unciv
 preset, slow on a phone.
 
-Resources, one per tile and only where the base ruleset lets them stand (MINE_TYPES, SUBSTANCES, FAMILIES and
+Resources, one per tile and only where the ruleset lets them stand (DEPOSITS, MINE_TYPES, SUBSTANCES, FAMILIES and
 DESIGNATIONS below):
-* points: the IGME's active workings of 2019 by substance, at their deposit (copper, gold) or their municipality's
-  centre (iron oxides, hydrocarbons, marble, salt, ornamental stone), on their tile or the nearest neighbour that fits.
-  Several workings of one substance on a tile or next to one already placed make one resource.
+* points: the BDMIN's large and medium deposits, worked or not (coal, uranium, bauxite, iron, gold, copper, silver), and
+  the IGME's active workings of 2019 by substance, at their deposit (copper, gold) or their municipality's centre (iron
+  oxides, hydrocarbons, marble, salt, ornamental stone), on their tile or the nearest neighbour that fits. Several of one
+  resource on a tile or next to one already placed make one.
 * areas: the protected designations whose product is an Unciv resource (wine, citrus, saffron and paprika, beef, lamb,
-  fish), each on the tile holding most of its area where it fits (a sea resource on the coast tile touching most of
-  it); smaller areas first, so the large ones that overlap them take another tile.
-Nothing else: no horses, coal, uranium or aluminium (no active source), no cheese or ham (Unciv has no such resource).
+  fish) or the mod's own Iberian pig (the four Iberian ham DOPs), each on the tile holding most of its area where it
+  fits (a sea resource on the coast tile touching most of it); smaller areas first, so the large ones that overlap them
+  take another tile. Horses go to the agricultural comarcas densest in equines (horse_areas), the same way.
+No cheese or other ham: Unciv has no such resource. The map names the mod (MOD_NAME) because of the pig.
 """
 
 from __future__ import annotations
@@ -30,12 +32,14 @@ from . import unciv
 from .spain_wonders import municipality_finder
 
 REQUIRES = ["world.json", "cities.json", "resources.json", "lenses.json", "_world", "calidad_diferenciada",
-            "igme_minas", "siane", "natural_earth_es"]
+            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario"]
 PRODUCES = ["unciv.json"]
 COUNTRIES = ("es",)
 
 TILE_KM = 25.0
 MAP_NAME = "España"
+MOD_NAME = "Spainciv Unciv"  # the folder Unciv makes from the repository's name (Github.kt: repoNameToFolderName)
+MOD_REPO = "DjinnFoundry/Spainciv-Unciv"
 STARTS = 12  # Spain at Madrid and "Any Civ" at the 11 largest urban areas far enough apart
 START_GAP = 6  # tiles between starting locations (150 km)
 MIN_START_LANDMASS = 100  # tiles: no starting location on an island smaller than this (Mallorca, the Canaries)
@@ -49,6 +53,11 @@ SUBSTANCES = {
     "GRANITO ORNAMENTAL": "Stone", "CALIZA ORNAMENTAL": "Stone", "PIZARRA ORNAMENTAL": "Stone",
     "ARENISCA ORNAMENTAL": "Stone", "CUARCITA ORNAMENTAL": "Stone",
 }
+# BDMIN substance → resource, for its large and medium deposits, worked or not (a deposit of several gives each).
+DEPOSITS = {"Hulla": "Coal", "Antracita": "Coal", "Lignito": "Coal", "Carbón": "Coal", "Uranio y radiactivos": "Uranium",
+            "Bauxita": "Aluminum", "Hierro": "Iron", "Oro": "Gold Ore", "Cobre": "Copper", "Plata": "Silver"}
+# Horses: the agricultural comarcas with at least HORSE_DENSITY times Spain's equines per km² (Censo Agrario 2020).
+HORSE_DENSITY = 4.0
 # Municipalities the 2019 list names as they were called then → their name in SIANE 2026; "SIN DEFINIR" (no
 # municipality) leaves a working unplaced.
 RENAMED = {"Castrillo Matajudíos": "Castrillo Mota de Judíos", "Sant Carles de la Ràpita": "La Ràpita"}
@@ -66,10 +75,13 @@ DESIGNATIONS = {
     "Cordero de Navarra o Nafarroako Arkumea (IGP)": "Sheep", "Lechazo de Castilla y león (IGP)": "Sheep",
     "Ternasco de Aragón (IGP)": "Sheep",
     "Plátano de Canarias (IGP)": "Bananas",
+    # The four DOPs of Iberian ham; Teruel, Trévelez and Serón protect hams of white pigs, which are not Iberian.
+    "Dehesa de Extremadura (DOP)": "Cerdo ibérico", "Guijuelo (DOP)": "Cerdo ibérico", "Jabugo (DOP)": "Cerdo ibérico",
+    "Los Pedroches (DOP)": "Cerdo ibérico",
 }
 # Placement order: strategic, then luxury, then bonus resources; points before areas within a kind.
-ORDER = ["Iron", "Oil", "Gold Ore", "Copper", "Marble", "Salt", "Wine", "Citrus", "Spices", "Cattle", "Sheep", "Fish",
-         "Bananas", "Stone"]
+ORDER = ["Iron", "Horses", "Coal", "Oil", "Aluminum", "Uranium", "Gold Ore", "Silver", "Copper", "Marble", "Salt",
+         "Wine", "Cerdo ibérico", "Citrus", "Spices", "Cattle", "Sheep", "Fish", "Bananas", "Stone"]
 WONDER = ("Rock of Gibraltar", "Gibraltar")  # Unciv's natural wonder, and the Natural Earth country it stands on
 
 DESCRIPTION = ("España de spainciv (spainciv.djinnfoundry.com): costa, relieve, ríos, cubierta del suelo y recursos "
@@ -100,6 +112,22 @@ def area_weights(grid: unciv.Grid, fine_centers, labels: list[list[int] | None],
                 if t >= 0:
                     out[k][t] += 1
     return out
+
+
+def horse_areas(world: dict, grid: unciv.Grid, fine: HexGrid, census: dict) -> dict[str, Counter]:
+    """The comarcas with HORSE_DENSITY times Spain's equines per km² or more → Counter of Unciv tile → their fine hexes.
+    A comarca's area is its fine land hexes (each municipality's hexes belong to its comarca)."""
+    comarca_of, heads = census["comarca_of"], {c: v["heads"] for c, v in census["comarcas"].items() if v["heads"]}
+    geoids = [c["geoid"] for c in world["counties"]]
+    cells: dict[str, list[int]] = defaultdict(list)
+    for c, county in enumerate(world["county"]):
+        if county >= 0 and (comarca := comarca_of.get(geoids[county])):
+            cells[comarca].append(c)
+    spain = sum(heads.values()) / sum(len(v) for v in cells.values())
+    density = {c: heads[c] / len(cells[c]) for c in heads if cells.get(c)}
+    dense = sorted((c for c, d in density.items() if d >= HORSE_DENSITY * spain), key=lambda c: (-density[c], c))
+    tile_of = lambda cell: grid.locate(*fine.center(*fine.col_row(cell)))
+    return {c: Counter(t for t in map(tile_of, cells[c]) if t >= 0) for c in dense}
 
 
 def place_points(resource: str, points: list[tuple[float, float]], grid: unciv.Grid, tiles) -> tuple[int, int]:
@@ -181,7 +209,11 @@ def build() -> None:
     for it in load_web("resources.json")["items"]:
         if it["type"] in MINE_TYPES:
             points[MINE_TYPES[it["type"]]].append((it["x"], it["y"]))
-    for w in load_interim("igme_minas")["workings"]:
+    igme = load_interim("igme_minas")
+    for d in igme["deposits"]:
+        for substance in d["substances"]:
+            points[DEPOSITS[substance]].append(proj(d["lon"], d["lat"]))
+    for w in igme["workings"]:
         resource = SUBSTANCES.get(w["substance"])
         if not resource:
             continue
@@ -196,25 +228,32 @@ def build() -> None:
     families = {n["name"]: n["family"] for n in load_interim("calidad_diferenciada")["names"]}
     by_designation = designation_resources(food["names"], families)
     weights = area_weights(grid, lambda c: fine.center(*fine.col_row(c)), food["labels"], set(by_designation))
+    horses = horse_areas(world, grid, fine, load_interim("ine_censo_agrario"))
 
     for resource in ORDER:
         done, missed = place_points(resource, points.get(resource, []), grid, tiles)
         placed[resource] += done
         unplaced[resource] += missed
         designations = [k for k, r in by_designation.items() if r == resource]
-        for k in sorted(designations, key=lambda k: (sum(weights[k].values()), k)):  # smaller areas first
-            if weights[k] and unciv.place_in(resource, grid, tiles, weights[k]) >= 0:
+        areas = [(weights[k], food["names"][k])  # smaller areas first
+                 for k in sorted(designations, key=lambda k: (sum(weights[k].values()), k))]
+        if resource == "Horses":
+            areas += [(area, None) for area in horses.values()]
+        for area, name in areas:
+            if area and unciv.place_in(resource, grid, tiles, area) >= 0:
                 placed[resource] += 1
             else:
                 unplaced[resource] += 1
-                unplaced_names.append(food["names"][k])
+                if name:
+                    unplaced_names.append(name)
 
     cities = load_web("cities.json")
     start_list = starts(grid, tiles, cities, world["country"]["capital_city"])
-    doc = unciv.tile_map(grid, tiles, MAP_NAME, DESCRIPTION.format(km=TILE_KM), [s[:3] for s in start_list])
+    doc = unciv.tile_map(grid, tiles, MAP_NAME, DESCRIPTION.format(km=TILE_KM), [s[:3] for s in start_list], MOD_NAME)
     land = [t for t in tiles if t.is_land]
     summary = {
-        "unciv_release": unciv.UNCIV_RELEASE, "map_name": MAP_NAME, "tile_km": TILE_KM,
+        "unciv_release": unciv.UNCIV_RELEASE, "map_name": MAP_NAME, "mod": {"name": MOD_NAME, "repo": MOD_REPO},
+        "tile_km": TILE_KM, "horse_comarcas": len(horses), "horse_density": HORSE_DENSITY,
         "grid": {"spacing": grid.spacing, "width": grid.width, "height": grid.height, "centre": list(grid.centre)},
         "tiles": len(tiles), "land_tiles": len(land), "national_land_tiles": sum(1 for t in land if t.national),
         "terrain": dict(sorted(Counter(t.base for t in tiles).items())),

@@ -8,6 +8,7 @@ import json
 import math
 import unittest
 import zipfile
+from unittest import mock
 
 from pipeline import countries, play, site
 from pipeline.build import spain_unciv, unciv
@@ -388,13 +389,73 @@ class DesignationsTest(unittest.TestCase):
         self.assertNotIn(names.index("Queso Manchego (DOP)"), got)  # Unciv has no cheese
         self.assertEqual(got[names.index("Ternasco de Aragón (IGP)")], "Sheep")
 
-    def test_every_resource_has_a_place_in_the_order(self):
+    def test_every_resource_has_a_place_in_the_order_and_texts_in_both_languages(self):
         used = set(spain_unciv.DESIGNATIONS.values()) | set(spain_unciv.FAMILIES.values()) | set(spain_unciv.SUBSTANCES.values()) \
-            | set(spain_unciv.MINE_TYPES.values())
+            | set(spain_unciv.MINE_TYPES.values()) | set(spain_unciv.DEPOSITS.values()) | {"Horses"}
         self.assertEqual(used, set(spain_unciv.ORDER))
         self.assertTrue(used <= set(unciv.RESOURCES))
-        self.assertEqual(set(play.RESOURCE_ES), set(unciv.RESOURCES))
-        self.assertEqual(set(play.RESOURCE_SOURCE), set(unciv.RESOURCES))
+        texts = json.loads((play.TEMPLATES / "unciv-resources.json").read_text(encoding="utf-8"))
+        for lang in ("es", "en"):
+            self.assertEqual(set(texts[lang]), set(unciv.RESOURCES), lang)
+
+    def test_the_iberian_ham_dops_give_the_mod_pig(self):
+        pig = {n for n, r in spain_unciv.DESIGNATIONS.items() if r == "Cerdo ibérico"}
+        self.assertEqual(pig, {"Jabugo (DOP)", "Guijuelo (DOP)", "Dehesa de Extremadura (DOP)", "Los Pedroches (DOP)"})
+        self.assertIn("Cerdo ibérico", unciv.MOD_RESOURCES)
+
+
+class HorseTest(unittest.TestCase):
+    def test_only_comarcas_dense_enough(self):
+        # Two comarcas of two municipalities' hexes each: A with 10 head on 2 hexes, B with 1 head on 2 hexes.
+        world = fine_world(cols=8, rows=6)
+        world["counties"] = [{"geoid": "01001"}, {"geoid": "01002"}]
+        world["county"] = [-1] * len(world["owner"])
+        world["county"][:2], world["county"][2:4] = [0, 0], [1, 1]
+        census = {"comarca_of": {"01001": "0101", "01002": "0102"},
+                  "comarcas": {"0101": {"name": "A", "heads": 10}, "0102": {"name": "B", "heads": 1}}}
+        fine = HexGrid(**world["grid"])
+        grid = unciv.Grid.covering(fine, 25.0)
+        areas = spain_unciv.horse_areas(world, grid, fine, census)  # Spain: 11 head on 4 hexes, 2.75 a hex
+        self.assertEqual(list(areas), [])  # A has 5 a hex: 1.8 times Spain, under HORSE_DENSITY
+        with mock.patch.object(spain_unciv, "HORSE_DENSITY", 1.5):  # A has 5 a hex, 1.8 times Spain
+            areas = spain_unciv.horse_areas(world, grid, fine, census)
+        self.assertEqual(list(areas), ["0101"])
+        self.assertEqual(sum(areas["0101"].values()), 2)
+
+
+class ModResourceTest(unittest.TestCase):
+    def test_tile_resources_json(self):
+        (pig,) = unciv.tile_resources_json()
+        self.assertEqual(pig["name"], "Cerdo ibérico")
+        self.assertEqual((pig["resourceType"], pig["improvement"]), ("Luxury", "Pasture"))
+        self.assertIn("Doesn't generate naturally", pig["uniques"])
+
+    def test_atlas_in_unciv_layout(self):
+        text = unciv.atlas("game.png", (128, 128), {"ResourceIcons/Cerdo ibérico": (0, 0)})
+        self.assertEqual(text.splitlines()[:6], ["game.png", "size: 128, 128", "format: RGBA8888",
+                                                 "filter: MipMapLinearLinear, Linear", "repeat: none", "ResourceIcons/Cerdo ibérico"])
+        self.assertIn("  size: 100, 100", text)
+
+    def test_the_icon_is_rgba_with_a_transparent_corner(self):
+        from pipeline.core import png
+        px = play.pig_icon()
+        self.assertEqual(len(px), 4 * unciv.ICON_PX ** 2)
+        self.assertEqual(px[3], 0)  # top-left corner transparent
+        middle = 4 * (unciv.ICON_PX * 52 + 46)
+        self.assertEqual(px[middle + 3], 255)  # the pig's body opaque
+        w, h, rows = png.decode(png.encode(unciv.ICON_PX, unciv.ICON_PX, px, channels=4))
+        self.assertEqual((w, h), (unciv.ICON_PX, unciv.ICON_PX))
+        self.assertIsNone(rows[0][0])  # decode reads alpha 0 as transparent
+
+    def test_the_map_names_its_mod_and_the_bare_map_needs_none(self):
+        doc = built()["map"]
+        self.assertEqual(doc["mapParameters"]["mods"], [spain_unciv.MOD_NAME])
+        self.assertTrue(any(t.get("resource") == "Cerdo ibérico" for t in doc["tileList"]))
+        bare = unciv.without_mod(doc)
+        self.assertEqual(bare["mapParameters"]["mods"], [])
+        self.assertFalse(any(t.get("resource") in unciv.MOD_RESOURCES for t in bare["tileList"]))
+        self.assertEqual(len(bare["tileList"]), len(doc["tileList"]))
+        self.assertEqual(doc["mapParameters"]["mods"], [spain_unciv.MOD_NAME])  # the original is untouched
 
 
 class ModAndPageTest(unittest.TestCase):
@@ -402,6 +463,7 @@ class ModAndPageTest(unittest.TestCase):
     def setUpClass(cls):
         cls.files = play.files(ES)
         cls.doc = built()
+        cls.folder = cls.doc["summary"]["mod"]["name"]
 
     def test_spain_has_the_page_and_downloads_and_the_us_none(self):
         self.assertEqual(set(self.files), {play.PAGE, play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0]})
@@ -411,28 +473,47 @@ class ModAndPageTest(unittest.TestCase):
     def test_the_mod_zip_is_one_folder_unciv_can_install(self):
         z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
         names = z.namelist()
-        self.assertEqual({n.split("/")[0] for n in names}, {play.MOD_FOLDER})
+        self.assertEqual({n.split("/")[0] for n in names}, {self.folder})
         inner = {n.split("/", 1)[1] for n in names}
         map_name = self.doc["summary"]["map_name"]
-        self.assertEqual(inner, {"jsons/ModOptions.json", f"maps/{map_name}", "preview.png", "README.md", "LICENSE"})
-        options = json.loads(z.read(f"{play.MOD_FOLDER}/jsons/ModOptions.json"))
+        self.assertEqual(inner, {"jsons/ModOptions.json", "jsons/TileResources.json", f"maps/{map_name}",
+                                 "Images/ResourceIcons/Cerdo ibérico.png", "game.png", "game.atlas", "Atlases.json",
+                                 "preview.png", "README.md", "LICENSE"})
+        read = lambda p: z.read(f"{self.folder}/{p}")
+        options = json.loads(read("jsons/ModOptions.json"))
         self.assertEqual((options["isBaseRuleset"], options["topics"]), (False, ["unciv-mod-maps"]))
-        self.assertEqual(unciv.decode(z.read(f"{play.MOD_FOLDER}/maps/{map_name}")), self.doc["map"])
-        self.assertTrue(z.read(f"{play.MOD_FOLDER}/preview.png").startswith(b"\x89PNG"))
+        self.assertEqual(json.loads(read("jsons/TileResources.json")), unciv.tile_resources_json())
+        self.assertEqual(read("Atlases.json").strip(), b"[game]")
+        self.assertIn("ResourceIcons/Cerdo ibérico", read("game.atlas").decode("utf-8"))
+        self.assertEqual(unciv.decode(read(f"maps/{map_name}")), self.doc["map"])
+        self.assertTrue(read("preview.png").startswith(b"\x89PNG"))
         self.assertEqual(self.files[play.MOD_ZIP](), self.files[play.MOD_ZIP]())  # deterministic
 
-    def test_the_bare_map_is_the_mod_map(self):
-        self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), self.doc["map"])
+    def test_the_readme_is_bilingual(self):
+        z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
+        text = z.read(f"{self.folder}/README.md").decode("utf-8")
+        self.assertIn("## Español", text)
+        self.assertIn("## English", text)
+        self.assertNotIn("$", text)
+        for lang in ("es", "en"):
+            names = play.resource_texts(self.doc["summary"], lang)
+            for resource, n in self.doc["summary"]["resources"].items():
+                self.assertIn(f"| {names[resource][0]} | {n} |", text)
+
+    def test_the_bare_map_is_the_map_without_the_mod(self):
+        self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"]))
 
     def test_the_page(self):
         html = self.files[play.PAGE]().decode("utf-8")
         s = self.doc["summary"]
         self.assertIn('<html lang="es">', html)
+        self.assertNotIn("$", html)
         for needle in (play.MOD_ZIP, play.MAP_FILE, play.SCREENSHOT[0], f"https://{ES.site_url}/{play.MOD_ZIP}",
-                       f'download="{s["map_name"]}"', play.MOD_REPO, "Descargar mod con Enlace"):
+                       f'download="{s["map_name"]}"', s["mod"]["repo"], "Descargar mod con Enlace", "Mods de extensión"):
             self.assertIn(needle, html)
+        names = play.resource_texts(s, "es")
         for resource, n in s["resources"].items():
-            self.assertIn(f"<td>{play.RESOURCE_ES[resource]}</td><td class=n>{n}</td>", html)
+            self.assertIn(f"<td>{names[resource][0]}</td><td class=n>{n}</td>", html)
         for start in s["starts"][1:]:
             self.assertIn(start["city"], html)
 
