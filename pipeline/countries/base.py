@@ -29,6 +29,7 @@ class Page:
     image_alt: str  # og:image:alt, twitter:image:alt (the image is <site_url>/og-image.png)
     data_credit: str  # the data sources, on the map and on share images
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
+    based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
 
 
 @dataclass(frozen=True)

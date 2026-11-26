@@ -6,7 +6,7 @@ web/index.html is written for the United States and is published as is for it. A
 - its language, title, description and social cards (canonical, og:*, twitter:*), with absolute URLs built from
   `site_url`; the card image is `https://<site_url>/og-image.png`;
 - a credit line on the map: its data sources, the licence notices its sources require, and usaciv's credit;
-- `<script id="country-page">`: site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
+- `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
   the world.json `country` block (so a new address or credit needs no data rebuild).
 
 A country whose web data lives in sites/<id>/data can put more site files next to it (sites/<id>/og-image.png):
@@ -59,13 +59,14 @@ def _meta(html: str, attr: str, name: str, value: str) -> str:
 
 def credits_html(country: Country) -> str:
     page = country.page
-    parts = [escape(page.data_credit), *map(escape, page.notices), f'Based on <a href="{USACIV_URL}" target="_blank" rel="noopener">usaciv</a> by Andrej Karpathy (MIT)']
+    link = f'<a href="{USACIV_URL}" target="_blank" rel="noopener">usaciv</a>'
+    parts = [escape(page.data_credit), *map(escape, page.notices), escape(page.based_on).replace("{usaciv}", link)]
     return f'<p id="map-credits" class="map-credits">{" · ".join(parts)}</p>'
 
 
 def page_config(country: Country) -> dict:
     """What the browser takes from the page rather than from world.json (see web/js/app/country.js)."""
-    return {"site_url": country.site_url, "data_credit": country.page.data_credit, "notices": list(country.page.notices)}
+    return {"lang": country.lang, "site_url": country.site_url, "data_credit": country.page.data_credit, "notices": list(country.page.notices)}
 
 
 def render_index(html: str, country: Country | None = None) -> str:
