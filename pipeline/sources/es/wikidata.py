@@ -13,6 +13,7 @@ import urllib.parse
 
 from ...core.fetch import read_manifest
 from ...core.source import Source, SourceInfo
+from .names import title_es
 
 ENDPOINT = "https://query.wikidata.org/sparql?format=json&query="
 HEADERS = {"User-Agent": "spainciv/0.1 (https://github.com/DjinnFoundry/spainciv)", "Accept": "application/sparql-results+json"}
@@ -85,9 +86,10 @@ def value(b: dict, key: str) -> str | None:
 
 
 def label(b: dict) -> str | None:
-    """The label service's answer; it returns the bare QID when no language in LANGUAGES has a label."""
+    """The label service's answer, with Spanish capitalisation ('Torre De Garay' → 'Torre de Garay'); it returns the
+    bare QID when no language in LANGUAGES has a label."""
     v = value(b, "sLabel")
-    return None if v is None or re.fullmatch(r"Q\d+", v) else v
+    return None if v is None or re.fullmatch(r"Q\d+", v) else title_es(v)
 
 
 class WikidataEs(Source):

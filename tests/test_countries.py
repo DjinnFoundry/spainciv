@@ -799,6 +799,13 @@ class SpainWondersTest(unittest.TestCase):
 
 
 class SpainTransportTest(unittest.TestCase):
+    def test_airport_names(self):
+        from pipeline.sources.es.transport import airport_name
+
+        self.assertEqual(airport_name("AEROPUERTO INTL. REGIÓN MURCIA (**)"), "Aeropuerto Intl. Región Murcia")
+        self.assertEqual(airport_name("CEUTA /HELIPUERTO"), "Ceuta (helipuerto)")
+        self.assertEqual(airport_name("MÁLAGA-COSTA DEL SOL"), "Málaga-Costa del Sol")
+
     def test_hub_classes_and_words(self):
         from pipeline.build.spain_infrastructure import hub_class
         from pipeline.sources.es.transport import words
@@ -862,7 +869,7 @@ class SpainPowerTest(unittest.TestCase):
                        ("La Cabana Wind Farm Spain", "Parque eólico La Cabana"),
                        ("Renopool Solar Farm (+5)", "Planta solar Renopool (+5)"),
                        ("Llevant Solar Solar Farm", "Planta solar Llevant"), ("Mula Solar Photovoltaic", "Planta solar Mula"),
-                       ("Alcala De Guadaira Solar Park (+4)", "Planta solar Alcala De Guadaira (+4)"),
+                       ("Alcala De Guadaira Solar Park (+4)", "Planta solar Alcala de Guadaira (+4)"),
                        ("Guzman Thermosolar Farm", "Central termosolar Guzman"), ("Aste Csp Solar Farm", "Central termosolar Aste"),
                        ("Castile La Mancha Solar Xxxiii", "Castilla-La Mancha Solar Xxxiii"), ("Alcudia Phase", "Alcudia"),
                        ("Bajo Aragon Solar", "Bajo Aragón Solar"), ("Almaraz", "Almaraz")]:
@@ -989,7 +996,7 @@ class SpainMinesTest(unittest.TestCase):
         self.assertIsNone(locate(sotiel, [self.dep("2", "Sorpresa", "pequeño")]))  # a small one never stands alone
 
     def test_names_and_provinces(self):
-        from pipeline.build.spain_resources import title_es
+        from pipeline.sources.es.names import title_es
         from pipeline.sources.es.mines import norm, province_code
 
         self.assertEqual(norm("Santos (Los)"), norm("Santos, Los"))
@@ -1000,6 +1007,13 @@ class SpainMinesTest(unittest.TestCase):
         self.assertEqual(title_es("MINA FATIMA (FATIMA, JARAMA, Y FATIMA FR. II)"),
                          "Mina Fatima (Fatima, Jarama, y Fatima Fr. II)")
         self.assertEqual(title_es("PENOUTA Olga"), "PENOUTA Olga")  # mixed case is left alone
+        self.assertEqual(title_es("JEREZ DE LA FRONTERA"), "Jerez de la Frontera")
+        self.assertEqual(title_es("TENERIFE NORTE-C. LA LAGUNA"), "Tenerife Norte-C. La Laguna")
+        self.assertEqual(title_es("FGL GRANADA-JAÉN"), "FGL Granada-Jaén")
+        self.assertEqual(title_es("A CORUÑA"), "A Coruña")
+        self.assertEqual(title_es("MINERALES Y PRODUCTOS DERIVADOS, S.A"), "Minerales y Productos Derivados, S.A")
+        self.assertEqual(title_es("Central termosolar Palma Del Rio"), "Central termosolar Palma del Rio")
+
 
 
 class SpainVintageTest(unittest.TestCase):

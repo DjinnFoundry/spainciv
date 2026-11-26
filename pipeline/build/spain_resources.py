@@ -14,6 +14,7 @@ import re
 from collections import defaultdict
 
 from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..sources.es.names import title_es
 from ..sources.es.provinces import PROVINCES, display_name
 from .resources import Placer, _cluster_name, _settle, _t, _tidy, summarize
 from .spain_wonders import municipality_finder
@@ -48,8 +49,6 @@ MINE_RULE = ("Todas las explotaciones de {what} activas en 2019 según la Estad�
              "estadística no publica la producción de cada mina. Cada una está en el yacimiento del BDMIN del IGME de su "
              "mineral y su municipio que comparte nombre con ella (o en el único grande o mediano); si no hay ninguno, "
              "en el centro de su municipio, y su detalle lo dice.")
-SMALL_WORDS = {"de", "del", "la", "las", "los", "el", "y", "e", "o", "a", "en"}
-ROMAN = {"I", "II", "III", "IV", "V", "VI"}
 
 
 def _mine(id, name, emoji, color, what, icon=None):
@@ -113,7 +112,7 @@ def plant_name_es(name: str) -> str:
     name = re.sub(r"\s+Phase$", "", re.sub(r" Spain\b", "", name))
     for en, es in EXONYMS.items():
         name = re.sub(rf"\b{en}\b", es, name)
-    return name
+    return title_es(name)
 
 
 def site(type_id: str, group: list[tuple[dict, float, float]], cell: int) -> dict:
@@ -140,19 +139,6 @@ def site(type_id: str, group: list[tuple[dict, float, float]], cell: int) -> dic
     return {"type": type_id, "name": plant_name_es(_tidy(name)), "x": x, "y": y, "cell": cell, "value": round(mw), "detail": detail}
 
 
-def title_es(name: str) -> str:
-    """A name the list writes in capitals, as Spanish writes it: 'MINAS DE RIO TINTO' → 'Minas de Rio Tinto' (articles
-    and prepositions in lower case, Roman numerals kept); a name already in mixed case is left alone."""
-    if not name.isupper():
-        return name
-    def word(m):
-        w = m.group(0)
-        if w in ROMAN:
-            return w
-        return w.lower() if w.lower() in SMALL_WORDS and m.start() else w.capitalize()
-    return re.sub(r"[^\W\d_]+", word, name)
-
-
 def mine_site(m: dict, place: Placer, find) -> dict:
     """One map site for a working of the IGME list: at its BDMIN deposit, or at its municipality's centre."""
     muni = find(m["municipality"], m["province"])
@@ -167,7 +153,7 @@ def mine_site(m: dict, place: Placer, find) -> dict:
     if cell < 0:
         raise RuntimeError(f"IGME mine {m['name']!r} falls off the map")
     province = display_name(PROVINCES[m["province"]][1])
-    detail = f"{m['company']}; {display_name(muni['name'])} ({province}); activa en 2019; {where}"
+    detail = f"{title_es(m['company'])}; {display_name(muni['name'])} ({province}); activa en 2019; {where}"
     return {"type": m["type"], "name": _tidy(title_es(m["name"])), "x": x, "y": y, "cell": cell, "value": None,
             "detail": detail}
 
