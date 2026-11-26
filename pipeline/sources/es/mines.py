@@ -5,6 +5,9 @@ The list gives each working's name, company, municipality and substance, not its
 statistic does not publish output per mine). Its counts per substance must equal Panorama Minero 2022's tables
 (PANORAMA_2019). A working takes the position of a BDMIN deposit of its mineral in its municipality (see locate);
 one without such a deposit is left without coordinates, for the builder to put at the municipality's centre.
+
+Every working of the list, of any substance, is also kept with its substance and municipality only (`workings`), for
+what places a substance by municipality: the Unciv map's quarries, salt works and oil fields.
 """
 
 from __future__ import annotations
@@ -49,9 +52,9 @@ PANORAMA_2019 = {"COBRE": 5, "ORO-PLATA (MIN.)": 1, "WOLFRAMIO": 1, "ESTAÑO-TÁ
                  "ESPATO FLÚOR": 6, "ESTRONCIO": 2, "MAGNESITA CRUDA": 3, "GLAUBERITA": 3, "THENARDITA": 1}
 BDMIN_WHERE = " OR ".join(f"Sustancia LIKE '%{s}%'" for s in sorted({s for _, subs in KIND.values() for s in subs}))
 SIZE_RANK = {"grande": 0, "mediano": 1}  # BDMIN's 'Tamaño_indicio'; 'pequeño' and 'desconocido' never stand alone
-# Older province names IGME uses → INE code (the others match INE's names).
+# Older or shortened province names IGME uses → INE code (the others match INE's names).
 PROVINCE_ALIASES = {"orense": "32", "gerona": "17", "lerida": "25", "vizcaya": "48", "guipuzcoa": "20",
-                    "baleares": "07", "coruna": "15", "la coruna": "15"}
+                    "baleares": "07", "coruna": "15", "la coruna": "15", "santa cruz tenerife": "38"}
 STOP = {"mina", "minas", "grupo", "minero", "otras", "otros", "fraccion", "concesion", "explotacion", "derivada",
         "del", "las", "los", "indicio", "indicios"}
 
@@ -70,7 +73,8 @@ PROVINCE_CODES = {norm(part): code for code, (_, n) in PROVINCES.items() for par
 
 
 def province_code(name: str) -> str:
-    code = PROVINCE_CODES.get(norm(name))
+    """INE code of a province as IGME writes it, in either official language ('ALICANTE/ALACANT', 'PALMAS (LAS)')."""
+    code = next((c for part in [name, *name.split("/")] if (c := PROVINCE_CODES.get(norm(part)))), None)
     if not code:
         raise RuntimeError(f"IGME: unknown province {name!r}")
     return code
@@ -113,8 +117,9 @@ class IgmeMinas(Source):
         description=f"The workings active in {YEAR} that the Estadística Minera de España lists, as IGME publishes "
         "them with Panorama Minero 2022 (EXPLOTACIONES_2019.xlsx); the metal mines and the potash, fluorspar, "
         "celestine, magnesite and sodium-sulphate mines are kept, and their count per substance matches the "
-        "Panorama's tables. Positions are those of the matching deposit in IGME's BDMIN mineral-occurrence database.",
-        used_for=["Mines on the map (resources)"],
+        "Panorama's tables. Positions are those of the matching deposit in IGME's BDMIN mineral-occurrence database. "
+        "Every other working of the list is kept by substance and municipality, for the Unciv map.",
+        used_for=["Mines on the map (resources)", "Resources of the Unciv map (iron, oil, marble, salt, stone)"],
     )
 
     def fetch(self, force=False):
@@ -152,8 +157,8 @@ class IgmeMinas(Source):
 
     def process(self):
         rows = next(iter(sheets(self.raw_dir / LIST_FILE).values()))
-        head = rows[0]
-        mines = [dict(zip(head, r)) for r in rows[1:] if r and r[head.index("Sustancia")] in KIND]
+        records = [dict(zip(rows[0], r)) for r in rows[1:] if r]
+        mines = [m for m in records if m["Sustancia"] in KIND]
         got = Counter(m["Sustancia"] for m in mines)
         if got != Counter(PANORAMA_2019):
             raise RuntimeError(f"IGME {YEAR}: workings per substance {dict(got)} != Panorama Minero 2022 {PANORAMA_2019}")
@@ -166,5 +171,8 @@ class IgmeMinas(Source):
             d = locate(mine, deposits) or {}
             out.append(mine | {"lon": d.get("lon"), "lat": d.get("lat"), "deposit": d.get("name") or None,
                                "deposit_size": d.get("size")})
+        workings = [{"name": " ".join(m["Explotacion"].split()), "substance": m["Sustancia"],
+                     "municipality": m["Municipio_Explotacion"], "province": province_code(m["Provincia_Explotacion"])}
+                    for m in records]
         return {"vintage": f"Estadística Minera de España {YEAR} (IGME, Panorama Minero 2022); BDMIN",
-                "_files": [LIST_FILE, PANORAMA_FILE, *files], "year": YEAR, "mines": out}
+                "_files": [LIST_FILE, PANORAMA_FILE, *files], "year": YEAR, "mines": out, "workings": workings}
