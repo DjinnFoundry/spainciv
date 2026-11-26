@@ -32,7 +32,8 @@ lists the public data behind the map.
   workers); Gold is GDP (INE regional accounts), published down to provinces only.
 - **Districts and city types** come from each city's industry specialisation against the national share: Castelló is a
   Ceramics city, Vigo and Valladolid are Motor cities.
-- **Lenses**: population density, income (INE household income atlas) and land cover.
+- **Lenses**: population density, income, poverty and mean age (INE household income atlas), born abroad and higher
+  education (INE Annual Population Census), homeowners (2021 Census) and land cover.
 - **Wonders**: the 16 National Parks.
 
 The interface is in Spanish (`web/js/i18n/`; the US map keeps its English). What is still missing, and why, is in
