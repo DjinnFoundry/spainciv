@@ -20,6 +20,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Consejeros de España sin gráficos vacíos ni «0 puntos» (E49): Economía muestra el empleo por sector y pone el mapa
+  de PIB, la clasificación y el gráfico de crecimiento por provincias; Prosperidad compara la renta con el alquiler
+  anual; el Explorador quita las columnas sin datos y abre con renta frente a crecimiento; Cultura oculta la sección
+  de desastres cuando no hay datos.
 - La potencia por provincia (consejero de Energía y Explorador) ya no sale vacía en España: `spain_resources` la
   rellena en `states.json` al terminar, con la misma suma que EE UU.
 - Restos de inglés y de EE UU en el mapa de España: los tooltips de puertos y aeropuertos («Large hub», «short tons»,
