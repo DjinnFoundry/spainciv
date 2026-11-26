@@ -168,9 +168,25 @@ SOURCES = {
         "license": _INE_LICENCE,
         "description": "Renta neta de los registros tributarios de la Agencia Tributaria y de las haciendas forales, "
         "cruzados con el Padrón, para cada municipio (y sus distritos y secciones censales, que aquí no se usan). El "
-        "mapa toma la renta neta media por persona de cada municipio, del último año que publica el INE. Pueden faltar "
-        "municipios pequeños (secreto estadístico): se quedan sin datos.",
-        "used_for": ["Lente de renta"],
+        "mapa toma, del último año que publica el INE, la renta neta media por persona de cada municipio para la lente "
+        "de renta y la renta neta media por hogar para la renta de los hogares de áreas urbanas, provincias y España (el "
+        "INE no publica la mediana por hogar de los municipios). En un grupo de municipios, la renta por hogar es la "
+        "renta total entre el total de hogares: cada municipio pesa por sus hogares, que son su población (Padrón del "
+        "mismo año) por la renta por persona entre la renta por hogar. Pueden faltar municipios pequeños (secreto "
+        "estadístico): se quedan sin datos y no cuentan en los grupos.",
+        "used_for": ["Lente de renta", "Renta de los hogares de áreas urbanas, provincias y España", "Alquiler ÷ renta"],
+    },
+    "ine_censo_actividad": {
+        "title": "Censo anual de población: población de 16 años o más por relación con la actividad, tabla 66594",
+        "license": _INE_LICENCE,
+        "description": "Ocupados, parados e inactivos de 16 años o más de España, cada provincia y cada municipio (y sus "
+        "secciones censales, que aquí no se usan), del Censo anual de población, que el INE elabora con registros "
+        "administrativos (Padrón y fuentes laborales, tributarias y educativas). La tasa de paro del mapa es parados ÷ "
+        "(ocupados + parados), contados donde viven, como la de la ACS del mapa de EE. UU.; en un área urbana es la "
+        "suma de sus parados entre la suma de su población activa. No es la tasa de la EPA (una encuesta) ni el paro "
+        "registrado del SEPE, que cuenta demandantes de empleo y no tiene denominador. El INE no publica los municipios "
+        "de menos de unos 75 habitantes, que no cuentan en su área.",
+        "used_for": ["Tasa de paro de áreas urbanas, provincias y España"],
     },
     "ine_censo_divisiones": {
         "title": "Censo anual de población: ocupados por división de la CNAE, España y ciudades principales (tablas 69960 y 69980)",
@@ -331,6 +347,19 @@ SOURCES = {
         "PDF de ADEAC (leída a pipeline/sources/es/data/bandera_azul_2026.csv; el número por comunidad coincide con el "
         "de ADEAC).",
         "used_for": ["Lente de Bandera Azul"],
+    },
+    "serpavi": {
+        "title": "Sistema Estatal de Referencia del Precio del Alquiler de Vivienda (SERPAVI), 2011-2024",
+        "publisher": "Ministerio de Vivienda y Agenda Urbana (con la Agencia Tributaria y la Dirección General del Catastro)",
+        "license": _REUSE,
+        "description": "Alquileres declarados en el IRPF por viviendas habituales (sin los arrendamientos entre "
+        "parientes), cruzados con el Catastro: número de viviendas alquiladas y alquiler mensual mediano de la vivienda "
+        "entera, por separado para pisos (vivienda colectiva) y casas (unifamiliar), por provincia y municipio. Los "
+        "municipios con pocos contratos no tienen cifra. Un lugar junta sus pisos y sus casas, y un área urbana sus "
+        "municipios con cifra, en la media de esas medianas ponderada por viviendas alquiladas: se aproxima a la "
+        "mediana del conjunto, no es la mediana exacta. España junta así sus provincias. Es la renta que declara el "
+        "arrendador; la del mapa de EE. UU. es el alquiler bruto, con suministros, que declara el inquilino.",
+        "used_for": ["Alquiler mensual de áreas urbanas, provincias y España", "Alquiler ÷ renta"],
     },
 }
 
