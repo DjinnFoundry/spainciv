@@ -2,6 +2,7 @@
 // Each is an ordinary lens object ({id, name, ramp, domain, scale, format, values: per cell}) that app.setLens()
 // accepts; they are built once per data model and cached, so the lens dock's histogram cache stays valid.
 import { fin, quantile } from "./util.js";
+import { t } from "../../../i18n.js";
 
 // Diverging: shrinking (brick) ← no change (parchment) → growing (teal). Dark ends so the extremes read on the map.
 const GROWTH_RAMP = ["#7a1f2b", "#c2463d", "#e8a07a", "#efe6d2", "#8fcbb8", "#2e9c8a", "#0f5e57"];
@@ -44,12 +45,12 @@ export function growthLens(data, by = "metros") {
       vals = data.levels.metros.rows.map((r) => r.v.growth);
     }
     return {
-      id: `adv-growth-${by}`, group: "people", name: by === "states" ? "Growth by state" : "Growth by metro",
-      icon: "l-people", emoji: "📈", unit: "population change", format: "pct", scale: "linear",
+      id: `adv-growth-${by}`, group: "people", name: by === "states" ? t("adv.lens.growthStates") : t("adv.lens.growthMetros"),
+      icon: "l-people", emoji: "📈", unit: t("adv.lens.growth.unit"), format: "pct", scale: "linear",
       domain: symDomain(vals), ramp: GROWTH_RAMP, higher_is: "neutral", source: "pep_population",
       description: by === "states"
-        ? `Population change ${yrs} by state (Census population estimates).`
-        : `Population change ${yrs} by metro and micro area (Census population estimates). Grey hexes lie outside them.`,
+        ? t("adv.lens.growthStates.desc", { years: yrs })
+        : t("adv.lens.growthMetros.desc", { years: yrs }),
       values,
     };
   });
@@ -65,10 +66,10 @@ export function scienceLens(data) {
     for (const [cell, city] of cellMetro) if (owner[cell] >= 0) values[cell] = share(city);
     const sci = app.data.nation?.yields?.find((y) => y.key === "science");
     return {
-      id: "adv-science-share", group: "knowledge", name: "Science jobs",
-      icon: "l-degrees", emoji: "🔬", unit: "of employed residents", format: "pct", scale: "linear",
+      id: "adv-science-share", group: "knowledge", name: t("adv.lens.science"),
+      icon: "l-degrees", emoji: "🔬", unit: t("adv.lens.science.unit"), format: "pct", scale: "linear",
       domain: robust(data.levels.metros.rows.map((r) => share(r.ref))), ramp: SCIENCE_RAMP, higher_is: "neutral", source: "acs_1yr",
-      description: `${sci?.label || "Science"} workers as a share of employed residents, by metro and micro area (counted where they live). Grey hexes lie outside them.`,
+      description: t("adv.lens.science.desc", { label: sci?.label || t("adv.yield.science") }),
       values,
     };
   });

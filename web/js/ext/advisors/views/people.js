@@ -6,6 +6,7 @@ import { createScatter } from "../core/scatter.js";
 import { section, tiles, segmented, mapPicker, frameBtn, sourcesHtml, topBy } from "../core/view.js";
 import { rowsHighlight } from "../core/data.js";
 import { growthLens } from "../core/lenses.js";
+import { t } from "../../../i18n.js";
 
 const METRO_MIN = 250000;
 
@@ -16,9 +17,9 @@ export function mount(ctx) {
   const yrs = n.growth_years || [];
 
   el.insertAdjacentHTML("beforeend", tiles([
-    { label: "Residents", value: count3(n.population), sub: data.vintage },
-    { label: `Growth ${yrs.join("–")}`, value: signedPct(n.growth, 2), sub: "Census estimates" },
-    { label: "Metros & micros", value: int(metros.rows.length), sub: counties ? `${int(counties.rows.length)} counties` : "" },
+    { label: t("adv.residents"), value: count3(n.population), sub: data.vintage },
+    { label: t("adv.growthYears", { years: yrs.join("–") }), value: signedPct(n.growth, 2), sub: t("adv.people.growthSource") },
+    { label: t("adv.people.metrosMicros"), value: int(metros.rows.length), sub: counties ? t("adv.nCounties", { n: int(counties.rows.length) }) : "" },
   ]));
 
   // --- the map: growth by default, so the map tells the same story as the first chart ---------------------------
@@ -30,16 +31,16 @@ export function mount(ctx) {
   const picker = mapPicker(ctx, mapRow, {
     value: "growth",
     options: [
-      { value: "growth", label: "Growth", lens: () => growthLens(data, gLevel) },
-      ...(counties ? [lensOpt("density", "Density", "density"), lensOpt("age", "Age", "age"), lensOpt("foreign_born", "Born abroad", "foreign_born")] : []),
-      { value: "terrain", label: "Terrain", lens: () => null },
+      { value: "growth", label: t("adv.growth"), lens: () => growthLens(data, gLevel) },
+      ...(counties ? [lensOpt("density", t("adv.density"), "density"), lensOpt("age", t("adv.age"), "age"), lensOpt("foreign_born", t("adv.bornAbroad"), "foreign_born")] : []),
+      { value: "terrain", label: t("adv.terrain"), lens: () => null },
     ],
   });
 
   // --- growth ---------------------------------------------------------------------------------------------------
-  const gBody = section(el, { title: "Who is growing, who is shrinking", note: `Population change ${yrs.join("–")} from one vintage of the Census population estimates, on today's borders. Metros of ${count3(METRO_MIN)}+ people.` });
+  const gBody = section(el, { title: t("adv.people.growth.title"), note: t("adv.people.growth.note", { years: yrs.join("–"), min: count3(METRO_MIN) }) });
   const gHost = document.createElement("div");
-  segmented(gBody, { label: "Areas", value: gLevel, options: [{ value: "metros", label: "Metros" }, { value: "states", label: "States" }], onChange: (v) => { gLevel = v; drawGrowth(); if (picker.value === "growth") picker.refresh(); } });
+  segmented(gBody, { label: t("adv.areas"), value: gLevel, options: [{ value: "metros", label: metros.label }, { value: "states", label: states.label }], onChange: (v) => { gLevel = v; drawGrowth(); if (picker.value === "growth") picker.refresh(); } });
   gBody.appendChild(gHost);
   function drawGrowth() {
     gHost.innerHTML = "";
@@ -54,15 +55,15 @@ export function mount(ctx) {
       onHover: (r) => link.hover(r ? rowsHighlight(lv, [r.row]) : null),
       onClick: (r) => lv.focus(r.row),
     };
-    gHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">Fastest growing</h4>`);
-    barList(gHost, { ...opts, rows: mk(fast), ariaLabel: "Fastest growing" });
-    gHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${slow.every((x) => x.v < 0) ? "Shrinking" : "Slowest growing"}</h4>`);
-    barList(gHost, { ...opts, rows: mk(slow), ariaLabel: "Slowest growing" });
+    gHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${t("adv.people.fastest")}</h4>`);
+    barList(gHost, { ...opts, rows: mk(fast), ariaLabel: t("adv.people.fastest") });
+    gHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${slow.every((x) => x.v < 0) ? t("adv.people.shrinking") : t("adv.people.slowest")}</h4>`);
+    barList(gHost, { ...opts, rows: mk(slow), ariaLabel: t("adv.people.slowest") });
   }
   drawGrowth();
 
   if (!counties) {
-    el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">counties.json is not built, so the county charts are missing.</p>`);
+    el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">${t("adv.noCounties")}</p>`);
     el.insertAdjacentHTML("beforeend", sourcesHtml(data, ["acs_1yr", "pep_population"], []));
     return {};
   }

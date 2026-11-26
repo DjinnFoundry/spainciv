@@ -12,6 +12,8 @@
 //   height = 300, ariaLabel
 //   onHover(point|null), onClick(point), onBrush(Set<key>|null)
 import { esc, fin, clamp, scale, ticks, logTicks, pad, extent, sizeCanvas, onWidth } from "./util.js";
+import { int } from "../../../format.js";
+import { t } from "../../../i18n.js";
 
 const M = { l: 52, r: 12, t: 10, b: 38 };
 
@@ -55,8 +57,8 @@ export function createScatter(host, opts) {
       r: o.size ? rmin + (rmax - rmin) * Math.sqrt(clamp((fin(p.s) ? p.s : 0) / smax, 0, 1)) : o.radius || 3,
     })).sort((a, b) => b.r - a.r);
     root._count = valid.length;
-    cv.setAttribute("aria-label", o.ariaLabel || `Scatter plot of ${valid.length} points: ${o.y?.label || "y"} against ${o.x?.label || "x"}`);
-    hint.textContent = o.brush === false ? "" : `${valid.length.toLocaleString("en-US")} points · drag to select`;
+    cv.setAttribute("aria-label", o.ariaLabel || t("adv.scatter.label", { n: valid.length, y: o.y?.label || "y", x: o.x?.label || "x" }));
+    hint.textContent = o.brush === false ? "" : t("adv.scatter.hint", { n: int(valid.length) });
     draw();
   }
 
@@ -95,11 +97,11 @@ export function createScatter(host, opts) {
     c.fillStyle = "rgba(236,208,142,.9)";
     c.font = "11px 'Palatino Linotype', Palatino, Georgia, serif";
     c.textAlign = "center";
-    c.fillText(`${o.x?.label || ""}${sx.log ? " (log)" : ""}`, (M.l + W - M.r) / 2, H - 9);
+    c.fillText(`${o.x?.label || ""}${sx.log ? t("adv.scatter.log") : ""}`, (M.l + W - M.r) / 2, H - 9);
     c.save();
     c.translate(11, (M.t + H - M.b) / 2);
     c.rotate(-Math.PI / 2);
-    c.fillText(`${o.y?.label || ""}${sy.log ? " (log)" : ""}`, 0, 0);
+    c.fillText(`${o.y?.label || ""}${sy.log ? t("adv.scatter.log") : ""}`, 0, 0);
     c.restore();
     // reference lines
     c.save();

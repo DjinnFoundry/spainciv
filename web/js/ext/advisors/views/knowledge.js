@@ -1,12 +1,13 @@
 // Knowledge advisor: degrees, broadband and the Science yield.
 import { esc, fin, ratio, colorScale, robustDomain, RAMPS } from "../core/util.js";
-import { money, pct, int, count3, fmtShort } from "../core/fmt.js";
+import { money, pct, int, count3, fmtShort, fixed } from "../core/fmt.js";
 import { barList, histogram, rampLegend } from "../core/charts.js";
 import { createTable } from "../core/table.js";
 import { createScatter } from "../core/scatter.js";
 import { section, tiles, segmented, mapPicker, frameBtn, sourcesHtml, topBy } from "../core/view.js";
 import { rowsHighlight } from "../core/data.js";
 import { scienceLens } from "../core/lenses.js";
+import { t } from "../../../i18n.js";
 
 const METRO_MIN = 250000;
 
@@ -26,9 +27,9 @@ export function mount(ctx) {
   };
 
   el.insertAdjacentHTML("beforeend", tiles([
-    { label: "Science workers", value: count3(usSci), sub: `${pct(usShare)} of the employed`, color: sci?.color },
-    { label: "Degree holders", value: pct(wavg("bachelors")), sub: "adults 25+, BA or higher" },
-    { label: "Broadband", value: pct(wavg("broadband")), sub: "of homes subscribe" },
+    { label: t("adv.know.workers"), value: count3(usSci), sub: t("adv.know.ofEmployed", { share: pct(usShare) }), color: sci?.color },
+    { label: t("adv.know.degrees"), value: pct(wavg("bachelors")), sub: t("adv.know.degrees.sub") },
+    { label: t("adv.know.broadband"), value: pct(wavg("broadband")), sub: t("adv.know.broadband.sub") },
   ]));
 
   // --- the map: degrees by default (the scatter's x axis), or the Science yield's share by metro ----------------
@@ -38,22 +39,22 @@ export function mount(ctx) {
   const picker = mapPicker(ctx, mapRow, {
     value: counties ? "bachelors" : "science",
     options: [
-      ...(counties ? [{ value: "bachelors", label: "Degrees", lens: () => "bachelors" }] : []),
-      { value: "science", label: "Science jobs", lens: () => scienceLens(data) },
-      ...(counties ? [{ value: "broadband", label: "Broadband", lens: () => "broadband" }] : []),
-      { value: "terrain", label: "Terrain", lens: () => null },
+      ...(counties ? [{ value: "bachelors", label: t("adv.know.degreesLens"), lens: () => "bachelors" }] : []),
+      { value: "science", label: t("adv.lens.science"), lens: () => scienceLens(data) },
+      ...(counties ? [{ value: "broadband", label: t("adv.know.broadband"), lens: () => "broadband" }] : []),
+      { value: "terrain", label: t("adv.terrain"), lens: () => null },
     ],
   });
 
   // --- science yield --------------------------------------------------------------------------------------------
-  const sBody = section(el, { title: "The Science yield", note: `${esc(sci?.description || "Workers in professional, scientific & technical services and information.")} Metros of ${count3(METRO_MIN)}+ people for the share ranking.` });
+  const sBody = section(el, { title: t("adv.know.title"), note: t("adv.know.note", { desc: esc(sci?.description || t("adv.know.fallbackDesc")), min: count3(METRO_MIN) }) });
   const sHost = document.createElement("div");
   let mode = "share";
-  segmented(sBody, { label: "Rank by", value: mode, options: [{ value: "share", label: "Share of jobs" }, { value: "abs", label: "Most workers" }], onChange: (v) => { mode = v; drawSci(); } });
+  segmented(sBody, { label: t("adv.rankBy"), value: mode, options: [{ value: "share", label: t("adv.shareOfJobs") }, { value: "abs", label: t("adv.know.most") }], onChange: (v) => { mode = v; drawSci(); } });
   const sMap = document.createElement("button");
   sMap.type = "button";
   sMap.className = "adv-mini";
-  sMap.textContent = "Colour the map by science jobs";
+  sMap.textContent = t("adv.know.colourMap");
   sMap.addEventListener("click", () => picker.set("science"));
   sBody.querySelector(".adv-seg")?.after(sMap);
   sBody.appendChild(sHost);
@@ -62,8 +63,8 @@ export function mount(ctx) {
     sHost.innerHTML = "";
     const list = mode === "abs" ? topBy(metros.rows, (r) => r.v.y_science, { n: 12 }) : topBy(metros.rows, share, { n: 12, min: METRO_MIN });
     barList(sHost, {
-      rank: true, ariaLabel: "Science leaders",
-      rows: list.map((x) => ({ key: x.r.key, label: x.r.name, sub: mode === "abs" ? pct(share(x.r)) : `×${(share(x.r) / usShare).toFixed(2)} U.S.`, value: x.v, text: mode === "abs" ? count3(x.v) : pct(x.v), color: sci?.color, row: x.r })),
+      rank: true, ariaLabel: t("adv.know.leaders"),
+      rows: list.map((x) => ({ key: x.r.key, label: x.r.name, sub: mode === "abs" ? pct(share(x.r)) : t("adv.vsNation", { x: fixed(share(x.r) / usShare, 2) }), value: x.v, text: mode === "abs" ? count3(x.v) : pct(x.v), color: sci?.color, row: x.r })),
       onHover: (r) => link.hover(r ? rowsHighlight(metros, [r.row]) : null),
       onClick: (r) => metros.focus(r.row),
     });
@@ -71,7 +72,7 @@ export function mount(ctx) {
   drawSci();
 
   if (!counties) {
-    el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">counties.json is not built, so the county charts are missing.</p>`);
+    el.insertAdjacentHTML("beforeend", `<p class="adv-empty pad">${t("adv.noCounties")}</p>`);
     el.insertAdjacentHTML("beforeend", sourcesHtml(data, ["acs_1yr"], []));
     return {};
   }
