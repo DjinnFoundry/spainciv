@@ -33,10 +33,9 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Publicación
 
-- Aprobar y llevar a producción la entrada de djinnfoundry.com (rama `feat/spainciv` del repo `djinncom`, preview en
-  https://feat-spainciv.djinncom.pages.dev).
-- Enlazar el repo en https://djinnfoundry.com/spainciv/ (párrafo `#repo-link`) cuando se haga público.
-- Automatizar el despliegue del mapa (hoy a mano: `pipeline package --country es` y `wrangler pages deploy`).
+- Despliegue del mapa a mano (`pipeline package --country es` y `wrangler pages deploy`, D16); automatizarlo cuando
+  vuelvan los créditos de GitHub Actions.
+- Publicar el anuncio en X (borrador preparado; lo publica David).
 - Generar la og-image desde código en vez de un recorte de captura.
 
 ## Por decidir (David)
