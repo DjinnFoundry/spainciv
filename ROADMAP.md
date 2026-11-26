@@ -41,8 +41,9 @@ decisiones que salgan van a `DECISIONS.md`.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
-- Rendimiento: arrastrar y el primer dibujado tras cambiar de zoom siguen bloqueando 40–115 ms con la CPU frenada
-  ×4 (opciones: relieve desde 8 px, lienzo más ancho hacia el arrastre, teselas o worker).
+- Rendimiento: el primer dibujado tras cambiar de zoom sigue bloqueando con la CPU frenada ×4, sobre todo al
+  alejar (pinta los sprites de la escala nueva). Opciones: relieve desde 8 px o worker; repintar por bandas se
+  probó y se descartó (A18).
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
 
