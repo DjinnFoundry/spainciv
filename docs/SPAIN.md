@@ -94,8 +94,8 @@ the site is served or packaged, `pipeline/play.py` makes from it:
   page's link;
 - `jugar.html`: how to play it and what is real data and what is game convention, linked from the help dialog.
 
-The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A16).
-The rules and the reasons are DECISIONS.md E51–E60, A15, A16 and F26–F28. The map was checked in Unciv 5.0.1 (the jar of the
+The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
+The rules and the reasons are DECISIONS.md E51–E57, E62–E62, A15, A17, F26, F29 and F29. The map was checked in Unciv 5.0.1 (the jar of the
 GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
 every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
 locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).
