@@ -1498,6 +1498,11 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
         self.assertEqual((c["kinds"], c["kept"]), (["artists", "writers"], ["artists"]))
         # A conquistador counts whatever his fame.
         self.assertEqual(classify({"P106": {"Q126236"}}, 0, self.trees())["kept"], ["conquistadors"])
+        # A Guanche king is named by his own title: mencey in Tenerife, guanarteme in Gran Canaria.
+        from pipeline.sources.es.personajes import GUANARTEME, MENCEY
+        for title in (MENCEY, GUANARTEME):
+            c = classify({"P39": {title, "Q116"}}, BY_ID["monarchs"].min_sitelinks, self.trees())
+            self.assertEqual(c["roles"]["monarchs"], title)
 
     def test_primary_decisive_then_description_then_most_occupations(self):
         from pipeline.sources.es.personajes import classify, primary

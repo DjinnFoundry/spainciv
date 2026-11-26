@@ -86,6 +86,7 @@ def occ(*qids: str, deep: bool = True, decisive: bool = False) -> tuple[Rule, ..
     return tuple(Rule("P106", q, deep, decisive) for q in qids)
 
 
+MENCEY, GUANARTEME = "Q2724892", "Q3323725"  # the Guanche kings of Tenerife and of Gran Canaria
 # Priority order (see classify: it orders the offices and breaks ties): offices and status (a Nobel, a crown, a
 # conquest, a sainthood) before trades, the rarer trades before the common ones, and sport last.
 KINDS = (
@@ -94,7 +95,9 @@ KINDS = (
     # Monarchs (Q116) with every crown below it, and queens consort (Q719039). Out: the bishops of Urgell and the
     # co-princes of Andorra, popes, the judges of Sardinia, the Lord of Biscay, Fürsten, prince-electors and the bishop
     # of Sion, which Wikidata files under monarch.
-    Kind("monarchs", FLOOR, (Rule("P39", "Q116", decisive=True), Rule("P39", "Q719039", decisive=True)),
+    # The Canary Islands' own titles come first, so they name the role: mencey (Tenerife), guanarteme (Gran Canaria).
+    Kind("monarchs", FLOOR, (Rule("P39", MENCEY, False, True), Rule("P39", GUANARTEME, False, True),
+                             Rule("P39", "Q116", decisive=True), Rule("P39", "Q719039", decisive=True)),
          frozenset({"Q19808790", "Q19808845", "Q49967564", "Q19546", "Q3769128", "Q2279624", "Q17077113", "Q18244",
                     "Q22722", "Q23034734"})),
     Kind("conquistadors", 0, occ(CONQUISTADOR, decisive=True)),
@@ -213,7 +216,7 @@ def classify(values: dict[str, set[str]], sitelinks: int, trees: dict[str, set[s
 # Words of a Wikidata description (in Spanish; Galician and Catalan share most of them) that name a category's trade.
 # Phrases of several words go after a |, and are matched before their first word.
 WORDS = {
-    "monarchs": "rey reina monarca emperador emperatriz califa emir sultán",
+    "monarchs": "rey reina monarca emperador emperatriz califa emir sultán mencey guanarteme",
     "conquistadors": "conquistador conquistadora",
     "explorers": "explorador exploradora navegante navegador navegadora marino marina corsario corsaria pirata "
     "almirante",

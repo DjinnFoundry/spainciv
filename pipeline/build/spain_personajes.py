@@ -45,7 +45,7 @@ STYLE = {
 # The class that names a person's role (the first rule of its primary category it meets) → (masculine, feminine).
 NOUNS = {
     "Q7191": ("premio Nobel", "premio Nobel"), "Q47170": ("premio Nobel", "premio Nobel"),
-    "Q116": ("monarca", "monarca"), "Q719039": ("reina consorte", "reina consorte"),
+    "Q2724892": ("mencey", "mencey"), "Q3323725": ("guanarteme", "guanarteme"), "Q116": ("monarca", "monarca"), "Q719039": ("reina consorte", "reina consorte"),
     "Q126236": ("conquistador", "conquistadora"),
     "Q11900058": ("explorador", "exploradora"), "Q10669499": ("marino", "marina"), "Q201559": ("corsario", "corsaria"),
     "Q10729326": ("pirata", "pirata"), "Q849424": ("capitán de barco", "capitana de barco"),
