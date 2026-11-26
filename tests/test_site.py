@@ -1,15 +1,19 @@
 """pipeline/site.py and the package: the US page is published as written; Spain gets its own head, credits and files."""
 
+import http.server
 import json
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import unittest
+import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
 from unittest import mock
 
+import pipeline.__main__ as cli
 from pipeline import countries, package, site
 from pipeline.core.paths import ROOT, WEB
 
@@ -109,19 +113,51 @@ class RenderTest(unittest.TestCase):
             site.render_index(TEMPLATE.replace('<meta property="og:url"', '<meta property="og:URL"'), countries.COUNTRIES["es"])
 
 
-class OverlayTest(unittest.TestCase):
-    def test_us_has_none(self):
-        self.assertIsNone(site.overlay_dir(countries.COUNTRIES["us"]))
-        self.assertEqual(site.overlay_files(countries.COUNTRIES["us"]), [])
+class GeneratedFilesTest(unittest.TestCase):
+    def test_us_only_renders_its_index(self):
+        files = site.generated_files(countries.COUNTRIES["us"])
+        self.assertEqual(set(files), {"index.html"})
+        self.assertEqual(files["index.html"](), (WEB / "index.html").read_bytes())
 
-    def test_spain_og_image(self):
-        files = dict((rel.as_posix(), f) for f, rel in site.overlay_files(countries.COUNTRIES["es"]))
-        self.assertIn("og-image.png", files)
-        self.assertNotIn("data", {Path(k).parts[0] for k in files})
-        png = files["og-image.png"].read_bytes()
-        self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
-        self.assertEqual((int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")), (1200, 630))
-        self.assertNotEqual(png, (WEB / "og-image.png").read_bytes())
+    def test_spain_draws_its_card(self):
+        es = countries.COUNTRIES["es"]
+        files = site.generated_files(es)
+        self.assertEqual(set(files), {"index.html", "og-image.png"})
+        self.assertEqual(files["index.html"](), site.index_bytes(es))
+        with mock.patch.object(site, "card_png", return_value=b"card") as card:
+            self.assertEqual(files["og-image.png"](), b"card")
+        card.assert_called_once_with(es)
+
+    def test_no_card_is_committed(self):
+        # The card is drawn from the data when the site is served or packaged; a stale copy must not shadow it.
+        self.assertEqual(sorted(p.name for p in (ROOT / "sites" / "es").iterdir() if p.name != ".DS_Store"), ["data"])
+
+
+class ServeTest(unittest.TestCase):
+    """`pipeline serve` answers the generated files as `package` writes them, and web/'s files as they are."""
+
+    def get(self, country_id, path):
+        with countries.using(country_id), mock.patch.object(site, "card_png", return_value=b"\x89PNG card"), \
+                mock.patch.object(cli._SiteHandler, "log_message"):
+            srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), cli.site_handler())
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{srv.server_port}{path}") as r:
+                    return r.headers["Content-Type"], r.read()
+            finally:
+                srv.shutdown()
+                srv.server_close()
+
+    def test_spain(self):
+        es = countries.COUNTRIES["es"]
+        self.assertEqual(self.get("es", "/og-image.png"), ("image/png", b"\x89PNG card"))
+        self.assertEqual(self.get("es", "/"), ("text/html; charset=utf-8", site.index_bytes(es)))
+        self.assertEqual(self.get("es", "/index.html?x=1")[1], site.index_bytes(es))
+        self.assertEqual(self.get("es", "/data/world.json")[1], (es.web_data_dir / "world.json").read_bytes())
+
+    def test_us(self):
+        self.assertEqual(self.get("us", "/og-image.png")[1], (WEB / "og-image.png").read_bytes())
+        self.assertEqual(self.get("us", "/")[1], (WEB / "index.html").read_bytes())
 
 
 class PackageTest(unittest.TestCase):
@@ -151,9 +187,11 @@ class PackageTest(unittest.TestCase):
 
     def test_spain_site(self):
         es = countries.COUNTRIES["es"]
-        out = self.build("es")
+        with mock.patch.object(site, "card_png", return_value=b"\x89PNG card") as card:
+            out = self.build("es")
+        card.assert_called_once_with(es)
         self.assertEqual((out / "index.html").read_bytes(), site.index_bytes(es))
-        self.assertEqual((out / "og-image.png").read_bytes(), (ROOT / "sites" / "es" / "og-image.png").read_bytes())
+        self.assertEqual((out / "og-image.png").read_bytes(), b"\x89PNG card")
         self.assertEqual((out / "data" / "world.json").read_bytes(), (es.web_data_dir / "world.json").read_bytes())
         self.assertFalse((out / "data" / "military.json").exists())  # US data never leaks into Spain's site
         for name in ("LICENSE", "NOTICE"):

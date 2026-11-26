@@ -4,13 +4,12 @@ web/index.html is written for the United States and is published as is for it. A
 (countries.base.Page) gets, when the site is served (`serve`) or packaged (`package`):
 
 - its language, title, description and social cards (canonical, og:*, twitter:*), with absolute URLs built from
-  `site_url`; the card image is `https://<site_url>/og-image.png`;
+  `site_url`; the card image is `https://<site_url>/og-image.png`, drawn from the country's data (pipeline/card.py);
 - a credit line on the map: its data sources, the licence notices its sources require, and usaciv's credit;
 - `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
   the world.json `country` block (so a new address or credit needs no data rebuild).
 
-A country whose web data lives in sites/<id>/data can put more site files next to it (sites/<id>/og-image.png):
-they replace web/'s files of the same name.
+generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.
 """
 
 from __future__ import annotations
@@ -18,26 +17,13 @@ from __future__ import annotations
 import json
 import re
 from html import escape
-from pathlib import Path
+from typing import Callable
 
+from .card import card_png
 from .core.paths import WEB
 from .countries import Country, active
 
 USACIV_URL = "https://karpathy.ai/usaciv/"
-
-
-def overlay_dir(country: Country | None = None) -> Path | None:
-    """sites/<id>/: the country's own site files (its data/ excluded), or None when the country's data is web/data."""
-    folder = (country or active()).web_data_dir.parent
-    return None if folder == WEB else folder
-
-
-def overlay_files(country: Country | None = None) -> list[tuple[Path, Path]]:
-    """(file, path in the site) for every overlay file of the country."""
-    folder = overlay_dir(country)
-    if folder is None or not folder.is_dir():
-        return []
-    return [(f, f.relative_to(folder)) for f in sorted(folder.rglob("*")) if f.is_file() and f.relative_to(folder).parts[0] != "data" and f.name != ".DS_Store"]
 
 
 def _attr(value: str) -> str:
@@ -106,3 +92,13 @@ def render_index(html: str, country: Country | None = None) -> str:
 def index_bytes(country: Country | None = None) -> bytes:
     """The country's index.html, ready to serve or package."""
     return render_index((WEB / "index.html").read_text(encoding="utf-8"), country).encode("utf-8")
+
+
+def generated_files(country: Country | None = None) -> dict[str, Callable[[], bytes]]:
+    """Site files made from code, by path in the site: index.html, and og-image.png for a country with a `page`
+    (the US keeps web/og-image.png)."""
+    c = country or active()
+    files = {"index.html": lambda: index_bytes(c)}
+    if c.page is not None:
+        files["og-image.png"] = lambda: card_png(c)
+    return files
