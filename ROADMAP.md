@@ -10,7 +10,7 @@ decisiones que salgan van a `DECISIONS.md`.
 ## Después
 
 2. I+D por comunidad (estadística de I+D del INE) para el rendimiento Science.
-4. Centrales (REE / registro del MITECO) y minas (IGME): recursos.
+4. Minas (IGME) como recursos.
 6. **i18n en/es**: pasada completa de la interfaz (unas 550 líneas en inglés en el JS), en un subagente en paralelo.
 
 ## Huecos conocidos

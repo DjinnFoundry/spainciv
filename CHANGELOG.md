@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Recursos: centrales eléctricas en servicio (nucleares, hidráulicas, bombeo, ciclos combinados, carbón, fuel de
+  las islas, y eólica, solar y baterías sumadas por hexágono), de powerplantmatching y, en Canarias, de OpenStreetMap.
 - Universidades: las 20 presenciales con más alumnos (SIIU, curso 2024-25) como maravillas, en el municipio donde
   estudian más de sus alumnos. España no publica el gasto en I+D por universidad, así que se ordenan por alumnos.
 - Visitantes de 2025 de los 16 Parques Nacionales (informe del OAPN, solo en PDF, transcrito a

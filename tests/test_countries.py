@@ -547,3 +547,23 @@ class SpainUniversitiesTest(unittest.TestCase):
         self.assertEqual(find("SAN VICENTE DEL RASPEIG/SANT VICENT DEL RASPEIG", "03")["geoid"], "03122")
         with self.assertRaises(RuntimeError):
             find("GRANADA", "50")
+
+
+class SpainPowerTest(unittest.TestCase):
+    def test_osm_capacity_and_fuels(self):
+        from pipeline.sources.es.power import mw_of, ppm_fuel
+
+        self.assertEqual(mw_of("697 MW"), 697)
+        self.assertEqual(mw_of("800 kW"), 0.8)
+        self.assertEqual(mw_of("1,2 GW"), 1200)
+        self.assertIsNone(mw_of("yes"))
+        self.assertEqual(ppm_fuel({"Fueltype": "Hydro", "Technology": "Pumped Storage"}), "pumped_storage")
+        self.assertEqual(ppm_fuel({"Fueltype": "Lignite", "Technology": ""}), "coal")
+        self.assertIsNone(ppm_fuel({"Fueltype": "Waste", "Technology": ""}))
+
+    def test_site_merges_units(self):
+        from pipeline.build.spain_resources import site
+
+        p = lambda name, mw: ({"name": name, "mw": mw, "year": 1983, "offshore": False, "source": "ppm"}, 0.0, 0.0)
+        s = site("nuclear", [p("Almaraz 1", 1049), p("Almaraz 2", 1044)], 7)
+        self.assertEqual((s["name"], s["value"], s["cell"]), ("Almaraz", 2093, 7))

@@ -8,7 +8,7 @@ import { frameBox, focusPoint } from "../core/frame.js";
 import { glyph } from "../../../ui/icon.js";
 
 const GROUPS = [
-  { id: "thermal", label: "Power plants", types: ["nuclear", "coal_plant", "gas_plant", "geothermal"] },
+  { id: "thermal", label: "Power plants", types: ["nuclear", "coal_plant", "gas_plant", "oil_plant", "geothermal"] },
   { id: "water", label: "Hydro", types: ["hydro", "pumped_storage"] },
   { id: "renew", label: "Wind, solar & batteries", types: ["wind", "solar", "battery"] },
   { id: "mines", label: "Mines", types: ["coal_mine", "gold", "copper", "iron", "silver", "platinum", "molybdenum", "lead_zinc", "rare_earths", "uranium"] },
