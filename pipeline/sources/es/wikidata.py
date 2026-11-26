@@ -17,6 +17,14 @@ from ...core.source import Source, SourceInfo
 ENDPOINT = "https://query.wikidata.org/sparql?format=json&query="
 HEADERS = {"User-Agent": "spainciv/0.1 (https://github.com/DjinnFoundry/spainciv)", "Accept": "application/sparql-results+json"}
 
+# Items in Spain of a class (or any subclass) with coordinates, leaving out those Wikidata records as demolished (P576).
+STANDING = """
+SELECT ?s ?sLabel ?coord WHERE {
+  ?s wdt:P31/wdt:P279* wd:%s; wdt:P17 wd:Q29; wdt:P625 ?coord.
+  FILTER NOT EXISTS { ?s wdt:P576 ?end. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "%%s". }
+}"""
+
 _QUERIES = {
     # Every item in Spain designated World Heritage, with its UNESCO site id (components share the site's number).
     "world_heritage": """
@@ -48,6 +56,10 @@ SELECT ?s ?sLabel ?coord (MAX(?v) AS ?visitors) WHERE {
   OPTIONAL { ?s wdt:P1174 ?v. }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "%s". }
 } GROUP BY ?s ?sLabel ?coord""",
+    # Castles (any subclass: tower houses, alcazabas, alcázares, castle ruins).
+    "castles": STANDING % "Q23413",
+    # Bullrings (plaza de toros, Q1193438, and its classes by category).
+    "bullrings": STANDING % "Q1193438",
     # Bienes de Interés Cultural (Spain's highest heritage protection) with coordinates.
     "bic": """
 SELECT ?s ?coord WHERE { ?s wdt:P1435 wd:Q23712; wdt:P625 ?coord. }""",
@@ -80,14 +92,15 @@ def label(b: dict) -> str | None:
 class WikidataEs(Source):
     info = SourceInfo(
         id="wikidata_es",
-        title="Wikidata: World Heritage sites, cathedrals, museums and Bienes de Interés Cultural in Spain",
+        title="Wikidata: World Heritage sites, cathedrals, museums, Bienes de Interés Cultural, castles and bullrings in Spain",
         publisher="Wikidata (Wikimedia Foundation and volunteer editors)",
         homepage="https://www.wikidata.org/",
         license="CC0 1.0 (public domain dedication)",
         description="Items in Spain designated World Heritage (grouped by their UNESCO site number), cathedrals and "
-        "co-cathedrals, museums, and Bienes de Interés Cultural, with their coordinates, from Wikidata's SPARQL service. "
-        "Volunteer-edited: coverage is close to, but not exactly, the official registers.",
-        used_for=["World Heritage and cathedral wonders", "Heritage lens (Bienes de Interés Cultural)", "Museums lens"],
+        "co-cathedrals, museums, Bienes de Interés Cultural, castles and bullrings, with their coordinates, from "
+        "Wikidata's SPARQL service. Volunteer-edited: coverage is close to, but not exactly, the official registers.",
+        used_for=["World Heritage and cathedral wonders", "Heritage lens (Bienes de Interés Cultural)", "Museums lens",
+                  "Castles lens", "Bullrings lens"],
     )
 
     def fetch(self, force=False):
@@ -132,18 +145,28 @@ class WikidataEs(Source):
                                           "world_heritage": None})
             if value(b, "whid"):
                 c["world_heritage"] = re.match(r"\d+", value(b, "whid")).group(0)
-        museums = {}
-        for b in self._rows("museums"):
-            q = qid(b["s"]["value"])
-            if q not in museums and label(b) and point(value(b, "coord")):
-                museums[q] = {"qid": q, "label": label(b), "coord": point(value(b, "coord")),
-                              "visitors": round(float(value(b, "visitors"))) if value(b, "visitors") else None}
+        museums = self._named("museums", lambda b: {
+            "visitors": round(float(value(b, "visitors"))) if value(b, "visitors") else None})
         bic = {qid(b["s"]["value"]): point(value(b, "coord")) for b in self._rows("bic")}
+        castles, bullrings = (sorted(self._named(n), key=lambda i: (i["label"], i["qid"]))
+                              for n in ("castles", "bullrings"))
         return {
             "vintage": f"Wikidata, {read_manifest(self.id)['world_heritage.json']['retrieved'][:10]}",
             "_files": [f"{n}.json" for n in QUERIES],
             "world_heritage": heritage,
             "cathedrals": sorted(cathedrals.values(), key=lambda c: c["label"] or c["qid"]),
             "bic": [c for c in bic.values() if c],
-            "museums": sorted(museums.values(), key=lambda m: (-(m["visitors"] or 0), m["label"])),
+            "museums": sorted(museums, key=lambda m: (-(m["visitors"] or 0), m["label"])),
+            "castles": castles,
+            "bullrings": bullrings,
         }
+
+    def _named(self, name: str, extra=lambda b: {}) -> list[dict]:
+        """The items of a query with a label and a position, once each (the first row of one with several), with
+        `extra(row)`'s fields, in the query's order."""
+        items: dict[str, dict] = {}
+        for b in self._rows(name):
+            q = qid(b["s"]["value"])
+            if q not in items and label(b) and point(value(b, "coord")):
+                items[q] = {"qid": q, "label": label(b), "coord": point(value(b, "coord")), **extra(b)}
+        return list(items.values())
