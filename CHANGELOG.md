@@ -6,6 +6,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Ejército** para España: el General deja de estar vacío. 478 instalaciones militares de OpenStreetMap (23 grandes,
+  75 bases), con su rama (Tierra, Armada, Aire y del Espacio, UME), su superficie y su enlace a Wikidata; los 15 mayores
+  campos de maniobras como terreno restringido (San Gregorio, 338 km²; Chinchilla, 149; Sierra del Retín, 100); las
+  instalaciones y el terreno militar por provincia; y 29 ciudades con guarnición. Rota y Morón van marcadas como de uso
+  conjunto con Estados Unidos. La capa militar del mapa dibuja sus fuertes y campos. Sin efectivos ni gasto por
+  provincia: el anuario de Defensa no se pudo descargar (E63–E67, A18, F30).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
