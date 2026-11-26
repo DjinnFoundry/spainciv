@@ -11,9 +11,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 2. Universidades e I+D (SIIU del Ministerio de Universidades; estadística de I+D del INE): maravillas del tipo
    universidad y el rendimiento Science.
-3. Puertos (Puertos del Estado, tráfico por puerto) y aeropuertos (AENA, pasajeros y carga): mejoras de casilla.
 4. Centrales (REE / registro del MITECO) y minas (IGME): recursos.
-5. Visitantes de los Parques Nacionales (OAPN) para ordenarlos como en EE UU, y Patrimonio Mundial (UNESCO) como maravillas.
 6. **i18n en/es**: pasada completa de la interfaz (unas 550 líneas en inglés en el JS), en un subagente en paralelo.
 
 ## Huecos conocidos

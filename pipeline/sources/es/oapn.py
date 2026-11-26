@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import re
 from pathlib import Path
 
 from ...core.geo import geojson_rings, load_geojson
@@ -15,6 +17,22 @@ FILE = "limites_parques_nacionales.geojson"
 # (from the certificate's own AIA URL) and Sectigo's R46 root (from the macOS system root store), checked with
 # `openssl verify`. SHA-256: intermediate 8C:54:C3:34:…:A4:EF:22:E0, root 7B:B6:47:A6:…:EC:38:F2:5A:06.
 OAPN_CHAIN = Path(__file__).parent / "certs" / "sectigo-r46-dv-r36.pem"
+
+
+VISITORS = Path(__file__).parent / "data" / "visitantes_parques_nacionales_2025.csv"
+VISITORS_YEAR = 2025
+PREFIX = re.compile(r"^Parque Nacional (Marítimo-Terrestre )?(de las |de los |de la |del |de )?", re.IGNORECASE)
+
+
+def short_name(name: str) -> str:
+    """'Parque Nacional de la Sierra de Guadarrama' → 'Sierra de Guadarrama'."""
+    return PREFIX.sub("", name).strip() or name
+
+
+def visitors() -> dict[str, int]:
+    """Visitors per park (short name), transcribed from the OAPN's 2025 report, which is only published as a PDF."""
+    with open(VISITORS, encoding="utf-8") as f:
+        return {r["park"]: int(r["visitors"]) for r in csv.DictReader(line for line in f if not line.startswith("#"))}
 
 
 def number(text: str | None) -> float | None:
@@ -33,7 +51,8 @@ class Oapn(Source):
         license="Public-sector information, reuse permitted citing the source (Ley 37/2007); the service declares no "
         "access constraints or fees",
         description="The boundaries of Spain's 16 National Parks as declared by law, with their declaration date and "
-        "official area, from the OAPN's map server. The special protection area around the Sierra de Guadarrama is "
+        "official area, from the OAPN's map server, and their 2025 visitors from the OAPN's yearly report (a PDF, "
+        "transcribed in pipeline/sources/es/data). The special protection area around the Sierra de Guadarrama is "
         "not a National Park and is left out.",
         used_for=["National Park wonders", "Protected land"],
     )
@@ -54,5 +73,12 @@ class Oapn(Source):
             })
         if len(parks) < 15:
             raise RuntimeError(f"{FILE}: only {len(parks)} National Parks")
-        return {"vintage": "OAPN, Red de Parques Nacionales", "_files": [FILE],
+        visits = visitors()
+        for p in parks:
+            p["visitors"] = visits.get(short_name(p["name"]))
+        missing = [p["name"] for p in parks if p["visitors"] is None]
+        if missing:
+            raise RuntimeError(f"no visitor figure for {missing}")
+        return {"vintage": f"OAPN, Red de Parques Nacionales; visitors {VISITORS_YEAR}", "_files": [FILE],
+                "visitors_year": VISITORS_YEAR,
                 "parks": sorted(parks, key=lambda p: p["name"])}

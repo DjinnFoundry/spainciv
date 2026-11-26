@@ -3,7 +3,7 @@
 * **World Heritage** (rule `world_heritage`): the 50 UNESCO sites with a Spanish component (Wikidata, grouped by UNESCO
   site number), in order of that number (roughly the order of inscription). A site sits on its main component (or the
   first one with coordinates); natural sites (only criteria vii–x) are natural wonders.
-* **National Parks** (rule `national_park`): all 16 (OAPN boundaries), ranked by declared area; a park covers the hexes
+* **National Parks** (rule `national_park`): all 16 (OAPN boundaries), ranked by 2025 visitors; a park covers the hexes
   whose centre is inside it. A park that is also a World Heritage site stays a park and is not repeated.
 * **Cathedrals** (rule `cathedral`): every cathedral and co-cathedral Wikidata records in Spain, alphabetically, except
   those already inside a World Heritage site (Burgos, Sevilla, Santiago…).
@@ -22,6 +22,7 @@ from ..core.geo import Shape, ShapeIndex, ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..countries import active
+from ..sources.es.oapn import short_name
 from .cities import nearest_land
 
 REQUIRES = ["_world", "oapn_parques", "wikidata_es", "cities.json", "world.json"]
@@ -33,13 +34,12 @@ RULES = [
      "text": "Every UNESCO World Heritage site with a component in Spain (50, as Wikidata records them), in order of their "
              "UNESCO number, roughly the order of inscription. Natural sites are natural wonders."},
     {"id": "national_park", "kind": "natural", "kinds": ["natural", "coastal"], "year": None,
-     "text": "Every one of Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by the area their declaring "
-             "law gives them. Spain publishes no downloadable table of park visitors yet, so they are not ranked by visits."},
+     "text": "Every one of Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by their 2025 visitors "
+             "(OAPN's yearly report): the Teide first, with over 5 million."},
     {"id": "cathedral", "kind": "landmark", "kinds": ["landmark"], "year": None,
      "text": "Every cathedral and co-cathedral in Spain that Wikidata records, alphabetically, except those that are part "
              "of a World Heritage site (already a wonder)."},
 ]
-PREFIX = re.compile(r"^Parque Nacional (Marítimo-Terrestre )?(de las |de los |de la |del |de )?", re.IGNORECASE)
 # What stands on the plinth (web/js/render/art/sites.js WONDER_MOTIFS), by words in the wonder's name.
 MOTIFS = [
     (r"catedral|seo|basílica", "spire"), (r"monasterio|abad|cartuja|colegiata", "mission"),
@@ -48,11 +48,6 @@ MOTIFS = [
     (r"teide|pirineo|monte|sierra|caldera|picos", "peak"), (r"bosque|hayas|garajonay", "forest"),
     (r"doñana|ibiza|cabrera|islas|marítim", "coast"), (r"camino|ruta|paisaje", "memorial"),
 ]
-
-
-def short_name(name: str) -> str:
-    """'Parque Nacional de la Sierra de Guadarrama' → 'Sierra de Guadarrama'."""
-    return PREFIX.sub("", name).strip() or name
 
 
 def slug(name: str) -> str:
@@ -117,7 +112,8 @@ def build() -> None:
     # National Parks first: they claim their hexes before the World Heritage sites that overlap them (Doñana, Teide…).
     park_names = set()
     parks = []
-    for park in sorted(parks_p["data"]["parks"], key=lambda p: -(p["area_ha"] or 0)):
+    year = parks_p["data"]["visitors_year"]
+    for park in sorted(parks_p["data"]["parks"], key=lambda p: -p["visitors"]):
         name = park["name"]
         park_names.add(slug(name))
         main = max(park["rings"], key=lambda r: abs(ring_area(r)))
@@ -125,7 +121,7 @@ def build() -> None:
             "id": f"pn-{slug(name)}", "name": name, "short": short_name(name),
             "kind": "coastal" if "Marítimo-Terrestre" in name else "natural", "rule": "national_park",
             "rank": len(parks) + 1,
-            "metrics": {"visits": None, "year": None, "area_km2": round(park["area_ha"] / 100, 1) if park["area_ha"] else None,
+            "metrics": {"visits": park["visitors"], "year": year, "area_km2": round(park["area_ha"] / 100, 1) if park["area_ha"] else None,
                         "unit_type": "Parque Nacional", "declared": park["declared"]},
             **placer.place(*ring_centroid(main)), "cells": placer.covered(park["rings"]), "curated": False,
             "motif": motif(name, True),
@@ -164,7 +160,8 @@ def build() -> None:
         "vintage": {"parks": parks_p["vintage"], "boundaries": parks_p["vintage"], "heritage": wd_p["vintage"]},
         "sources": ["wikidata_es", "oapn_parques"],
         "rules": RULES,
-        "national": {"park_visits": None, "park_visits_year": None, "r1_universities": None,
+        "national": {"park_visits": sum(p["visitors"] for p in parks_p["data"]["parks"]), "park_visits_year": year,
+                     "r1_universities": None,
                      "world_heritage_sites": len(heritage), "cathedrals": len(cathedrals)},
         "wonders": wonders,
     })
