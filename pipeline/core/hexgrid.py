@@ -61,14 +61,15 @@ class HexGrid:
             return self.index(col, row)
         return -1
 
-    def neighbours(self, index: int) -> list[int]:
+    def neighbour(self, index: int, direction: int) -> int:
+        """The neighbour in `direction` (0 E, 1 SE, 2 SW, 3 W, 4 NW, 5 NE), or -1 outside the grid."""
         col, row = self.col_row(index)
-        out = []
-        for dc, dr in _NEIGHBOURS[row & 1]:
-            c, r = col + dc, row + dr
-            if 0 <= c < self.cols and 0 <= r < self.rows:
-                out.append(self.index(c, r))
-        return out
+        dc, dr = _NEIGHBOURS[row & 1][direction]
+        c, r = col + dc, row + dr
+        return self.index(c, r) if 0 <= c < self.cols and 0 <= r < self.rows else -1
+
+    def neighbours(self, index: int) -> list[int]:
+        return [j for d in range(6) if (j := self.neighbour(index, d)) >= 0]
 
     def to_dict(self) -> dict:
         return {"radius": self.radius, "cols": self.cols, "rows": self.rows}

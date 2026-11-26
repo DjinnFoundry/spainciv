@@ -1,4 +1,5 @@
-"""A small PNG decoder (standard library only) for map images served by WMS: 8-bit RGB, RGBA, grey or palette.
+"""A small PNG decoder and RGB encoder (standard library only). decode() reads map images served by WMS (8-bit RGB,
+RGBA, grey or palette); encode() writes the images the pipeline draws (pipeline/card.py).
 
 Rasters that are only published as rendered maps (e.g. CORINE through the Spanish IDEE WMS) are read back to classes
 by their exact legend colours; decode() returns the pixels as (r, g, b) tuples, row by row.
@@ -82,11 +83,30 @@ def _pixels(line: bytearray, ctype: int, palette, trns) -> list:
 
 
 def encode_rgb(rows: list[list[tuple[int, int, int]]]) -> bytes:
-    """An 8-bit RGB PNG (filter 0), for tests."""
-    h, w = len(rows), len(rows[0])
-    raw = b"".join(b"\x00" + bytes(v for px in row for v in px) for row in rows)
+    """An 8-bit RGB PNG of rows of (r, g, b)."""
+    return encode(len(rows[0]), len(rows), bytes(v for row in rows for px in row for v in px))
+
+
+def _filter_cost(filtered: bytes) -> int:
+    """Sum of the filtered bytes read as signed: the smaller, the better the row compresses."""
+    return sum(v if v < 128 else 256 - v for v in filtered)
+
+
+def encode(width: int, height: int, rgb: bytes) -> bytes:
+    """An 8-bit RGB PNG of `rgb` (width × height × 3 bytes, row by row), each row with the filter that compresses
+    best by the usual heuristic (smallest sum of absolute filtered bytes): none, Sub or Up."""
+    stride = 3 * width
+    out, prev = bytearray(), bytes(stride)
+    for y in range(height):
+        line = rgb[y * stride:(y + 1) * stride]
+        sub = bytes((line[x] - (line[x - 3] if x >= 3 else 0)) & 255 for x in range(stride))
+        up = bytes((a - b) & 255 for a, b in zip(line, prev))
+        ftype, best = min(((0, line), (1, sub), (2, up)), key=lambda c: _filter_cost(c[1]))
+        out += bytes([ftype]) + best
+        prev = line
 
     def chunk(kind, body):
         return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
 
-    return SIGNATURE + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return SIGNATURE + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(bytes(out), 9)) + chunk(b"IEND", b"")
