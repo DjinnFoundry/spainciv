@@ -25,6 +25,14 @@ decisiones que salgan van a `DECISIONS.md`.
 - El Padrón 2025 tiene 8.138 municipios y el SIANE 2026 8.132.
 - 298 hexágonos de mar, sobre todo alrededor del recuadro de Canarias, no tienen muestras de ETOPO (bajo el recuadro se descartan a propósito).
 - En la vista inicial, el minimapa tapa parte del recuadro de Canarias.
+- Platos regionales: llegan a la provincia, no a la comarca; no hay fuente más fina. La cobertura de la Wikipedia es
+  desigual (Madrid 47, Álava 1).
+- Lenguas: falta el aragonés y el catalán de Aragón (sin lista publicada de municipios) y los dialectos (sin
+  delimitación oficial).
+- Bandera Azul: cada playa va a la costa de su municipio, no a su posición; se podría afinar con las playas de Wikidata.
+- Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
+- Rendimiento: arrastrar y el primer dibujado tras cambiar de zoom siguen bloqueando 40–115 ms con la CPU frenada
+  ×4 (opciones: relieve desde 8 px, lienzo más ancho hacia el arrastre, teselas o worker).
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
 
