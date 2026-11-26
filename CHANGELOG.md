@@ -22,6 +22,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ### Corregido
 - La potencia por provincia (consejero de Energía y Explorador) ya no sale vacía en España: `spain_resources` la
   rellena en `states.json` al terminar, con la misma suma que EE UU.
+- Restos de inglés y de EE UU en el mapa de España: los tooltips de puertos y aeropuertos («Large hub», «short tons»,
+  FAA, USACE), 103 nombres de centrales («Las Majas Wind Farm» pasa a «Parque eólico Las Majas»), las fechas de cinco
+  fuentes («AENA 2025 (final)», «students», «visitors») y textos de los consejeros que hablaban de embarques, libras,
+  el NPS o la I+D de las facultades de medicina. Los puertos y la carga aérea se dan en toneladas, no en toneladas
+  cortas ni en libras (Algeciras: 100,7 M t, no 111 M). El menú Mapa ya no ofrece Ejército ni Rutas comerciales, que
+  España no tiene. Un test busca palabras inglesas en `sites/es/data` para que no vuelvan.
+- `pipeline serve` se reinicia cuando cambia el código del pipeline. Un servidor arrancado antes de traducir la página
+  servía la línea de créditos en inglés bajo la interfaz en castellano; `package` y `serve` dan ya el mismo `index.html`.
 - Alejar el zoom ya no redibuja el mapa entero en cada fotograma: el lienzo se pinta al 60 % de la escala y se
   reescala hasta que el zoom para (de 11 a 4 redibujados en 20 pasos de rueda, en España y en EE UU).
 - La vista de ciudad de España cita el Padrón, el Censo del INE y el atlas de áreas urbanas. Los distritos comparan

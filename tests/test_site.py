@@ -159,6 +159,26 @@ class ServeTest(unittest.TestCase):
         self.assertEqual(self.get("us", "/og-image.png")[1], (WEB / "og-image.png").read_bytes())
         self.assertEqual(self.get("us", "/")[1], (WEB / "index.html").read_bytes())
 
+    def test_restarts_when_the_pipeline_code_changes(self):
+        """A server started before an edit to site.py or a country's page would keep serving the old index.html
+        (an English credit line under a Spanish interface): serve runs the server in a child it restarts."""
+        children = [mock.Mock(**{"poll.return_value": None}), mock.Mock(returncode=0, **{"poll.side_effect": [None, 0, 0]})]
+        stamps = iter([1.0, 1.0, 2.0, 2.0, 2.0, 2.0])
+        with mock.patch.dict(cli.os.environ, {cli.SERVE_CHILD: ""}), \
+                mock.patch.object(cli.subprocess, "Popen", side_effect=children) as popen, \
+                mock.patch.object(cli, "code_stamp", lambda: next(stamps)), mock.patch.object(cli.time, "sleep"), \
+                mock.patch("builtins.print"), self.assertRaises(SystemExit) as done:
+            cli.cmd_serve(8772, ["serve", "--country", "es", "--port", "8772"])
+        self.assertEqual(done.exception.code, 0)
+        self.assertEqual(popen.call_count, 2)
+        children[0].terminate.assert_called_once_with()
+        args, kw = popen.call_args
+        self.assertEqual(args[0][1:], ["-m", "pipeline", "serve", "--country", "es", "--port", "8772"])
+        self.assertEqual(kw["env"][cli.SERVE_CHILD], "1")
+
+    def test_code_stamp_follows_the_newest_module(self):
+        self.assertEqual(cli.code_stamp(), max(p.stat().st_mtime for p in (ROOT / "pipeline").rglob("*.py")))
+
 
 class PackageTest(unittest.TestCase):
     """cmd_package into a temporary dist/ (the source zip and site zip are written there too)."""

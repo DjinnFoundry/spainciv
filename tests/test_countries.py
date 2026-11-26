@@ -850,6 +850,23 @@ class SpainPowerTest(unittest.TestCase):
         p = lambda name, mw: ({"name": name, "mw": mw, "year": 1983, "offshore": False, "source": "ppm"}, 0.0, 0.0)
         s = site("nuclear", [p("Almaraz 1", 1049), p("Almaraz 2", 1044)], 7)
         self.assertEqual((s["name"], s["value"], s["cell"]), ("Almaraz", 2093, 7))
+        # Spanish names, and capacities without float noise (123.1 + 123.2 = 246.29999999999998)
+        s = site("solar", [p("Renopool Solar Farm", 123.1), p("Renopool Solar Farm", 123.2)], 7)
+        self.assertEqual(s["name"], "Planta solar Renopool")
+        self.assertEqual(s["detail"], "2 centrales, entre ellas Planta solar Renopool (123,2 MW), en servicio desde 1983")
+
+    def test_plant_names_in_spanish(self):
+        from pipeline.build.spain_resources import plant_name_es
+
+        for en, es in [("Las Majas Wind Farm (+1)", "Parque eólico Las Majas (+1)"), ("Monlora Wind", "Parque eólico Monlora"),
+                       ("La Cabana Wind Farm Spain", "Parque eólico La Cabana"),
+                       ("Renopool Solar Farm (+5)", "Planta solar Renopool (+5)"),
+                       ("Llevant Solar Solar Farm", "Planta solar Llevant"), ("Mula Solar Photovoltaic", "Planta solar Mula"),
+                       ("Alcala De Guadaira Solar Park (+4)", "Planta solar Alcala De Guadaira (+4)"),
+                       ("Guzman Thermosolar Farm", "Central termosolar Guzman"), ("Aste Csp Solar Farm", "Central termosolar Aste"),
+                       ("Castile La Mancha Solar Xxxiii", "Castilla-La Mancha Solar Xxxiii"), ("Alcudia Phase", "Alcudia"),
+                       ("Bajo Aragon Solar", "Bajo Aragón Solar"), ("Almaraz", "Almaraz")]:
+            self.assertEqual(plant_name_es(en), es)
 
 
 class SpainFoodTest(unittest.TestCase):
@@ -983,6 +1000,18 @@ class SpainMinesTest(unittest.TestCase):
         self.assertEqual(title_es("MINA FATIMA (FATIMA, JARAMA, Y FATIMA FR. II)"),
                          "Mina Fatima (Fatima, Jarama, y Fatima Fr. II)")
         self.assertEqual(title_es("PENOUTA Olga"), "PENOUTA Olga")  # mixed case is left alone
+
+
+class SpainVintageTest(unittest.TestCase):
+    def test_source_vintages_in_spanish(self):
+        from pipeline.build.texts_es import vintage
+
+        for en, es in [("INE Padrón, 1 January 2025", "INE Padrón, 1 de enero de 2025"),
+                       ("AENA 2025 (final)", "AENA 2025 (datos definitivos)"), ("SIIU, students 2024-2025", "SIIU, matriculados 2024-2025"),
+                       ("OAPN, Red de Parques Nacionales; visitors 2025", "OAPN, Red de Parques Nacionales; visitantes 2025"),
+                       ("MAPA, Calidad diferenciada (2017 areas); eAmbrosia", "MAPA, Calidad diferenciada (zonas de 2017); eAmbrosia"),
+                       ("powerplantmatching 2889ad9d1; OpenStreetMap (Canary Islands)", "powerplantmatching 2889ad9d1; OpenStreetMap (Canarias)")]:
+            self.assertEqual(vintage(en), es)
 
 
 class SpainBeachesTest(unittest.TestCase):

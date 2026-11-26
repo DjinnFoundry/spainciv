@@ -201,8 +201,9 @@ Also, per state:
 ```
 
 `field_vintages` (optional) names the vintage of an economic field whose source is not the one `vintage` describes
-(Spain: unemployment, household income and rent come from other sources than the Padrón). A field it leaves out has
-`vintage`; the US nation.json has no such block.
+(Spain: unemployment, household income, rent and the employed come from other sources than the Padrón), or says that
+no source gives it (Spain's `home_value`), since the advisors quote it in the field's description. A field it leaves
+out has `vintage`; the US nation.json has no such block.
 
 ## lenses.json
 

@@ -1,7 +1,7 @@
 // Hover tooltips for the map-art layers (HTML strings; every data value is escaped). Each says where the number comes
 // from and the caveat that matters for it (FAF values are model estimates; bases have no published headcount; the
 // trade arc is a drawing aid; curated landmarks are an editorial pick).
-import { esc, compact, int, pct } from "../../format.js";
+import { esc, compact, int, pct, fixed, withPct, shownTons, shownWeight } from "../../format.js";
 import { FORT_KINDS, fortKind } from "../../render/art/sites.js";
 import { MODE_STYLE } from "../../render/art/improvements.js";
 import { t } from "../../i18n.js";
@@ -19,8 +19,8 @@ function usd(n) {
   return `$${int(n)}`;
 }
 
-const HUB_NAME = { L: "Large hub", M: "Medium hub", S: "Small hub", N: "Nonhub primary airport" };
-const PORT_TYPE = { coastal: "Coastal port", great_lakes: "Great Lakes port", inland: "Inland river port" };
+const HUB_NAME = { L: "tip.hub.L", M: "tip.hub.M", S: "tip.hub.S", N: "tip.hub.N" };
+const PORT_TYPE = { coastal: "tip.port.coastal", great_lakes: "tip.port.great_lakes.us", inland: "tip.port.inland" };
 const WONDER_KIND = { natural: "wonder.kind.natural", university: "wonder.kind.university", landmark: "wonder.kind.landmark" };
 const NATIONAL_PARK = new Set(["National Park", "Parque Nacional"]); // metrics.unit_type in the US and Spanish data
 
@@ -28,27 +28,27 @@ export const tips = {
   port(p, m) {
     const yr = p.year ?? "";
     const lines = [
-      `<b>${esc(p.name)}</b> ${muted(`${esc(PORT_TYPE[p.type] || "Port")}, ${esc(p.state || "")}`)}`,
-      `#${esc(p.rank)} by tonnage · <b>${num(p.tons)}</b> short tons (${esc(yr)})`,
+      `<b>${esc(p.name)}</b> ${muted(`${esc(t(PORT_TYPE[p.type] || "tip.port"))}, ${esc(p.state || "")}`)}`,
+      t("tip.port.rank", { rank: esc(p.rank), tons: num(shownTons(p.tons)), year: esc(yr) }),
     ];
-    if (p.foreign != null || p.domestic != null) lines.push(`Foreign ${num(p.foreign)} · domestic ${num(p.domestic)}`);
-    if (p.imports != null || p.exports != null) lines.push(`Imports ${num(p.imports)} · exports ${num(p.exports)}`);
-    lines.push(muted("USACE principal ports; placed at the port area's centre (long river ports are approximate)."));
+    if (p.foreign != null || p.domestic != null) lines.push(t("tip.port.foreign", { foreign: num(shownTons(p.foreign)), domestic: num(shownTons(p.domestic)) }));
+    if (p.imports != null || p.exports != null) lines.push(t("tip.port.imports", { imports: num(shownTons(p.imports)), exports: num(shownTons(p.exports)) }));
+    lines.push(muted(t("tip.port.note")));
     return lines.join("<br>");
   },
   airport(a) {
     const lines = [`<b>${esc(a.id)} · ${esc(a.name)}</b> ${muted(esc([a.city, a.state].filter(Boolean).join(", ")))}`];
-    lines.push(a.hub ? esc(HUB_NAME[a.hub] || a.hub) : "All-cargo airport (not a primary passenger airport)");
+    lines.push(a.hub ? esc(HUB_NAME[a.hub] ? t(HUB_NAME[a.hub]) : a.hub) : t("tip.air.cargoOnly"));
     if (a.enplanements != null) {
       let ch = "";
       if (a.enplanements_prev > 0) {
         const r = a.enplanements / a.enplanements_prev - 1;
-        ch = ` (${sign(r)}${Math.abs(r * 100).toFixed(1)}% on ${a.year - 1})`;
+        ch = t("tip.air.change", { change: withPct(sign(r) + fixed(Math.abs(r * 100), 1)), year: a.year - 1 });
       }
-      lines.push(`<b>${num(a.enplanements)}</b> boardings in ${esc(a.year)}${ch}`);
+      lines.push(t("tip.air.pax", { n: num(a.enplanements), year: esc(a.year), change: ch }));
     }
-    if (a.cargo_lbs != null) lines.push(`All-cargo landed weight ${num(a.cargo_lbs)} lb`);
-    lines.push(muted("FAA CY enplanements and all-cargo data."));
+    if (a.cargo_lbs != null) lines.push(t("tip.air.cargo", { v: num(shownWeight(a.cargo_lbs)) }));
+    lines.push(muted(t("tip.air.note")));
     return lines.join("<br>");
   },
   fort(f, m) {

@@ -28,8 +28,11 @@ export function mount(ctx) {
 
   el.insertAdjacentHTML("beforeend", tiles([
     { label: t("adv.know.workers"), value: count3(usSci), sub: t("adv.know.ofEmployed", { share: pct(usShare) }), color: sci?.color },
-    { label: t("adv.know.degrees"), value: pct(wavg("bachelors")), sub: t("adv.know.degrees.sub") },
-    { label: t("adv.know.broadband"), value: pct(wavg("broadband")), sub: t("adv.know.broadband.sub") },
+    // Degrees and broadband are county figures: a map without counties (Spain) has neither.
+    ...(counties ? [
+      { label: t("adv.know.degrees"), value: pct(wavg("bachelors")), sub: t("adv.know.degrees.sub") },
+      { label: t("adv.know.broadband"), value: pct(wavg("broadband")), sub: t("adv.know.broadband.sub") },
+    ] : []),
   ]));
 
   // --- the map: degrees by default (the scatter's x axis), or the Science yield's share by metro ----------------

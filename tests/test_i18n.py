@@ -154,11 +154,99 @@ class FormatTest(unittest.TestCase):
         self.assertEqual(self.formats({}), ["950", "1.2K", "123K", "1.6M", "1.6B", "2.10T", "$2.10T", "$35,200", "1,234,567",
                                             "12.3%", "50%", "6.6M", "350K", "3.3"])
 
+    def test_weights_in_the_country_units(self):
+        """The data keep short tons and pounds; the US map shows them as they are, Spain's in tonnes."""
+        def weights(country):
+            return json.loads(node(f"""
+                import {{ setCountry }} from './web/js/app/country.js';
+                import {{ shownTons, shownWeight }} from './web/js/format.js';
+                setCountry({{ country: {json.dumps(country)} }}, null);
+                console.log(JSON.stringify([shownTons(1102311), shownWeight(2204623), shownTons(null), shownWeight(null)]));
+            """))
+        self.assertEqual(weights({}), [1102311, 2204623, None, None])
+        tonnes, cargo, *nulls = weights({"locale": "es-ES", "lang": "es"})
+        self.assertAlmostEqual(tonnes, 1e6, delta=1)
+        self.assertAlmostEqual(cargo, 1000, delta=0.01)
+        self.assertEqual(nulls, [None, None])
+
     def test_spanish_formats(self):
         nb = " "
         self.assertEqual(self.formats({"locale": "es-ES", "currency": "EUR", "lang": "es"}), [
             "950", f"1,2{nb}mil", f"123,5{nb}mil", f"1,6{nb}M", f"1600{nb}M", f"2,1{nb}B", f"2,1{nb}B{nb}€", f"35.200{nb}€",
             "1.234.567", f"12,3{nb}%", f"50{nb}%", f"6,6{nb}M", f"350{nb}mil", "3,3"])
+
+
+class SpanishDataTest(unittest.TestCase):
+    """Spain's data files (sites/es/data) are read by Spanish speakers: a text in them that carries common English
+    words is a leftover of a US builder or of an English source (a vintage, a plant name, a unit).
+
+    A small heuristic: words that are English and spelled like no Spanish (or Catalan, Galician, Basque) word, in every
+    string that is not an id or a code. Proper names that hold one go in PROPER_NAMES, with the reason they stay."""
+
+    DATA = ROOT / "sites" / "es" / "data"
+    # Keys whose values are ids or codes, never shown as text.
+    CODES = {"id", "type", "kind", "key", "icon", "motif", "rule", "group", "format", "scale", "higher_is", "color", "dark",
+             "source", "sources", "file", "files", "sha256", "url", "cbsa", "county", "state", "naics", "via", "basis",
+             "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
+             "locale", "currency"}
+    CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
+    ENGLISH = set("""the of and with from for by is are was not this that its which who people residents workers jobs
+        county counties state states share median average farm wind plant plants power station airport airports
+        students visitors island islands short tons pounds lb million billion year years unknown phase landmark
+        landmarks wonder wonders university universities river lake coast coastal mountain mountains hills north south
+        east west population income land forest desert urban edition none other boardings enplanements cargo nonhub
+        museum gallery""".split())
+    # Licence codes and the names of products and bodies, kept as they are written.
+    PROPER_NAMES = [
+        re.compile(r"\bCC BY(?:-[A-Z]{2})*"),  # Creative Commons licences
+        "CORINE Land Cover",  # the Copernicus product
+        "National Centers for Environmental Information",  # the NOAA office that publishes ETOPO
+        "Institute for the Study of the Ancient World",  # Pleiades' publisher (NYU)
+        "power=plant",  # the OpenStreetMap tag
+        "Alma Mater Museum",  # the museum of the Archdiocese of Zaragoza is called so
+        # Museums that Wikidata names only in English (or in English before Catalan, Galician or Basque, the label
+        # order of pipeline/sources/es/wikidata.py). A new label order needs a fresh fetch of the Wikidata queries.
+        "Chinijo Museum", "Culleredo Ethnographic Museum", "Hash Marihuana & Hemp Museum", "Liedtke Museum",
+        "Military Museum of Valencia", "Modern Art Museum of Barcelona", "Museum Cemento Rezola", "Museum Jorge Rando",
+        "Museum Juan Évora", "Museum of Contemporary Tapestry", "The House of Magic. The Xevi Collection",
+        "The Sherry Gallery", "Truffles Museum of Metauten",
+    ]
+
+    @classmethod
+    def english_words(cls, text: str) -> set[str]:
+        for p in cls.PROPER_NAMES:
+            text = p.sub("", text) if isinstance(p, re.Pattern) else text.replace(p, "")
+        return {w.lower() for w in re.findall(r"[^\W\d_]+", text)} & cls.ENGLISH
+
+    def leftovers(self, name):
+        found = []
+
+        def walk(x, path):
+            if isinstance(x, dict):
+                for k, v in x.items():
+                    if k not in self.CODES:
+                        walk(v, f"{path}.{k}")
+            elif isinstance(x, list):
+                for i, v in enumerate(x):
+                    walk(v, f"{path}[{i}]")
+            elif isinstance(x, str) and not x.startswith("http") and x not in self.CODE_VALUES:
+                if words := self.english_words(x):
+                    found.append(f"{name}{path}: {x[:100]!r} ({', '.join(sorted(words))})")
+
+        walk(json.loads((self.DATA / name).read_text(encoding="utf-8")), "")
+        return found
+
+    def test_no_english_in_spanish_texts(self):
+        found = [f for p in sorted(self.DATA.glob("*.json")) for f in self.leftovers(p.name)]
+        self.assertEqual(found, [], "\n".join(found[:40]))
+
+    def test_the_heuristic_catches_the_old_leftovers(self):
+        for text in ("AENA 2025 (final) boardings", "Las Majas Wind Farm (+1)", "SIIU, students 2024-2025",
+                     "OAPN, Red de Parques Nacionales; visitors 2025", "Naval Museum of Cartagena"):
+            self.assertTrue(self.english_words(text), text)
+        for text in ("Andén 0", "Museu de la Farmàcia Catalana", "Estación de Metro Ópera", "Areas Gordas (Sanxenxo)",
+                     "CORINE Land Cover 2018", "MAPA: CC BY 4.0", "miles de toneladas"):
+            self.assertFalse(self.english_words(text), text)
 
 
 if __name__ == "__main__":

@@ -34,6 +34,13 @@ SUMMARY_NOTE = ("Totales de los sitios del mapa: cada tipo de central tiene un u
 ENERGY_NOTE = ("Solo cuentan las centrales y las agrupaciones eólicas, solares y de baterías del mapa, cada una por encima "
                "del umbral de su tipo: no es la potencia total instalada en la provincia.")
 UNIT = re.compile(r"\s+(\d+|[IVX]+|Phase)$")  # 'Almaraz 1' and 'Almaraz 2' are units of 'Almaraz'
+# powerplantmatching files many plants under English names ('Las Majas Wind Farm', 'Castile La Mancha Solar'): the map
+# writes the kind first, in Spanish ('Parque eólico Las Majas'), and the regions by their Spanish names.
+PLANT_KINDS = [(re.compile(r"^(.+?) Wind(?: Farm)?\b(?: Spain)?"), "Parque eólico {}"),
+               (re.compile(r"^(.+?) (?:Thermosolar|Csp Solar) Farm\b(?: Spain)?"), "Central termosolar {}"),
+               (re.compile(r"^(.+?)(?: Solar)? Solar (?:Farm|Park|Photovoltaic)\b(?: Spain)?"), "Planta solar {}")]
+EXONYMS = {"Castile La Mancha": "Castilla-La Mancha", "Castile Leon": "Castilla y León", "Andalusia": "Andalucía",
+           "Aragon": "Aragón", "Seville": "Sevilla"}
 TYPE_OF = {"coal": "coal_plant", "gas": "gas_plant", "oil": "oil_plant"}
 MINE_SRC = "igme_minas"
 MINE_RULE = ("Todas las explotaciones de {what} activas en 2019 según la Estadística Minera de España (IGME, Panorama "
@@ -96,6 +103,19 @@ def minimum(fuel: str) -> float:
     return 0 if fuel == "nuclear" else PLANT_MIN.get(fuel, CLUSTER_MIN.get(fuel, float("inf")))
 
 
+def plant_name_es(name: str) -> str:
+    """A plant's name as the Spanish map shows it: 'Las Majas Wind Farm (+1)' → 'Parque eólico Las Majas (+1)',
+    'Andalusia Solar' → 'Andalucía Solar', 'Alcudia Phase' → 'Alcudia'."""
+    for pattern, form in PLANT_KINDS:
+        name, n = pattern.subn(lambda m: form.format(m.group(1)), name, count=1)
+        if n:
+            break
+    name = re.sub(r"\s+Phase$", "", re.sub(r" Spain\b", "", name))
+    for en, es in EXONYMS.items():
+        name = re.sub(rf"\b{en}\b", es, name)
+    return name
+
+
 def site(type_id: str, group: list[tuple[dict, float, float]], cell: int) -> dict:
     """One map site from the (plant, x, y) of a type in a hex: the capacity-weighted position, the largest plant's
     name (or the plants' shared name), and the plants and online years in the detail."""
@@ -107,17 +127,17 @@ def site(type_id: str, group: list[tuple[dict, float, float]], cell: int) -> dic
     years = sorted(p["year"] for p, _, _ in group if p["year"])
     online = "" if not years else f", en servicio desde {years[0]}" + (f"–{years[-1]}" if years[-1] != years[0] else "")
     if len(group) == 1:
-        name, detail = lead["name"], f"{num(mw)} MW{online}"
+        name, detail = lead["name"], f"{num(round(mw, 2))} MW{online}"
     else:
         bases = {UNIT.sub("", p["name"]) for p, _, _ in group}
         name = (bases.pop() if len(bases) == 1 else None) \
             or _cluster_name([(p["name"], p["mw"]) for p, _, _ in group]) or f"{_tidy(lead['name'])} (+{len(group) - 1})"
-        detail = f"{len(group)} centrales, entre ellas {lead['name']} ({num(lead['mw'])} MW){online}"
+        detail = f"{len(group)} centrales, entre ellas {plant_name_es(lead['name'])} ({num(round(lead['mw'], 2))} MW){online}"
     if any(p["offshore"] for p, _, _ in group):
         detail += "; marina, en el hexágono de costa más cercano"
     if any(p["source"] == "osm" for p, _, _ in group):
         detail += "; OpenStreetMap"
-    return {"type": type_id, "name": _tidy(name), "x": x, "y": y, "cell": cell, "value": round(mw), "detail": detail}
+    return {"type": type_id, "name": plant_name_es(_tidy(name)), "x": x, "y": y, "cell": cell, "value": round(mw), "detail": detail}
 
 
 def title_es(name: str) -> str:
