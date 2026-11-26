@@ -188,6 +188,48 @@ SOURCES = {
         "de menos de unos 75 habitantes, que no cuentan en su área.",
         "used_for": ["Tasa de paro de áreas urbanas, provincias y España"],
     },
+    "ine_adrh_indicadores": {
+        "title": "Atlas de Distribución de Renta de los Hogares (ADRH): indicadores demográficos (tabla 30832) y umbrales "
+        "relativos de renta (tabla 30829)",
+        "license": _INE_LICENCE,
+        "description": "De cada municipio, la edad media de sus residentes (tabla 30832, que el ADRH toma del Censo anual "
+        "de población y publica para todos los municipios) y la proporción de residentes con ingresos por unidad de "
+        "consumo (escala de la OCDE modificada) por debajo del 60 % de la mediana nacional (tabla 30829, ambos sexos; "
+        "desde el ADRH 2023 la mediana es la de toda España, territorios forales incluidos). A los municipios pequeños "
+        "les puede faltar el indicador de renta (secreto estadístico): se quedan sin datos.",
+        "used_for": ["Lente de edad media", "Lente de pobreza"],
+    },
+    "ine_censo_nacimiento": {
+        "title": "Censo anual de población: población por sexo y lugar de nacimiento (España/extranjero), tabla 65031",
+        "license": _INE_LICENCE,
+        "description": "Residentes nacidos en España y en el extranjero de España, cada provincia y cada municipio (y sus "
+        "secciones censales, que aquí no se usan), del Censo anual de población, que el INE elabora con el Padrón y "
+        "otros registros. Es el lugar de nacimiento, no la nacionalidad: cuentan los españoles nacidos fuera y no los "
+        "extranjeros nacidos en España.",
+        "used_for": ["Lente de nacidos en el extranjero"],
+    },
+    "ine_censo_formacion": {
+        "title": "Censo anual de población: población de 15 años o más por sexo y nivel de estudios (agrupado), tabla 66592",
+        "license": _INE_LICENCE,
+        "description": "Residentes de 15 años o más por el nivel de estudios más alto terminado (primaria o inferior, "
+        "primera etapa de secundaria, segunda etapa de secundaria y postsecundaria no superior, educación superior) de "
+        "España, cada provincia y cada municipio (y sus secciones censales, que aquí no se usan), del Censo anual de "
+        "población. La educación superior incluye los ciclos formativos de grado superior además de los estudios "
+        "universitarios. El INE solo cruza la edad en los municipios de 500 habitantes o más, así que el mapa cuenta a "
+        "todos los de 15 años o más.",
+        "used_for": ["Lente de estudios superiores"],
+    },
+    "ine_censo2021_indicadores": {
+        "title": "Censos de Población y Viviendas 2021: indicadores por sección censal (viviendas principales por régimen "
+        "de tenencia)",
+        "license": _INE_LICENCE,
+        "description": "Viviendas principales (residencia habitual de un hogar) en propiedad, en alquiler y en otro régimen "
+        "de tenencia de cada sección censal el 1 de enero de 2021, del fichero de indicadores del Censo de 2021, sumadas "
+        "por municipio. El INE no publica las secciones de los municipios más pequeños (secreto estadístico), que se "
+        "quedan sin dato, y llama provisional al fichero porque está pasando algunas viviendas a su sección correcta, "
+        "lo que no cambia el total de un municipio.",
+        "used_for": ["Lente de vivienda en propiedad"],
+    },
     "ine_censo_divisiones": {
         "title": "Censo anual de población: ocupados por división de la CNAE, España y ciudades principales (tablas 69960 y 69980)",
         "license": _INE_LICENCE,

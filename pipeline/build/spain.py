@@ -45,6 +45,7 @@ from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
+from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
 from .spain_wonders import place_key
 from .states import label_anchor, land_shares
 from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LABELS, num, vintage
@@ -53,7 +54,7 @@ from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
-            "gastronomia_es"]
+            "gastronomia_es"] + PEOPLE_REQUIRES
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -707,7 +708,7 @@ def build() -> None:
         "description": f"Residentes por km² de tierra. La población de cada municipio (Padrón del INE, {year}) se reparte "
         "entre sus hexágonos en proporción a la parte del municipio que cubre cada uno.",
         "values": density,
-    }, income_lens(adrh_p, world["counties"], weights),
+    }, income_lens(adrh_p, world["counties"], weights), *people_lenses(world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
         dishes_lens(load_interim("gastronomia_es")["dishes"], world),
