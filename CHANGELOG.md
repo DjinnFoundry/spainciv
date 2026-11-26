@@ -9,6 +9,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
   1 de aluminio). Los yacimientos del BDMIN con coordenadas en metros UTM (27 de 280) quedan en su sitio: el carbón de
   Villablino, el oro de Salave y la bauxita de La Vansa ya están en el mapa (E63).
+- Capa **Denominaciones de origen** con los 398 nombres que España tiene en el registro de la UE (eran 292 zonas del
+  Ministerio de 2017): 108 con zona nueva, entre ellos los 43 vinos de la tierra, 14 vinos de pago y lo registrado desde 2017
+  (Torrezno de Soria, Miel de Málaga, Queso de Burgos…), con la zona de su documento único o pliego sobre los límites
+  municipales; el tooltip dice cómo se obtuvo cada zona. Penedès, Priorat, Idiazabal, los txakolis y otros que no
+  casaban por el nombre quedan enlazados a su registro. En el mapa de Unciv, el vino pasa de 81 a 132 casillas
+  (E64–E66, F31).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del

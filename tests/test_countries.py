@@ -888,20 +888,142 @@ class SpainFoodTest(unittest.TestCase):
                          "Orujo de Galicia (IGP)")
         self.assertEqual(label("Dehesa del Carrizal", "Vino de Pago"), "Dehesa del Carrizal (Vino de pago)")
 
-    def test_food_lens_counts_and_small_areas(self):
-        from pipeline.build.spain import food_lens
+    def test_names_match_across_spellings(self):
+        from pipeline.sources.es.food import matches
+
+        same = [(["Penedés, Comunidad de Cataluña", "Penedés"], ["Penedès"], "Wine"),
+                (["Priorato, Comunidad de Cataluña", "Priorato"], ["Priorat", "Priorato"], "Wine"),
+                (["Queso Idiazábal"], ["Idiazabal"], "Food"),
+                (["Pago de Calzadilla", "Pago de Calzadilla"], ["Calzadilla"], "Wine"),
+                (["Las Islas Canarias"], ["Islas Canarias"], "Wine"),
+                (["Pimiento del Piquillo de Lodosa"], ["Pimientos del Piquillo de Lodosa"], "Food"),
+                (["Aceite de Monterrubio"], ["Aceite Monterrubio"], "Food"),
+                (["Jijona / Xixona"], ["Jijona"], "Food"),
+                (["Ternera de Navarra o Nafarroako Aratxea"], ["Nafarroako Aratxea", "Ternera de Navarra"], "Food"),
+                (["Chacolí de Getaria-Getariako Txakolina"],
+                 ["Getariako Txakolina", "Chacolí de Getaria", "Txakoli de Getaria"], "Wine")]
+        for ministry, protected, product in same:
+            self.assertTrue(matches(ministry, protected, product), ministry)
+        # one part of a hyphenated name is not enough; a product word comes off only where it is generic
+        self.assertFalse(matches(["Alubia de La Bañeza-León"], ["León"], "Food"))
+        self.assertFalse(matches(["Queso de Murcia"], ["Murcia"], "Wine"))
+        self.assertFalse(matches(["Queso de Murcia"], ["Jumilla"], "Food"))
+
+    def test_register_matching_by_product_and_renames(self):
+        from pipeline.sources.es.food import match_register
+
+        def gi(gid, names, product, file="X"):
+            return {"giIdentifier": gid, "protectedNames": names, "productType": product,
+                    "registration": {"fileNumber": file}}
+
+        def zone(name, family, cal=None):
+            return {"zon_ds_nombre": name, "cal_ds_nombre": cal or name, "fam_ds_nombre": family}
+
+        register = [gi("W", ["Murcia"], "Wine"), gi("F", ["Queso de Murcia"], "Food"),
+                    gi("L", ["León"], "Wine", "PDO-ES-A0882"), gi("S", ["Pacharán Navarro"], "Spirit drink")]
+        got = match_register({"DO09": zone("Queso de Murcia", "Quesos y Mantequillas"),
+                              "DO83": zone("Tierra de León", "Vinos", "D.O.Tierra de León"),
+                              "DO99": zone("Pacharán Navarro", "Bebidas Espirituosas", "I.G.P.Pacharán Navarro"),
+                              "DO307": zone("Aceite de la Comunitat Valenciana", "Aceites de Oliva Virgen")}, register)
+        self.assertEqual({code: g["giIdentifier"] for code, g in got.items()}, {"DO09": "F", "DO83": "L", "DO99": "S"})
+        with self.assertRaises(RuntimeError):
+            match_register({"A": zone("Murcia", "Vinos"), "B": zone("D.O.Murcia", "Vinos")}, register)
+
+    def test_area_units_and_labels(self):
+        from pipeline.sources.es.food import area_label, parse_units
+
+        self.assertEqual(parse_units("provincia:42 municipio:05057* isla:Mallorca comunidad:07"),
+                         ["provincia:42", "municipio:05057*", "isla:Mallorca", "comunidad:07"])
+        for bad in ("provincia:99", "municipio:5057", "isla:Atlántida", "comarca:Bierzo", "comunidad:42"):
+            with self.assertRaises(ValueError):
+                parse_units(bad)
+        self.assertEqual(area_label("Torrezno de Soria", "IGP", ["provincia:42"]), "Torrezno de Soria (IGP · provincia)")
+        self.assertEqual(area_label("X", "IGP", ["provincia:07", "municipio:05057"]), "X (IGP · provincia, municipios)")
+        self.assertEqual(area_label("Urbezo", "Vino de pago", ["municipio:50080"]), "Urbezo (Vino de pago · finca)")
+        self.assertEqual(area_label("Y", "DOP", []), "Y (DOP · sin zona)")
+
+    def test_every_registered_name_needs_an_area(self):
+        from pipeline.sources.es.food import register_areas
+
+        def gi(gid, names, product):
+            return {"giIdentifier": gid, "protectedNames": names, "productType": product, "giType": "PGI",
+                    "registration": {"fileNumber": gid}}
+
+        ministry = {"DO1": {"zon_ds_nombre": "Rioja", "cal_ds_nombre": "D.O.Ca.Rioja", "fam_ds_nombre": "Vinos",
+                            "tpr_ds_descripcion": "Denominación de Origen Calificada"},
+                    "DO2": {"zon_ds_nombre": "Aceite Viejo", "cal_ds_nombre": "Aceite Viejo",
+                            "fam_ds_nombre": "Aceites de Oliva Virgen", "tpr_ds_descripcion": "Denominación de Origen Protegida"}}
+        rings = {"DO1": [[(0, 0), (1, 0), (1, 1)]], "DO2": [[(0, 0), (1, 0), (1, 1)]]}
+        row = {"eambrosia": "T", "nombre": "Torrezno de Soria", "figura": "IGP", "familia": "Embutidos y Productos Cárnicos",
+               "units": ["provincia:42"], "fuente": "DOUE C/2024/4674", "nota": ""}
+        register = [gi("R", ["Rioja"], "Wine"), gi("T", ["Torrezno de Soria"], "Food")]
+        out = register_areas(register, ministry, rings, [row])
+        self.assertEqual([(n["name"], n["area"]) for n in out["names"]],
+                         [("Rioja (DOP)", "mapa"), ("Torrezno de Soria (IGP · provincia)", "unidades")])
+        self.assertEqual(out["not_registered"], ["Aceite Viejo (DOP)"])
+        self.assertEqual((out["eu_registered"], out["eu_register"]), (2, {"PGI Wine": 1, "PGI Food": 1}))
+        with self.assertRaises(RuntimeError):  # a registered name with no area anywhere
+            register_areas(register, ministry, rings, [])
+        with self.assertRaises(RuntimeError):  # a row for a name the Ministry maps
+            register_areas(register, ministry, rings, [row, {**row, "eambrosia": "R"}])
+        with self.assertRaises(RuntimeError):  # a row for a name not in the register
+            register_areas(register, ministry, rings, [row, {**row, "eambrosia": "Z"}])
+
+    def test_the_areas_csv_reads(self):
+        from pipeline.sources.es.food import read_areas
+
+        rows = read_areas()
+        self.assertTrue(rows)
+        self.assertEqual(len({r["eambrosia"] for r in rows}), len(rows))
+        for r in rows:
+            self.assertIn(r["figura"], ("DOP", "IGP", "Vino de pago"))
+            self.assertTrue(r["fuente"] and r["url"].startswith("https://"), r["nombre"])
+            self.assertTrue(r["units"] or r["nota"], r["nombre"])  # no area: the note says why
+
+
+class SpainFoodLensTest(unittest.TestCase):
+    """A 4 × 4 grid in which every hex is land; municipalities are unit squares around hex centres."""
+
+    def setUp(self):
         from pipeline.core.hexgrid import HexGrid
 
-        grid = HexGrid(radius=10.0, cols=4, rows=4)
-        owner = [0] * grid.size
-        cx, cy = grid.center(*grid.col_row(5))
+        self.grid = HexGrid(radius=10.0, cols=4, rows=4)
+        self.centre = [self.grid.center(*self.grid.col_row(c)) for c in range(self.grid.size)]
+        codes = [f"07{c:03d}" for c in range(self.grid.size)]
+        self.world = {"owner": [0] * self.grid.size, "county": list(range(self.grid.size)), "counties": codes}
+        self.munis = [{"geoid": g, "state_fips": "07", "centre": self.centre[c],
+                       "rings": [[(self.centre[c][0] + dx, self.centre[c][1] + dy) for dx, dy in
+                                  ((0, 0), (1, 0), (1, 1), (0, 1))]]} for c, g in enumerate(codes)]
+
+    def lens(self, names):
+        from pipeline.build.spain_food import food_lens
+
+        return food_lens(names, lambda lon, lat: (lon, lat), self.grid, self.world, self.munis, [])
+
+    def test_polygons_units_estates_and_order(self):
+        cx, cy = self.centre[5]
         big = [[(-100, -100), (1000, -100), (1000, 1000), (-100, 1000)]]
         tiny = [[(cx - 1, cy - 1), (cx - 0.5, cy - 1), (cx - 0.5, cy - 0.5)]]
-        lens = food_lens([{"name": "A (DOP)", "rings": big}, {"name": "B (IGP)", "rings": tiny}],
-                         lambda lon, lat: (lon, lat), grid, owner)
-        self.assertEqual(lens["values"][5], 2)
-        self.assertEqual([lens["names"][k] for k in lens["labels"][5]], ["A (DOP)", "B (IGP)"])
-        self.assertEqual(sum(lens["values"]), grid.size + 1)
+        lens = self.lens([{"name": "A (DOP)", "area": "mapa", "rings": big},
+                          {"name": "B (IGP)", "area": "mapa", "rings": tiny},
+                          {"name": "C (IGP · municipios)", "area": "unidades", "units": ["municipio:07005", "municipio:07006*"]},
+                          {"name": "D (Vino de pago · finca)", "area": "finca", "units": ["municipio:07006"]},
+                          {"name": "E (IGP · sin zona)", "area": "ninguna", "units": [], "note": "sin pliego"}])
+        self.assertEqual(lens["names"], ["A (DOP)", "B (IGP)", "C (IGP · municipios)", "D (Vino de pago · finca)"])
+        named = lambda c: [lens["names"][k] for k in lens["labels"][c]]
+        self.assertEqual(named(5), ["B (IGP)", "C (IGP · municipios)", "A (DOP)"])  # smallest area first
+        self.assertEqual(named(6), ["D (Vino de pago · finca)", "C (IGP · municipios)", "A (DOP)"])
+        self.assertEqual(sum(lens["values"]), self.grid.size + 4)
+        self.assertIn("Sin zona: E (IGP · sin zona), sin pliego.", lens["description"])
+
+    def test_whole_province_and_island(self):
+        from pipeline.build.spain_food import island, unit_municipalities
+
+        # hexes 0 and 1 touch (shared corner); the rest stand apart
+        self.munis[1]["rings"] = [[(x, y) for x, y in self.munis[1]["rings"][0]] + [self.munis[0]["rings"][0][2]]]
+        self.assertEqual(island(self.munis, "07000"), {"07000", "07001"})
+        self.assertEqual(len(unit_municipalities(["provincia:07"], self.munis)), self.grid.size)
+        self.assertEqual(unit_municipalities(["municipio:07003*"], self.munis), {"07003"})
 
 
 class SpainNamedLensTest(unittest.TestCase):

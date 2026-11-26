@@ -399,13 +399,18 @@ SOURCES = {
         "used_for": ["Caballos del mapa de Unciv"],
     },
     "calidad_diferenciada": {
-        "title": "Denominaciones de calidad: sus zonas (MAPA) y el registro de la UE (eAmbrosia)",
-        "publisher": "Ministerio de Agricultura, Pesca y Alimentación; Comisión Europea (eAmbrosia)",
-        "license": "MAPA: CC BY 4.0; eAmbrosia: aviso de reutilización de la Comisión Europea (CC BY 4.0)",
-        "description": "La zona geográfica de cada denominación de origen protegida (DOP), indicación geográfica "
-        "protegida (IGP), vino de calidad y vino de pago de España, tal como las cartografía el Ministerio (revisión de "
-        "2017: las registradas después aún no tienen zona), y los nombres que España tiene en el registro de la UE.",
-        "used_for": ["Lente de denominaciones de origen"],
+        "title": "Denominaciones de calidad: el registro de la UE (eAmbrosia) y sus zonas (MAPA y pliegos)",
+        "publisher": "Comisión Europea (eAmbrosia, Diario Oficial); Ministerio de Agricultura, Pesca y Alimentación; "
+        "gobiernos autonómicos (pliegos de condiciones)",
+        "license": "eAmbrosia y EUR-Lex: aviso de reutilización de la Comisión Europea (CC BY 4.0); MAPA: CC BY 4.0; "
+        "pliegos: textos oficiales",
+        "description": "Todos los nombres que España tiene en el registro de la UE (denominaciones de origen protegidas, "
+        "indicaciones geográficas protegidas, vinos y bebidas espirituosas) con su zona geográfica: la del mapa del "
+        "Ministerio cuando la tiene (revisión de 2017) y, si no, la que delimita su pliego o el documento único de la "
+        "UE, pasada a pipeline/sources/es/data/calidad_diferenciada_zonas.csv como comunidades, provincias, islas o "
+        "municipios. Un vino de pago es una finca y va en su municipio.",
+        "used_for": ["Lente de denominaciones de origen",
+                     "Recursos del mapa de Unciv (vino, cítricos, especias, ganado, ovejas, pescado, plátanos)"],
     },
     "pleiades_iberia": {
         "title": "Pueblos de la Iberia antigua (Pleiades)",
