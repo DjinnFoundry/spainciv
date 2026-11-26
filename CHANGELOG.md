@@ -5,6 +5,9 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ## Sin publicar
 
+### Añadido
+- Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E24, E25).
+
 ### Corregido
 - Alejar el zoom ya no redibuja el mapa entero en cada fotograma: el lienzo se pinta al 60 % de la escala y se
   reescala hasta que el zoom para (de 11 a 4 redibujados en 20 pasos de rueda, en España y en EE UU).
