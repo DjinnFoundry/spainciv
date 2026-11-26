@@ -34,8 +34,8 @@ lists the public data behind the map.
 - **Lenses**: population density, income (INE household income atlas) and land cover.
 - **Wonders**: the 16 National Parks.
 
-What is still missing, and why, is in [ROADMAP.md](ROADMAP.md): ports and airports, power plants, universities, the
-national-park visitor counts, and a Spanish interface (the UI is still in English).
+The interface is in Spanish (`web/js/i18n/`; the US map keeps its English). What is still missing, and why, is in
+[ROADMAP.md](ROADMAP.md): ports and airports, power plants, universities and the national-park visitor counts.
 
 ## Run it
 
@@ -78,4 +78,4 @@ cubierta del suelo, provincias y municipios del IGN, las 86 grandes áreas urban
 Censo del INE, PIB provincial, renta, carreteras, ferrocarril y los 16 Parques Nacionales. Es un port del
 [usaciv](https://karpathy.ai/usaciv/) de Andrej Karpathy, con la misma licencia MIT. El mapa está en
 [spainciv.djinnfoundry.com](https://spainciv.djinnfoundry.com/); las fuentes y sus licencias, en
-[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). La interfaz sigue en inglés por ahora.
+[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). La interfaz está en castellano.
