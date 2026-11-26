@@ -65,7 +65,8 @@ SELECT ?s ?sLabel ?coord (MAX(?v) AS ?visitors) WHERE {
 SELECT ?s ?coord WHERE { ?s wdt:P1435 wd:Q23712; wdt:P625 ?coord. }""",
 }
 
-LANGUAGES = "es,mul,en,gl,ca,eu"  # label fallback order (Wikidata now keeps many labels only in "mul")
+LANGUAGES = "es,mul,gl,ca,eu,en"  # label fallback order: Spanish, then "mul" (where Wikidata now keeps many
+# labels), then the regional languages; English last, for items no one has named in a language of Spain
 QUERIES = {k: (v % LANGUAGES if "%s" in v else v) for k, v in _QUERIES.items()}
 POINT = re.compile(r"Point\(([-\d.eE]+) ([-\d.eE]+)\)")
 
