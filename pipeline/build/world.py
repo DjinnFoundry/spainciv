@@ -9,16 +9,14 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..core.geo import AlbersEllipsoid, MapProjection, Shape, ShapeIndex
+from ..core.geo import Shape, ShapeIndex, ring_area, ring_centroid
 from ..core.hexgrid import SQRT3, HexGrid
-from ..core.store import load_interim, save_interim, write_web
+from ..core.store import save_interim, write_web
+from ..countries import active
+from . import world_inputs
 
-REQUIRES = ["census_boundaries", "natural_earth", "etopo", "nlcd"]
+REQUIRES = world_inputs.REQUIRES
 PRODUCES = ["_world", "world.json"]
-
-HEX_RADIUS_KM = 25.0
-MARGIN_KM = 200.0
-CONUS_EXCLUDE = {"02", "15", "60", "66", "69", "72", "78"}  # AK, HI, territories
 
 # Cell owner codes (besides state index >= 0)
 WATER, FOREIGN = -1, -2
@@ -46,12 +44,19 @@ WATER_NOTE = (
 
 FLAT, HILLS, MOUNTAINS, PEAKS = range(4)
 LAND_MIN_ALT_M = -100  # ETOPO samples below this inside a land hex are treated as sea floor
-RELIEF_TABLE = [
-    {"id": FLAT, "name": "Flat", "rule": "Elevation standard deviation inside the hex under 85 m."},
-    {"id": HILLS, "name": "Hills", "rule": "Elevation standard deviation ≥ 85 m."},
-    {"id": MOUNTAINS, "name": "Mountains", "rule": "Elevation standard deviation ≥ 260 m, or mean elevation ≥ 2,300 m."},
-    {"id": PEAKS, "name": "Peaks", "rule": "Mean elevation ≥ 2,700 m (alpine)."},
-]
+HILLS_STD_M, MOUNTAINS_STD_M = 85.0, 260.0  # tuned on 25 km hexes; other hex sizes set their own (pipeline/countries)
+
+
+def relief_table(hills: float = HILLS_STD_M, mountains: float = MOUNTAINS_STD_M) -> list[dict]:
+    return [
+        {"id": FLAT, "name": "Flat", "rule": f"Elevation standard deviation inside the hex under {hills:g} m."},
+        {"id": HILLS, "name": "Hills", "rule": f"Elevation standard deviation ≥ {hills:g} m."},
+        {"id": MOUNTAINS, "name": "Mountains", "rule": f"Elevation standard deviation ≥ {mountains:g} m, or mean elevation ≥ 2,300 m."},
+        {"id": PEAKS, "name": "Peaks", "rule": "Mean elevation ≥ 2,700 m (alpine)."},
+    ]
+
+
+RELIEF_TABLE = relief_table()
 RELIEF_NOTE = (
     "From ETOPO1 samples (~9 km apart, about 20 per hex) with altitude ≥ -100 m, so bays and sea floor don't "
     "count; all samples are used if none qualify. Water hexes are always flat."
@@ -90,15 +95,14 @@ PCT = {
     "forest": (41, 42, 43), "crop": (82,), "pasture": (81,), "grass": (71, 21), "shrub": (52,),
     "wetland": (90, 95), "developed": (22, 23, 24),
 }
-NLCD_STEP_KM = 2.0
 
 
-def classify_relief(mean: float, std: float) -> int:
+def classify_relief(mean: float, std: float, hills: float = HILLS_STD_M, mountains: float = MOUNTAINS_STD_M) -> int:
     if mean >= 2700:
         return PEAKS
-    if std >= 260 or mean >= 2300:
+    if std >= mountains or mean >= 2300:
         return MOUNTAINS
-    if std >= 85:
+    if std >= hills:
         return HILLS
     return FLAT
 
@@ -247,30 +251,31 @@ def majority(values: list, centre) -> object:
 
 
 def build() -> None:
-    bounds = load_interim("census_boundaries")
-    ne = load_interim("natural_earth")
-    etopo = load_interim("etopo")
-    nlcd = load_interim("nlcd")
+    country = active()
+    inputs = world_inputs.load(country.id)
+    ne, etopo = inputs.ne, inputs.etopo
+    radius, margin = country.hex_radius_km, country.margin_km
+    texts = inputs.texts
 
-    states = [s for s in bounds["states"] if s["fips"] not in CONUS_EXCLUDE]
+    states = [s for s in inputs.regions if s["fips"] not in country.off_map]
     states.sort(key=lambda s: s["name"])
-    counties = [c for c in bounds["counties"] if c["state_fips"] not in CONUS_EXCLUDE]
+    counties = [c for c in inputs.units if c["state_fips"] not in country.off_map]
     counties.sort(key=lambda c: c["geoid"])
 
-    # Projection: fit the lower-48 with a margin.
-    probe = MapProjection(0, 0, 0)
+    # Projection: fit the country's regions with a margin.
+    probe = country.map_projection(0, 0, 0)
     xs, ys = [], []
     for s in states:
         for ring in s["rings"]:
             for lon, lat in ring:
-                x, y = probe._albers(lon, lat)
+                x, y = probe.base(lon, lat)
                 xs.append(x)
                 ys.append(y)
-    proj = MapProjection(min(xs), max(ys), MARGIN_KM)
-    width = max(xs) - min(xs) + 2 * MARGIN_KM
-    height = max(ys) - min(ys) + 2 * MARGIN_KM
-    grid = HexGrid.covering(width, height, HEX_RADIUS_KM)
-    print(f"    grid {grid.cols}×{grid.rows} = {grid.size} hexes of {HEX_RADIUS_KM:g} km")
+    proj = country.map_projection(min(xs), max(ys), margin)
+    width = max(xs) - min(xs) + 2 * margin
+    height = max(ys) - min(ys) + 2 * margin
+    grid = HexGrid.covering(width, height, radius)
+    print(f"    grid {grid.cols}×{grid.rows} = {grid.size} hexes of {radius:g} km")
 
     def shape(rings):
         return Shape([[proj(lon, lat) for lon, lat in r] for r in rings])
@@ -286,9 +291,10 @@ def build() -> None:
     samples_land = [[] for _ in range(grid.size)]  # land altitudes, for the peak height and the valley-floor test
     below_sea = [0] * grid.size  # ETOPO samples below 0 m ...
     below_sum = [0.0] * grid.size  # ... and their altitude sum
+    occluded = proj.occluded
     for lat, lon, alt in zip(etopo["lat"], etopo["lon"], etopo["alt"]):
         i = grid.cell_at(*proj(lon, lat))
-        if i < 0:
+        if i < 0 or occluded(lon, lat):
             continue
         if alt < 0:
             below_sea[i] += 1
@@ -315,7 +321,7 @@ def build() -> None:
     # land or other water; the majority decides (the centre breaks ties). All seven also give an
     # area-weighted county mix for lenses.
     offsets = [(0.0, 0.0)] + [
-        (0.6 * HEX_RADIUS_KM * math.cos(math.radians(60 * k - 30)), 0.6 * HEX_RADIUS_KM * math.sin(math.radians(60 * k - 30)))
+        (0.6 * radius * math.cos(math.radians(60 * k - 30)), 0.6 * radius * math.sin(math.radians(60 * k - 30)))
         for k in range(6)
     ]
     owner = [WATER] * grid.size
@@ -371,6 +377,19 @@ def build() -> None:
         owner[i], water[i] = o, LAND
     print(f"    {len(slivers)} sliver water hexes turned into land: {[i for i, _ in slivers]}")
 
+    # Regions smaller than a hex (Ceuta, Melilla) own no cell by majority; where the country asks for it, each claims
+    # the hex holding the centroid of its largest outline, so it has a place on the map (the US leaves DC without one).
+    if country.claim_tiny_regions:
+        owned = set(owner)
+        for k, s_ in enumerate(states):
+            if k in owned:
+                continue
+            ring = max(s_["rings"], key=lambda rg: abs(ring_area(rg)))
+            cell = grid.cell_at(*proj(*ring_centroid(ring)))
+            if cell >= 0:
+                owner[cell], water[cell] = k, LAND
+                print(f"    {s_['name']} owns no hex by majority: claims hex {cell}")
+
     # --- counties for US cells -------------------------------------------------------------------
     county = [-1] * grid.size
     county_samples: list[list[int]] = [[] for _ in range(grid.size)]
@@ -401,7 +420,7 @@ def build() -> None:
         pool = same or valid
         county[i] = smp[0] if smp[0] in pool else Counter(pool).most_common(1)[0][0]
         off_state += not same
-    print(f"    {borrowed} US hexes borrowed a neighbour's county; {off_state} have no county in their own state")
+    print(f"    {borrowed} {country.id.upper()} hexes borrowed a neighbour's county; {off_state} have no county in their own state")
 
     # --- elevation, water depth classes and relief -------------------------------------------------
     elev = [0] * grid.size
@@ -419,7 +438,7 @@ def build() -> None:
                 no_elev += 1
                 continue  # elev 0, flat
             elev[i] = round(m)
-            relief[i] = classify_relief(max(m, 0.0), sd)
+            relief[i] = classify_relief(max(m, 0.0), sd, *country.relief_std_m)
             if relief[i] in (HILLS, MOUNTAINS) and is_valley_floor(samples_land[i]):
                 relief[i] -= 1  # mostly flat lowland with a range at one edge (the Central Valley's rim)
                 valley_floor += 1
@@ -439,12 +458,9 @@ def build() -> None:
                 water[i] = COAST if near_land or elev[i] > COAST_DEPTH_M else OCEAN
     print(f"    {no_elev} hexes without elevation samples; {valley_floor} valley-floor hexes eased one relief class")
 
-    # --- land cover from NLCD --------------------------------------------------------------------
-    albers = AlbersEllipsoid()  # NLCD is in EPSG:5070
-    rows, legend = nlcd["rows"], nlcd["legend"]
-    x0, dx, y0, dy = nlcd["x0"], nlcd["dx"], nlcd["y0"], nlcd["dy"]
-    ncols, nrows = nlcd["cols"], len(rows)
-    lattice = hex_lattice(HEX_RADIUS_KM, NLCD_STEP_KM)
+    # --- land cover (NLCD, or a raster cross-walked to NLCD codes) ----------------------------------
+    cover_at = inputs.cover_at
+    lattice = hex_lattice(radius, inputs.cover_step_km)
     cover = [0] * grid.size
     pct = {k: [0] * grid.size for k in PCT}
     no_cover = 0
@@ -454,11 +470,9 @@ def build() -> None:
         cx, cy = grid.center(*grid.col_row(i))
         counts: Counter = Counter()
         for ox, oy in lattice:
-            ex, ey = albers(*proj.inverse(cx + ox, cy + oy))
-            c, r = round((ex - x0) / dx), round((ey - y0) / dy)
-            if 0 <= c < ncols and 0 <= r < nrows:
-                counts[rows[r][c]] += 1
-        counts = Counter({legend[ch]: n for ch, n in counts.items()})
+            code = cover_at(*proj.inverse(cx + ox, cy + oy))
+            if code is not None:
+                counts[code] += 1
         land = sum(n for code, n in counts.items() if code not in (0, 11))
         cover[i] = dominant_cover(counts, land)
         if not land:
@@ -466,7 +480,7 @@ def build() -> None:
             continue
         for k, codes in PCT.items():
             pct[k][i] = round(100 * sum(counts[c] for c in codes) / land)
-    print(f"    {len(lattice)} NLCD points per hex; {no_cover} US hexes without land-cover samples")
+    print(f"    {len(lattice)} land-cover points per hex; {no_cover} {country.id.upper()} hexes without land-cover samples")
 
     # --- rivers ----------------------------------------------------------------------------------
     # Lake centerlines are kept only where they cross land hexes (reservoirs narrower than half a hex,
@@ -492,17 +506,24 @@ def build() -> None:
                 continue  # a corner clipped down to nothing
             pts = simplify(piece, 4.0)
             if len(pts) >= 2:
-                rivers.append({"name": name, "rank": rank, "pts": [round(v, 1) for p in pts for v in p]})
+                rivers.append({"name": name, "rank": int(rank), "pts": [round(v, 1) for p in pts for v in p]})
 
-    cover_table = [{"id": 0, "key": "none", "name": "None", "rule": "Water, foreign land, or no NLCD land pixels."}] + [
+    cover_table = [{"id": 0, "key": "none", "name": "None", "rule": texts.get("cover_none_rule", "Water, foreign land, or no NLCD land pixels.")}] + [
         {"id": cid, "key": key, "name": name, "color": color, "nlcd": codes, "rule": rule}
         for cid, key, name, color, codes, rule in COVER
     ]
+    water_table = [dict(t) for t in WATER_TABLE]
+    if "water_land_rule" in texts:
+        water_table[LAND]["rule"] = texts["water_land_rule"]
     tables = {
-        "water": WATER_TABLE,
-        "relief": RELIEF_TABLE,
+        "water": water_table,
+        "relief": relief_table(*country.relief_std_m),
         "cover": cover_table,
-        "notes": {"water": WATER_NOTE, "relief": RELIEF_NOTE, "cover": COVER_NOTE},
+        "notes": {
+            "water": texts.get("water_note", WATER_NOTE),
+            "relief": texts.get("relief_note", RELIEF_NOTE),
+            "cover": texts.get("cover_note", COVER_NOTE),
+        },
     }
     states_out = [{"fips": s["fips"], "abbr": s["abbr"], "name": s["name"]} for s in states]
     write_web(
@@ -512,7 +533,7 @@ def build() -> None:
             "grid": grid.to_dict(),
             "width": round(width, 1),
             "height": round(height, 1),
-            "margin": MARGIN_KM,
+            "margin": margin,
             "owner": owner,
             "county": county,
             "elev": elev,
@@ -525,6 +546,7 @@ def build() -> None:
             "states": states_out,
             "counties": [{"geoid": c["geoid"], "name": c["name"]} for c in counties],
             "rivers": rivers,
+            "country": country.web_block(proj),
         },
     )
     save_interim(

@@ -14,14 +14,15 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..core.geo import MapProjection
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
+from ..countries import active
 from .cities import nearest_land
 from .disasters import county_declarations
 
 REQUIRES = ["_world", "census_gazetteer", "acs_5yr", "usrc_2020", "cdc_places", "fema_declarations"]
 PRODUCES = ["lenses.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 GROUPS = [
     {"id": "people", "name": "People"},
@@ -211,14 +212,8 @@ def build() -> None:
     gaz = load_interim("census_gazetteer")
     acs_payload = load_interim_payload("acs_5yr")
     acs = acs_payload["data"]["geos"]
-    proj = MapProjection(**world["projection"])
+    proj = active().world_projection(world)
     grid = HexGrid(**world["grid"])
-    owner = world["owner"]
-    samples = world["county_samples"]
-    hex_area = 1.5 * math.sqrt(3) * grid.radius**2
-    state_index = {fips: i for i, fips in enumerate(world["states"])}
-
-    total_hits = Counter(k for s in samples for k in s if k >= 0)
 
     county = []  # aligned with world["counties"]
     for geoid in world["counties"]:
@@ -230,47 +225,9 @@ def build() -> None:
             else None
         )
 
-    # Unsampled counties go to the hex holding their centre (moved onto US land if needed).
-    small_by_cell: dict[int, list[int]] = {}
-    moved, lost = [], []
-    for k, c in enumerate(county):
-        if not c or total_hits[k]:
-            continue
-        g = gaz["counties"].get(c["geoid"])
-        if not g:
-            lost.append(c["geoid"])
-            continue
-        x, y = proj(g["lon"], g["lat"])
-        cell = grid.cell_at(x, y)
-        if cell < 0 or not samples[cell]:
-            cell = nearest_land(grid, owner, max(cell, 0), x, y, state_index.get(c["geoid"][:2], -1))
-            moved.append(g["name"])
-        if cell < 0:
-            lost.append(c["geoid"])
-            continue
-        small_by_cell.setdefault(cell, []).append(k)
-
-    people = [None] * grid.size
-    weights: list[list[tuple[int, float]]] = [[] for _ in range(grid.size)]
-    density = [None] * grid.size
-    for i, s in enumerate(samples):
-        if not s:
-            continue
-        parts = [(k, county[k]["pop"] * hits / total_hits[k]) for k, hits in Counter(x for x in s if x >= 0).items() if county[k]]
-        parts += [(k, county[k]["pop"]) for k in small_by_cell.get(i, [])]
-        land = sum(1 for x in s if x >= 0) or 1  # a hex whose samples all miss counties still counts its centre
-        weights[i] = parts
-        if parts:
-            people[i] = sum(p for _, p in parts)
-            density[i] = round(people[i] / (hex_area * land / len(s)), 2)
-
-    total_counties = sum(c["pop"] for c in county if c)
-    total_hexes = sum(p for p in people if p)
-    print(f"    population on hexes {total_hexes:,.0f} of {total_counties:,.0f} ({total_hexes / total_counties:.4%})")
-    if moved:
-        print(f"    {len(moved)} unsampled counties moved off water: {', '.join(moved)}")
-    if lost:
-        print(f"    {len(lost)} counties not placed: {', '.join(lost)}")
+    _, weights, density = spread_population(
+        world, proj, [c["pop"] if c else None for c in county], lambda k: _gaz_centre(gaz, county[k]["geoid"])
+    )
 
     lenses = [
         {
@@ -293,22 +250,7 @@ def build() -> None:
                 values[i] = round(v, 4) if meta["format"] == "pct" else round(v, 1 if v < 1000 else 0)
         lenses.append({"id": lid, **meta, "source": "acs_5yr", "values": values})
 
-    pct = world.get("pct")
-    if pct:
-        cover = world.get("cover") or [1] * grid.size  # cover 0 = no land-cover samples: no data, not 0%
-        for lid, (keys, meta) in LAND_LENSES.items():
-            values = [
-                round(sum(pct[k][i] for k in keys) / 100, 2) if owner[i] >= 0 and cover[i] else None
-                for i in range(grid.size)
-            ]
-            lenses.append(
-                {
-                    "id": lid, "group": "land", **meta, "unit": "share of land", "format": "pct",
-                    "scale": "linear", "higher_is": "neutral", "source": "nlcd", "values": values,
-                }
-            )
-    else:
-        print("    _world has no land-cover shares (pct) yet: land lenses skipped")
+    lenses += land_lenses(world, "nlcd")
 
     lenses += community_lenses(world["counties"], county, weights, acs)
 
@@ -320,6 +262,98 @@ def build() -> None:
 
     groups = [g for g in GROUPS if any(l["group"] == g["id"] for l in lenses)]
     write_web("lenses.json", {"vintage": acs_payload["vintage"], "groups": groups, "lenses": lenses})
+
+
+def _gaz_centre(gaz: dict, geoid: str):
+    g = gaz["counties"].get(geoid)
+    return (g["lon"], g["lat"], g["name"]) if g else None
+
+
+def spread_population(world: dict, proj, pops: list, centre_of) -> tuple[list, list, list]:
+    """Spread each unit's population over its hexes: (people, weights, density) per cell.
+
+    `pops` is aligned with world["counties"] (None = no data); a unit's people go to the hexes whose 7 samples hit it,
+    in proportion to the hits. A unit no sample hits (smaller than a hex) goes whole to the hex holding its centre,
+    `centre_of(k)` → (lon, lat, name) or None, moved onto the nearest land hex of its region when that is water.
+    weights[cell] = [(unit index, people)], the weights every other unit lens uses.
+    """
+    grid = HexGrid(**world["grid"])
+    owner = world["owner"]
+    samples = world["county_samples"]
+    hex_area = 1.5 * math.sqrt(3) * grid.radius**2
+    state_index = {fips: i for i, fips in enumerate(world["states"])}
+    total_hits = Counter(k for s in samples for k in s if k >= 0)
+
+    # Unsampled counties go to the hex holding their centre (moved onto US land if needed).
+    small_by_cell: dict[int, list[int]] = {}
+    moved, lost = [], []
+    geoids = world["counties"]
+    for k, pop in enumerate(pops):
+        if pop is None or total_hits[k]:
+            continue
+        g = centre_of(k)
+        if not g:
+            lost.append(geoids[k])
+            continue
+        lon, lat, name = g
+        x, y = proj(lon, lat)
+        cell = grid.cell_at(x, y)
+        if cell < 0 or not samples[cell]:
+            cell = nearest_land(grid, owner, max(cell, 0), x, y, state_index.get(geoids[k][:2], -1))
+            moved.append(name)
+        if cell < 0:
+            lost.append(geoids[k])
+            continue
+        small_by_cell.setdefault(cell, []).append(k)
+
+    people = [None] * grid.size
+    weights: list[list[tuple[int, float]]] = [[] for _ in range(grid.size)]
+    density = [None] * grid.size
+    for i, s in enumerate(samples):
+        if not s:
+            continue
+        parts = [(k, pops[k] * hits / total_hits[k]) for k, hits in Counter(x for x in s if x >= 0).items() if pops[k] is not None]
+        parts += [(k, pops[k]) for k in small_by_cell.get(i, [])]
+        land = sum(1 for x in s if x >= 0) or 1  # a hex whose samples all miss counties still counts its centre
+        weights[i] = parts
+        if parts:
+            people[i] = sum(p for _, p in parts)
+            density[i] = round(people[i] / (hex_area * land / len(s)), 2)
+
+    total_counties = sum(p for p in pops if p is not None)
+    total_hexes = sum(p for p in people if p)
+    print(f"    population on hexes {total_hexes:,.0f} of {total_counties:,.0f} ({total_hexes / total_counties:.4%})")
+    if moved:
+        print(f"    {len(moved)} unsampled counties moved off water: {', '.join(moved)}")
+    if lost:
+        print(f"    {len(lost)} counties not placed: {', '.join(lost)}")
+
+    return people, weights, density
+
+
+def land_lenses(world: dict, source: str) -> list[dict]:
+    """The land-cover share lenses (forest, farmland, developed...) from world["pct"]; [] without land cover."""
+    grid = HexGrid(**world["grid"])
+    owner = world["owner"]
+    lenses = []
+    pct = world.get("pct")
+    if pct:
+        cover = world.get("cover") or [1] * grid.size  # cover 0 = no land-cover samples: no data, not 0%
+        for lid, (keys, meta) in LAND_LENSES.items():
+            values = [
+                round(sum(pct[k][i] for k in keys) / 100, 2) if owner[i] >= 0 and cover[i] else None
+                for i in range(grid.size)
+            ]
+            lenses.append(
+                {
+                    "id": lid, "group": "land", **meta, "unit": "share of land", "format": "pct",
+                    "scale": "linear", "higher_is": "neutral", "source": source, "values": values,
+                }
+            )
+    else:
+        print("    _world has no land-cover shares (pct) yet: land lenses skipped")
+
+    return lenses
 
 
 # ---------------------------------------------------------------- faith, wellbeing, disaster and veteran lenses

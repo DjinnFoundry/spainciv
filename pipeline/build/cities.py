@@ -16,14 +16,15 @@ from __future__ import annotations
 import math
 import re
 
-from ..core.geo import MapProjection
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
+from ..countries import active
 from .growth import Growth
 from .yields import GDP_INDUSTRIES, INDUSTRY_LINES, YIELDS, bea_combos, economy, gdp_profile, sum_counties
 
 REQUIRES = ["_world", "census_gazetteer", "acs_1yr", "acs_5yr", "cbsa_delineation", "bea_gdp", "pep_population"]
 PRODUCES = ["cities.json", "nation.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 NON_CONUS = {"AK", "HI", "PR"}
 CAPITAL_CBSA = "47900"  # Washington-Arlington-Alexandria, DC-VA-MD-WV
@@ -189,7 +190,7 @@ def build() -> None:
     deline = load_interim("cbsa_delineation")
     bea_payload = load_interim_payload("bea_gdp")
     bea = bea_payload["data"]
-    proj = MapProjection(**world["projection"])
+    proj = active().world_projection(world)
     grid = HexGrid(**world["grid"])
     owner = world["owner"]
 

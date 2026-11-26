@@ -7,6 +7,8 @@
 //   field = {key, label, format, unit, higher_is, source, description, lens?, group, derived?}
 import { fin, ratio } from "./util.js";
 import { frameBox } from "./frame.js";
+import { country } from "../../../app/country.js";
+import { isMoney } from "../../../format.js";
 
 const COUNTY_LENS = {
   density: "density", income: "income", home_value: "home", poverty: "poverty", median_age: "age", foreign_born: "foreign_born",
@@ -77,7 +79,7 @@ export function buildData(app) {
     F("rent_burden", "Rent ÷ income", "pct", { unit: "median rent × 12 ÷ median income", higher_is: "bad", source: src, group: "Prosperity", description: "Median rent × 12 ÷ median household income (a ratio of medians, not the share of renters who are burdened)." }),
     F("unemployment", "Unemployment", "pct", { unit: "unemployed ÷ labour force", higher_is: "bad", source: src, group: "Prosperity", description: `Unemployed ÷ civilian labour force (${vintage}, B23025).` }),
     F("employed", "Employed", "int", { unit: "employed residents", source: src, description: `Employed residents, where they live (${vintage}).` }),
-    ...(nation.yields || []).filter((y) => y.unit !== "usd").map((y) => F(`y_${y.key}`, `${y.label} workers`, "int", { unit: "workers", source: src, group: "Yields", description: y.description })),
+    ...(nation.yields || []).filter((y) => !isMoney(y.unit)).map((y) => F(`y_${y.key}`, `${y.label} workers`, "int", { unit: "workers", source: src, group: "Yields", description: y.description })),
   ];
   const rollupFields = () => counties ? [...ROLLUP.map((k) => {
     const f = counties.fields.find((x) => x.key === k);
@@ -165,7 +167,7 @@ export function buildData(app) {
     rent_burden: o.rent_burden ?? null,
     unemployment: o.unemployment ?? null,
     employed: o.employed ?? null,
-    ...Object.fromEntries((nation.yields || []).filter((y) => y.unit !== "usd").map((y) => [`y_${y.key}`, o.yields?.[y.key] ?? null])),
+    ...Object.fromEntries((nation.yields || []).filter((y) => !isMoney(y.unit)).map((y) => [`y_${y.key}`, o.yields?.[y.key] ?? null])),
   });
 
   // --- resources by place ---------------------------------------------------------------------------------------
@@ -188,10 +190,11 @@ export function buildData(app) {
   }));
   const landFields = LAND_KEYS.map((k) => F(`land_${k}`, LAND_LABEL[k], "pct", { unit: "share of land", source: "nlcd", group: "Land", description: `Share of the land in ${LAND_LABEL[k].toLowerCase()} (NLCD, mean over the area's hexes).`, lens: k === "forest" ? "forest" : k === "developed" ? "developed" : null }));
   const energyField = F("energy_mw", "Mapped power", "mw", { unit: "MW of mapped sites", source: "eia_860m", group: "Energy", description: "Capacity of the power sites mapped as resources (each type above its size threshold): not the total generating capacity." });
+  const LV = country().levels;
   const states_ = makeLevel({
-    id: "states", label: "States", noun: "state",
+    id: "states", label: LV.region.many, noun: LV.region.one.toLowerCase(),
     rows: stateRows,
-    fields: [F("name", "State", "text", { group: "Name" }), ...econFields("acs_1yr"), ...rollupFields(), F("land_km2", "Land area", "km2", { unit: "km²", source: "census_gazetteer", group: "Land", derived: true }), ...landFields, energyField],
+    fields: [F("name", LV.region.one, "text", { group: "Name" }), ...econFields("acs_1yr"), ...rollupFields(), F("land_km2", "Land area", "km2", { unit: "km²", source: "census_gazetteer", group: "Land", derived: true }), ...landFields, energyField],
     highlight: (rows) => ({ states: new Set(rows.map((r) => r.ref)) }),
     rowAtCell: (cell, byKey) => (owner[cell] >= 0 ? stateRows[owner[cell]] || null : null),
     focus: (row) => app.selectState(row.ref, { fly: true }),
@@ -208,9 +211,9 @@ export function buildData(app) {
   }));
   const metroByCity = new Map(metroRows.map((r) => [r.ref, r]));
   const metros = makeLevel({
-    id: "metros", label: "Metros", noun: "metro",
+    id: "metros", label: LV.metro.many, noun: LV.metro.one.toLowerCase(),
     rows: metroRows,
-    fields: [F("name", "Metro", "text", { group: "Name" }), F("states", "States", "text", { group: "Name" }), F("kind", "Type", "text", { group: "Name", description: "Metropolitan (50,000+ urban core) or micropolitan area (OMB)." }), ...econFields("acs_1yr"), ...rollupFields(), F("land_km2", "Land area", "km2", { unit: "km²", source: "census_gazetteer", group: "Land", derived: true }), energyField],
+    fields: [F("name", LV.metro.one, "text", { group: "Name" }), F("states", LV.region.many, "text", { group: "Name" }), F("kind", "Type", "text", { group: "Name", description: "Metropolitan (50,000+ urban core) or micropolitan area (OMB)." }), ...econFields("acs_1yr"), ...rollupFields(), F("land_km2", "Land area", "km2", { unit: "km²", source: "census_gazetteer", group: "Land", derived: true }), energyField],
     highlight: (rows, o = {}) => {
       const cells = new Set();
       for (const r of rows) for (const c of r.ref.footprint || [r.ref.cell]) cells.add(c);
@@ -242,11 +245,11 @@ export function buildData(app) {
     // Counties smaller than a hex own no cell: counties.json `cell` (the hex nearest the county's centre) stands in.
     const cellsOfRow = (r) => countyCells.get(r.ref) || (Number.isInteger(r.v.cell) ? [r.v.cell] : []);
     const fields = counties.fields.filter((f) => f.key !== "cbsa" && f.key !== "geoid" && f.key !== "cell").map((f) => ({
-      ...F(f.key, f.key === "name" ? "County" : f.label, f.format, { unit: f.unit, higher_is: f.higher_is, source: f.source, description: f.description, lens: COUNTY_LENS[f.key], group: groupOf(f.key) }),
+      ...F(f.key, f.key === "name" ? LV.unit.one : f.label, f.format, { unit: f.unit, higher_is: f.higher_is, source: f.source, description: f.description, lens: COUNTY_LENS[f.key], group: groupOf(f.key) }),
     }));
     fields.splice(2, 0, F("metro", "Metro", "text", { group: "Name", description: "The metro or micro area the county belongs to (OMB), if it is on the map." }));
     counties_ = makeLevel({
-      id: "counties", label: "Counties", noun: "county",
+      id: "counties", label: LV.unit.many, noun: LV.unit.one.toLowerCase(),
       rows: countyRows, fields,
       highlight: (rows) => {
         const cells = new Set();

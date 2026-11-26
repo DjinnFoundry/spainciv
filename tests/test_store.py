@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from pipeline import countries
+
 from pipeline.core import store
 
 
@@ -14,9 +16,9 @@ class StoreTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        for p in (mock.patch.object(store, "INTERIM", root / "interim"), mock.patch.object(store, "WEB_DATA", root / "web")):
-            p.start()
-            self.addCleanup(p.stop)
+        ctx = countries.using(interim_dir=root / "interim", web_data_dir=root / "web")
+        ctx.__enter__()
+        self.addCleanup(ctx.__exit__, None, None, None)
         self.addCleanup(self.tmp.cleanup)
         self.root = root
 

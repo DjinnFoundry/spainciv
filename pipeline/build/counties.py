@@ -7,14 +7,12 @@ plus land area and density (Gazetteer), land-cover shares averaged over the coun
 
 from __future__ import annotations
 
-import json
 import re
 from collections import Counter
 
-from ..core.geo import MapProjection
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..countries import active
 from .cities import nearest_land
 from .disasters import county_declarations
 from .lenses import (AMENITIES_NOTE, COUNTY_LENSES, DISASTERS_NOTE, FAITH_CATEGORIES, FAITH_NOTE, _optional,
@@ -23,6 +21,7 @@ from .lenses import (AMENITIES_NOTE, COUNTY_LENSES, DISASTERS_NOTE, FAITH_CATEGO
 REQUIRES = ["_world", "census_gazetteer", "acs_5yr", "cbsa_delineation", "cities.json",
             "usrc_2020", "cdc_places", "fema_declarations"]
 PRODUCES = ["counties.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 # Output key → lens id (lenses.COUNTY_LENSES); the lens supplies the formula and metadata.
 METRICS = {
@@ -155,10 +154,10 @@ def build() -> None:
     acs_payload = load_interim_payload("acs_5yr")
     acs = acs_payload["data"]["geos"]
     deline = load_interim("cbsa_delineation")
-    city_ids = {c["id"] for c in json.loads((WEB_DATA / "cities.json").read_text())}
+    city_ids = {c["id"] for c in load_web("cities.json")}
     cbsa_of = {g: code for code, geoids in deline["counties"].items() if code in city_ids for g in geoids}
     pct, cover = world.get("pct"), world.get("cover")
-    proj, grid, owner = MapProjection(**world["projection"]), HexGrid(**world["grid"]), world["owner"]
+    proj, grid, owner = active().world_projection(world), HexGrid(**world["grid"]), world["owner"]
     state_idx = {fips: k for k, fips in enumerate(world["states"])}
 
     def rep_cell(geoid, g):

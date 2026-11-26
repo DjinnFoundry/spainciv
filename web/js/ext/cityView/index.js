@@ -17,6 +17,7 @@ import { createBannerFocus } from "./bannerFocus.js";
 import { render, goToSection } from "./screen.js";
 import { icon } from "../../ui/icon.js";
 import { esc } from "../../format.js";
+import { country } from "../../app/country.js";
 
 const MODE = "city";
 const CSS_HREF = new URL("../../../css/cityview.css", import.meta.url).href;
@@ -67,7 +68,7 @@ export async function install(app) {
   // industries concentrated in the metro's own jobs). A line under it says so and opens the Districts tab.
   function addDistrictsLink(panel, city) {
     const sec = [...panel.querySelectorAll(".cp-section")].find((s) => /where (people|residents) work/i.test(s.querySelector("h3")?.textContent || ""));
-    if (!sec || sec.querySelector(".cv-plink")) return;
+    if (!sec || sec.querySelector(".cv-plink") || country().id !== "us") return; // names US sources (ACS, BLS QCEW)
     const p = document.createElement("p");
     p.className = "cv-plink";
     p.innerHTML = `These are residents' industries (ACS). The metro's specialised districts, from jobs counted at employers (BLS QCEW), are in the City View. <button type="button">Districts ›</button>`;

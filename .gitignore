@@ -1,4 +1,4 @@
-data/raw/
+data/raw
 data/interim/
 .venv/
 __pycache__/
@@ -9,3 +9,5 @@ __pycache__/
 out/
 dist/
 usaciv.zip
+spainciv.zip
+.wrangler/

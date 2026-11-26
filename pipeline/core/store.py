@@ -12,7 +12,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .paths import INTERIM, WEB_DATA
+
+
+def interim_dir() -> Path:
+    """data/interim (or the active country's own folder): see pipeline/countries."""
+    from ..countries import active
+
+    return active().interim_dir
+
+
+def web_dir() -> Path:
+    """web/data (or the active country's own folder): what the browser loads."""
+    from ..countries import active
+
+    return active().web_data_dir
 
 
 def atomic_write_text(path: Path, text: str) -> None:
@@ -39,11 +52,11 @@ def save_interim(name: str, data: dict, *, vintage: str | None = None) -> None:
     }
     if files is not None:
         payload["files"] = sorted(str(f) for f in files)
-    atomic_write_text(INTERIM / f"{name}.json", json.dumps(payload, separators=(",", ":")))
+    atomic_write_text(interim_dir() / f"{name}.json", json.dumps(payload, separators=(",", ":")))
 
 
 def load_interim_payload(name: str) -> dict:
-    path = INTERIM / f"{name}.json"
+    path = interim_dir() / f"{name}.json"
     if not path.exists():
         raise FileNotFoundError(f"interim '{name}' missing – run: uv run python -m pipeline process {name}")
     return json.loads(path.read_text())
@@ -55,5 +68,13 @@ def load_interim(name: str) -> Any:
 
 def write_web(name: str, data: Any) -> None:
     text = json.dumps(data, separators=(",", ":"), allow_nan=False)
-    atomic_write_text(WEB_DATA / name, text)
-    print(f"    → web/data/{name} ({len(text) / 1e3:.0f} kB)")
+    atomic_write_text(web_dir() / name, text)
+    print(f"    → {web_dir().parent.name}/{web_dir().name}/{name} ({len(text) / 1e3:.0f} kB)")
+
+
+def load_web(name: str, optional: bool = False) -> Any:
+    """Read a web data file another builder wrote (None if `optional` and it does not exist)."""
+    path = web_dir() / name
+    if optional and not path.exists():
+        return None
+    return json.loads(path.read_text())

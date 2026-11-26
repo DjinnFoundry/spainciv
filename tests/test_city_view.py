@@ -1,9 +1,51 @@
 """Builder helpers for the City view, Explorer and Advisors: footprints, ranks, peers, pop series,
 resource summaries and state land shares / energy (pure functions on tiny inputs)."""
 
+import shutil
+import subprocess
 import unittest
 
 from pipeline.build import cities, counties, resources, states
+from pipeline.core.paths import ROOT
+
+
+@unittest.skipUnless(shutil.which("node"), "Node is required to render the City View modules")
+class CityViewSourceTest(unittest.TestCase):
+    def test_city_view_uses_the_loaded_countrys_sources(self):
+        result = subprocess.run(["node", "--input-type=module", "-e", r"""
+            import assert from 'node:assert/strict';
+            import { readFileSync } from 'node:fs';
+            import { setCountry } from './web/js/app/country.js';
+            import { districtsHtml } from './web/js/ext/cityView/districts.js';
+            import { render } from './web/js/ext/cityView/screen.js';
+
+            const load = (dir, name) => JSON.parse(readFileSync(`${dir}/${name}.json`, 'utf8'));
+            for (const dir of ['sites/es/data', 'web/data']) {
+                const world = load(dir, 'world');
+                const cityList = load(dir, 'cities');
+                const city = cityList[0];
+                const nation = load(dir, 'nation');
+                setCountry(world);
+                const model = { city, cityList, nation, stateRGB: [0, 0, 0], states: [],
+                    sites: [], tiles: [], inds: [], gdpInds: [], peers: [], hexArea: 87 };
+                const el = { classList: { add() {} }, style: { setProperty() {} },
+                    querySelector: () => ({ addEventListener() {} }), querySelectorAll: () => [] };
+                render(el, model, { loadCounties: () => null });
+                const districts = districtsHtml(model, load(dir, 'districts'), null);
+                if (world.country?.id === 'es') {
+                    for (const label of ['Member municipalities', 'INE Annual Population Census', 'province level']) {
+                        assert.ok(el.innerHTML.includes(label), `Spanish City View omits ${label}`);
+                    }
+                    const wrongSource = el.innerHTML.match(/\bUS [\d€]|\b(?:ACS|BEA|QCEW)\b|U\.S\.|current dollars|Census population estimates/);
+                    assert.equal(wrongSource?.[0], undefined);
+                    assert.ok(!districts.includes('×US'), 'Spanish districts compare against Spain');
+                } else {
+                    assert.match(el.innerHTML, /ACS 5-year county estimates/);
+                    assert.match(el.innerHTML, /Share of U\.S\. GDP/);
+                }
+            }
+        """], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class FootprintTest(unittest.TestCase):

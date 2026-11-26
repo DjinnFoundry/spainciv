@@ -138,7 +138,7 @@ class CheckTest(unittest.TestCase):
         m = D.Metrics(qcew())
         ds = D.evaluate(m, ["01001", "01003"], 100000)
         return {"version": 1, "vintage": "v", "year": 2025, "sources": ["bls_qcew"], "rule": {"text": D.RULE_TEXT},
-                "catalog": D.CATALOG, "industries": {"3361": {"title": "x", "us_emp": 6000}},
+                "catalog": [dict(c) for c in D.CATALOG], "industries": {"3361": {"title": "x", "us_emp": 6000}},
                 "national": {"emp": 1_000_000, "avg_pay": 60000},
                 "cities": {"A": {"emp": 100000, "avg_pay": 50000, "counties": [2, 2],
                                  "top": [{"naics": "3361", "emp": 6000, "lq": 10.0}],
@@ -161,6 +161,12 @@ class CheckTest(unittest.TestCase):
         lines = self.run_check(self.doc(), [{"id": "A"}, {"id": "B"}])
         self.assertFalse([m for lv, m in lines if lv == "FAIL"], lines)
 
+    def test_country_catalog_may_leave_districts_out(self):
+        d = self.doc()
+        d["catalog"] = [c for c in d["catalog"] if c["id"] != "encampment"]  # Spain has no Encampment
+        lines = self.run_check(d, [{"id": "A"}, {"id": "B"}])
+        self.assertFalse([m for lv, m in lines if lv == "FAIL"], lines)
+
     def test_violations(self):
         cases = {
             "badge": lambda d: d["cities"]["A"].update(badge=None),
@@ -168,7 +174,9 @@ class CheckTest(unittest.TestCase):
             "ipeds badge": lambda d: d["cities"]["A"].update(badge={"district": "campus", "basis": "ipeds"}),
             "lower_bound": lambda d: d["cities"]["A"]["districts"][0].update(lower_bound=False, suppressed=3),
             "unknown": lambda d: d["cities"]["A"]["districts"].append({"id": "spaceport", "emp": 1}),
-            "catalog": lambda d: d["catalog"].pop(),
+            "catalog order": lambda d: d["catalog"].reverse(),
+            "catalog unknown id": lambda d: d["catalog"].append({**d["catalog"][0], "id": "spaceport"}),
+            "catalog empty": lambda d: d["catalog"].clear(),
             "top": lambda d: d["cities"]["A"]["top"].append({"naics": "9999"}),
         }
         for what, change in cases.items():

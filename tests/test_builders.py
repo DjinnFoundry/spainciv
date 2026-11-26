@@ -8,6 +8,8 @@ from pathlib import Path
 from types import ModuleType
 from unittest import mock
 
+from pipeline import countries
+
 import pipeline.__main__ as cli
 from pipeline.build import BUILDERS, _order
 
@@ -55,9 +57,9 @@ class PlanningTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        for p in (mock.patch.object(cli, "INTERIM", root / "interim"), mock.patch.object(cli, "WEB_DATA", root / "web")):
-            p.start()
-            self.addCleanup(p.stop)
+        ctx = countries.using(interim_dir=root / "interim", web_data_dir=root / "web")
+        ctx.__enter__()
+        self.addCleanup(ctx.__exit__, None, None, None)
         self.addCleanup(self.tmp.cleanup)
         self.root = root
         self.log = []

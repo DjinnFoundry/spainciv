@@ -556,7 +556,8 @@ function badgeFor(badges, city) {
   return { label: b.label, color: b.color, rgb };
 }
 
-/** Population floor for a hex radius in screen px: national view shows the big metros, close zoom everything. */
+const BANNER_REF_R_KM = 25;
+/** Population floor for a 25 km hex radius in screen px: national view shows the big metros, close zoom everything. */
 function popFloor(Rpx) {
   return Rpx < 5 ? 2e6 : Rpx < 8 ? 7e5 : Rpx < 14 ? 2.5e5 : Rpx < 24 ? 1.5e5 : Rpx < 40 ? 1e5 : Rpx < 70 ? 4e4 : 0;
 }
@@ -577,9 +578,12 @@ function popFloor(Rpx) {
 export function drawBanners(ctx, cam, w, state, yields, nation = state.nation) {
   const { grid } = w;
   const Rpx = grid.R * cam.scale;
-  const minPop = popFloor(Rpx);
-  const showYields = Rpx > 24;
-  const L = Rpx < 8 ? LAYOUTS.compact : LAYOUTS.full;
+  // Which banners show is a matter of map scale, not hex size: the thresholds were tuned on 25 km hexes, so they
+  // read the px size a 25 km hex would have (the same as Rpx for the US; larger for Spain's 5.8 km hexes).
+  const scaleRpx = BANNER_REF_R_KM * cam.scale;
+  const minPop = popFloor(scaleRpx);
+  const showYields = scaleRpx > 24;
+  const L = scaleRpx < 8 ? LAYOUTS.compact : LAYOUTS.full;
   // count budget: about 0.3 plates per plate-sized patch of screen (the plates themselves stay well under that)
   const unit = L === LAYOUTS.compact ? 170 * 50 : 320 * 90;
   const budget = Math.max(6, Math.round(((cam.w * cam.h) / unit) * 0.3));

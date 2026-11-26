@@ -1,7 +1,9 @@
 # Data contracts (v2)
 
-The pipeline (Python) and the browser (web/js) agree on these files in `web/data/`. Change a contract here first, then on
-both sides. All coordinates are **map km**: Albers equal-area, origin top-left, y **down** (see `pipeline/core/geo.py`).
+The pipeline (Python) and the browser (web/js) agree on these files in `web/data/` (`sites/<country>/data/` for a country
+other than the US, see `pipeline/countries`). Change a contract here first, then on both sides. All coordinates are
+**map km**: the country's equal-area projection (Albers for the US, Lambert azimuthal for Spain; world.json
+`country.projection`), origin top-left, y **down** (see `pipeline/core/geo.py`).
 Per-cell arrays have length `grid.cols * grid.rows`, with index `row * cols + col` (pointy-top, odd-r layout, see
 `pipeline/core/hexgrid.py` ⇄ `web/js/hex.js`). `null` always means "no data". Never write `0` as a stand-in for "unknown".
 
@@ -64,9 +66,25 @@ Per-cell arrays have length `grid.cols * grid.rows`, with index `row * cols + co
   },
   "states":   [{"fips": "01", "abbr": "AL", "name": "Alabama"}],
   "counties": [{"geoid": "01001", "name": "Autauga County"}],
-  "rivers":   [{"name": "Mississippi", "rank": 1, "pts": [x0, y0, x1, y1, ...]}]   // clipped to the map; no lake centerlines
+  "rivers":   [{"name": "Mississippi", "rank": 1, "pts": [x0, y0, x1, y1, ...]}],  // clipped to the map; no lake centerlines
+  "country": {       // optional (absent in the original usaciv data, which the browser treats as the United States)
+    "id": "us", "name": "United States", "product": "usaciv", "site_url": "karpathy.ai/usaciv",
+    "lang": "en", "locale": "en-US", "currency": "USD", "capital_city": "47900",
+    "levels": {"region": {"one": "State", "many": "States"}, "unit": {"one": "County", "many": "Counties"},
+               "metro": {"one": "Metro", "many": "Metros"}},
+    "projection": {"kind": "albers", "lat1": 29.5, "lat2": 45.5, "lat0": 37.5, "lon0": -96.0, "radius_km": 6371.0088,
+                   "min_x": -2350.1, "max_y": 1559.2, "margin": 200.0}
+    // Spain: {"kind": "laea", "lat0": 40.0, "lon0": -3.7, "radius_km": …, "min_x", "max_y", "margin",
+    //         "insets": [{"name": "Canarias", "lon": [w, e], "lat": [s, n], "dx": km, "dy": km, "box": [x0, y0, x1, y1]}]}
+  }
 }
 ```
+
+`country.projection` is the projection the pipeline used (`pipeline/core/geo.py` `to_web()` + `MapProjection.to_dict()`);
+`web/js/geo.js` inverts it. Map km → projection plane: `X = x + min_x - margin`, `Y = max_y + margin - y` (y up). An
+inset shifts the points inside its lon/lat window by `(dx, dy)` in that plane; `box` is the shifted window's extent, so
+a point inside `box` is shifted back before inverting. For other countries `states` holds the regions (provinces:
+`fips` = INE province code, `abbr` = ISO 3166-2 code) and `counties` the units (municipalities: `geoid` = INE code).
 
 Cover ids (fixed): 0 none · 1 forest_deciduous · 2 forest_evergreen · 3 forest_mixed · 4 scrub (scrub & desert) ·
 5 grassland · 6 pasture · 7 cropland · 8 wetland · 9 urban · 10 barren · 11 ice.

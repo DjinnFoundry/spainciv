@@ -46,6 +46,7 @@
 // Geography: lon/lat come from the world projection (world.json `projection` {min_x, max_y, margin} when present,
 // else the constants of the shipped grid). Worlds without one (the dev gallery) fall back to hash-based choices.
 import { hash01 } from "../../hex.js";
+import { mapProjection, US_ALBERS } from "../../geo.js";
 import { COVER } from "../../terrain.js";
 import { FOREIGN } from "../../world.js";
 import { css, mix, shade, parseHex } from "../../color.js";
@@ -370,25 +371,21 @@ function speckle(g, S, r, n, dark, light) {
 
 // --- geography (lon/lat of a cell) ---------------------------------------------------------------------------------
 
-// Albers equal-area conic of the pipeline (pipeline/core/geo.py Albers + MapProjection); keep in sync.
 const RAD = Math.PI / 180;
-const ALBERS = (() => {
-  const RE = 6371.0088, p1 = 29.5 * RAD, p2 = 45.5 * RAD, p0 = 37.5 * RAD;
-  const n = (Math.sin(p1) + Math.sin(p2)) / 2;
-  const c = Math.cos(p1) ** 2 + 2 * n * Math.sin(p1);
-  return { RE, n, c, rho0: (RE * Math.sqrt(c - 2 * n * Math.sin(p0))) / n, lon0: -96 };
-})();
-// The shipped grid's projection (data/interim/_world.json), used when world.json does not carry `projection`.
-const SHIPPED_PROJ = { min_x: -2350.109311515341, max_y: 1559.2228881834299, margin: 200, grid: [25, 117, 90] };
+// The shipped grid's projection (data/interim/_world.json), used when world.json carries neither `country` nor
+// `projection` (the original usaciv data).
+const SHIPPED_PROJ = { ...US_ALBERS, min_x: -2350.109311515341, max_y: 1559.2228881834299, margin: 200, grid: [25, 117, 90] };
 const geoTables = new WeakMap();
 
 function geoTable(w) {
   let t = geoTables.get(w);
   if (t === undefined) {
     const raw = w.raw, g = w.grid, sp = SHIPPED_PROJ;
-    const p = raw.projection
+    const p = raw.country?.projection
+      || (raw.projection && { ...US_ALBERS, ...raw.projection })
       || (raw.margin === sp.margin && g.R === sp.grid[0] && g.cols === sp.grid[1] && g.rows === sp.grid[2] ? sp : null);
-    t = p ? { p, lon: new Float32Array(g.size).fill(NaN), lat: new Float32Array(g.size) } : null;
+    const proj = p && mapProjection(p);
+    t = proj ? { proj, lon: new Float32Array(g.size).fill(NaN), lat: new Float32Array(g.size) } : null;
     geoTables.set(w, t);
   }
   return t;
@@ -398,12 +395,9 @@ function geoTable(w) {
 function geo(w, i) {
   const t = geoTable(w);
   if (t && Number.isNaN(t.lon[i])) {
-    const { RE, n, c, rho0, lon0 } = ALBERS;
-    const X = w.grid.cx(i) + t.p.min_x - t.p.margin, Y = t.p.max_y + t.p.margin - w.grid.cy(i);
-    const dy = rho0 - Y, rho = Math.hypot(X, dy);
-    const s = (c - ((rho * n) / RE) ** 2) / (2 * n);
-    t.lon[i] = lon0 + Math.atan2(X, dy) / n / RAD;
-    t.lat[i] = Math.asin(Math.max(-1, Math.min(1, s))) / RAD;
+    const [lon, lat] = t.proj.inverse(w.grid.cx(i), w.grid.cy(i));
+    t.lon[i] = lon;
+    t.lat[i] = lat;
   }
   return t;
 }
@@ -453,7 +447,7 @@ function fieldRegion(w, i) {
     // n·(lon − lon0) per 3° band keeps them aligned with the real section lines.
     const band = Math.floor((t.lon[i] + 130) / 3);
     const lonMid = band * 3 - 130 + 1.5;
-    return { key: `p${band}`, ang: -ALBERS.n * (lonMid - ALBERS.lon0) * RAD, ox: band * 37.3, oy: band * 23.9 };
+    return { key: `p${band}`, ang: -t.proj.n * (lonMid - t.proj.lon0) * RAD, ox: band * 37.3, oy: band * 23.9 };
   }
   // Metes-and-bounds country (or no projection): an irregular direction per ~280 km region.
   const bx = Math.floor(w.grid.cx(i) / 280), by = Math.floor(w.grid.cy(i) / 280);

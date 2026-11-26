@@ -30,11 +30,11 @@ import json
 from pathlib import Path
 
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
 
 REQUIRES = ["bls_qcew", "ipeds", "_world", "cities.json", "world.json"]
 PRODUCES = ["districts.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 MIN_LQ = 1.25
 MIN_JOBS = 1000
@@ -206,12 +206,15 @@ def excess(emp, q) -> float:
     return emp * (1 - 1 / q) if emp and q and q > 1 else 0.0
 
 
-def evaluate(m: Metrics, fips: list[str], total: int | None, wet: bool = True) -> list[dict]:
-    """Every district that passes the rule for this set of counties, strongest first (max MAX_PER_CITY)."""
+def evaluate(m: Metrics, fips: list[str], total: int | None, wet: bool = True, catalog: list[dict] = CATALOG) -> list[dict]:
+    """Every district of `catalog` that passes the rule for this set of counties, strongest first (max MAX_PER_CITY).
+
+    `m` is any object with Metrics' `industry(codes, own, members)`, `us(codes, own)` and `us_emp` (other countries
+    pass their own: the codes are then their classification's, and `wages` may be None)."""
     out = []
     if not total:
         return out
-    for d in CATALOG:
+    for d in catalog:
         if d["id"] == "harbor" and not wet:
             continue
         v = m.industry(d["naics"], d["own"], fips)
@@ -237,7 +240,7 @@ def evaluate(m: Metrics, fips: list[str], total: int | None, wet: bool = True) -
         strength = max(excess(v["emp"], dlq) if broad else 0, best_sub[3] if specialty else 0)
         out.append({
             "id": d["id"], "lq": _r(dlq, 2), "emp": v["emp"], "share": _r(share, 4),
-            "avg_pay": round(v["wages"] / v["emp"]) if v["emp"] else None,
+            "avg_pay": round(v["wages"] / v["emp"]) if v["emp"] and v["wages"] is not None else None,
             "sub": best_sub[0] if best_sub else None, "sub_lq": _r(best_sub[1], 2) if best_sub else None,
             "sub_emp": best_sub[2] if best_sub else None,
             "sub_lower_bound": bool(best_sub[4]) if best_sub else None,
@@ -294,10 +297,11 @@ def holds_state_capital(city: dict) -> bool:
     return any(cap in parts and abbr in states for cap, abbr in STATE_CAPITALS)
 
 
-def badge_for(best: dict | None, capital: bool = False, state_capital: bool = False) -> dict | None:
+def badge_for(best: dict | None, capital: bool = False, state_capital: bool = False, by_id: dict = BY_ID,
+              basis: str = "qcew") -> dict | None:
     if not best:
         return None
-    d = BY_ID[best["id"]]
+    d = by_id[best["id"]]
     sub = best["sub"]
     use_sub = sub is not None and best["sub_lq"] is not None and best["sub_lq"] >= SPECIALTY_LQ
     label = d["badge"]["labels"].get(sub, d["badge"]["label"]) if use_sub else d["badge"]["label"]
@@ -311,7 +315,7 @@ def badge_for(best: dict | None, capital: bool = False, state_capital: bool = Fa
     else:
         ge = "≥" if best.get("lower_bound") else ""
         text = f"{d['name']}: {ge}{best['lq']:.1f}× the national share of jobs"
-    return {"id": d["badge"]["id"], "label": label, "district": d["id"], "text": text, "basis": "qcew"}
+    return {"id": d["badge"]["id"], "label": label, "district": d["id"], "text": text, "basis": basis}
 
 
 def wet_cities(cities: list[dict], world_i: dict, world: dict) -> set[str]:
@@ -342,8 +346,8 @@ def build() -> None:
     payload = load_interim_payload("bls_qcew")
     q = payload["data"]
     world_i = load_interim("_world")
-    cities = json.loads((WEB_DATA / "cities.json").read_text())
-    world = json.loads((WEB_DATA / "world.json").read_text())
+    cities = load_web("cities.json")
+    world = load_web("world.json")
     m = Metrics(q)
     titles = q["codes"]
     wet = wet_cities(cities, world_i, world)
@@ -468,8 +472,8 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
         bad("rule.text missing")
     cat = doc["catalog"]
     ids = [d.get("id") for d in cat] if isinstance(cat, list) else []
-    if ids != IDS:
-        bad(f"catalog ids {ids} != {IDS}")
+    if not ids or ids != [i for i in IDS if i in ids]:  # known ids in the fixed order; a country may leave some out
+        bad(f"catalog ids {ids} are not a subset of {IDS} in that order")
     for d in cat if isinstance(cat, list) else []:
         for k in ("name", "icon", "color", "naics", "own", "sub", "badge", "description"):
             if k not in d:
@@ -491,7 +495,7 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
         if extra:
             bad(f"{len(extra)} ids not in cities.json, e.g. {sorted(extra)[:3]}")
     n_null = n_badge = n_lower = 0
-    counts = {i: 0 for i in IDS}
+    counts = {i: 0 for i in ids}
     for cid, row in cities.items():
         if row is None:
             n_null += 1

@@ -19,11 +19,11 @@ import json
 import math
 from pathlib import Path
 
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, write_web
+from ..core.store import load_interim, load_web, write_web
 
 REQUIRES = ["acs_1yr", "cities.json"]
 PRODUCES = ["citizens.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 FIGURES = {"workforce": 20, "age": 10, "commute": 10}
 SPECIALIST_HIGH = 1.5
@@ -196,7 +196,7 @@ def full_row(rec: dict | None, nat: dict | None, reliable: bool) -> dict | None:
 
 def build() -> None:
     acs = load_interim("acs_1yr")
-    cities = json.loads((WEB_DATA / "cities.json").read_text())
+    cities = load_web("cities.json")
     nat_rec = acs["geos"].get(NATION)
     national = full_row(nat_rec, None, True)
     if national is None:

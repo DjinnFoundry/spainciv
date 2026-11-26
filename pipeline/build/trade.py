@@ -29,11 +29,11 @@ from collections import defaultdict
 from pathlib import Path
 
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
 
 REQUIRES = ["_world", "faf5", "census_boundaries", "cities.json", "infrastructure.json"]
 PRODUCES = ["trade.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 TOP_N = 40
 MIN_KM = 250
@@ -225,9 +225,8 @@ def build() -> None:
     faf = payload["data"]
     bounds = load_interim("census_boundaries")["states"]
     abbr_of = {s["fips"]: s["abbr"] for s in bounds}
-    cities = json.loads((WEB_DATA / "cities.json").read_text())
-    ipath = WEB_DATA / "infrastructure.json"
-    infra = json.loads(ipath.read_text()) if ipath.exists() else None
+    cities = load_web("cities.json")
+    infra = load_web("infrastructure.json", optional=True)
 
     zones, zone_of = build_zones(faf, world, cities, abbr_of)
     parts_state = {k: z["state_fips"] for k, z in faf["zones"].items()}

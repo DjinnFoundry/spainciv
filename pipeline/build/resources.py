@@ -17,18 +17,18 @@ order when only one icon fits a cell.
 
 from __future__ import annotations
 
-import json
 import re
 from collections import defaultdict
 
-from ..core.geo import MapProjection, Shape
+from ..core.geo import Shape
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..countries import active
 
 REQUIRES = ["_world", "eia_860m", "eia_coal", "msha_mines", "eia_shale_plays", "census_boundaries",
             "cbsa_delineation", "cities.json"]
 PRODUCES = ["resources.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 # --- thresholds (MW = net summer capacity) -------------------------------------
 PLANT_MIN = {"hydro": 250, "coal": 1000, "gas": 1500, "pumped_storage": 1000}  # single plants, by fuel
@@ -204,7 +204,7 @@ class Placer:
     """
 
     def __init__(self, world):
-        self.proj = MapProjection(**world["projection"])
+        self.proj = active().world_projection(world)
         self.grid = HexGrid(**world["grid"])
         self.owner = world["owner"]
 
@@ -468,7 +468,7 @@ def locate(items: list[dict], world: dict) -> None:
     abbrs = [abbr_of.get(f) for f in world["states"]]
     known = {a for a in abbrs if a}
     by_name = {s["name"]: s["abbr"] for s in bounds} | {a: a for a in known}
-    city_ids = {c["id"] for c in json.loads((WEB_DATA / "cities.json").read_text())}
+    city_ids = {c["id"] for c in load_web("cities.json")}
     cbsa_of = {g: code for code, geoids in load_interim("cbsa_delineation")["counties"].items()
                if code in city_ids for g in geoids}
     owner, county, geoids = world["owner"], world["county"], world["counties"]

@@ -1,5 +1,7 @@
 // Keyboard & mouse cheat-sheet.
 import { icon } from "../ui/icon.js";
+import { country } from "./country.js";
+import { esc } from "../format.js";
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
 const MOD = isMac ? "⌘" : "Ctrl";
@@ -40,7 +42,8 @@ export function initHelp() {
       </section>`).join("")}</div>
     <p class="help-foot">Every number traces back to public data: open the <b>Almanac</b> for sources.
       The link in the address bar always reopens this exact view.
-      Source code: <a href="usaciv-source.zip" download>usaciv-source.zip</a> (MIT; run it with uv, see its README).</p>`;
+      Source code: <a href="${country().product}-source.zip" download>${country().product}-source.zip</a> (MIT; run it with uv, see its README).${country().product === "usaciv" ? "" : `
+      ${esc(country().product)} is based on <a href="https://karpathy.ai/usaciv/" target="_blank" rel="noopener">usaciv</a> by Andrej Karpathy (MIT licence, see LICENSE).`}</p>`;
 
   const close = () => {
     if (modal.hidden) return;

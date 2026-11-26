@@ -26,16 +26,18 @@ import argparse
 import ast
 import functools
 import http.server
+import io
 import sys
 import time
 from pathlib import Path
 from types import ModuleType
 
-from .build import BUILDERS
+from . import countries, site
+from .build import BUILDERS, builders_for, requires
 from .core import fetch
-from .core.paths import INTERIM, WEB, WEB_DATA
-from .core.store import save_interim
-from .sources import BY_ID, SOURCES
+from .core.paths import WEB
+from .core.store import interim_dir, save_interim, web_dir
+from .sources import BY_ID, SOURCES, sources_for
 
 
 def _pick(names, registry, kind):
@@ -81,8 +83,8 @@ def cmd_process(names):
 def output_path(name: str) -> Path:
     """Where a REQUIRES/PRODUCES name lives: "_x" and sources → data/interim, "x.json" → web/data."""
     if name.startswith("_") or not name.endswith(".json"):
-        return INTERIM / f"{name}.json"
-    return WEB_DATA / name
+        return interim_dir() / f"{name}.json"
+    return web_dir() / name
 
 
 def select_builders(names, builders: dict[str, ModuleType], with_deps: bool = False) -> list[str]:
@@ -96,7 +98,7 @@ def select_builders(names, builders: dict[str, ModuleType], with_deps: bool = Fa
         producer = {out: n for n, m in builders.items() for out in m.PRODUCES}
         todo = list(chosen)
         while todo:
-            for req in getattr(builders[todo.pop()], "REQUIRES", []):
+            for req in requires(builders[todo.pop()]):
                 up = producer.get(req)
                 if up and up not in chosen:
                     chosen.add(up)
@@ -124,7 +126,7 @@ def is_stale(mod: ModuleType) -> bool:
     outs = [output_path(p) for p in mod.PRODUCES]
     if not outs or not all(p.exists() for p in outs):
         return True
-    inputs = [output_path(r) for r in getattr(mod, "REQUIRES", [])]
+    inputs = [output_path(r) for r in requires(mod)]
     if not all(p.exists() for p in inputs):
         return True  # let build() fail with its own clear message
     inputs += helper_files(Path(mod.__file__))
@@ -156,14 +158,50 @@ def cmd_list():
         print(f"  {s.id:20} {s.info.title}")
     print("builders (in order):")
     for name, mod in BUILDERS.items():
-        print(f"  {name:20} needs {', '.join(mod.REQUIRES) or '-'}")
+        print(f"  {name:20} needs {', '.join(requires(mod)) or '-'}")
+
+
+class _SiteHandler(http.server.SimpleHTTPRequestHandler):
+    """Serves the active country's site as `package` builds it: web/, with data/ taken from the country's web data
+    folder (sites/<id>/data for Spain), its own site files over web/'s, and index.html rendered (pipeline/site.py)."""
+
+    data_dir: Path = WEB / "data"
+    overlay: dict = {}  # "/og-image.png" -> sites/<id>/og-image.png
+
+    def translate_path(self, path):
+        rel = path.split("?", 1)[0].split("#", 1)[0]
+        if rel.startswith("/data/"):
+            return str(self.data_dir / rel[len("/data/"):])
+        if rel in self.overlay:
+            return str(self.overlay[rel])
+        return super().translate_path(path)
+
+    def send_head(self):
+        if self.path.split("?", 1)[0] not in ("/", "/index.html"):
+            return super().send_head()
+        body = site.index_bytes()
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        return io.BytesIO(body)
 
 
 def cmd_serve(port=8765):
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(WEB))
+    overlay = {"/" + rel.as_posix(): f for f, rel in site.overlay_files()}
+    handler = functools.partial(type("Handler", (_SiteHandler,), {"data_dir": web_dir(), "overlay": overlay}), directory=str(WEB))
     with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as srv:
-        print(f"serving web/ at http://127.0.0.1:{port}")
+        print(f"serving web/ ({countries.active().name}) at http://127.0.0.1:{port}")
         srv.serve_forever()
+
+
+def select_country(country_id: str) -> None:
+    """Make a country active and point the source and builder registries at it."""
+    global BUILDERS, BY_ID, SOURCES
+    countries.set_active(country_id)
+    SOURCES = sources_for(country_id)
+    BY_ID = {s.id: s for s in SOURCES}
+    BUILDERS = builders_for(country_id)
 
 
 def main(argv=None):
@@ -174,8 +212,11 @@ def main(argv=None):
     p.add_argument("--deps", action="store_true", help="build: also run upstream builders of the named ones")
     p.add_argument("--offline", action="store_true", help="use cached downloads only; never touch the network")
     p.add_argument("--port", type=int, default=8765)
+    p.add_argument("--country", default="us", choices=sorted(countries.COUNTRIES), help="which country to build (default us)")
     a = p.parse_args(argv)
     fetch.OFFLINE = a.offline
+    if a.country != countries.active().id:
+        select_country(a.country)
     if a.command == "fetch":
         cmd_fetch(a.names, a.force)
     elif a.command == "process":

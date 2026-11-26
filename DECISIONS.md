@@ -1,0 +1,80 @@
+# Decisiones
+
+Registro de las decisiones de spainciv: qué se eligió, por qué y quién. Lo que se decida a partir de ahora se añade
+aquí, con fecha; si una decisión cambia, se marca como sustituida y se enlaza la nueva. El cómo usarlo está en
+`docs/SPAIN.md`; lo pendiente, en `ROADMAP.md`; lo hecho, en `CHANGELOG.md`.
+
+Quién: **David** = decidida por David; **Claude** = tomada en autónomo, pendiente de que David la revise.
+
+## Proyecto
+
+| Fecha | # | Decisión | Por qué | Quién |
+|---|---|---|---|---|
+| 2026-11-26 | D1 | El producto se llama **spainciv** | | David |
+| 2026-11-26 | D2 | `main` = zip de Karpathy intacto (tag `upstream-2026-11-26`); el trabajo va en `espana` | Referencia para comparar y para mandar arreglos | David |
+| 2026-11-26 | D3 | El commit `280dc16` no se reescribe; cada commit lleva `Based-on: usaciv by Andrej Karpathy (MIT)` | Reescribirlo exigía force push y tocar `main` | David |
+| 2026-11-26 | D4 | Las descargas en bruto viven fuera del repo: `data/raw` es un symlink a un disco de datos, con copia de respaldo en otro equipo | Unos 1,5 GB que no deben ir al repo ni al disco del sistema | David |
+| 2026-11-26 | D5 | Bugs del original: se arreglan y se apuntan en `UPSTREAM.md` | Para mandárselos a Karpathy | David |
+| 2026-11-26 | D7 | Licencia MIT de Karpathy: `LICENSE` intacto; el sitio empaquetado lleva `LICENSE` y `NOTICE` en su raíz además del zip de código; la ayuda de spainciv dice que está basado en usaciv; el README abre con una nota de fork | La MIT exige el aviso en «todas las copias o partes sustanciales», y el sitio publica el JS | Claude |
+| 2026-11-26 | D8 | spainciv usa **la misma licencia MIT** que usaciv: `LICENSE` conserva la línea de Karpathy y añade «Copyright (c) 2026 DjinnFoundry» para los cambios | Misma licencia que el original | David |
+| 2026-11-26 | D9 | spainciv se publica en el subdominio `spainciv.djinnfoundry.com`, como proyecto propio de Cloudflare Pages (como maruxa o mazao); la entrada en djinnfoundry.com queda en una rama y una preview hasta que David la apruebe | El bundle del mapa (≈11 MB, su propio JS y CSS) engordaría y podría chocar con el sitio principal | Claude (subagente) |
+| 2026-11-26 | D10 | Nada de datos personales (rutas locales, nombres de equipos) en los ficheros del repo: el zip de código que ofrece el mapa los publica | Lo detectó el subagente de publicación; el historial de git aún los contiene (ver ROADMAP) | Claude |
+| 2026-11-26 | D11 | Repo y carpeta renombrados a **spainciv** (`DjinnFoundry/spainciv`) | Nombre del producto (D1) | David |
+| 2026-11-26 | D12 | Repo público con **historial limpio**: el commit original de Karpathy primero, intacto, y los nuestros reescritos sin datos personales; el autor conserva su email. `main` = spainciv, rama `upstream` = el zip de Karpathy | El historial antiguo contenía rutas locales y nombres de equipos (D10) | David |
+| 2026-11-26 | D13 | README en inglés con un resumen en castellano; el de Karpathy se conserva en `docs/USACIV.md`. El anuncio en X lo publica David a partir de un borrador | Mismo público que usaciv | David |
+| 2026-11-26 | D14 | La entrada de djinnfoundry.com se integra y se despliega con la apertura del repo | «Ese sitio es nuestro» | David |
+| 2026-11-26 | D6 | Los `web/data` de EE UU del repo siguen siendo los publicados por Karpathy | Regenerarlos cambia las añadas de datos, y nadie lo ha pedido | Claude |
+
+## Arquitectura
+
+| Fecha | # | Decisión | Por qué | Quién |
+|---|---|---|---|---|
+| 2026-11-26 | A1 | Abstracción **mixta**: se generalizan `world`, la colocación en la malla, rendimientos, distritos, ciudades, estados y lentes con adaptadores por país; `military`, `trade`, `disasters`, fe y `resources` quedan solo para EE UU | Equilibrio entre reescribir todo y duplicar builders | David |
+| 2026-11-26 | A2 | EE UU debe dar los mismos `web/data` byte a byte, con una única excepción aditiva: el bloque `country` de `world.json` | Refactor sin cambio de comportamiento, comprobable con diff | David |
+| 2026-11-26 | A3 | Un build por país: EE UU en `web/data`, España en `sites/es/data`; spainciv se publica aparte | Sin selector de país en la app | David |
+| 2026-11-26 | A4 | `world.json` sigue en `version: 2`; `country` es una clave opcional | Es aditivo: los datos antiguos siguen siendo válidos y la web asume EE UU sin el bloque | Claude |
+| 2026-11-26 | A5 | Los builders que solo valen para un país declaran `COUNTRIES`; `REQUIRES` puede ir por país | Registro único, filtrado por país | Claude |
+| 2026-11-26 | A6 | La cubierta del suelo de cualquier país se traduce a códigos NLCD | Una sola definición de las reglas de cubierta y de las tablas de `world.json` | Claude |
+| 2026-11-26 | A7 | Interfaz en inglés hasta una pasada de i18n completa (en/es) al final de las fases principales, en un subagente en paralelo | No bloquear los datos con la traducción | David |
+| 2026-11-26 | A8 | Título, tarjetas sociales, créditos y dirección de cada país salen de `Country.page` y se escriben al servir o empaquetar (`pipeline/site.py`); el `index.html` de EE UU queda intacto | Una sola fuente por país sin reconstruir datos | Claude (subagente) |
+| 2026-11-26 | A9 | La tarjeta social de España va en español; la interfaz sigue en inglés hasta la pasada de i18n (A7) | Quien comparte el enlace lo ve en su idioma | Claude (subagente) |
+
+## Mapa de España
+
+| Fecha | # | Decisión | Por qué | Quién |
+|---|---|---|---|---|
+| 2026-11-26 | E1 | Hexágonos de **10 km de ancho** (radio 5,77 km, ~87 km²) | Unos 5.700 hexágonos de tierra, como los 4.800 de EE UU; escala cercana al municipio | David |
+| 2026-11-26 | E2 | Proyección del mapa: **LAEA esférica centrada en 40°N 3,7°O**, no la EPSG:3035 directa. La EPSG:3035 elipsoidal se usa solo para leer rásteres | La EPSG:3035 está centrada en 52°N 10°E y gira la península; es el mismo reparto que el original (Albers esférico + EPSG:5070) | Claude (sustituye a «EPSG:3035» del plan inicial) |
+| 2026-11-26 | E3 | Canarias en un recuadro al suroeste; las muestras reales que caen bajo el recuadro se descartan | Como en la mayoría de mapas de España; sin mezclar el mar de debajo con las islas | David (recuadro); Claude (posición y descarte) |
+| 2026-11-26 | E4 | Margen de 80 km | El de EE UU (200 km) es para un país cuatro veces más ancho | Claude |
+| 2026-11-26 | E5 | Relieve: colinas con desviación típica ≥ 32 m y montañas ≥ 138 m (EE UU: 85 m y 260 m) | Reproducen el reparto que la regla original da a España con hexágonos de 25 km (26/56/18 %); con los umbrales de EE UU salía un 64 % llano | Claude |
+| 2026-11-26 | E6 | Ceuta y Melilla reclaman el hexágono de su centroide (`claim_tiny_regions`) | Son más pequeñas que un hexágono; EE UU deja D. C. sin hexágono, como el original | Claude |
+| 2026-11-26 | E7 | Niveles: provincias (código INE en `fips`, ISO 3166-2:ES en `abbr`), municipios (código INE en `geoid`) | Mismas claves del contrato, ids con el mismo formato | Claude |
+| 2026-11-26 | ~~E8~~ (sustituida por E14) | Ciudades del primer corte = municipios de 50.000 habitantes o más | Hasta que entren las áreas urbanas del AUDES (ver ROADMAP) | Claude |
+| 2026-11-26 | E9 | El oro es el PIB del INE solo en provincias y nación; las ciudades no tienen | No hay PIB municipal oficial; no se reparte por población | Claude |
+| 2026-11-26 | E10 | Dato que falta = `null`, nunca un relleno | Regla del proyecto | David |
+| 2026-11-26 | E11 | Lente de renta = renta neta media por persona del ADRH; `median_income` de las ciudades queda a null | Es una media por persona, no la mediana por hogar de EE UU | Claude |
+| 2026-11-26 | E12 | Qué ciudades se rotulan depende de la escala del mapa (umbrales leídos sobre un hexágono de 25 km), no del tamaño del hexágono | Con hexágonos pequeños, la vista nacional solo mostraba Madrid | Claude |
+| 2026-11-26 | E14 | Ciudades = las 86 **grandes áreas urbanas del AUDES** 2025, como los metros de EE UU: id y posición del municipio núcleo (el primero de la lista), población, serie, empleo y huella sumados sobre los miembros | Equivale a las CBSA; Móstoles o Getafe dejan de ser ciudades sueltas y pasan al área de Madrid | Claude |
+| 2026-11-26 | E15 | Emparejamiento AUDES → INE por nombre (formas cooficiales y artículos invertidos), con los homónimos resueltos por cercanía al núcleo y una tabla de alias por nombre oficial actual para los municipios renombrados. Cada área se comprueba: todos sus municipios y la población 2024 a menos de un 3 % del AUDES; si no, el build falla | El AUDES publica solo nombres; su población no coincide al habitante con ningún año del Padrón. Los alias se guardan como nombres comprobables, no como códigos (dos de tres códigos escritos de memoria eran erróneos) | Claude |
+| 2026-11-26 | E16 | El empleo de un área suma los miembros que el INE publica (500 habitantes o más); los distritos se calculan sobre el municipio núcleo | Tres áreas pierden unos 6.500 residentes de municipios diminutos, y se declara. Las divisiones a dos dígitos solo existen para las ciudades principales: mezclar el núcleo con el total del área falsearía los cocientes | Claude |
+| 2026-11-26 | E17 | Carreteras de España: clase 0 = autovías y autopistas (Natural Earth «Major Highway» con `expressway`), clase 1 = otras carreteras de rango de escala ≤ 7; ferrocarril con los niveles de EE UU. Puertos y aeropuertos vacíos hasta tener AENA y Puertos del Estado | Mismo dibujo que EE UU; Natural Earth no rellena el país fuera de Norteamérica, así que se recorta por las fronteras | Claude |
+| 2026-11-26 | E18 | Maravillas: los 16 Parques Nacionales, todos, ordenados por superficie oficial (sin visitantes: no hay tabla descargable); los marítimo-terrestres como «coastal» | Son pocos y todos notables; el ranking por visitas de EE UU no es replicable aún | Claude |
+
+## Fuentes
+
+| Fecha | # | Decisión | Por qué | Quién |
+|---|---|---|---|---|
+| 2026-11-26 | ~~F1~~ (sustituida por F11) | Fronteras: Eurostat GISCO LAU 2023 | Descarga directa, sin formulario. **Solo uso no comercial**: para un uso comercial, cambiar a las líneas límite del IGN/CNIG (ROADMAP) | Claude |
+| 2026-11-26 | F2 | Relieve: ETOPO1 a resolución completa por ERDDAP, en franjas de 2° | El mismo servicio que el original; el ERDDAP corta las peticiones grandes | Claude |
+| 2026-11-26 | F3 | Cubierta: CORINE 2018 leída del WMS del IGN/IDEE por el color exacto de la leyenda, a 500 m | El servidor de la EEA no responde desde aquí; el WMS no suaviza, así que el color identifica la clase sin error. 500 m = unidad mínima de CORINE | Claude |
+| 2026-11-26 | F4 | Se lleva en el repo la raíz HARICA TLS RSA 2021 (sacada del almacén de raíces de macOS, huella anotada) como CA extra para el IDEE | El `cert.pem` de macOS no la tiene y Python no valida sin ella | Claude |
+| 2026-11-26 | F5 | Población: INE tabla 29005; PIB: INE tabla 80109; renta: INE tabla 30824 | Exportaciones csv sin clave, CC BY 4.0 citando al INE | Claude |
+| 2026-11-26 | ~~F6~~ (sustituida por F8) | Empleo por sector = afiliación media a la Seguridad Social por provincia y sección CNAE-2009 (2025), Régimen General y autónomos más los activos del Sistema Especial Agrario, sumados a la sección A | Es la única serie completa por sección CNAE sin clave. La serie RG+RETA excluye los sistemas especiales y sin ellos la agricultura salía a un 44 %. Cuenta donde se trabaja, no donde se vive (al revés que el ACS) | Claude |
+| 2026-11-26 | F7 | Secciones CNAE → claves de industria de EE UU (D+E → utilities; G → retail, rotulado «comercio al por mayor y al por menor»; S+T+U → other), y los rendimientos con las mismas listas de industrias que EE UU (Production = B+C+F; Science = J+M) | Una sola definición de los rendimientos para los dos países | Claude |
+| 2026-11-26 | F8 | Empleo por sector = **Censo anual de población del INE** (ocupados por sección CNAE donde viven): tabla 69962 para provincias y nación, 69992 para los municipios de 500 habitantes o más (2024) | Cuenta por residencia, como el ACS de EE UU, y llega a las ciudades, así que ciudades, provincias y nación salen de la misma fuente y sus rangos se comparan. Sustituye a la afiliación (F6), que solo llegaba a provincias; su código se borra | Claude |
+| 2026-11-26 | F9 | Una industria a la que le falta una sección de la fuente es null, y un rendimiento con una parte null también | Nunca sumas parciales presentadas como totales | Claude |
+| 2026-11-26 | F10 | Distritos de España con el motor de EE UU (`districts.evaluate`, mismos umbrales) y un catálogo CNAE a dos dígitos; `districts.json` lleva un bloque `method` con el sistema de códigos y la fuente, y el frontend usa los textos de BLS QCEW si no está | Una sola regla; el frontend no atribuye a BLS datos del INE | Claude |
+| 2026-11-26 | E13 | `pop_series` de las ciudades de España desde 2020, como en EE UU | La gráfica de la vista de ciudad se diseñó para unos 6 años; la serie completa sigue en el interim | Claude |
+| 2026-11-26 | F11 | Fronteras y capitales municipales: **SIANE del IGN** (1:3M, edición 2026) desde los GeoPackages de rOpenSpain/mapSpain fijados a un commit, leídos con sqlite3 y un decodificador WKB propio. Los territorios compartidos (53xxx) entran en su provincia pero no como municipio. Las ciudades se colocan en su capital municipal. `gisco_lau` se borra | CC BY 4.0 (GISCO era solo de uso no comercial), y los 8.132 municipios vigentes con sus capitales. Encontrado por el agente de investigación de proyectos FOSS | Claude |
+| 2026-11-26 | F12 | Los servidores del OAPN no envían el certificado intermedio y su raíz (Sectigo R46) falta en bundles antiguos: el repo lleva intermedio y raíz, verificados con `openssl verify` y con sus huellas anotadas | Sin ellos Python no valida el TLS; preferible a bajar por http | Claude |

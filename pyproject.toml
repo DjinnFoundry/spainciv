@@ -7,3 +7,4 @@ dependencies = []  # standard library only, on purpose
 
 [tool.uv]
 package = false
+exclude-newer = "4 days"

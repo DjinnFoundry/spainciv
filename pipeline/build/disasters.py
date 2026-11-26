@@ -15,6 +15,7 @@ from ..core.store import load_interim, load_interim_payload, write_web
 
 REQUIRES = ["_world", "fema_declarations", "noaa_billions"]
 PRODUCES = ["disasters.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 FEMA_TYPES = [
     {"id": "hurricane", "name": "Hurricanes & tropical storms",

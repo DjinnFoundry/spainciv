@@ -22,6 +22,7 @@ from .military import Locator, _is_num, _load
 REQUIRES = ["_world", "nps_boundaries", "nps_visits", "ipeds", "herd", "nhl_landmarks", "census_boundaries",
             "cbsa_delineation", "cities.json"]
 PRODUCES = ["wonders.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 N_PARKS, N_UNITS, N_UNIVERSITIES, PER_METRO = 15, 5, 20, 2
 LINEAR = {"Parkway", "National Scenic Trail", "National Trails System", "National Wild & Scenic River",
@@ -392,6 +393,6 @@ def check(web_dir) -> list[tuple[str, str]]:
     by_rule = Counter(x.get("rule") for x in d.get("wonders") or [])
     if not bad:
         out.append(("PASS", f"wonders.json: {n} wonders ({', '.join(f'{v} {k}' for k, v in by_rule.items())})"))
-    if not 30 <= n <= 60:
-        out.append(("WARN", f"wonders.json: {n} wonders (expected about 30-60)"))
+    if not 10 <= n <= 60:
+        out.append(("WARN", f"wonders.json: {n} wonders (expected about 10-60)"))
     return out

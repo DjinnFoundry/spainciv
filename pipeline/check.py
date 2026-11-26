@@ -28,13 +28,13 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .core.paths import INTERIM, WEB_DATA
+from .core import store
+from .countries import active
 
 # Density lens total vs ACS county total. Tight because lenses.py uses the same
 # land-share formula, so this mainly catches dropped or double-counted people.
 CONSERVATION_TOLERANCE = 0.005
 LENS_NULL_WARN = 0.05  # share of US cells with a null lens value
-CONUS_EXCLUDE = {"02", "15", "60", "66", "69", "72", "78"}  # AK, HI, territories
 
 REQUIRED = ["world.json", "cities.json", "states.json", "nation.json", "lenses.json", "sources.json"]
 OPTIONAL = ["resources.json", "counties.json"]
@@ -47,7 +47,7 @@ COVER_KEYS = [
 ]
 PCT_KEYS = ["forest", "crop", "pasture", "grass", "shrub", "wetland", "developed"]
 YIELD_KEYS = ["food", "production", "gold", "science", "culture"]
-LENS_FORMATS = {"int", "usd", "pct", "float", "minutes", "years", "category"}
+LENS_FORMATS = {"int", "usd", "eur", "pct", "float", "minutes", "years", "category"}
 LENS_SCALES = {"log", "linear"}
 HIGHER_IS = {"good", "bad", "neutral"}
 RESOURCE_CATEGORIES = {"energy", "mineral", "agri"}
@@ -146,6 +146,27 @@ def check_cells(r: Report, name: str, arr, n: int, lo=None, hi=None, *, kind="in
 # ---------------------------------------------------------------- validators
 
 
+COUNTRY_KEYS = ["id", "name", "product", "site_url", "lang", "locale", "currency", "levels", "capital_city", "projection"]
+PROJECTION_KEYS = {"albers": ["lat1", "lat2", "lat0", "lon0"], "laea": ["lat0", "lon0"]}
+
+
+def check_country_block(r: Report, c) -> None:
+    """world.json `country` (optional; written since the country configurations): names, levels and projection."""
+    if c is None:
+        r.note("world.json: no country block (the browser assumes the United States)")
+        return
+    if not need_keys(r, "world.json country", c, COUNTRY_KEYS):
+        return
+    if not (isinstance(c["levels"], dict) and all(isinstance(c["levels"].get(k), dict) and {"one", "many"} <= c["levels"][k].keys() for k in ("region", "unit", "metro"))):
+        r.fail("world.json country.levels: needs region, unit and metro, each with one and many")
+    p = c["projection"]
+    kind = p.get("kind") if isinstance(p, dict) else None
+    if kind not in PROJECTION_KEYS:
+        r.fail(f"world.json country.projection: unknown kind {kind!r}")
+    elif need_keys(r, "world.json country.projection", p, PROJECTION_KEYS[kind] + ["radius_km", "min_x", "max_y", "margin"]):
+        r.ok(f"world.json country: {c['name']} ({c['id']}), {kind} projection, {len(p.get('insets') or [])} inset(s)")
+
+
 def check_world(r: Report, w) -> dict | None:
     """Validate world.json. Returns a small context (n, owner, states, …) for the other checks, or None."""
     if not isinstance(w, dict):
@@ -171,6 +192,7 @@ def check_world(r: Report, w) -> dict | None:
         r.fail("world.json states: every entry needs fips, abbr, name")
     if not all(isinstance(c, dict) and {"geoid", "name"} <= c.keys() for c in counties):
         r.fail("world.json counties: every entry needs geoid, name")
+    check_country_block(r, w.get("country"))
 
     ok = True
     owner = w.get("owner")
@@ -469,7 +491,7 @@ def check_nation(r: Report, nat) -> list[str]:
                          ["key", "icon", "emoji", "label", "color", "unit", "description"]):
             continue
         keys.append(y["key"])
-        if y["unit"] not in ("workers", "usd") or not COLOR.match(str(y["color"])):
+        if y["unit"] not in ("workers", "usd", "eur") or not COLOR.match(str(y["color"])):
             r.fail(f"nation.json yield {y['key']}: unit must be workers|usd and color #hex")
     if not isinstance(nat["industries"], dict) or not all(isinstance(v, str) for v in nat["industries"].values()):
         r.fail("nation.json: industries must be {key: label}")
@@ -856,10 +878,10 @@ def quality_counties(r: Report, ctx: dict, world_interim: dict | None, county_po
     if not (gaz and ctx["owner"] and "projection" in world_interim):
         return
     try:
-        from .core.geo import MapProjection
+        from .countries import active
         from .core.hexgrid import HexGrid
 
-        proj, grid = MapProjection(**world_interim["projection"]), HexGrid(**ctx["grid"])
+        proj, grid = active().world_projection(world_interim), HexGrid(**ctx["grid"])
     except Exception as exc:  # geo.py is shared code; don't let it take the report down
         r.note(f"county coverage: cannot project centres ({exc})")
         return
@@ -957,12 +979,14 @@ def run_builder_checks(r: Report, web_dir: Path, checks=None) -> None:
             r._add(level, f"{name}: {msg}")
 
 
-def run(web_dir: Path = WEB_DATA, interim_dir: Path = INTERIM, quiet: bool = False, builder_checks_=None) -> Report:
+def run(web_dir: Path | None = None, interim_dir: Path | None = None, quiet: bool = False, builder_checks_=None) -> Report:
     """Run every check and return the report.
 
     builder_checks_: None = discover the builder check() functions (part 3); a list of (name, fn) to run those
     instead; [] to skip part 3.
     """
+    web_dir = store.web_dir() if web_dir is None else web_dir
+    interim_dir = store.interim_dir() if interim_dir is None else interim_dir
     r = Report(quiet)
     r.section("contracts (docs/DATA_CONTRACTS.md v2)")
     docs = {name: _load(r, web_dir, name, True) for name in REQUIRED}
@@ -995,7 +1019,7 @@ def run(web_dir: Path = WEB_DATA, interim_dir: Path = INTERIM, quiet: bool = Fal
     acs5 = _interim(interim_dir, "acs_5yr")
     gaz = _interim(interim_dir, "census_gazetteer")
     geoids = [c.get("geoid") for c in ctx["counties"] if isinstance(c, dict)]
-    geoids = [g for g in geoids if isinstance(g, str) and g[:2] not in CONUS_EXCLUDE]
+    geoids = [g for g in geoids if isinstance(g, str) and g[:2] not in active().off_map]
     county_pop = county_population(acs5, geoids) if acs5 else {}
     samples = world_interim.get("county_samples") if world_interim else None
     ratio = None
@@ -1018,7 +1042,7 @@ def run(web_dir: Path = WEB_DATA, interim_dir: Path = INTERIM, quiet: bool = Fal
     return r
 
 
-def main(web_dir: Path = WEB_DATA, interim_dir: Path = INTERIM) -> int:
+def main(web_dir: Path | None = None, interim_dir: Path | None = None) -> int:
     r = run(web_dir, interim_dir)
     print(f"\ncheck: {r.count('PASS')} pass, {r.count('WARN')} warn, {r.count('FAIL')} fail")
     return 1 if r.failed else 0

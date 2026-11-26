@@ -21,6 +21,7 @@ import hashlib
 import http.client
 import itertools
 import json
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -81,7 +82,16 @@ def read_manifest(source_id: str) -> dict:
     return json.loads(p.read_text()) if p.exists() else {}
 
 
-def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_binary: bool) -> tuple[str, int]:
+def _context(cafile: Path | None) -> ssl.SSLContext | None:
+    """The default TLS context, also trusting `cafile` (a root a publisher's chain needs that the system bundle lacks)."""
+    if cafile is None:
+        return None
+    ctx = ssl.create_default_context()
+    ctx.load_verify_locations(cafile=str(cafile))
+    return ctx
+
+
+def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_binary: bool, cafile: Path | None = None) -> tuple[str, int]:
     """One download attempt into `tmp`. Returns (sha256 hex, size).
 
     A body shorter than the declared Content-Length (connection cut mid-transfer)
@@ -89,7 +99,7 @@ def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_bi
     """
     digest = hashlib.sha256()
     size = 0
-    with urllib.request.urlopen(_request(url, headers=headers), timeout=timeout) as resp:
+    with urllib.request.urlopen(_request(url, headers=headers), timeout=timeout, context=_context(cafile)) as resp:
         ctype = (resp.headers.get("Content-Type") or "").lower()
         length = resp.headers.get("Content-Length")
         identity = not resp.headers.get("Content-Encoding")
@@ -157,14 +167,16 @@ def download(
     timeout: int = 600,
     headers: dict | None = None,
     expect_binary: bool = False,
+    cafile: Path | None = None,
 ) -> Path:
     """Download `url` to data/raw/<source_id>/<rel_path> unless already cached.
 
     `headers` are extra request headers. With `expect_binary=True` a text/html
     response is an error (some publishers answer missing files with a 200 page).
+    `cafile` is an extra root certificate to trust for this download.
     """
     return _download_with(
-        source_id, url, rel_path, lambda tmp: _fetch_to(url, tmp, timeout, headers, expect_binary), force=force
+        source_id, url, rel_path, lambda tmp: _fetch_to(url, tmp, timeout, headers, expect_binary, cafile), force=force
     )
 
 

@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Unit tests (standard library; the geo.js parity test runs with the runner's node)
+        run: uv run --locked python -m unittest discover -s tests
+      - name: Trailer MP4 unit test
+        run: node --test web/dev/trailer/mp4.test.js
+      - name: Data check, United States
+        run: uv run --locked python -m pipeline check
+      - name: Data check, Spain
+        run: uv run --locked python -m pipeline check --country es

@@ -6,7 +6,8 @@ or every manifest entry if it did not say.
 
 from ..core.fetch import read_manifest
 from ..core.store import load_interim_payload, write_web
-from ..sources import SOURCES
+from ..countries import active
+from ..sources import sources_for
 
 REQUIRES: list[str] = []
 PRODUCES = ["sources.json"]
@@ -15,7 +16,7 @@ RUN_LAST = True
 
 def build() -> None:
     out = []
-    for s in SOURCES:
+    for s in sources_for(active().id):
         try:
             payload = load_interim_payload(s.id)
         except FileNotFoundError:

@@ -1,0 +1,6 @@
+spainciv is a port to Spain of usaciv by Andrej Karpathy (https://karpathy.ai/usaciv/), released under the MIT
+licence (see LICENSE). spainciv's own changes are released under the same MIT licence. The original source is kept
+unchanged at the tag `upstream-2026-11-26`; the country configurations, the Spanish data sources and the
+changes listed in UPSTREAM.md are on top of it.
+
+Data sources keep their own licences; the in-app Almanac lists each one with its files, URLs and checksums.

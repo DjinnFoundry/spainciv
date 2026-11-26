@@ -20,6 +20,9 @@ class NaturalEarth(Source):
     )
 
     FILES = ["ne_50m_admin_0_countries", "ne_50m_lakes", "ne_50m_rivers_lake_centerlines"]
+    BBOX = BBOX
+    HOME = "USA"  # ADM0_A3 of the mapped country: its land comes from the country's own boundaries
+    SCALE = "1:50m"
 
     def _path(self, name):
         return f"{TAG}/{name}.geojson"
@@ -34,28 +37,30 @@ class NaturalEarth(Source):
     def process(self):
         # Every non-US country with land in the window (Canada, Mexico, Cuba, the Bahamas, Bermuda...),
         # keeping only its rings there, so foreign coasts inside the map are land rather than sea.
+        countries_file, lakes_file, rivers_file = self.FILES
+        bbox = self.BBOX
         countries = []
-        for f in self._features("ne_50m_admin_0_countries"):
-            if f["properties"].get("ADM0_A3") == "USA":
+        for f in self._features(countries_file):
+            if f["properties"].get("ADM0_A3") == self.HOME:
                 continue
-            rings = [r for r in geojson_rings(f["geometry"]) if bbox_intersects(r, BBOX)]
+            rings = [r for r in geojson_rings(f["geometry"]) if bbox_intersects(r, bbox)]
             if rings:
                 countries.append({"name": f["properties"]["ADMIN"], "rings": rings})
         lakes = []
-        for f in self._features("ne_50m_lakes"):
+        for f in self._features(lakes_file):
             rings = geojson_rings(f["geometry"])
-            if rings and bbox_intersects(rings[0], BBOX):
+            if rings and bbox_intersects(rings[0], bbox):
                 lakes.append({"name": f["properties"].get("name"), "rings": rings})
         rivers = []
-        for f in self._features("ne_50m_rivers_lake_centerlines"):
+        for f in self._features(rivers_file):
             p = f["properties"]
             for line in geojson_lines(f["geometry"]):
-                if bbox_intersects(line, BBOX):
+                if bbox_intersects(line, bbox):
                     rivers.append(
                         {"name": p.get("name"), "rank": p.get("scalerank", 10), "featurecla": p.get("featurecla"), "line": line}
                     )
         return {
-            "vintage": f"Natural Earth {TAG} (1:50m)",
+            "vintage": f"Natural Earth {TAG} ({self.SCALE})",
             "_files": [self._path(n) for n in self.FILES],
             "countries": countries,
             "lakes": lakes,
@@ -81,6 +86,8 @@ class NaturalEarthRoads(Source):
     )
 
     FILES = ["ne_10m_roads", "ne_10m_railroads"]
+    BBOX = BBOX
+    LABEL = "US"
 
     def _path(self, name):
         return f"{TAG}/{name}.geojson"
@@ -89,11 +96,16 @@ class NaturalEarthRoads(Source):
         for name in self.FILES:
             self.download(f"{BASE}/{name}.geojson", self._path(name), force=force)
 
+    def keep_road(self, p: dict) -> bool:
+        """The mapped country's roads (Natural Earth fills sov_a3 only in North America)."""
+        return p.get("sov_a3") == "USA"
+
     def process(self):
+        BBOX = self.BBOX
         roads, rail, types = [], [], {}
         for f in load_geojson(self.raw_dir / self._path("ne_10m_roads")):
             p = f["properties"]
-            if p.get("sov_a3") != "USA" or p.get("featurecla") == "Ferry":
+            if not self.keep_road(p) or p.get("featurecla") == "Ferry":
                 continue
             types[p.get("type")] = types.get(p.get("type"), 0) + 1
             if p.get("type") == "Ferry Route":
@@ -116,7 +128,7 @@ class NaturalEarthRoads(Source):
             if lines:
                 rail.append({"scalerank": p.get("scalerank"), "category": p.get("category"),
                              "lines": [[(round(x, 4), round(y, 4)) for x, y in ln] for ln in lines]})
-        print(f"    {len(roads)} US road features ({types}), {len(rail)} rail features in the map window")
+        print(f"    {len(roads)} {self.LABEL} road features ({types}), {len(rail)} rail features in the map window")
         return {
             "vintage": f"Natural Earth {TAG} (1:10m)",
             "_files": [self._path(n) for n in self.FILES],

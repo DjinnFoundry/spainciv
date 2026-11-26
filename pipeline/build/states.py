@@ -13,18 +13,17 @@ can exceed the state, so the frontend should still clamp or hide those labels.
 
 from __future__ import annotations
 
-import json
 import math
 from collections import deque
 
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, write_web
+from ..core.store import load_interim, load_web, write_web
 from .growth import Growth
 from .yields import YIELDS, economy, gdp_profile
 
 REQUIRES = ["_world", "census_boundaries", "acs_1yr", "bea_gdp", "pep_population", "resources.json"]
 PRODUCES = ["states.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 MIN_LABEL_KM, MAX_LABEL_KM = 14.0, 110.0  # suggested font height range, map km
 
@@ -132,10 +131,9 @@ def land_shares(world: dict, s: int) -> dict | None:
 def energy_by_state() -> dict[str, dict] | None:
     """abbr → {unit, total, by_type, sites, note} summed from resources.json items of every MW type
     (states without a mapped site get zeros under "", the default row); None if resources.json is not built."""
-    path = WEB_DATA / "resources.json"
-    if not path.exists():
+    res = load_web("resources.json", optional=True)
+    if res is None:
         return None
-    res = json.loads(path.read_text())
     mw_types = [t["id"] for t in res["types"] if t["unit"] == "MW"]
     mw: dict[str, dict] = {}
     sites: dict[str, dict] = {}

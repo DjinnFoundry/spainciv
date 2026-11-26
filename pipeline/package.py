@@ -1,7 +1,9 @@
-"""Build the deploy package: one file, usaciv.zip in the project root. It unzips to a usaciv/ folder holding the static
-site, ready to upload as /usaciv/. (dist/usaciv/ is the same folder unzipped, kept for local testing.)
+"""Build the deploy package: one file, <product>.zip in the project root (usaciv.zip, or spainciv.zip with --country es).
+It unzips to a <product>/ folder holding the static site, ready to upload as /<product>/. (dist/<product>/ is the same
+folder unzipped, kept for local testing.) The site is web/ with the active country's data as its data/ folder, its own
+site files (sites/<id>/og-image.png) over web/'s, and its index.html rendered by pipeline/site.py.
 
-The site gets a copy of the source code as usaciv-source.zip, linked from the in-app help, so anyone can download,
+The site gets a copy of the source code as <product>-source.zip, linked from the in-app help, so anyone can download,
 run and remix it. Both zips are deterministic (sorted entries, fixed timestamps), so rebuilding from unchanged files
 gives byte-identical archives.
 """
@@ -13,15 +15,15 @@ import zipfile
 from pathlib import Path
 
 from .core.paths import ROOT, WEB
+from .core.store import web_dir
+from .countries import active
+from .site import index_bytes, overlay_files
 
-NAME = "usaciv"
 DIST = ROOT / "dist"
-SITE = DIST / NAME
-SOURCE_ZIP = f"{NAME}-source.zip"
 
 # What goes into the source zip (relative to ROOT). Downloads, caches and build output are left out: anyone can
 # recreate them with `uv run python -m pipeline all`.
-SOURCE_ITEMS = ["README.md", "LICENSE", "pyproject.toml", "uv.lock", ".gitignore", "docs", "pipeline", "tests", "web"]
+SOURCE_ITEMS = ["README.md", "LICENSE", "NOTICE", "UPSTREAM.md", "CHANGELOG.md", "ROADMAP.md", "DECISIONS.md", "pyproject.toml", "uv.lock", ".gitignore", "docs", "pipeline", "tests", "web", "sites"]
 SKIP_NAMES = {"__pycache__", ".DS_Store"}
 SKIP_SUFFIXES = {".pyc", ".part"}
 # Dev-only pages (art gallery, trailer maker) ship in the source zip but not on the public site.
@@ -55,22 +57,31 @@ def _zip(path: Path, files, base: Path, prefix: str) -> int:
 
 
 def cmd_package() -> None:
-    missing = [p for p in ("data/cities.json", "data/world.json", "index.html") if not (WEB / p).exists()]
+    NAME = active().product
+    SITE = DIST / NAME
+    SOURCE_ZIP = f"{NAME}-source.zip"
+    data = web_dir()
+    missing = [p for p in (data / "cities.json", data / "world.json", WEB / "index.html") if not p.exists()]
     if missing:
-        raise SystemExit(f"web/ is incomplete ({', '.join(missing)} missing): run `uv run python -m pipeline all` first")
+        raise SystemExit(f"the site is incomplete ({', '.join(map(str, missing))} missing): run `uv run python -m pipeline all` first")
     if SITE.exists():
         shutil.rmtree(SITE)
     SITE.mkdir(parents=True)
 
-    # 1. The site: web/ without the dev pages.
-    n_site = 0
-    for f in _files(WEB, ["."]):
-        rel = f.relative_to(WEB)
-        if rel.parts[0] in SITE_SKIP_DIRS:
-            continue
+    # 1. The site: web/ without the dev pages, with the country's data as data/ and its own files over web/'s.
+    site_files = {f.relative_to(WEB): f for f in _files(WEB, ["."]) if f.relative_to(WEB).parts[0] not in SITE_SKIP_DIRS | {"data"}}
+    site_files |= {Path("data") / f.relative_to(data): f for f in _files(data, ["."])}
+    site_files |= {rel: f for f, rel in overlay_files()}
+    for rel, f in site_files.items():
         dst = SITE / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(f, dst)
+    (SITE / "index.html").write_bytes(index_bytes())
+    n_site = len(site_files)
+
+    # The site ships the code itself, so the MIT notice (and NOTICE's credit) goes with it, not only in the source zip.
+    for name in ("LICENSE", "NOTICE"):
+        shutil.copy2(ROOT / name, SITE / name)
         n_site += 1
 
     # 2. The source code, served next to the site.

@@ -20,14 +20,15 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from ..core.geo import MapProjection, Shape, ShapeIndex
+from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..countries import active
 
 REQUIRES = ["_world", "mirta", "dmdc_personnel", "oldcc_spending", "acs_5yr", "census_boundaries",
             "cbsa_delineation", "cities.json"]
 PRODUCES = ["military.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 COMPONENTS = [
     {"id": "army", "name": "Army", "codes": ["usa"]},
@@ -163,7 +164,7 @@ class Locator:
 
     def __init__(self, world: dict):
         self.world = world
-        self.proj = MapProjection(**world["projection"])
+        self.proj = active().world_projection(world)
         self.grid = HexGrid(**world["grid"])
         self.owner = world["owner"]
         bounds = load_interim("census_boundaries")
@@ -180,7 +181,7 @@ class Locator:
                 shapes.append(Shape([[self.proj(lon, lat) for lon, lat in ring] for ring in c["rings"]]))
         self.county_index = ShapeIndex(shapes, 100.0)
         self.counties_by_name = bounds["counties"]
-        cities = json.loads((WEB_DATA / "cities.json").read_text())
+        cities = load_web("cities.json")
         self.cities = {c["id"]: c for c in cities}
         self.cbsa_of = {g: code for code, geoids in load_interim("cbsa_delineation")["counties"].items()
                         if code in self.cities for g in geoids}

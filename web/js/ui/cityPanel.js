@@ -1,6 +1,7 @@
 import { css } from "../color.js";
 import { esc } from "../format.js";
 import { isCapital } from "../world.js";
+import { country } from "../app/country.js";
 import { yieldGrid, amenities, industries, gdpRow, popLine, growthSpan, showPanel, hidePanel } from "./infoPanel.js";
 
 /**
@@ -34,8 +35,10 @@ export function openCityPanel(city, ctx) {
       { title: "Amenities &amp; Housing", html: amenities(city, n) + gdpRow(city) },
       { title: "Districts · where people work", html: industries(city, nation) },
     ],
-    foot: `Source: ${esc(nation.vintage)} (tables C24030, B19025, B19013, B25064, B25077, B23025)${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}.
-      Green ×N = this industry's share of jobs is N× the U.S. share.`,
+    foot: country().id === "us"
+      ? `Source: ${esc(nation.vintage)} (tables C24030, B19025, B19013, B25064, B25077, B23025)${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}.
+      Green ×N = this industry's share of jobs is N× the U.S. share.`
+      : `Source: ${esc(nation.vintage)}${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}. Fields without a source for this country show –.`,
     onClose: ctx.onClose,
     onPedia: ctx.onPedia,
     wire(panel) {

@@ -1,13 +1,12 @@
 // Share popover: copy a link to the current view, or download a 1600×900 PNG of it with a caption strip.
 import { drawIcon, hasIcon } from "../icons.js";
 import { icon } from "../ui/icon.js";
+import { country } from "./country.js";
 
-// The address printed on shared images. Set it to the published site (e.g. "example.com/us-atlas"); when left
-// empty, the page's own host and path are used, except on a local dev server, where SITE_FALLBACK is printed.
-export const SITE_URL = "karpathy.ai/usaciv";
-const SITE_FALLBACK = "usaciv";
-
+// The address printed on shared images: the country's site_url (see app/country.js); when
+// empty, the page's own host and path are used, except on a local dev server, where the product name is printed.
 export function siteLabel() {
+  const SITE_URL = country().site_url, SITE_FALLBACK = country().product;
   if (SITE_URL) return SITE_URL;
   try {
     const { hostname, host, pathname } = location;
@@ -25,7 +24,6 @@ export const IMG_H = 900;
 export const CAPTION_H = 118;
 const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
 const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
-const CREDIT = "Data: Census ACS, BEA, NOAA, USGS/MRLC, EIA, Natural Earth";
 
 async function copyText(text) {
   try {
@@ -80,6 +78,21 @@ export function composeImage(info, { height = IMG_H } = {}) {
   }
   if (ok) ctx.drawImage(map, 0, 0);
 
+  // Licence notices the map must carry (e.g. the attribution of CC BY boundaries), bottom-right of the map.
+  const notice = (country().notices || []).join(" · ");
+  if (notice) {
+    ctx.font = `13px ${SANS}`;
+    const w = ctx.measureText(notice).width + 16;
+    ctx.fillStyle = "rgba(13,20,30,.72)";
+    ctx.fillRect(IMG_W - w, mapH - 22, w, 22);
+    ctx.fillStyle = "#d8cba8";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(notice, IMG_W - 8, mapH - 11);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+
   // --- caption strip ---
   const y0 = mapH;
   const g = ctx.createLinearGradient(0, y0, 0, imgH);
@@ -115,7 +128,7 @@ export function composeImage(info, { height = IMG_H } = {}) {
   ctx.fillStyle = "#ecd08e";
   ctx.font = `bold 36px ${SERIF}`;
   spaced(ctx, 5);
-  ctx.fillText("UNITED STATES", 112, cy + 2);
+  ctx.fillText(country().name.toUpperCase(), 112, cy + 2);
   spaced(ctx, 0);
   ctx.fillStyle = "#b9ab88";
   ctx.font = `italic 17px ${SERIF}`;
@@ -169,7 +182,7 @@ export function composeImage(info, { height = IMG_H } = {}) {
   }
   ctx.font = `14px ${SANS}`;
   ctx.fillStyle = "#b9ab88";
-  ctx.fillText(CREDIT, rx, cy + 20);
+  ctx.fillText(country().data_credit, rx, cy + 20);
   ctx.font = `bold 17px ${SERIF}`;
   ctx.fillStyle = "#c9a45c";
   spaced(ctx, 1);

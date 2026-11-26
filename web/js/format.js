@@ -1,3 +1,5 @@
+import { country } from "./app/country.js";
+
 export function compact(n) {
   if (n == null || Number.isNaN(n)) return "–";
   const a = Math.abs(n);
@@ -8,13 +10,18 @@ export function compact(n) {
   return String(Math.round(n));
 }
 
-export const money = (n) => (n == null ? "–" : "$" + compact(n));
-export const dollars = (n) => (n == null ? "–" : "$" + Math.round(n).toLocaleString("en-US"));
+const SYMBOL = { USD: "$", EUR: "€" };
+/** The country's currency symbol (world.json country.currency). */
+export const currency = () => SYMBOL[country().currency] ?? country().currency + " ";
+/** True for a money unit or format: "usd" (the original data) or "eur". */
+export const isMoney = (unit) => unit === "usd" || unit === "eur";
+export const money = (n) => (n == null ? "–" : currency() + compact(n));
+export const dollars = (n) => (n == null ? "–" : currency() + Math.round(n).toLocaleString("en-US"));
 export const int = (n) => (n == null ? "–" : Math.round(n).toLocaleString("en-US"));
 export const pct = (x, d = 1) => (x == null ? "–" : (x * 100).toFixed(d) + "%");
 
 export function yieldValue(y, v) {
-  return y.unit === "usd" ? money(v) : compact(v);
+  return isMoney(y.unit) ? money(v) : compact(v);
 }
 
 export function popShort(n) {

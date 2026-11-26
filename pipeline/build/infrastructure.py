@@ -23,14 +23,15 @@ import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from ..core.geo import MapProjection, Shape, ShapeIndex
+from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
-from ..core.paths import WEB_DATA
-from ..core.store import load_interim, load_interim_payload, write_web
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..countries import active
 
 REQUIRES = ["_world", "natural_earth_roads", "natural_earth", "usace_ports", "faa_airports", "census_boundaries",
             "cbsa_delineation", "cities.json"]
 PRODUCES = ["infrastructure.json"]
+COUNTRIES = ("us",)  # reads US source schemas (Census, BEA, BLS…); see pipeline/countries
 
 SAMPLE_KM = 4.0
 MAJOR_MAX_SCALERANK = 6
@@ -174,17 +175,24 @@ def _route_key(name: str) -> tuple:
     return (len(digits) or 9, int(digits) if digits else 999, name)
 
 
-def build_roads(grid, proj, owner, ne):
+def us_road_class(f: dict) -> tuple[int, str | None] | None:
+    """(class, route name) of a US road: 0 Interstate, 1 major highway; None to leave it out."""
+    inter = f["level"] == "Interstate"
+    sr = f["scalerank"] if f["scalerank"] is not None else 99
+    major = sr <= MAJOR_MAX_SCALERANK or (f["expressway"] and f["type"] in MAJOR_TYPES)
+    if not (inter or major):
+        return None
+    return (0 if inter else 1), _route_name(f["level"], f["name"])
+
+
+def build_roads(grid, proj, owner, ne, classify=us_road_class):
     cls_of = defaultdict(lambda: 9)
     names = defaultdict(Counter)
     for f in ne["roads"]:
-        inter = f["level"] == "Interstate"
-        sr = f["scalerank"] if f["scalerank"] is not None else 99
-        major = sr <= MAJOR_MAX_SCALERANK or (f["expressway"] and f["type"] in MAJOR_TYPES)
-        if not (inter or major):
+        c = classify(f)
+        if c is None:
             continue
-        cls = 0 if inter else 1
-        name = _route_name(f["level"], f["name"])
+        cls, name = c
         for line in f["lines"]:
             pts = [proj(lon, lat) for lon, lat in line]
             for run in sample_cells(grid, pts):
@@ -236,7 +244,7 @@ class Locator:
         bounds = load_interim("census_boundaries")["states"]
         abbr_of = {s["fips"]: s["abbr"] for s in bounds}
         self.abbrs = [abbr_of.get(f) for f in world["states"]]
-        city_ids = {c["id"] for c in json.loads((WEB_DATA / "cities.json").read_text())}
+        city_ids = {c["id"] for c in load_web("cities.json")}
         self.cbsa_of = {g: code for code, geoids in load_interim("cbsa_delineation")["counties"].items()
                         if code in city_ids for g in geoids}
 
@@ -307,7 +315,7 @@ def _int(v):
 
 def build() -> None:
     world = load_interim("_world")
-    grid, proj, owner = HexGrid(**world["grid"]), MapProjection(**world["projection"]), world["owner"]
+    grid, proj, owner = HexGrid(**world["grid"]), active().world_projection(world), world["owner"]
     ne = load_interim("natural_earth_roads")
     foreign = load_interim("natural_earth")["countries"]
     foreign_idx = ShapeIndex([Shape([[proj(lon, lat) for lon, lat in r] for r in c["rings"]]) for c in foreign],
