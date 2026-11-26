@@ -45,6 +45,7 @@ from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
+from . import spain_daily
 from .spain_wonders import place_key
 from .states import label_anchor, land_shares
 from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LABELS, num, vintage
@@ -53,7 +54,7 @@ from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
-            "gastronomia_es"]
+            "gastronomia_es"] + spain_daily.SOURCES
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -715,6 +716,7 @@ def build() -> None:
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
         beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + [
         {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
+    lenses += spain_daily.lenses(world, weights, proj, grid)
     set_domains(lenses, DOMAIN_NOTE)
     groups = [g for g in localized(GROUPS, {k: {"name": v} for k, v in LENS_GROUPS.items()}) + ES_GROUPS
               if any(l["group"] == g["id"] for l in lenses)]

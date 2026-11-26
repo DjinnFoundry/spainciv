@@ -9,6 +9,10 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Huecos conocidos
 
+- Lentes diarias (E33–E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
+  los demás llevan el resto de su provincia (o la provincia, en la esperanza de vida). Incendios: faltan los
+  menores de unas 30 ha que no ve el EFFIS, y no hay lente de inundaciones (sin conjunto oficial abierto por municipio).
+  La banda ancha es cobertura, no contratación.
 - Minas: la lista por mina más reciente del IGME es la de 2019; La Parrilla (wolframio, desde 2020) y Alquife (hierro,
   2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
