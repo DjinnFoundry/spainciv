@@ -312,14 +312,17 @@ SOURCES = {
         "used_for": ["Mapa: tierra y agua", "Límites provinciales", "Municipio de cada hexágono", "Posición de las ciudades"],
     },
     "wikidata_es": {
-        "title": "Wikidata: Patrimonio Mundial, catedrales, museos y Bienes de Interés Cultural de España",
+        "title": "Wikidata: Patrimonio Mundial, catedrales, museos, Bienes de Interés Cultural, castillos y plazas de toros "
+        "de España",
         "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
         "license": "CC0 1.0 (cesión al dominio público)",
         "description": "Los elementos de España declarados Patrimonio Mundial (agrupados por su número de sitio de la "
-        "UNESCO), las catedrales y concatedrales, los museos y los Bienes de Interés Cultural, con sus coordenadas, del servicio "
-        "SPARQL de Wikidata. Lo editan voluntarios: la cobertura se acerca a los registros oficiales, pero no es exacta.",
+        "UNESCO), las catedrales y concatedrales, los museos, los Bienes de Interés Cultural, los castillos (con sus "
+        "subclases: casas torre, alcazabas, alcázares, ruinas) y las plazas de toros, sin los derribados, con sus "
+        "coordenadas, del servicio SPARQL de Wikidata. Lo editan voluntarios: la cobertura se acerca a los registros "
+        "oficiales, pero no es exacta.",
         "used_for": ["Maravillas de Patrimonio Mundial y catedrales", "Lente de patrimonio (Bienes de Interés Cultural)",
-                     "Lente de museos"],
+                     "Lente de museos", "Lentes de castillos y de plazas de toros"],
     },
     "aena_airports": {
         "title": "Pasajeros, operaciones y mercancías por aeropuerto de la red de AENA (2025, definitivos)",
@@ -479,6 +482,37 @@ SOURCES = {
         "que cubre su perímetro. La estadística oficial española (EGIF, del Ministerio para la Transición Ecológica) "
         "cuenta todos los incendios, también los pequeños, pero no tiene descarga por municipio.",
         "used_for": ["Lente de incendios"],
+    },
+    "fiestas_interes_turistico": {
+        "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
+        "publisher": "Ministerio de Industria y Turismo, Secretaría de Estado de Turismo",
+        "license": _REUSE,
+        "description": "Las dos listas oficiales de fiestas declaradas de Interés Turístico Internacional y Nacional "
+        "(Orden ICT/851/2019), por comunidad autónoma y con el año de cada declaración, tal como las publica "
+        "turismo.gob.es. Cada fiesta se sitúa en los municipios que nombra su título (una ruta o un valle, en los suyos) "
+        "con una tabla del repositorio (pipeline/sources/es/data/fiestas_interes_turistico.csv). Una fiesta que está en "
+        "las dos listas cuenta una vez, como Internacional.",
+        "used_for": ["Lente de fiestas de interés turístico", "Índice de fiesta"],
+    },
+    "ine_viviendas_turisticas": {
+        "title": "Viviendas turísticas, plazas y plazas por vivienda turística por municipio (INE, estadística "
+        "experimental, tabla 39363)",
+        "publisher": "Instituto Nacional de Estadística (INE)",
+        "license": _INE_LICENCE,
+        "description": "Viviendas que se anuncian como alquiler turístico en las grandes plataformas en línea, casadas "
+        "con el Catastro, y sus plazas, por municipio, de la estadística experimental del INE sobre viviendas "
+        "turísticas. Se usa el último periodo publicado; las de los municipios suman el total nacional.",
+        "used_for": ["Lente de viviendas turísticas", "Índice de fiesta"],
+    },
+    "osm_bares": {
+        "title": "Bares y pubs de España (OpenStreetMap, amenity=bar y amenity=pub)",
+        "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
+        "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
+        "description": "Todos los nodos, vías y relaciones de OpenStreetMap en España con amenity=bar o amenity=pub, en "
+        "su posición (el centro de una vía), de una sola consulta guardada. Las cafeterías y los restaurantes no "
+        "cuentan. Lo mapean voluntarios: las ciudades y las costas turísticas están mucho mejor cubiertas que los "
+        "pueblos.",
+        "used_for": ["Lente de bares por 1.000 habitantes", "Índice de fiesta"],
     },
 }
 

@@ -34,7 +34,10 @@ lists the public data behind the map.
   Ceramics city, Vigo and Valladolid are Motor cities.
 - **Lenses**: population density, income, poverty and mean age (INE household income atlas), born abroad and higher
   education (INE Annual Population Census), homeowners (2021 Census), land cover, broadband coverage, commuting, life
-  expectancy, religious weddings (Spain has no religion census) and burnt area (EFFIS).
+  expectancy, religious weddings (Spain has no religion census) and burnt area (EFFIS); heritage, museums, castles
+  and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
+  Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
+  party index.
 - **Wonders**: the 16 National Parks.
 
 The interface is in Spanish (`web/js/i18n/`; the US map keeps its English). What is still missing, and why, is in

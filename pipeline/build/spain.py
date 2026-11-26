@@ -47,6 +47,8 @@ from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
 from . import spain_daily
 from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
+from .spain_fiesta import FIESTA_REQUIRES, fiesta_lenses
+from .spain_named import named_counts, shore_cell
 from .spain_wonders import place_key
 from .states import label_anchor, land_shares
 from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LABELS, num, vintage
@@ -55,7 +57,7 @@ from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
-            "gastronomia_es"] + spain_daily.SOURCES + PEOPLE_REQUIRES
+            "gastronomia_es"] + spain_daily.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -317,7 +319,7 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
     }
 
 
-ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}, {"id": "food", "name": "Comida y bebida"}]
+ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}, {"id": "food", "name": "Comida, bebida y fiestas"}]
 
 
 def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -335,23 +337,6 @@ def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
         "conjuntos históricos) de cada hexágono, según los sitúa Wikidata.",
         "values": values,
     }
-
-
-def named_counts(names: list[str], cells_of: list[list[int]], owner: list[int]) -> dict:
-    """A count lens that also names what it counts: `values` (how many per land hex), `names`, and per hex the indices
-    of the names in it (`labels`), which the tooltip lists."""
-    labels: list[list[int] | None] = [[] if o >= 0 else None for o in owner]
-    for k, cells in enumerate(cells_of):
-        for c in cells:
-            if c >= 0 and labels[c] is not None:
-                labels[c].append(k)
-    return {"values": [len(v) if v is not None else None for v in labels], "names": names, "labels": labels}
-
-
-def shore_cell(grid: HexGrid, owner: list[int], x: float, y: float) -> int:
-    """The land hex at x/y, or the nearest one next to it (a harbour museum sits in a sea hex); -1 if none."""
-    cell = grid.cell_at(x, y)
-    return -1 if cell < 0 else cell if owner[cell] >= 0 else nearest_land(grid, owner, cell, x, y, -1, max_rings=1)
 
 
 def museums_lens(museums: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -715,7 +700,8 @@ def build() -> None:
         dishes_lens(load_interim("gastronomia_es")["dishes"], world),
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
-        beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + [
+        beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj),
+        *fiesta_lenses(world, proj, grid, lau["municipalities"], pops, weights, year)] + [
         {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
     lenses += spain_daily.lenses(world, weights, proj, grid)
     set_domains(lenses, DOMAIN_NOTE)
