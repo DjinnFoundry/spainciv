@@ -1254,18 +1254,28 @@ class SpainFiestasTest(unittest.TestCase):
 
 class SpainFiestaLensesTest(unittest.TestCase):
     def test_per_inhabitant_is_the_hex_share_of_counts_over_its_residents(self):
-        from pipeline.build.spain_fiesta import per_inhabitant
+        from pipeline.build.spain_fiesta import hex_totals, per_inhabitant
 
         # Hex 0 holds all of A (1,000 people, 10 bars) and half of B (2,000 of 4,000 people, 4 bars): 12 / 3,000.
         weights = [[(0, 1000), (1, 2000)], [(1, 2000)], [], [(2, 50)]]
-        values = per_inhabitant({"A": 10, "B": 4, "C": None}, ["A", "B", "C"], [1000, 4000, 50], weights)
-        self.assertEqual(values, [4.0, 1.0, None, None])
+        totals = hex_totals({"A": 10, "B": 4, "C": None}, ["A", "B", "C"], [1000, 4000, 50], weights)
+        self.assertEqual(totals, [(12.0, 3000), (2.0, 2000), None, None])
+        self.assertEqual(per_inhabitant(totals), [4.0, 1.0, None, None])
 
-    def test_percentiles_and_party_index(self):
-        from pipeline.build.spain_fiesta import party_index, percentiles
+    def test_times_spain_draws_small_hexes_towards_spain(self):
+        from pipeline.build.spain_fiesta import times_spain
 
-        self.assertEqual(percentiles([0, 0, 2, None, 5]), [0, 0, 2 / 3, None, 1])
-        self.assertEqual(party_index([[0, 1, 2], [2, 1, 0], [0, 0, None]]), [33, 33, None])
+        # Spain: 40 bars for 20,000 people (2 per 1,000). A hamlet of 50 with 1 bar reads 20 per 1,000 raw, but
+        # (1 + 1,000 × 0.002) / 1,050 = 1.43× Spain's with a prior of 1,000; a town of 19,950 with 39 barely moves.
+        hamlet, town = times_spain([(1, 50), (39, 19950), None], 1000)[:2]
+        self.assertAlmostEqual(hamlet, 3 / 1050 / 0.002)
+        self.assertAlmostEqual(town, 41 / 20950 / 0.002)
+        self.assertIsNone(times_spain([(1, 50), None], 1000)[1])
+
+    def test_party_index_is_the_geometric_mean(self):
+        from pipeline.build.spain_fiesta import party_index
+
+        self.assertEqual(party_index([[2, 1, 1], [4, 1, None], [1, 1, 3]]), [2.0, 1.0, None])
 
     def test_a_fiesta_counts_once_per_hex(self):
         from pipeline.build.spain_fiesta import fiesta_cells, fiestas_lens

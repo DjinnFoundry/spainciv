@@ -8,14 +8,15 @@ index, castles and bullrings.
   pipeline/sources/es/data/fiestas_interes_turistico.csv), named in the tooltip.
 * **Bars** (OpenStreetMap amenity=bar and pub) are counted in the municipality whose SIANE outline holds them; one
   outside every outline (the 1:3M coast is simplified) goes to the municipality with the nearest capital.
-* **Party index** (`PARTY_PARTS`): for each component, a hex's percentile = the share of land hexes with a value that
-  have a strictly lower one (0 = the lowest, so the many hexes without a fiesta score 0 on it); the index is the mean
-  of the three percentiles × 100. It is this map's own index, not an official statistic.
+* **Party index**: how many times Spain's usual a hex is, as the geometric mean of three factors: its bars and its
+  tourist dwellings per inhabitant, each ÷ Spain's rate, and 1 + its fiesta points (Internacional 2, Nacional 1). The
+  two rates are first drawn towards Spain's as if the hex had `PARTY_PRIOR` more residents at that rate, so a hamlet
+  with one bar does not outshine Benidorm. 1 is Spain's usual; the lens leaves everything up to it dark. It is this
+  map's own index, not an official statistic.
 """
 
 from __future__ import annotations
 
-import bisect
 import math
 
 from ..core.geo import Shape, ShapeIndex
@@ -29,6 +30,7 @@ FIESTA_REQUIRES = ["fiestas_interes_turistico", "ine_viviendas_turisticas", "osm
 PER = 1000  # per 1,000 inhabitants
 CATEGORY = {"internacional": "Internacional", "nacional": "Nacional"}
 FIESTA_WEIGHT = {"internacional": 2, "nacional": 1}  # in the party index
+PARTY_PRIOR = 1000  # residents: the weight of Spain's rate in a hex's bars and tourist dwellings for the party index
 
 
 def municipality_cells(grid: HexGrid, owner: list[int], proj, municipalities: list[dict]) -> dict[str, int]:
@@ -59,29 +61,33 @@ def locate(points: list[list[float]], municipalities: list[dict], proj) -> tuple
     return codes, outside
 
 
-def per_inhabitant(counts: dict[str, float | None], geoids: list[str], pops: list, weights: list) -> list:
-    """Per 1,000 inhabitants on each hex: the population-weighted mean of its municipalities' rates (null where none
-    of them has both a count and residents)."""
-    rate = [counts.get(g) * PER / p if counts.get(g) is not None and p else None for g, p in zip(geoids, pops)]
-    values = []
+def hex_totals(counts: dict[str, float | None], geoids: list[str], pops: list, weights: list) -> list:
+    """(count, residents) on each hex: its share of each municipality's count, by the residents it holds of it; null
+    where none of its municipalities has both a count and residents."""
+    share = [counts.get(g) / p if counts.get(g) is not None and p else None for g, p in zip(geoids, pops)]
+    out = []
     for parts in weights:
-        vals = [(rate[k], w) for k, w in parts if rate[k] is not None and w > 0]
-        wsum = sum(w for _, w in vals)
-        values.append(round(sum(v * w for v, w in vals) / wsum, 1) if wsum else None)
-    return values
+        held = [(share[k], w) for k, w in parts if share[k] is not None and w > 0]
+        out.append((sum(s * w for s, w in held), sum(w for _, w in held)) if held else None)
+    return out
 
 
-def percentiles(values: list) -> list:
-    """Each value's share of the non-null values strictly below it (0 for the lowest); null stays null."""
-    known = sorted(v for v in values if v is not None)
-    n = len(known)
-    return [None if v is None else bisect.bisect_left(known, v) / max(n - 1, 1) for v in values]
+def per_inhabitant(totals: list) -> list:
+    """Per 1,000 inhabitants on each hex (the population-weighted mean of its municipalities' rates)."""
+    return [None if t is None else round(t[0] * PER / t[1], 1) for t in totals]
 
 
-def party_index(parts: list[list]) -> list:
-    """Mean percentile of the parts × 100, per hex; null where any part is null."""
-    ranks = [percentiles(p) for p in parts]
-    return [None if any(r is None for r in rs) else round(100 * sum(rs) / len(rs)) for rs in zip(*ranks)]
+def times_spain(totals: list, prior: float) -> list:
+    """Each hex's rate ÷ Spain's, the hex's count and residents first topped up with `prior` residents at Spain's
+    rate: (count + prior × Spain) ÷ (residents + prior) ÷ Spain."""
+    known = [t for t in totals if t is not None]
+    spain = sum(c for c, _ in known) / sum(r for _, r in known)
+    return [None if t is None else (t[0] + prior * spain) / (t[1] + prior) / spain for t in totals]
+
+
+def party_index(factors: list[list]) -> list:
+    """The geometric mean of the factors, per hex, to two decimals; null where any factor is null."""
+    return [None if any(f is None for f in fs) else round(math.prod(fs) ** (1 / len(fs)), 2) for fs in zip(*factors)]
 
 
 def fiesta_cells(fiestas: list[dict], cell_of: dict[str, int]) -> list[list[int]]:
@@ -121,15 +127,15 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
     bars = load_interim("osm_bares")
     wikidata = load_interim("wikidata_es")
 
-    homes_rate = per_inhabitant({g: m.get("dwellings") for g, m in homes["municipalities"].items()}, geoids, pops,
-                                weights)
+    home_totals = hex_totals({g: m.get("dwellings") for g, m in homes["municipalities"].items()}, geoids, pops,
+                             weights)
     codes, outside = locate(bars["bars"], municipalities, proj)
     bar_count: dict[str, float] = {m["geoid"]: 0 for m in municipalities}
     for code in codes:
         bar_count[code] += 1
-    bars_rate = per_inhabitant(bar_count, geoids, pops, weights)
+    bar_totals = hex_totals(bar_count, geoids, pops, weights)
     cells = fiesta_cells(fiestas, municipality_cells(grid, owner, proj, municipalities))
-    points = [None if o < 0 else 0 for o in owner]
+    points = [None if o < 0 else 0 for o in owner]  # fiesta points per hex
     for f, fc in zip(fiestas, cells):
         for c in fc:
             points[c] += FIESTA_WEIGHT[f["category"]]
@@ -145,7 +151,7 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
          f"{num(homes['nation']['dwellings'])} que el INE encuentra anunciadas en las grandes plataformas y casa con el "
          f"Catastro (estadística experimental, {homes['period'][5:]}/{homes['period'][:4]}), entre los residentes del "
          f"Padrón ({padron_year}). En un hexágono, la media de sus municipios ponderada por población.",
-         "values": homes_rate},
+         "values": per_inhabitant(home_totals)},
         fiestas_lens(fiestas, cells, owner),
         {"id": "bars", "group": "food", "name": "Bares", "icon": "l-bars", "emoji": "🍺",
          "unit": "bares y pubs por 1.000 habitantes", "format": "float", "scale": "linear", "higher_is": "neutral",
@@ -155,17 +161,19 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
          "media de sus municipios ponderada por población. Lo mapean voluntarios y la cobertura es muy desigual: "
          "ciudades y costas turísticas están mucho mejor mapeadas que los pueblos, donde un cero puede ser un bar sin "
          "mapear.",
-         "values": bars_rate},
+         "values": per_inhabitant(bar_totals)},
         {"id": "party", "group": "food", "name": "Índice de fiesta", "icon": "l-party", "emoji": "💃",
-         "unit": "índice de este mapa (0–100)", "format": "int", "scale": "linear", "higher_is": "neutral",
-         "domain": [0, 100], "ramp": ["#1a1030", "#47206a", "#8a2c8c", "#d0477a", "#f6894f", "#ffd86b"],
+         "unit": "veces lo habitual en España", "format": "float", "scale": "log", "higher_is": "neutral",
+         "domain": [1, 4], "ramp": ["#1a1030", "#47206a", "#8a2c8c", "#d0477a", "#f6894f", "#ffd86b"],
          "source": "fiestas_interes_turistico",
-         "description": "Índice propio de este mapa, no una estadística oficial: la media de tres percentiles del "
-         "hexágono × 100. Para cada parte, el percentil es la proporción de hexágonos con dato que tienen un valor "
-         "estrictamente menor (0 el más bajo): fiestas de interés turístico (Internacional = 2 puntos, Nacional = 1), "
-         "bares por 1.000 habitantes y viviendas turísticas por 1.000 habitantes. Índice = 100 × (P_fiestas + P_bares + "
-         "P_viviendas) ÷ 3. Sin fiesta declarada, esa parte vale 0.",
-         "values": party_index([points, bars_rate, homes_rate])},
+         "description": "Índice propio de este mapa, no una estadística oficial: cuántas veces lo habitual en España "
+         "tiene un hexágono de bares, de viviendas turísticas y de fiestas de interés turístico, como media geométrica "
+         "de tres factores. Bares y viviendas turísticas: su número por habitante ÷ el de España, contando cada "
+         f"hexágono con {num(PARTY_PRIOR)} residentes más a la tasa de España, para que una aldea con un bar no pase "
+         "por Benidorm. Fiestas: 1 + sus puntos (Internacional 2, Nacional 1). 1 es lo habitual; todo lo que no llega "
+         "queda oscuro.",
+         "values": party_index([times_spain(bar_totals, PARTY_PRIOR), times_spain(home_totals, PARTY_PRIOR),
+                                [None if p is None else 1 + p for p in points]])},
         points_lens(wikidata["castles"], proj, grid, owner, id="castles", group="heritage", name="Castillos",
                     icon="l-castles", emoji="🏰", unit="castillos", scale="log",
                     ramp=["#1b1a17", "#3d3a31", "#6b6250", "#a08f6c", "#d2c08f", "#f7efd0"],
