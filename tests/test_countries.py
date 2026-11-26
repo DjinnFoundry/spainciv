@@ -592,3 +592,12 @@ class SpainFoodTest(unittest.TestCase):
         self.assertEqual(lens["values"][5], 2)
         self.assertEqual([lens["names"][k] for k in lens["labels"][5]], ["A (DOP)", "B (IGP)"])
         self.assertEqual(sum(lens["values"]), grid.size + 1)
+
+
+class SpainNamedLensTest(unittest.TestCase):
+    def test_named_counts(self):
+        from pipeline.build.spain import named_counts
+
+        lens = named_counts(["A", "B", "C"], [[0, 1], [1], [-1, 2]], [0, 0, -1])
+        self.assertEqual(lens["values"], [1, 2, None])
+        self.assertEqual(lens["labels"], [[0], [0, 1], None])
