@@ -13,7 +13,7 @@ const KIND = {
   university: { label: "Universities", color: "#4a86d6" },
   landmark: { label: "Landmarks", color: "#e0b54c" },
 };
-const RULE_TITLE = { national_park: "National parks", park_unit: "Other park units", research_university: "Research universities", landmark: "Landmarks" };
+const RULE_TITLE = { national_park: "National parks", park_unit: "Other park units", research_university: "Research universities", great_university: "Great universities", landmark: "Landmarks" };
 const DIS_COLOR = { hurricane: "#4f9ad6", flood: "#2fa4b8", fire: "#e8774a", severe_storm: "#9a7bc9", winter: "#c9dcef", other: "#9a9aa8" };
 
 export async function mount(ctx) {
@@ -37,7 +37,7 @@ export async function mount(ctx) {
   el.appendChild(tileEl);
   const drawTiles = (dis) => {
     tileEl.innerHTML = tiles([
-      { label: "Wonders", value: int(wonders.length), sub: (() => { const byRule = (...ids) => wonders.filter((w) => ids.includes(w.rule)).length; return `${byRule("national_park", "park_unit")} park units · ${byRule("research_university")} universities · ${byRule("landmark")} landmarks`; })() },
+      { label: "Wonders", value: int(wonders.length), sub: (() => { const byRule = (...ids) => wonders.filter((w) => ids.includes(w.rule)).length; return `${byRule("national_park", "park_unit")} park units · ${byRule("research_university", "great_university")} universities · ${byRule("landmark")} landmarks`; })() },
       { label: "Park visits", value: count3(won?.national?.park_visits), sub: `all NPS units, ${won?.national?.park_visits_year || ""}` },
       dis?.noaa?.national
         ? { label: "$1B+ disasters", value: int(dis.noaa.national.events), sub: `${dis.noaa.years?.join("–") || ""} · ${money(dis.noaa.national.cost_usd)}` }
@@ -88,7 +88,7 @@ export async function mount(ctx) {
         wHost.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">${esc(RULE_TITLE[rule.id] || rule.id)}</h4><p class="adv-note adv-rule">${esc(rule.text)}</p>`);
         const host = mk("div");
         wHost.appendChild(host);
-        const val = (w) => (w.kind === "university" ? w.metrics?.rd_usd : w.kind === "natural" ? w.metrics?.visits : null);
+        const val = (w) => (w.kind === "university" ? w.metrics?.rd_usd ?? w.metrics?.students : w.kind === "natural" ? w.metrics?.visits : null);
         wonderBars.push(barList(host, {
           rank: !rule.curated, compact: true, ariaLabel: RULE_TITLE[rule.id] || rule.id,
           rows: list.map((w) => ({ key: w.key, label: w.short || w.name, full: w.name, sub: w.state, value: val(w), text: metricText(w), color: KIND[w.kind]?.color })),
@@ -342,7 +342,7 @@ export async function mount(ctx) {
 
 function metricText(w) {
   const m = w.metrics || {};
-  if (w.kind === "university") return fin(m.rd_usd) ? `${money(m.rd_usd)} R&D` : "–";
+  if (w.kind === "university") return fin(m.rd_usd) ? `${money(m.rd_usd)} R&D` : fin(m.students) ? `${count3(m.students)} students` : "–";
   if (w.kind === "natural") return fin(m.visits) ? `${count3(m.visits)} visits` : "–";
   if (fin(m.visits)) return `${count3(m.visits)} visits`;
   return fin(m.designated) ? `landmark since ${m.designated}` : "landmark";

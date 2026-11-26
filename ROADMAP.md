@@ -9,8 +9,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Después
 
-2. Universidades e I+D (SIIU del Ministerio de Universidades; estadística de I+D del INE): maravillas del tipo
-   universidad y el rendimiento Science.
+2. I+D por comunidad (estadística de I+D del INE) para el rendimiento Science.
 4. Centrales (REE / registro del MITECO) y minas (IGME): recursos.
 6. **i18n en/es**: pasada completa de la interfaz (unas 550 líneas en inglés en el JS), en un subagente en paralelo.
 

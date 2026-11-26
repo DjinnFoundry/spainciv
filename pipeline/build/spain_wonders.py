@@ -5,6 +5,9 @@
   first one with coordinates); natural sites (only criteria vii–x) are natural wonders.
 * **National Parks** (rule `national_park`): all 16 (OAPN boundaries), ranked by 2025 visitors; a park covers the hexes
   whose centre is inside it. A park that is also a World Heritage site stays a park and is not repeated.
+* **Great universities** (rule `great_university`): the 20 on-site universities with the most students (SIIU), at the
+  municipality where most of their students study. Spain publishes no R&D spending per university, so they are not
+  ranked by research as in the US.
 * **Cathedrals** (rule `cathedral`): every cathedral and co-cathedral Wikidata records in Spain, alphabetically, except
   those already inside a World Heritage site (Burgos, Sevilla, Santiago…).
 
@@ -25,7 +28,7 @@ from ..countries import active
 from ..sources.es.oapn import short_name
 from .cities import nearest_land
 
-REQUIRES = ["_world", "oapn_parques", "wikidata_es", "cities.json", "world.json"]
+REQUIRES = ["_world", "oapn_parques", "wikidata_es", "siiu_universidades", "siane", "cities.json", "world.json"]
 PRODUCES = ["wonders.json"]
 COUNTRIES = ("es",)
 
@@ -36,6 +39,9 @@ RULES = [
     {"id": "national_park", "kind": "natural", "kinds": ["natural", "coastal"], "year": None,
      "text": "Every one of Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by their 2025 visitors "
              "(OAPN's yearly report): the Teide first, with over 5 million."},
+    {"id": "great_university", "kind": "university", "kinds": ["university"], "year": None,
+     "text": "The 20 universities teaching on site with the most degree, master's and doctoral students in 2024-25 "
+             "(SIIU, Ministerio de Ciencia, Innovación y Universidades), at the municipality where most of them study."},
     {"id": "cathedral", "kind": "landmark", "kinds": ["landmark"], "year": None,
      "text": "Every cathedral and co-cathedral in Spain that Wikidata records, alphabetically, except those that are part "
              "of a World Heritage site (already a wonder)."},
@@ -53,6 +59,50 @@ MOTIFS = [
 def slug(name: str) -> str:
     t = unicodedata.normalize("NFD", short_name(name).lower())
     return re.sub(r"[^a-z0-9]+", "-", "".join(ch for ch in t if unicodedata.category(ch) != "Mn")).strip("-")
+
+
+UNIVERSITIES = 20
+# SIIU names drop "Universidad (de)": a name starting with one of these words takes "Universidad" alone
+# ("Universidad Complutense de Madrid"), "País Vasco" takes "del", any other is a place and takes "de".
+NAME_FIRST_WORDS = {"Autónoma", "Politécnica", "Politècnica", "Complutense", "Carlos", "Rey", "Europea", "Pontificia",
+                    "Nacional", "Internacional", "Oberta", "Jaume", "Pompeu", "Rovira", "Miguel", "Pablo", "Ramon",
+                    "Camilo", "Alfonso", "Francisco", "Antonio", "Cardenal", "Católica", "CEU", "Abat", "Loyola", "Mondragon"}
+
+
+def university_name(siiu: str) -> str:
+    first = siiu.split()[0]
+    if first in NAME_FIRST_WORDS:
+        return f"Universidad {siiu}"
+    return f"Universidad {'del' if first == 'País' else 'de'} {siiu}"
+
+
+
+def place_key(name: str) -> str:
+    """A municipality name as both SIIU and SIANE write it: 'HOSPITALET DE LLOBREGAT (L')' and
+    "Hospitalet de Llobregat, L'" both give "l hospitalet de llobregat"."""
+    t = unicodedata.normalize("NFD", name.lower().strip())
+    t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
+    t = re.sub(r"\s*\((.+?)\)$", r", \1", t)
+    if m := re.match(r"(.+?), (\S+)$", t):
+        t = f"{m.group(2)} {m.group(1)}"
+    return re.sub(r"[^a-z0-9]+", " ", t).strip()
+
+
+def municipality_finder(municipalities: list[dict]):
+    """name (any of its official forms) and province code → the SIANE municipality."""
+    index: dict[str, list[dict]] = {}
+    for m in municipalities:
+        for part in m["name"].split("/"):
+            index.setdefault(place_key(part), []).append(m)
+
+    def find(name: str, province: str) -> dict:
+        found = {m["geoid"]: m for part in name.split("/") for m in index.get(place_key(part), [])}
+        local = [m for m in found.values() if m["state_fips"] == province]
+        pick = local or list(found.values())
+        if len(pick) != 1:
+            raise RuntimeError(f"municipality {name!r} (province {province}): {len(pick)} matches")
+        return pick[0]
+    return find
 
 
 def motif(name: str, natural: bool) -> str:
@@ -142,6 +192,20 @@ def build() -> None:
             "motif": motif(site["name"], site["natural"]),
         })
 
+    uni_p = load_interim_payload("siiu_universidades")
+    find = municipality_finder(load_interim("siane")["municipalities"])
+    universities = []
+    for u in [u for u in uni_p["data"]["universities"] if u["on_site"]][:UNIVERSITIES]:
+        province, town = max(u["places"].items(), key=lambda kv: kv[1])[0].split("|", 1)
+        muni = find(town, province)
+        universities.append({
+            "id": f"univ-{u['code']}", "name": university_name(u["name"]), "short": u["name"], "kind": "university", "rule": "great_university",
+            "rank": len(universities) + 1,
+            "metrics": {"students": u["students"], "students_year": uni_p["data"]["year"], "rd_usd": None,
+                        "type": u["type"], "municipality": muni["name"]},
+            **placer.place(*muni["centre"]), "cells": None, "curated": False,
+        })
+
     cathedrals = []
     for c in sorted(wd["cathedrals"], key=lambda c: (c["label"] or c["qid"]).lower()):
         if c["world_heritage"] or not c["coord"] or not c["label"]:
@@ -152,17 +216,19 @@ def build() -> None:
             **placer.place(*c["coord"]), "cells": None, "curated": False, "motif": "spire",
         })
 
-    for w in heritage + parks + cathedrals:
+    for w in heritage + parks + universities + cathedrals:
         w["short"] = w["short"] or w["name"]
-    wonders = heritage + parks + cathedrals  # rule order, as in RULES
+    wonders = heritage + parks + universities + cathedrals  # rule order, as in RULES
     write_web("wonders.json", {
         "version": 1,
-        "vintage": {"parks": parks_p["vintage"], "boundaries": parks_p["vintage"], "heritage": wd_p["vintage"]},
-        "sources": ["wikidata_es", "oapn_parques"],
+        "vintage": {"parks": parks_p["vintage"], "boundaries": parks_p["vintage"], "heritage": wd_p["vintage"],
+                    "universities": uni_p["vintage"]},
+        "sources": ["wikidata_es", "oapn_parques", "siiu_universidades"],
         "rules": RULES,
         "national": {"park_visits": sum(p["visitors"] for p in parks_p["data"]["parks"]), "park_visits_year": year,
                      "r1_universities": None,
                      "world_heritage_sites": len(heritage), "cathedrals": len(cathedrals)},
         "wonders": wonders,
     })
-    print(f"    {len(heritage)} World Heritage sites, {len(parks)} National Parks, {len(cathedrals)} cathedrals")
+    print(f"    {len(heritage)} World Heritage sites, {len(parks)} National Parks, {len(universities)} universities, "
+          f"{len(cathedrals)} cathedrals")

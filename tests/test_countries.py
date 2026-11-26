@@ -523,3 +523,27 @@ class SpainTransportTest(unittest.TestCase):
         self.assertEqual([hub_class(p, 1000) for p in (10, 9, 3, 1, 0)], ["L", "M", "M", "S", "N"])
         self.assertEqual(hub_class(5, 0), "N")
         self.assertEqual(words("ALICANTE-ELCHE MIGUEL HDEZ. Aeropuerto"), {"alicante", "elche", "miguel", "hdez"})
+
+
+class SpainUniversitiesTest(unittest.TestCase):
+    def test_names_and_place_keys(self):
+        from pipeline.build.spain_wonders import place_key, university_name
+
+        self.assertEqual(university_name("Complutense de Madrid"), "Universidad Complutense de Madrid")
+        self.assertEqual(university_name("Sevilla"), "Universidad de Sevilla")
+        self.assertEqual(university_name("País Vasco/Euskal Herriko Unibertsitatea"),
+                         "Universidad del País Vasco/Euskal Herriko Unibertsitatea")
+        self.assertEqual(place_key("HOSPITALET DE LLOBREGAT (L')"), place_key("Hospitalet de Llobregat, L'"))
+        self.assertEqual(place_key("VALÈNCIA"), "valencia")
+
+    def test_municipality_finder_prefers_province(self):
+        from pipeline.build.spain_wonders import municipality_finder
+
+        find = municipality_finder([{"geoid": "18087", "name": "Granada", "state_fips": "18"},
+                                    {"geoid": "99001", "name": "Granada", "state_fips": "99"},
+                                    {"geoid": "03122", "name": "Sant Vicent del Raspeig/San Vicente del Raspeig",
+                                     "state_fips": "03"}])
+        self.assertEqual(find("GRANADA", "18")["geoid"], "18087")
+        self.assertEqual(find("SAN VICENTE DEL RASPEIG/SANT VICENT DEL RASPEIG", "03")["geoid"], "03122")
+        with self.assertRaises(RuntimeError):
+            find("GRANADA", "50")

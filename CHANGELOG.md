@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Universidades: las 20 presenciales con más alumnos (SIIU, curso 2024-25) como maravillas, en el municipio donde
+  estudian más de sus alumnos. España no publica el gasto en I+D por universidad, así que se ordenan por alumnos.
 - Visitantes de 2025 de los 16 Parques Nacionales (informe del OAPN, solo en PDF, transcrito a
   `pipeline/sources/es/data/`); los parques se ordenan por visitas, como en EE UU: el Teide, primero, con 5,1 M.
 - Aeropuertos (los 48 de AENA, con su tráfico de 2025 y la categoría de hub de la FAA por cuota de pasajeros) y puertos
