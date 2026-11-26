@@ -1,5 +1,5 @@
 """The Unciv export: the hex geometry and file format (pipeline/build/unciv.py), Spain's map (pipeline/build/spain_unciv.py,
-sites/es/data/unciv.json)."""
+sites/es/data/unciv.json) and its mod, downloads and page (pipeline/play.py)."""
 
 import base64
 import gzip
@@ -9,7 +9,7 @@ import math
 import unittest
 import zipfile
 
-from pipeline import countries
+from pipeline import countries, play, site
 from pipeline.build import spain_unciv, unciv
 from pipeline.build.world import COAST, LAKE, LAND, OCEAN
 from pipeline.core.hexgrid import HexGrid
@@ -393,6 +393,48 @@ class DesignationsTest(unittest.TestCase):
             | set(spain_unciv.MINE_TYPES.values())
         self.assertEqual(used, set(spain_unciv.ORDER))
         self.assertTrue(used <= set(unciv.RESOURCES))
+        self.assertEqual(set(play.RESOURCE_ES), set(unciv.RESOURCES))
+        self.assertEqual(set(play.RESOURCE_SOURCE), set(unciv.RESOURCES))
+
+
+class ModAndPageTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.files = play.files(ES)
+        cls.doc = built()
+
+    def test_spain_has_the_page_and_downloads_and_the_us_none(self):
+        self.assertEqual(set(self.files), {play.PAGE, play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0]})
+        self.assertEqual(play.files(countries.COUNTRIES["us"]), {})
+        self.assertEqual(site.page_config(ES)["play"], play.PAGE)
+
+    def test_the_mod_zip_is_one_folder_unciv_can_install(self):
+        z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
+        names = z.namelist()
+        self.assertEqual({n.split("/")[0] for n in names}, {play.MOD_FOLDER})
+        inner = {n.split("/", 1)[1] for n in names}
+        map_name = self.doc["summary"]["map_name"]
+        self.assertEqual(inner, {"jsons/ModOptions.json", f"maps/{map_name}", "preview.png", "README.md", "LICENSE"})
+        options = json.loads(z.read(f"{play.MOD_FOLDER}/jsons/ModOptions.json"))
+        self.assertEqual((options["isBaseRuleset"], options["topics"]), (False, ["unciv-mod-maps"]))
+        self.assertEqual(unciv.decode(z.read(f"{play.MOD_FOLDER}/maps/{map_name}")), self.doc["map"])
+        self.assertTrue(z.read(f"{play.MOD_FOLDER}/preview.png").startswith(b"\x89PNG"))
+        self.assertEqual(self.files[play.MOD_ZIP](), self.files[play.MOD_ZIP]())  # deterministic
+
+    def test_the_bare_map_is_the_mod_map(self):
+        self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), self.doc["map"])
+
+    def test_the_page(self):
+        html = self.files[play.PAGE]().decode("utf-8")
+        s = self.doc["summary"]
+        self.assertIn('<html lang="es">', html)
+        for needle in (play.MOD_ZIP, play.MAP_FILE, play.SCREENSHOT[0], f"https://{ES.site_url}/{play.MOD_ZIP}",
+                       f'download="{s["map_name"]}"', play.MOD_REPO, "Descargar mod con Enlace"):
+            self.assertIn(needle, html)
+        for resource, n in s["resources"].items():
+            self.assertIn(f"<td>{play.RESOURCE_ES[resource]}</td><td class=n>{n}</td>", html)
+        for start in s["starts"][1:]:
+            self.assertIn(start["city"], html)
 
 
 if __name__ == "__main__":

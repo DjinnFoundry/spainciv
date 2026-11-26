@@ -139,6 +139,8 @@ export default {
   "core.help.esc": "Close help, search, Almanac, then the panel",
   "core.help.foot": "Every number traces back to public data: open the <b>Almanac</b> for sources.\n      The link in the address bar always reopens this exact view.\n      Source code: {zip} (MIT; run it with uv, see its README).",
   "core.help.basedOn": "\n      {product} is based on {usaciv} by Andrej Karpathy (MIT licence, see LICENSE).",
+  "core.help.play": "\n      This map can be played in Unciv, the open-source Civilization V: {link}.",
+  "core.help.playLink": "Play in Unciv",
   // Almanac (ui/pedia.js)
   "core.pedia.about": "About this map",
   "core.pedia.about.body": `<p>This is the real United States, drawn like a strategy game. Nothing is invented: every tile, city and
