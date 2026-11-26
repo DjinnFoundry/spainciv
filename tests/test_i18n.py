@@ -17,6 +17,8 @@ NODE = shutil.which("node")
 WEB_JS = ROOT / "web" / "js"
 # t("key"), t('key') or t(`key`) with a literal key: the keys the code asks for.
 KEY_USE = re.compile(r"""\bt\(\s*(["'`])([A-Za-z0-9_.@-]+)\1""")
+# usOr("key") in an advisor: "key.us" on the US map, "key" elsewhere (web/js/ext/advisors/views/energy.js).
+US_OR_USE = re.compile(r"""\busOr\(\s*(["'`])([A-Za-z0-9_.@-]+)\1""")
 
 
 def node(script: str) -> str:
@@ -27,13 +29,17 @@ def node(script: str) -> str:
 
 
 def used_keys() -> dict[str, str]:
-    """Every literal key passed to t() in web/js, with the first file that uses it."""
+    """Every literal key passed to t() in web/js (both strings of a usOr() key), with the first file that uses it."""
     keys: dict[str, str] = {}
     for f in sorted(WEB_JS.rglob("*.js")):
         if "i18n" in f.relative_to(WEB_JS).parts[0]:
             continue
-        for m in KEY_USE.finditer(f.read_text(encoding="utf-8")):
-            keys.setdefault(m.group(2), str(f.relative_to(ROOT)))
+        text, where = f.read_text(encoding="utf-8"), str(f.relative_to(ROOT))
+        for m in KEY_USE.finditer(text):
+            keys.setdefault(m.group(2), where)
+        for m in US_OR_USE.finditer(text):
+            keys.setdefault(m.group(2), where)
+            keys.setdefault(m.group(2) + ".us", where)
     return keys
 
 
