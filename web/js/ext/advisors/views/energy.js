@@ -6,7 +6,7 @@ import { createTable } from "../core/table.js";
 import { section, tiles, chips, sourcesHtml } from "../core/view.js";
 import { frameBox, focusPoint } from "../core/frame.js";
 import { glyph } from "../../../ui/icon.js";
-import { t } from "../../../i18n.js";
+import { t, usOr } from "../../../i18n.js";
 import { country } from "../../../app/country.js";
 
 const GROUPS = [
@@ -18,9 +18,6 @@ const GROUPS = [
 ];
 const groupLabel = (g) => t(`adv.energy.g.${g.id}`);
 const nSites = (n) => t("adv.energy.nSites", { n, count: int(n) });
-// The United States text (its agencies, thresholds and units) on the US map, the general text elsewhere.
-// tests/test_i18n.py checks that both strings exist for every usOr() key.
-const usOr = (key) => t(country().id === "us" ? `${key}.us` : key);
 
 export function mount(ctx) {
   const { app, data, el, link } = ctx;
