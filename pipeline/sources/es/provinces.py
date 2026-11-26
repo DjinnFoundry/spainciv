@@ -1,4 +1,5 @@
-"""Spain's 52 provinces (50 plus the autonomous cities of Ceuta and Melilla): INE code → (ISO 3166-2:ES code, name).
+"""Spain's 52 provinces (50 plus the autonomous cities of Ceuta and Melilla): INE code → (ISO 3166-2:ES code, name),
+and the autonomous communities they belong to.
 
 Reference data, not a download: the INE province codes are the first two digits of every municipality code, and
 the ISO 3166-2:ES subdivision codes are the short labels the map uses where a full name doesn't fit. Names are the
@@ -21,6 +22,20 @@ PROVINCES = {
     "51": ("CE", "Ceuta"), "52": ("ML", "Melilla"),
 }
 
+
+# Autonomous communities (17, plus the autonomous cities of Ceuta and Melilla): INE code → (name as INE writes it, its
+# provinces). Copied from the community and province columns of INE table 69962 (Annual Population Census).
+COMMUNITIES = {
+    "01": ("Andalucía", ["04", "11", "14", "18", "21", "23", "29", "41"]), "02": ("Aragón", ["22", "44", "50"]),
+    "03": ("Asturias, Principado de", ["33"]), "04": ("Balears, Illes", ["07"]), "05": ("Canarias", ["35", "38"]),
+    "06": ("Cantabria", ["39"]), "07": ("Castilla y León", ["05", "09", "24", "34", "37", "40", "42", "47", "49"]),
+    "08": ("Castilla - La Mancha", ["02", "13", "16", "19", "45"]), "09": ("Cataluña", ["08", "17", "25", "43"]),
+    "10": ("Comunitat Valenciana", ["03", "12", "46"]), "11": ("Extremadura", ["06", "10"]),
+    "12": ("Galicia", ["15", "27", "32", "36"]), "13": ("Madrid, Comunidad de", ["28"]), "14": ("Murcia, Región de", ["30"]),
+    "15": ("Navarra, Comunidad Foral de", ["31"]), "16": ("País Vasco", ["01", "20", "48"]), "17": ("Rioja, La", ["26"]),
+    "18": ("Ceuta", ["51"]), "19": ("Melilla", ["52"]),
+}
+COMMUNITY_OF = {prov: comm for comm, (_, provs) in COMMUNITIES.items() for prov in provs}
 
 def display_name(name: str) -> str:
     """INE's inverted article form → reading order: 'Coruña, A' → 'A Coruña', 'Balears, Illes' → 'Illes Balears'."""

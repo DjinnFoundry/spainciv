@@ -188,7 +188,19 @@ SOURCES = {
         "(como la ACS del mapa de EE. UU.), del Censo anual de población (Ocupación y actividad): España y las provincias "
         "(tabla 69962) y todos los municipios de 500 habitantes o más (tabla 69992). Las secciones se asignan a los "
         "sectores del mapa; «No consta» solo cuenta en el total.",
-        "used_for": ["Rendimientos de comida, producción, ciencia y cultura", "Empleo por sector", "Residentes ocupados"],
+        "used_for": ["Rendimientos de comida, producción y cultura", "Reparto de la ciencia (I+D) entre provincias y ciudades",
+                     "Empleo por sector", "Residentes ocupados"],
+    },
+    "ine_imasd": {
+        "title": "Estadística sobre actividades de I+D (todos los sectores): gasto en I+D interna y personal en I+D por "
+        "comunidad autónoma, tablas 82978 y 82944",
+        "license": _INE_LICENCE,
+        "description": "Gasto en I+D interna (euros) y personal en I+D en equivalencia a jornada completa (EJC), contados "
+        "donde se hace la I+D, de España, sus 17 comunidades autónomas, Ceuta y Melilla (tabla 82978; empresas, "
+        "administración pública, enseñanza superior e instituciones privadas sin fines de lucro, según el Manual de "
+        "Frascati). El año sale de la serie nacional de personal en EJC (tabla 82944). Los datos de Ceuta y Melilla están "
+        "protegidos por secreto estadístico y quedan vacíos.",
+        "used_for": ["Rendimiento de ciencia (personal en I+D) de las provincias, las ciudades y España"],
     },
     "ine_padron": {
         "title": "Cifras oficiales de población de los municipios (revisión del Padrón municipal), tabla 29005",
