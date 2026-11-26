@@ -12,7 +12,7 @@ const GROUPS = [
   { id: "thermal", label: "Power plants", types: ["nuclear", "coal_plant", "gas_plant", "oil_plant", "geothermal"] },
   { id: "water", label: "Hydro", types: ["hydro", "pumped_storage"] },
   { id: "renew", label: "Wind, solar & batteries", types: ["wind", "solar", "battery"] },
-  { id: "mines", label: "Mines", types: ["coal_mine", "gold", "copper", "iron", "silver", "platinum", "molybdenum", "lead_zinc", "rare_earths", "uranium"] },
+  { id: "mines", label: "Mines", types: ["coal_mine", "gold", "copper", "iron", "silver", "platinum", "molybdenum", "lead_zinc", "rare_earths", "uranium", "tungsten", "tin_tantalum", "potash", "fluorite", "celestine", "magnesite", "sodium_sulfate"] },
   { id: "plays", label: "Oil & gas plays", types: ["oil", "gas"] },
 ];
 
@@ -176,7 +176,7 @@ export function mount(ctx) {
     const src = data.source(ty.source);
     const total = fin(s.value) ? (ty.unit === "MW" ? mw(s.value) : `${count3(s.value)} ${ty.unit}`) : ty.unit === "km² play area" ? "areas not additive" : "";
     return `<div class="adv-explain" style="--cc:${esc(ty.color)}"><span class="ic">${glyph(ty, 22)}</span><div>
-      <b>${esc(ty.name)}</b> <span class="sub">${int(s.count || 0)} mapped${total ? ` · ${esc(total)}` : ""} · measured in ${esc(ty.unit)}</span>
+      <b>${esc(ty.name)}</b> <span class="sub">${int(s.count || 0)} mapped${total ? ` · ${esc(total)}` : ""}${ty.unit ? ` · measured in ${esc(ty.unit)}` : ""}</span>
       <p>${esc(ty.description)}</p><span class="src">Source: ${esc(src ? `${src.title} (${src.vintage || src.publisher})` : ty.source)}</span></div></div>`;
   }).join("")}`).join("");
 

@@ -480,9 +480,10 @@ def locate(items: list[dict], world: dict) -> None:
 
 
 def summarize(items: list[dict], types: list[dict]) -> dict:
-    """National and per-state {type: {count, value, unit}} over the mapped items."""
+    """National and per-state {type: {count, value, unit}} over the mapped items (value null for a type without a
+    unit, whose sites carry no value, and for the non-additive play areas)."""
     def blank(t):
-        return {"count": 0, "value": None if t["id"] in NOT_ADDITIVE else 0, "unit": t["unit"]}
+        return {"count": 0, "value": None if t["id"] in NOT_ADDITIVE or t["unit"] is None else 0, "unit": t["unit"]}
 
     by_id = {t["id"]: t for t in types}
     national = {t["id"]: blank(t) for t in types}
