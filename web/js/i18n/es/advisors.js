@@ -96,7 +96,6 @@ export default {
   "adv.cult.noWonders": "Este mapa no tiene maravillas (wonders.json).",
   "adv.cult.disKicker": "Declaraciones de la FEMA · desastres de la NOAA",
   "adv.cult.disLoading": "Leyendo los registros de desastres…",
-  "adv.cult.noDisasters": "Este mapa todavía no tiene datos de desastres (disasters.json).",
   "adv.cult.c.faith": "Fe: {note}",
   "adv.cult.c.faithDefault": "cuenta los fieles de las congregaciones donde celebran, no las creencias de los residentes.",
   "adv.cult.c.amen": "Bienestar: {note}",

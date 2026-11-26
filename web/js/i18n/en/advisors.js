@@ -96,7 +96,6 @@ export default {
   "adv.cult.noWonders": "wonders.json is not built.",
   "adv.cult.disKicker": "FEMA declarations · NOAA billion-dollar events",
   "adv.cult.disLoading": "Reading the disaster records…",
-  "adv.cult.noDisasters": "disasters.json is not built.",
   "adv.cult.c.faith": "Faith: {note}",
   "adv.cult.c.faithDefault": "counts adherents of congregations where they worship, not residents' beliefs.",
   "adv.cult.c.amen": "Amenities: {note}",
