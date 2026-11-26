@@ -764,7 +764,7 @@ class SpainFoodTest(unittest.TestCase):
 
 class SpainNamedLensTest(unittest.TestCase):
     def test_named_counts(self):
-        from pipeline.build.spain import named_counts
+        from pipeline.build.spain_named import named_counts
 
         lens = named_counts(["A", "B", "C"], [[0, 1], [1], [-1, 2]], [0, 0, -1])
         self.assertEqual(lens["values"], [1, 2, None])
@@ -909,3 +909,112 @@ class SpainDishesTest(unittest.TestCase):
         from pipeline.sources.es.dishes import slug
 
         self.assertEqual(slug("la provincia de Córdoba (España)"), "la_provincia_de_crdoba_espaa")
+
+
+class SpainFiestasTest(unittest.TestCase):
+    PAGE = ('<dl class="accordion"><dt id="dt1" class="close">Andalucía</dt><dd style="display: none;"><ul>'
+            "<li>Semana Santa de Baena, Córdoba (2026)</li><li>Romería del Rocío de Almonte (1980)</li></ul></dd>"
+            '<dt id="dt1" class="close">Comunitat Valenciana</dt><dd><ul><li>Callosa de Ensarriá, Alicante (1984)</li>'
+            "<li>Fiesta de Moros y Cristianos en honor de la Virgen de las Injurias de\n    </li></ul></dd></dl>")
+
+    def test_entries_and_years(self):
+        from pipeline.sources.es.fiestas import entries, split_year
+
+        found = entries(self.PAGE)
+        self.assertEqual(found[0], ("Andalucía", "Semana Santa de Baena, Córdoba (2026)"))
+        self.assertEqual(found[3], ("Comunitat Valenciana",
+                                    "Fiesta de Moros y Cristianos en honor de la Virgen de las Injurias de"))
+        self.assertEqual(split_year("Ruta del Tambor y el Bombo (2014, incluye las Semanas Santas de Calanda)"),
+                         ("Ruta del Tambor y el Bombo", 2014))
+        self.assertEqual(split_year("Fiesta de las Injurias de"), ("Fiesta de las Injurias de", None))
+
+    def test_each_fiesta_once_at_its_highest_category(self):
+        from pipeline.sources.es.fiestas import fiestas
+
+        listed = {"internacional": [("Andalucía", "Semana Santa de Baena, Córdoba (2026)")],
+                  "nacional": [("Andalucía", "Semana Santa de Baena (2001)"),
+                               ("Comunitat Valenciana", "Callosa de Ensarriá, Alicante (1984)"),
+                               ("Comunitat Valenciana", "Moros y Cristianos de las Injurias de")]}
+
+        def row(cat, name, munis="", same=""):
+            return {"category": cat, "name": name, "municipalities": munis, "same_as": same}
+
+        table = [row("internacional", "Semana Santa de Baena, Córdoba (2026)", "14007"),
+                 row("nacional", "Semana Santa de Baena (2001)", same="Semana Santa de Baena, Córdoba (2026)"),
+                 row("nacional", "Callosa de Ensarriá, Alicante (1984)", "03048"),
+                 row("nacional", "Moros y Cristianos de las Injurias de", same="Callosa de Ensarriá, Alicante (1984)")]
+        found = fiestas(listed, table)
+        self.assertEqual([(f["name"], f["category"], f["year"], f["municipalities"]) for f in found],
+                         [("Semana Santa de Baena, Córdoba", "internacional", 2026, ["14007"]),
+                          ("Moros y Cristianos de las Injurias de Callosa de Ensarriá, Alicante", "nacional", 1984,
+                           ["03048"])])
+        with self.assertRaises(RuntimeError):  # a new declaration nobody placed
+            fiestas({**listed, "nacional": listed["nacional"] + [("Galicia", "Entroido de Laza (2027)")]}, table)
+        with self.assertRaises(RuntimeError):  # a row the pages no longer list
+            fiestas(listed, table + [row("nacional", "Fiesta retirada (1980)", "01001")])
+
+    def test_table_covers_the_cached_pages(self):
+        """The table in the repository places every fiesta of the cached official pages, in valid INE codes."""
+        import csv
+
+        from pipeline.core.paths import RAW
+        from pipeline.sources.es.fiestas import PAGES, TABLE, entries, fiestas
+
+        pages = {c: RAW / "fiestas_interes_turistico" / f"{c}.html" for c in PAGES}
+        if not all(p.exists() for p in pages.values()):
+            self.skipTest("turismo.gob.es pages not fetched")
+        listed = {c: entries(p.read_text(encoding="utf-8")) for c, p in pages.items()}
+        with open(TABLE, encoding="utf-8") as f:
+            table = list(csv.DictReader(line for line in f if not line.startswith("#")))
+        found = fiestas(listed, table)
+        self.assertTrue(all(len(m) == 5 and m.isdigit() and m[:2] in PROVINCES for f in found for m in f["municipalities"]))
+
+
+class SpainFiestaLensesTest(unittest.TestCase):
+    def test_per_inhabitant_is_the_hex_share_of_counts_over_its_residents(self):
+        from pipeline.build.spain_fiesta import per_inhabitant
+
+        # Hex 0 holds all of A (1,000 people, 10 bars) and half of B (2,000 of 4,000 people, 4 bars): 12 / 3,000.
+        weights = [[(0, 1000), (1, 2000)], [(1, 2000)], [], [(2, 50)]]
+        values = per_inhabitant({"A": 10, "B": 4, "C": None}, ["A", "B", "C"], [1000, 4000, 50], weights)
+        self.assertEqual(values, [4.0, 1.0, None, None])
+
+    def test_percentiles_and_party_index(self):
+        from pipeline.build.spain_fiesta import party_index, percentiles
+
+        self.assertEqual(percentiles([0, 0, 2, None, 5]), [0, 0, 2 / 3, None, 1])
+        self.assertEqual(party_index([[0, 1, 2], [2, 1, 0], [0, 0, None]]), [33, 33, None])
+
+    def test_a_fiesta_counts_once_per_hex(self):
+        from pipeline.build.spain_fiesta import fiesta_cells, fiestas_lens
+
+        cells = fiesta_cells([{"municipalities": ["10107", "10183", "10035"]}], {"10107": 4, "10183": 4, "10035": 5})
+        self.assertEqual(cells, [[4, 5]])
+        lens = fiestas_lens([{"name": "El Cerezo en Flor", "category": "nacional"}], cells, [0] * 6)
+        self.assertEqual(lens["values"][4:], [1, 1])
+        self.assertEqual(lens["names"], ["El Cerezo en Flor (Nacional)"])
+
+    def test_bars_go_to_their_municipality_or_the_nearest_capital(self):
+        from pipeline.build.spain_fiesta import locate
+
+        def square(x0):
+            return [[[x0, 0], [x0 + 10, 0], [x0 + 10, 10], [x0, 10]]]
+
+        munis = [{"geoid": "A", "rings": square(0), "centre": [5, 5]},
+                 {"geoid": "B", "rings": square(10), "centre": [15, 5]}]
+        codes, outside = locate([[2, 2], [12, 8], [19, 30]], munis, lambda lon, lat: (lon, lat))
+        self.assertEqual((codes, outside), (["A", "B", "B"], 1))
+
+    def test_wikidata_named_items_once_with_label_and_position(self):
+        from pipeline.sources.es.wikidata import WikidataEs
+
+        rows = [{"s": {"value": "http://www.wikidata.org/entity/Q1"}, "sLabel": {"value": "Castillo de Loarre"},
+                 "coord": {"value": "Point(-0.6127 42.3256)"}},
+                {"s": {"value": "http://www.wikidata.org/entity/Q1"}, "sLabel": {"value": "Castillo de Loarre"},
+                 "coord": {"value": "Point(-0.6 42.3)"}},
+                {"s": {"value": "http://www.wikidata.org/entity/Q2"}, "sLabel": {"value": "Q2"},
+                 "coord": {"value": "Point(-1 40)"}}]
+        source = WikidataEs()
+        source._rows = lambda name: rows
+        self.assertEqual(source._named("castles"), [{"qid": "Q1", "label": "Castillo de Loarre",
+                                                     "coord": (-0.6127, 42.3256)}])
