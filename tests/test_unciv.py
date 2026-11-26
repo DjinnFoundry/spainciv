@@ -263,6 +263,16 @@ class ResourceTest(unittest.TestCase):
         self.assertEqual(unciv.place_at("Cattle", self.grid, self.tiles, x, y), -1)  # no grassland near
         self.assertEqual(unciv.place_at("Wine", self.grid, self.tiles, -900, -900), -1)
 
+    def test_two_rings_reach_a_tile_two_steps_away(self):
+        # A forest two tiles from the point: uranium finds it with two rings, not with one.
+        x, y = self.grid.center(self.mid)
+        ring1 = set(self.grid.ring(self.mid))
+        far = next(n for c in ring1 for n in self.grid.ring(c) if n != self.mid and n not in ring1)
+        self.tiles[far].features = ["Forest"]
+        self.assertEqual(unciv.place_at("Uranium", self.grid, self.tiles, x, y), -1)
+        self.assertEqual(unciv.place_at("Uranium", self.grid, self.tiles, x, y, rings=2), far)
+        self.assertEqual(spain_unciv.RINGS, {"Uranium": 2, "Aluminum": 2})
+
     def test_an_area_takes_its_largest_tile_and_a_sea_resource_its_coast(self):
         ring = self.grid.ring(self.mid)
         weight = {self.mid: 3, ring[0]: 5}
@@ -516,6 +526,25 @@ class ModAndPageTest(unittest.TestCase):
             self.assertIn(f"<td>{names[resource][0]}</td><td class=n>{n}</td>", html)
         for start in s["starts"][1:]:
             self.assertIn(start["city"], html)
+
+
+class BdminPositionTest(unittest.TestCase):
+    def test_the_geometry_not_the_utm_fields(self):
+        # BDMIN's X and Y are sometimes UTM metres (Salave); the geometry asked for in WGS84 is right.
+        import tempfile
+        from pathlib import Path
+        from pipeline.sources.es.mines import IgmeMinas
+
+        feature = {"attributes": {"Codigo_indicio": "0010009", "Nombre_mina": "Salave", "Municipio": "Tapia de Casariego",
+                                  "Provincia": "ASTURIAS", "Sustancia": " Oro", "Tamaño_indicio": "grande",
+                                  "X": 668599.97427368, "Y": 4825949.9889806},
+                   "geometry": {"x": -6.912208999999962, "y": 43.56745100000006}}
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "bdmin_yacimientos_0.json").write_text(json.dumps({"features": [feature]}))
+            with mock.patch.object(IgmeMinas, "raw_dir", Path(d)):
+                (deposit,), files = IgmeMinas().deposits("bdmin_yacimientos")
+        self.assertEqual((deposit["lon"], deposit["lat"]), (-6.912209, 43.567451))
+        self.assertEqual(files, ["bdmin_yacimientos_0.json"])
 
 
 if __name__ == "__main__":
