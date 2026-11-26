@@ -601,3 +601,22 @@ class SpainNamedLensTest(unittest.TestCase):
         lens = named_counts(["A", "B", "C"], [[0, 1], [1], [-1, 2]], [0, 0, -1])
         self.assertEqual(lens["values"], [1, 2, None])
         self.assertEqual(lens["labels"], [[0], [0, 1], None])
+
+
+class SpainPeoplesTest(unittest.TestCase):
+    def test_territories_and_colours(self):
+        from pipeline.build.spain import peoples_lens
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=10.0, cols=6, rows=2)
+        owner = [0] * grid.size
+        left, right = grid.center(0, 0), grid.center(5, 0)
+        peoples = [{"id": "1", "name": "Vaccaei", "lon": left[0], "lat": left[1]},
+                   {"id": "2", "name": "Vascones", "lon": right[0], "lat": right[1]},
+                   {"id": "3", "name": "Far away", "lon": 1e6, "lat": 1e6}]
+        lens = peoples_lens(peoples, lambda lon, lat: (lon, lat), grid, owner)
+        self.assertEqual([c["name"] for c in lens["categories"]], ["Vaccaei", "Vascones"])  # unused peoples drop out
+        self.assertEqual(lens["values"][grid.size // 2 - 6], 0)
+        self.assertEqual(lens["values"][5], 1)
+        self.assertNotEqual(lens["categories"][0]["color"], lens["categories"][1]["color"])  # they touch
+        self.assertEqual(lens["domain"], [0, 1])

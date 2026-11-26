@@ -30,12 +30,12 @@ from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
-from .lenses import COUNTY_LENSES, DOMAIN_NOTE, GROUPS, land_lenses, percentile_domain, spread_population
+from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
 from .states import label_anchor, land_shares
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
-            "calidad_diferenciada"]
+            "calidad_diferenciada", "pleiades_iberia"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -263,6 +263,50 @@ def museums_lens(museums: list[dict], proj, grid: HexGrid, owner: list[int]) -> 
     }
 
 
+PEOPLE_REACH_KM = 175  # further than this from every people's point a hex is left blank: the Balearic and Canary Islands
+# Eight colours, assigned so that neighbouring territories never share one.
+PEOPLE_COLOURS = ["#c8553d", "#f2a541", "#7fb069", "#3d8fbf", "#9b5de5", "#e86a92", "#43aa8b", "#d4c26a"]
+
+
+def peoples_lens(peoples: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
+    """Each land hex in the territory of the nearest ancient people (Pleiades points), up to PEOPLE_REACH_KM away.
+    The territories are nearest-point regions drawn by this map, not the historical boundaries, which no source maps."""
+    points = [proj(p["lon"], p["lat"]) for p in peoples]
+    nearest: list[int | None] = []
+    for c, o in enumerate(owner):
+        k = None
+        if o >= 0:
+            x, y = grid.center(*grid.col_row(c))
+            d, k = min((math.hypot(px - x, py - y), j) for j, (px, py) in enumerate(points))
+            k = k if d <= PEOPLE_REACH_KM else None
+        nearest.append(k)
+    used = sorted({k for k in nearest if k is not None}, key=lambda k: peoples[k]["name"])
+    index = {k: i for i, k in enumerate(used)}
+    touching: dict[int, set[int]] = {i: set() for i in range(len(used))}
+    for c, k in enumerate(nearest):
+        if k is not None:
+            for n in grid.neighbours(c):
+                if nearest[n] is not None and nearest[n] != k:
+                    touching[index[k]].add(index[nearest[n]])
+    colour: dict[int, int] = {}
+    for i in sorted(touching, key=lambda i: -len(touching[i])):  # greedy, most-connected first
+        taken = {colour[j] for j in touching[i] if j in colour}
+        colour[i] = next(c for c in range(len(PEOPLE_COLOURS)) if c not in taken)
+    categories = [{"id": peoples[k]["id"], "name": peoples[k]["name"], "color": PEOPLE_COLOURS[colour[i]]}
+                  for i, k in enumerate(used)]
+    return {
+        "id": "peoples", "group": "heritage", "name": "Ancient peoples", "icon": "l-peoples", "emoji": "🛡️",
+        "unit": "people of ancient Iberia", "format": "category", "scale": "linear", "higher_is": "neutral",
+        "categories": categories, "ramp": [c["color"] for c in categories], "domain": [0, max(len(categories) - 1, 1)],
+        "source": "pleiades_iberia",
+        "description": f"The ancient people whose Pleiades location is nearest to each hex (within {PEOPLE_REACH_KM} km): "
+        "Vaccaei, Vascones, Cantabri, Ilergetes… and, in the south and east, the regions named after their peoples "
+        "(Turdetania, Bastetania, Contestania). The borders are nearest-point territories drawn by this map: Pleiades "
+        "gives each people a point, not a boundary.",
+        "values": [index[k] if k is not None else None for k in nearest],
+    }
+
+
 def food_lens(names: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
     """Protected food and drink names (DOP, IGP, wine denominations) whose area holds each land hex's centre. A name
     whose area holds no hex centre (a small vino de pago) goes to the land hex nearest its area's centre."""
@@ -381,10 +425,9 @@ def build() -> None:
         "values": density,
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
-        food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner)] + land_lenses(world, "corine")
-    for lens in lenses:
-        lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
-        lens["description"] += DOMAIN_NOTE
+        food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
+        peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner)] + land_lenses(world, "corine")
+    set_domains(lenses)
     groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
 
     write_web("cities.json", cities)

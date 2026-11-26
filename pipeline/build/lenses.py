@@ -52,6 +52,15 @@ def nice(v: float, up: bool) -> float:
     return round((math.ceil if up else math.floor)(v / mag) * mag, 10)
 
 
+def set_domains(lenses: list[dict]) -> None:
+    """Give each lens the percentile domain of its values, unless it fixes its own (categorical, or a clamped scale)."""
+    for lens in lenses:
+        if "domain" in lens:
+            continue
+        lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
+        lens["description"] += DOMAIN_NOTE
+
+
 def percentile_domain(values: list, log: bool) -> list[float] | None:
     """[2nd, 98th] percentile of the non-null hex values, rounded outward; positive values only on a log scale."""
     vals = sorted(v for v in values if v is not None and (v > 0 or not log))
@@ -254,11 +263,7 @@ def build() -> None:
 
     lenses += community_lenses(world["counties"], county, weights, acs)
 
-    for lens in lenses:
-        if "domain" in lens:  # fixed by the lens itself (categorical, or a clamped scale)
-            continue
-        lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
-        lens["description"] += DOMAIN_NOTE
+    set_domains(lenses)
 
     groups = [g for g in GROUPS if any(l["group"] == g["id"] for l in lenses)]
     write_web("lenses.json", {"vintage": acs_payload["vintage"], "groups": groups, "lenses": lenses})

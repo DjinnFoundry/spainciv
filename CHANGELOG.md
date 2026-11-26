@@ -11,6 +11,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Capa «Ancient peoples»: cada hexágono en el territorio del pueblo prerromano más cercano según Pleiades
+  (Vaccaei, Vascones, Cantabri, Ilergetes, Turdetania…), sin que dos vecinos compartan color.
 - Capa «Museums»: los 2.517 museos que Wikidata sitúa en España, contados por hexágono y nombrados en el tooltip.
 - Capa «Food & drink»: las 292 denominaciones de calidad con zona (DOP, IGP, vinos de pago y de calidad) que cubren
   cada hexágono, con sus nombres al pasar el ratón (MAPA; España tiene 398 nombres en el registro de la UE).
