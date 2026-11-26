@@ -14,10 +14,12 @@ const DEFAULT_COLS = {
   metros: ["states", "population", "growth", "gdp_pc", "median_income"],
   counties: ["state", "population", "density", "income", "poverty"],
 };
+// Each axis takes the first listed column the level has values for, skipping one an earlier axis took (Spain's
+// metros have no GDP: income across, unemployment as colour).
 const DEFAULT_XY = {
-  states: { x: "median_income", y: "growth", s: "population", c: "unemployment" },
-  metros: { x: "gdp_pc", y: "growth", s: "population", c: "median_income" },
-  counties: { x: "income", y: "bachelors", s: "population", c: "density" },
+  states: { x: ["median_income"], y: ["growth"], s: ["population"], c: ["unemployment"] },
+  metros: { x: ["gdp_pc", "median_income"], y: ["growth"], s: ["population"], c: ["median_income", "unemployment"] },
+  counties: { x: ["income"], y: ["bachelors"], s: ["population"], c: ["density"] },
 };
 // Table headers: keys of short labels, ~60 px wide (they wrap to two lines; &shy; marks where a long word may break).
 const SHORT = Object.fromEntries([
@@ -41,17 +43,26 @@ export async function mount(ctx) {
   // only when the Explorer opens, and added to the levels once.
   await extendData(data, ["military", "districts", "citizens"]);
   const avail = ["states", "metros", "counties"].filter((k) => data.levels[k]);
+  // A column with no value at a level (Spain publishes no metro GDP or home values) is left out of every picker.
+  const levels = Object.fromEntries(avail.map((k) => [k, withValues(data.levels[k])]));
+  const defaultXy = (k) => {
+    const out = {};
+    for (const [axis, prefs] of Object.entries(DEFAULT_XY[k])) {
+      out[axis] = prefs.find((f) => levels[k].field(f) && !Object.values(out).includes(f)) ?? prefs[0];
+    }
+    return out;
+  };
   const saved = load() || {};
   const st = {
     level: avail.includes(ctx.params.level) ? ctx.params.level : avail.includes(saved.level) ? saved.level : "metros",
-    cols: { ...DEFAULT_COLS, ...(saved.cols || {}) },
-    xy: { ...DEFAULT_XY, ...(saved.xy || {}) },
+    cols: { ...Object.fromEntries(avail.map((k) => [k, DEFAULT_COLS[k].filter((f) => levels[k].field(f))])), ...(saved.cols || {}) },
+    xy: { ...Object.fromEntries(avail.map((k) => [k, defaultXy(k)])), ...(saved.xy || {}) },
     filters: [],
     onlySel: false,
     sel: null,
   };
   const persist = () => save({ level: st.level, cols: st.cols, xy: st.xy });
-  const L = () => data.levels[st.level];
+  const L = () => levels[st.level];
 
   // --- controls -------------------------------------------------------------------------------------------------
   const top = section(el, { title: t("adv.ex.title"), note: t("adv.ex.note") });
@@ -60,7 +71,7 @@ export async function mount(ctx) {
   top.appendChild(lvRow);
   segmented(lvRow, {
     label: t("adv.ex.level"), value: st.level,
-    options: avail.map((k) => ({ value: k, label: data.levels[k].label })),
+    options: avail.map((k) => ({ value: k, label: levels[k].label })),
     onChange: (v) => { st.level = v; st.filters = st.filters.filter((f) => L().field(f.key)); st.sel = null; persist(); rebuild(); },
   });
   const colsBox = document.createElement("details");
@@ -420,4 +431,11 @@ export async function mount(ctx) {
       return false;
     },
   };
+}
+
+/** The level without its columns that have no value in any row (name always stays). */
+function withValues(lv) {
+  const fields = lv.fields.filter((f) => f.key === "name" || lv.rows.some((r) => r.v[f.key] != null));
+  const keep = new Set(fields.map((f) => f.key));
+  return { ...lv, fields, field: (k) => (keep.has(k) ? lv.field(k) : null) };
 }
