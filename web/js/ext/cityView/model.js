@@ -1,38 +1,40 @@
 // City View data model: everything the city screen and its map layer show, derived from cities.json,
 // nation.json, lenses.json, world.json and resources.json. Pure functions over app.data / app.w (no DOM).
+import { t } from "../../i18n.js";
+import { fixed } from "../../format.js";
 
 // Industry → short label, district colour (the medallion behind its icon) and icon id (icons.js i-<key>).
 export const INDUSTRY = {
-  agriculture: { short: "Agriculture", color: "#4f7a2a" },
-  mining: { short: "Mining", color: "#6a5038" },
-  construction: { short: "Construction", color: "#8a5426" },
-  manufacturing: { short: "Manufacturing", color: "#9a5a22" },
-  wholesale: { short: "Wholesale", color: "#7a6420" },
-  retail: { short: "Retail", color: "#8a6a1e" },
-  transportation: { short: "Logistics", color: "#3d5f73" },
-  utilities: { short: "Utilities", color: "#2a5f86" },
-  information: { short: "Information", color: "#25557e" },
-  finance: { short: "Finance", color: "#7a6420" },
-  real_estate: { short: "Real estate", color: "#6b4a2f" },
-  professional: { short: "Professional", color: "#2b4f8a" },
-  management: { short: "Management", color: "#4a4a7a" },
-  admin: { short: "Admin services", color: "#4b5a68" },
-  education: { short: "Education", color: "#2a3f7a" },
-  health: { short: "Health care", color: "#7a2f2f" },
-  arts: { short: "Arts", color: "#5b3a7e" },
-  accommodation: { short: "Hospitality", color: "#6e3a5e" },
-  other: { short: "Other services", color: "#4b4b4b" },
-  public_admin: { short: "Government", color: "#3a5a4a" },
-  government: { short: "Government", color: "#3a5a4a" },
+  agriculture: { get short() { return t("cv.ind.agriculture"); }, color: "#4f7a2a" },
+  mining: { get short() { return t("cv.ind.mining"); }, color: "#6a5038" },
+  construction: { get short() { return t("cv.ind.construction"); }, color: "#8a5426" },
+  manufacturing: { get short() { return t("cv.ind.manufacturing"); }, color: "#9a5a22" },
+  wholesale: { get short() { return t("cv.ind.wholesale"); }, color: "#7a6420" },
+  retail: { get short() { return t("cv.ind.retail"); }, color: "#8a6a1e" },
+  transportation: { get short() { return t("cv.ind.transportation"); }, color: "#3d5f73" },
+  utilities: { get short() { return t("cv.ind.utilities"); }, color: "#2a5f86" },
+  information: { get short() { return t("cv.ind.information"); }, color: "#25557e" },
+  finance: { get short() { return t("cv.ind.finance"); }, color: "#7a6420" },
+  real_estate: { get short() { return t("cv.ind.real_estate"); }, color: "#6b4a2f" },
+  professional: { get short() { return t("cv.ind.professional"); }, color: "#2b4f8a" },
+  management: { get short() { return t("cv.ind.management"); }, color: "#4a4a7a" },
+  admin: { get short() { return t("cv.ind.admin"); }, color: "#4b5a68" },
+  education: { get short() { return t("cv.ind.education"); }, color: "#2a3f7a" },
+  health: { get short() { return t("cv.ind.health"); }, color: "#7a2f2f" },
+  arts: { get short() { return t("cv.ind.arts"); }, color: "#5b3a7e" },
+  accommodation: { get short() { return t("cv.ind.accommodation"); }, color: "#6e3a5e" },
+  other: { get short() { return t("cv.ind.other"); }, color: "#4b4b4b" },
+  public_admin: { get short() { return t("cv.ind.government"); }, color: "#3a5a4a" },
+  government: { get short() { return t("cv.ind.government"); }, color: "#3a5a4a" },
 };
 export const industryIcon = (k) => `i-${k === "government" ? "public_admin" : k}`;
 
 // Land-use groups shown as a hex's "tile yield" (world.json pct keys → group). Cover ids give the map colour.
 export const LAND = [
-  { key: "built", label: "Built-up", icon: "l-developed", cover: 9, keys: ["developed"] },
-  { key: "farm", label: "Farmland", icon: "l-farmland", cover: 7, keys: ["crop", "pasture"] },
-  { key: "forest", label: "Forest", icon: "l-forest", cover: 3, keys: ["forest"] },
-  { key: "open", label: "Open land", icon: null, cover: 4, keys: ["grass", "shrub", "wetland"] },
+  { key: "built", get label() { return t("cv.land.built"); }, icon: "l-developed", cover: 9, keys: ["developed"] },
+  { key: "farm", get label() { return t("cv.land.farm"); }, icon: "l-farmland", cover: 7, keys: ["crop", "pasture"] },
+  { key: "forest", get label() { return t("cv.land.forest"); }, icon: "l-forest", cover: 3, keys: ["forest"] },
+  { key: "open", get label() { return t("cv.land.open"); }, icon: null, cover: 4, keys: ["grass", "shrub", "wetland"] },
 ];
 
 const sum = (o) => Object.values(o || {}).reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0);
@@ -229,9 +231,9 @@ export function resourceValue(item, type, compact) {
   const v = item.value;
   if (!Number.isFinite(v)) return "";
   const u = type?.unit || "";
-  if (u === "MW") return v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)} GW` : `${Math.round(v)} MW`;
-  if (u === "employees") return `${compact(v)} workers`;
-  if (/tons/.test(u)) return `${compact(v)} t/yr`;
-  if (/km²/.test(u)) return `${compact(v)} km² play`;
+  if (u === "MW") return v >= 1000 ? `${fixed(v / 1000, v >= 10000 ? 0 : 1)} GW` : `${Math.round(v)} MW`;
+  if (u === "employees") return t("cv.res.workers", { n: compact(v) });
+  if (/tons/.test(u)) return t("cv.res.tons", { n: compact(v) });
+  if (/km²/.test(u)) return t("cv.res.play", { n: compact(v) });
   return `${compact(v)} ${u}`.trim();
 }
