@@ -63,6 +63,7 @@ export default {
   "core.panel.cityFoot": "Source: {vintage} (tables C24030, B19025, B19013, B25064, B25077, B23025){gdp}.\n      Green ×N = this industry's share of jobs is N× the U.S. share.",
   "core.panel.stateFoot": "Source: {vintage}{gdp}. Ranks are among the {count} mapped {levels} + DC (1 = largest).",
   "core.panel.gdpSource": "; GDP: {vintage}",
+  "core.panel.yieldSource": "; {label}: {vintage}",
   "core.panel.gdpLabel": "GDP",
   "core.panel.gdpYear": "GDP ({year})",
   "core.panel.perPerson": "{value} per person",

@@ -2,7 +2,7 @@ import { css } from "../color.js";
 import { esc } from "../format.js";
 import { isCapital } from "../world.js";
 import { t } from "../i18n.js";
-import { yieldGrid, amenities, industries, gdpRow, gdpSource, popLine, growthSpan, showPanel, hidePanel } from "./infoPanel.js";
+import { yieldGrid, amenities, industries, gdpRow, extraSources, popLine, growthSpan, showPanel, hidePanel } from "./infoPanel.js";
 
 /**
  * ctx: {w, nation, onClose, onPedia, onState(stateIndex)}
@@ -35,7 +35,7 @@ export function openCityPanel(city, ctx) {
       { title: t("core.panel.amenities"), html: amenities(city, n) + gdpRow(city) },
       { title: t("core.panel.districts"), html: industries(city, nation) },
     ],
-    foot: t("core.panel.cityFoot", { vintage: esc(nation.vintage), gdp: gdpSource(nation) }),
+    foot: t("core.panel.cityFoot", { vintage: esc(nation.vintage), gdp: extraSources(nation) }),
     onClose: ctx.onClose,
     onPedia: ctx.onPedia,
     wire(panel) {

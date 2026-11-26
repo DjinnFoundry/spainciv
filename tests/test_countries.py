@@ -291,9 +291,10 @@ class SpainJobsTest(unittest.TestCase):
         self.assertEqual(jobs["utilities"], 20)  # D + E
         self.assertEqual(jobs["other"], 30)  # S + T + U
         self.assertEqual(sum(jobs.values()), 210)
-        e = spain.econ(1000, 5e9, 2024, sections)
+        e = spain.econ(1000, 5e9, 2024, sections, 7)
         self.assertEqual(e["employed"], 210)
-        self.assertEqual(e["yields"], {"food": 10, "production": 30, "gold": 5e9, "science": 20, "culture": 10})
+        self.assertEqual(e["yields"], {"food": 10, "production": 30, "gold": 5e9, "science": 7, "culture": 10})
+        self.assertIsNone(spain.econ(1000, 5e9, 2024, sections)["yields"]["science"], "Science is R&D, never the census")
         self.assertIsNone(spain.jobs_of(None))
         partial = spain.econ(1000, None, None, {s: 10 for s in "ABDEFGHIJKLMNOPQRSTU"})  # no section C
         self.assertIsNone(partial["jobs"]["manufacturing"])
@@ -340,6 +341,94 @@ class CensoOcupadosTest(unittest.TestCase):
         self.assertEqual(out["provinces"]["12"], {"C": 1000})  # "No consta" only counts in the totals INE gives
         self.assertEqual(out["municipalities"], {"12040": {"C": 10302}})
 
+
+class SpainScienceTest(unittest.TestCase):
+    """Science = INE R&D personnel by community, shared below it by the census Science workers (J + M)."""
+
+    def test_every_province_in_one_community(self):
+        from pipeline.sources.es.ine import UNIPROVINCIAL
+        from pipeline.sources.es.provinces import COMMUNITIES, COMMUNITY_OF
+
+        provs = [p for _, ps in COMMUNITIES.values() for p in ps]
+        self.assertEqual(sorted(provs), sorted(PROVINCES), "each province exactly once")
+        self.assertEqual(len(COMMUNITIES), 19)
+        self.assertEqual(COMMUNITY_OF["03"], "10")  # Alicante, Comunitat Valenciana
+        self.assertEqual(UNIPROVINCIAL, {"03": "33", "04": "07", "06": "39", "13": "28", "14": "30", "15": "31",
+                                         "17": "26", "18": "51", "19": "52"})
+
+    def _process(self, communities_csv: str, series_csv: str) -> dict:
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from pipeline.sources.es.ine import IneImasd
+
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "82978.csv").write_text(communities_csv, encoding="utf-8")
+            (Path(d) / "82944.csv").write_text(series_csv, encoding="utf-8")
+            src = IneImasd()
+            with mock.patch.object(type(src), "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                return src.process()
+
+    def _communities_csv(self) -> str:
+        from pipeline.sources.es.provinces import COMMUNITIES
+
+        out = "\ufeffComunidades autónomas;Tipo de indicador;Total\n"
+        out += "Total Nacional;Gasto en I+D interna (miles de euros);25.321.275\nTotal Nacional;Personal en EJC: Total;310.336,2\n"
+        out += "Total Nacional;Personal en EJC: Mujeres;129.278,2\n"
+        for code, (name, _) in COMMUNITIES.items():
+            v = ".." if code in ("18", "19") else "1.000,5"
+            out += f"{code} {name};Personal en EJC: Total;{v}\n{code} {name};Gasto en I+D interna (miles de euros);{v}\n"
+        return out
+
+    def test_source_reads_communities_and_dates_them_by_the_series(self):
+        series = "\ufeffSectores/unidad;Periodo;Total\nTotal (EJC);2025;310.336,2\nTotal (EJC);2024;295.289,7\n"
+        series += "Empresas: Total (EJC);2024;310.336,2\n"  # another line with the same number is not the total
+        out = self._process(self._communities_csv(), series)
+        self.assertEqual(out["year"], 2025)
+        self.assertEqual(out["nation"], {"spending_eur": 25_321_275_000, "personnel_fte": 310336.2})
+        self.assertEqual(out["communities"]["13"], {"personnel_fte": 1000.5, "spending_eur": 1_000_500})
+        self.assertEqual(out["communities"]["18"], {"personnel_fte": None, "spending_eur": None}, "secret stays null")
+        self.assertIn("2025", out["vintage"])
+
+    def test_source_fails_when_the_year_is_unclear(self):
+        with self.assertRaises(RuntimeError):
+            self._process(self._communities_csv(), "Sectores/unidad;Periodo;Total\nTotal (EJC);2024;295.289,7\n")
+        with self.assertRaises(RuntimeError):  # a community missing
+            self._process(self._communities_csv().replace("01 Andalucía", "99 Atlántida"),
+                          "Sectores/unidad;Periodo;Total\nTotal (EJC);2025;310.336,2\n")
+
+    def test_community_rd_is_shared_by_science_workers(self):
+        from pipeline.build import spain
+
+        rd = {"communities": {"10": {"personnel_fte": 3000.0}, "13": {"personnel_fte": 500.0}, "18": {"personnel_fte": None}}}
+        provinces = {"03": {"J": 100, "M": 100}, "12": {"J": 50, "M": 50}, "46": {"J": 300, "M": 400}, "28": {"J": 1000, "M": 1500},
+                     "51": {"J": 10, "M": 10}}
+        rates = spain.rd_rates(rd, provinces)
+        self.assertAlmostEqual(rates["10"], 3000 / 1000)  # Comunitat Valenciana: 1000 Science workers
+        self.assertAlmostEqual(rates["13"], 500 / 2500)
+        self.assertIsNone(rates["18"], "Ceuta: no R&D figure")
+        self.assertIsNone(rates["01"], "no R&D row and no census rows")
+        shares = [spain.rd_science({p: provinces[p]}, rates) for p in ("03", "12", "46")]
+        self.assertEqual(shares, [600, 300, 2100])
+        self.assertEqual(sum(shares), 3000, "provinces add up to their community")
+        # an area straddling two communities takes each member at its own rate; unpublished members are left out
+        self.assertEqual(spain.rd_science({"46250": {"J": 10, "M": 0}, "28079": {"J": 50, "M": 50}, "28001": None}, rates), 50)
+        self.assertIsNone(spain.rd_science({"51001": {"J": 1, "M": 1}}, rates))
+        self.assertIsNone(spain.rd_science({"46250": {"J": 10}}, rates), "Science workers unknown (no M)")
+        self.assertIsNone(spain.rd_science({"46250": None}, rates))
+
+    def test_science_yield_is_rd_with_its_own_source(self):
+        from pipeline.build import spain
+
+        ys = {y["key"]: y for y in spain.yields_es(2024, {"vintage": "INE Estadística sobre actividades de I+D, 2025",
+                                                           "data": {"year": 2025}})}
+        self.assertEqual(ys["science"]["industries"], [], "no census breakdown under an R&D total")
+        self.assertEqual(ys["science"]["vintage"], "INE Estadística sobre actividades de I+D, 2025")
+        self.assertIn("I+D del INE, 2025", ys["science"]["description"])
+        self.assertIn("Censo anual de población (2024)", ys["science"]["description"])
+        self.assertNotIn("vintage", ys["food"])
+        self.assertEqual(ys["production"]["industries"], ["manufacturing", "construction", "mining"])
 
 class SpainDistrictsTest(unittest.TestCase):
     def test_catalog_follows_the_us_order_without_encampment(self):

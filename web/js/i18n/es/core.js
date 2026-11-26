@@ -63,6 +63,7 @@ export default {
   "core.panel.cityFoot": "Fuente: {vintage}{gdp}. ×N en verde: la proporción de ocupados del sector es N veces la de España. Los campos que aún no tienen fuente para España salen como –.",
   "core.panel.stateFoot": "Fuente: {vintage}{gdp}. La posición es entre las {count} {levels} del mapa (1 = la mayor).",
   "core.panel.gdpSource": "; PIB: {vintage}",
+  "core.panel.yieldSource": "; {label}: {vintage}",
   "core.panel.gdpLabel": "PIB",
   "core.panel.gdpYear": "PIB ({year})",
   "core.panel.perPerson": "{value} por habitante",

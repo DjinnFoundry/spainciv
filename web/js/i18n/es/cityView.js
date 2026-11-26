@@ -167,7 +167,7 @@ export default {
   "cv.cmp.housing": "Vivienda y empleo",
 
   // footer
-  "cv.foot.sources": "Censo anual de población del INE; Atlas Digital de las Áreas Urbanas (Ministerio de Vivienda)",
+  "cv.foot.sources": "Censo anual de población y Estadística sobre actividades de I+D del INE; Atlas Digital de las Áreas Urbanas (Ministerio de Vivienda)",
   "cv.foot": "Fuentes: {vintage}; {sources}{gdp}. Los puestos se cuentan entre las {n} {group} del mapa.",
 
   // the quick panel button, the dock and the map key
