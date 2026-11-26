@@ -187,5 +187,41 @@ class CountryJsTest(unittest.TestCase):
         self.assertEqual(self.country({}, "not json")["site_url"], "karpathy.ai/usaciv")
 
 
+@unittest.skipUnless(NODE, "node is not installed")
+class ShareLinkJsTest(unittest.TestCase):
+    def test_camera_updates_keep_city_view_until_it_loads(self):
+        result = subprocess.run([NODE, "--input-type=module", "-e", """
+            import assert from 'node:assert/strict';
+            import { createHashState } from './web/js/app/api.js';
+
+            globalThis.window = { addEventListener() {} };
+            globalThis.location = new URL('https://example.com/#city=12040&view=city');
+            const navigation = [];
+            const write = (kind, href) => {
+                navigation.push(kind);
+                location.href = new URL(href, location.href);
+            };
+            globalThis.history = {
+                pushState: (_state, _title, href) => write('push', href),
+                replaceState: (_state, _title, href) => write('replace', href),
+            };
+            const url = createHashState({ read: () => ({ city: '12040', at: [1, 2, 3] }) });
+            url.flush();
+            assert.equal(url.value('view'), 'city');
+            assert.deepEqual(navigation, ['replace']);
+
+            let active = null;
+            url.register('view', { get: () => active, set: (value) => { active = value; } });
+            await Promise.resolve();
+            assert.equal(active, 'city');
+
+            active = null;
+            url.flush();
+            assert.equal(url.value('view'), null);
+            assert.deepEqual(navigation, ['replace', 'push']);
+        """], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

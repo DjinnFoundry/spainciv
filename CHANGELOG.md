@@ -8,6 +8,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ### Corregido
 - La vista de ciudad de España cita el Padrón, el Censo del INE y el atlas de áreas urbanas. Los distritos comparan
   con España y la sección de economía indica la escala provincial del PIB.
+- Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
 - README propio de spainciv (inglés, con resumen en castellano) y capturas de España; el README de Karpathy pasa a

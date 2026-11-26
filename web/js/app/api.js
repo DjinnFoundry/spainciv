@@ -72,8 +72,10 @@ export function createHashState(opts) {
   let applying = false;
 
   const params = (hash) => new URLSearchParams(String(hash || "").replace(/^#/, ""));
+  const extensionEntries = (hash) => [...params(hash)].filter(([key]) => !CORE_KEYS.has(key));
   const readExtras = () => {
-    const out = [];
+    // Camera updates may write the URL before an extension has loaded and read its entry.
+    const out = new Map(extensionEntries(location.hash));
     for (const [key, h] of extras) {
       let v = null;
       try {
@@ -81,9 +83,10 @@ export function createHashState(opts) {
       } catch (err) {
         console.error(`hash key "${key}" get() failed`, err);
       }
-      if (v != null && v !== "") out.push([key, String(v)]);
+      if (v == null || v === "") out.delete(key);
+      else out.set(key, String(v));
     }
-    return out;
+    return [...out];
   };
   const format = (core, ex) => {
     const base = formatHash(core);
@@ -92,11 +95,7 @@ export function createHashState(opts) {
     return base ? `${base}&${tail}` : `#${tail}`;
   };
   const sig = (core, ex) => `${core.lens || ""}|${core.city || ""}|${core.state || ""}|${ex.map((e) => e.join("=")).join("&")}`;
-  const hashSig = (hash) => {
-    const p = params(hash);
-    const ex = [...extras.keys()].filter((k) => p.get(k)).map((k) => [k, p.get(k)]);
-    return sig(parseHash(hash), ex);
-  };
+  const hashSig = (hash) => sig(parseHash(hash), extensionEntries(hash));
   let entrySig = hashSig(location.hash);
 
   function write(force = false) {
