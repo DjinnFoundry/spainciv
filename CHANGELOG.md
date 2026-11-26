@@ -9,6 +9,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Restos de inglés y de EE UU en el mapa de España: los tooltips de puertos y aeropuertos («Large hub», «short tons»,
+  FAA, USACE), 103 nombres de centrales («Las Majas Wind Farm» pasa a «Parque eólico Las Majas»), las fechas de cinco
+  fuentes («AENA 2025 (final)», «students», «visitors») y textos de los consejeros que hablaban de embarques, libras,
+  el NPS o la I+D de las facultades de medicina. Los puertos y la carga aérea se dan en toneladas, no en toneladas
+  cortas ni en libras (Algeciras: 100,7 M t, no 111 M). El menú Mapa ya no ofrece Ejército ni Rutas comerciales, que
+  España no tiene. Un test busca palabras inglesas en `sites/es/data` para que no vuelvan.
+- `pipeline serve` se reinicia cuando cambia el código del pipeline. Un servidor arrancado antes de traducir la página
+  servía la línea de créditos en inglés bajo la interfaz en castellano; `package` y `serve` dan ya el mismo `index.html`.
 - Alejar el zoom ya no redibuja el mapa entero en cada fotograma: el lienzo se pinta al 60 % de la escala y se
   reescala hasta que el zoom para (de 11 a 4 redibujados en 20 pasos de rueda, en España y en EE UU).
 - La vista de ciudad de España cita el Padrón, el Censo del INE y el atlas de áreas urbanas. Los distritos comparan
