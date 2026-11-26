@@ -163,33 +163,41 @@ def cmd_list():
 
 class _SiteHandler(http.server.SimpleHTTPRequestHandler):
     """Serves the active country's site as `package` builds it: web/, with data/ taken from the country's web data
-    folder (sites/<id>/data for Spain), its own site files over web/'s, and index.html rendered (pipeline/site.py)."""
+    folder (sites/<id>/data for Spain) and the files pipeline/site.py makes from code (index.html, the social card)
+    made afresh on every request."""
 
     data_dir: Path = WEB / "data"
-    overlay: dict = {}  # "/og-image.png" -> sites/<id>/og-image.png
+
+    @staticmethod
+    def _url_path(path: str) -> str:
+        return path.split("?", 1)[0].split("#", 1)[0]
 
     def translate_path(self, path):
-        rel = path.split("?", 1)[0].split("#", 1)[0]
+        rel = self._url_path(path)
         if rel.startswith("/data/"):
             return str(self.data_dir / rel[len("/data/"):])
-        if rel in self.overlay:
-            return str(self.overlay[rel])
         return super().translate_path(path)
 
     def send_head(self):
-        if self.path.split("?", 1)[0] not in ("/", "/index.html"):
+        rel = self._url_path(self.path).lstrip("/") or "index.html"
+        make = site.generated_files().get(rel)
+        if make is None:
             return super().send_head()
-        body = site.index_bytes()
+        body = make()
         self.send_response(200)
-        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.send_header("Content-type", self.guess_type(rel) + ("; charset=utf-8" if rel.endswith(".html") else ""))
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         return io.BytesIO(body)
 
 
+def site_handler():
+    """The request handler for the active country's site."""
+    return functools.partial(type("Handler", (_SiteHandler,), {"data_dir": web_dir()}), directory=str(WEB))
+
+
 def cmd_serve(port=8765):
-    overlay = {"/" + rel.as_posix(): f for f, rel in site.overlay_files()}
-    handler = functools.partial(type("Handler", (_SiteHandler,), {"data_dir": web_dir(), "overlay": overlay}), directory=str(WEB))
+    handler = site_handler()
     with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as srv:
         print(f"serving web/ ({countries.active().name}) at http://127.0.0.1:{port}")
         srv.serve_forever()

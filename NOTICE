@@ -4,3 +4,6 @@ unchanged at the tag `upstream-2026-11-26`; the country configurations, the Span
 changes listed in UPSTREAM.md are on top of it.
 
 Data sources keep their own licences; the in-app Almanac lists each one with its files, URLs and checksums.
+
+The social card is lettered in Cinzel (pipeline/core/fonts/Cinzel.ttf), Copyright 2020 The Cinzel Project Authors,
+under the SIL Open Font License 1.1 (pipeline/core/fonts/OFL.txt).

@@ -13,6 +13,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- La tarjeta social de spainciv (`og-image.png`) se dibuja desde los datos al empaquetar o servir
+  (`pipeline/card.py`, Python puro): el mapa de hexágonos con su terreno, provincias, ríos, el recuadro de Canarias y
+  las ciudades mayores, con el nombre, el título de la tarjeta, la dirección y la atribución del IGN. Sustituye al
+  recorte de captura, que tenía los textos en inglés.
 - Capa «Platos regionales»: 577 platos, embutidos, quesos, dulces y vinos de las categorías de gastronomía por
   provincia de la Wikipedia en español, filtrados con Wikidata, listados en cada hexágono de su provincia.
 - Interfaz de spainciv en castellano: tablas `web/js/i18n/<lang>/`, `t()`, números en es-ES (Intl) y textos de los

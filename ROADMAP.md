@@ -41,7 +41,6 @@ decisiones que salgan van a `DECISIONS.md`.
 - Despliegue del mapa a mano (`pipeline package --country es` y `wrangler pages deploy`, D16); automatizarlo cuando
   vuelvan los créditos de GitHub Actions.
 - Publicar el anuncio en X (borrador preparado; lo publica David).
-- Generar la og-image desde código en vez de un recorte de captura.
 
 ## Por decidir (David)
 

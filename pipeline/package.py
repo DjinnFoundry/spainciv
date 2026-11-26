@@ -1,7 +1,7 @@
 """Build the deploy package: one file, <product>.zip in the project root (usaciv.zip, or spainciv.zip with --country es).
 It unzips to a <product>/ folder holding the static site, ready to upload as /<product>/. (dist/<product>/ is the same
-folder unzipped, kept for local testing.) The site is web/ with the active country's data as its data/ folder, its own
-site files (sites/<id>/og-image.png) over web/'s, and its index.html rendered by pipeline/site.py.
+folder unzipped, kept for local testing.) The site is web/ with the active country's data as its data/ folder, and the
+files pipeline/site.py makes from code over web/'s: index.html, and the social card of a country with a page.
 
 The site gets a copy of the source code as <product>-source.zip, linked from the in-app help, so anyone can download,
 run and remix it. Both zips are deterministic (sorted entries, fixed timestamps), so rebuilding from unchanged files
@@ -17,7 +17,7 @@ from pathlib import Path
 from .core.paths import ROOT, WEB
 from .core.store import web_dir
 from .countries import active
-from .site import index_bytes, overlay_files
+from .site import generated_files
 
 DIST = ROOT / "dist"
 
@@ -68,16 +68,18 @@ def cmd_package() -> None:
         shutil.rmtree(SITE)
     SITE.mkdir(parents=True)
 
-    # 1. The site: web/ without the dev pages, with the country's data as data/ and its own files over web/'s.
+    # 1. The site: web/ without the dev pages, with the country's data as data/ and the generated files over web/'s.
     site_files = {f.relative_to(WEB): f for f in _files(WEB, ["."]) if f.relative_to(WEB).parts[0] not in SITE_SKIP_DIRS | {"data"}}
     site_files |= {Path("data") / f.relative_to(data): f for f in _files(data, ["."])}
-    site_files |= {rel: f for f, rel in overlay_files()}
+    generated = generated_files()
     for rel, f in site_files.items():
-        dst = SITE / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(f, dst)
-    (SITE / "index.html").write_bytes(index_bytes())
-    n_site = len(site_files)
+        if rel.as_posix() not in generated:
+            dst = SITE / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dst)
+    for name, make in generated.items():
+        (SITE / name).write_bytes(make())
+    n_site = len(site_files.keys() | {Path(name) for name in generated})
 
     # The site ships the code itself, so the MIT notice (and NOTICE's credit) goes with it, not only in the source zip.
     for name in ("LICENSE", "NOTICE"):
