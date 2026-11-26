@@ -297,6 +297,20 @@ SOURCES = {
         "que declaran su potencia.",
         "used_for": ["Centrales del mapa (recursos)"],
     },
+    "igme_minas": {
+        "title": "Minas activas en 2019 (Estadística Minera de España, IGME), situadas con los yacimientos del BDMIN",
+        "publisher": "IGME-CSIC (Instituto Geológico y Minero de España); Ministerio para la Transición Ecológica "
+        "(Estadística Minera de España)",
+        "license": "Licencia de uso del IGME: reutilización libre y gratuita, comercial o no, citando la fuente "
+        "(Ley 37/2007 y RD 1495/2011)",
+        "description": "Las explotaciones activas en 2019 de la Estadística Minera de España, tal como el IGME las "
+        "publica con el Panorama Minero 2022 (EXPLOTACIONES_2019.xlsx), la lista más reciente con el nombre de cada "
+        "mina. Se quedan las minas metálicas y las de potasa, fluorita, celestina, magnesita y sulfato sódico, y su "
+        "número por sustancia coincide con las tablas del Panorama. La estadística no da la posición ni la producción de "
+        "cada mina: la posición es la del yacimiento de su mineral y su municipio en el BDMIN del IGME (base de datos de "
+        "indicios minerales) y, si no hay ninguno, el centro del municipio.",
+        "used_for": ["Minas del mapa (recursos)"],
+    },
     "calidad_diferenciada": {
         "title": "Denominaciones de calidad: sus zonas (MAPA) y el registro de la UE (eAmbrosia)",
         "publisher": "Ministerio de Agricultura, Pesca y Alimentación; Comisión Europea (eAmbrosia)",

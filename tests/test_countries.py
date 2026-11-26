@@ -746,6 +746,51 @@ class SpainLanguagesTest(unittest.TestCase):
             castilian_codes({"46": ["Atlántida"]}, self.MUNIS)
 
 
+class SpainMinesTest(unittest.TestCase):
+    @staticmethod
+    def dep(code, name, size, municipality="Almonaster la Real", province="21", substance=" Pirita, Cobre"):
+        return {"code": code, "name": name, "size": size, "municipality": municipality, "province": province,
+                "substance": substance, "lon": 0.0, "lat": 0.0}
+
+    def test_locate_prefers_a_deposit_sharing_the_name(self):
+        from pipeline.sources.es.mines import locate
+
+        mine = {"name": "AGUAS TEÑIDAS-HERRERITOS", "municipality": "Almonaster la Real", "province": "21",
+                "substance": "COBRE"}
+        deposits = [self.dep("1", "Cueva de la Mora", "grande"), self.dep("2", "Aguas Teñidas", "mediano"),
+                    self.dep("3", "Aguas Teñidas", "grande", municipality="Calañas"),  # another municipality
+                    self.dep("4", "Aguas Teñidas", "grande", substance=" Manganeso")]  # another mineral
+        self.assertEqual(locate(mine, deposits)["code"], "2")
+        riotinto = {"name": "MINAS DE RIO TINTO", "municipality": "Minas de Riotinto", "province": "21",
+                    "substance": "COBRE"}
+        found = locate(riotinto, [self.dep("5", "Cerro Colorado", "grande", "Minas de Riotinto"),
+                                  self.dep("6", "Minas de Riotinto", "grande", "Minas de Riotinto")])
+        self.assertEqual(found["code"], "6")  # the words run together: 'Rio Tinto' = 'Riotinto'
+
+    def test_locate_falls_back_to_the_only_large_or_medium_deposit(self):
+        from pipeline.sources.es.mines import locate
+
+        sotiel = {"name": "Concesión de Explotación, derivada del PI “Sotiel”", "municipality": "Almonaster la Real",
+                  "province": "21", "substance": "COBRE"}
+        only = [self.dep("1", "Cueva de la Mora", "grande"), self.dep("2", "Sorpresa", "pequeño")]
+        self.assertEqual(locate(sotiel, only)["code"], "1")
+        self.assertIsNone(locate(sotiel, only + [self.dep("3", "Angelita", "mediano")]))  # two: none is chosen
+        self.assertIsNone(locate(sotiel, [self.dep("2", "Sorpresa", "pequeño")]))  # a small one never stands alone
+
+    def test_names_and_provinces(self):
+        from pipeline.build.spain_resources import title_es
+        from pipeline.sources.es.mines import norm, province_code
+
+        self.assertEqual(norm("Santos (Los)"), norm("Santos, Los"))
+        self.assertEqual((province_code("ORENSE"), province_code("OURENSE"), province_code("LA CORUÑA")),
+                         ("32", "32", "15"))
+        with self.assertRaises(RuntimeError):
+            province_code("ATLÁNTIDA")
+        self.assertEqual(title_es("MINA FATIMA (FATIMA, JARAMA, Y FATIMA FR. II)"),
+                         "Mina Fatima (Fatima, Jarama, y Fatima Fr. II)")
+        self.assertEqual(title_es("PENOUTA Olga"), "PENOUTA Olga")  # mixed case is left alone
+
+
 class SpainBeachesTest(unittest.TestCase):
     def test_beach_town(self):
         from pipeline.build.spain import beach_town

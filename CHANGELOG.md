@@ -21,6 +21,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   actividades de I+D del INE, 2025: 310.336 personas en España en lugar de 1,9 M de ocupados en J + M. El INE lo da por
   comunidad; provincias y ciudades reciben su parte según sus ocupados en J + M (Censo). Gipuzkoa sube del puesto 16 al
   8 y Navarra del 21 al 12; Ceuta y Melilla quedan sin dato (secreto estadístico). Fuente nueva `ine_imasd`.
+- Minas como recursos: las 25 explotaciones metálicas y de minerales industriales clave activas en 2019 según la
+  Estadística Minera (IGME): cobre (Riotinto, Las Cruces, Aguas Teñidas, Cueva de la Mora, Sotiel), oro (El Valle-Boinás),
+  wolframio (Los Santos), estaño y tántalo (Penouta), potasa, fluorita, celestina, magnesita y sulfato sódico. Están en
+  su yacimiento del BDMIN del IGME (21) o en el centro de su municipio (4), sin valor: la estadística no publica la
+  producción de cada mina.
 - Capa «Platos regionales»: 577 platos, embutidos, quesos, dulces y vinos de las categorías de gastronomía por
   provincia de la Wikipedia en español, filtrados con Wikidata, listados en cada hexágono de su provincia.
 - Interfaz de spainciv en castellano: tablas `web/js/i18n/<lang>/`, `t()`, números en es-ES (Intl) y textos de los
