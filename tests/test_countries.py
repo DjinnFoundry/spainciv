@@ -507,6 +507,121 @@ class SpainLivingTest(unittest.TestCase):
             serpavi.latest_year(["CPRO"])
 
 
+class SpainPeopleTest(unittest.TestCase):
+    """Mean age, born abroad, higher education, homeowners and poverty: sources and lenses (spain_people.py)."""
+
+    @staticmethod
+    def _process(src, files: dict[str, str]):
+        import tempfile
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in files.items():
+                (Path(d) / name).write_text(text, encoding="utf-8")
+            with mock.patch.object(type(src), "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                return src.process()
+
+    def test_latest_complete_year(self):
+        from pipeline.sources.es.ine_people import latest_complete
+
+        self.assertEqual(latest_complete({"2023": {"a": 1, "b": 1}, "2024": {"a": 1, "b": 1}, "2025": {"a": 1}}), "2024")
+
+    def test_adrh_indicators(self):
+        from pipeline.sources.es.ine_people import IneAdrhIndicadores
+
+        ages = ("﻿Municipios;Distritos;Secciones;Indicadores demográficos;Periodo;Total\n"
+                "28079 Madrid;;;Edad media de la población;2024;44,5\n"
+                "28079 Madrid;;;Edad media de la población;2023;44,2\n"
+                "28079 Madrid;2807901 Madrid distrito 01;;Edad media de la población;2024;40\n"
+                "28079 Madrid;;;Porcentaje de población menor de 18 años;2024;15,1\n"
+                "42173 Soria;;;Edad media de la población;2024;46\n")
+        below = "Población con ingresos por unidad de consumo por debajo {}% de la mediana"
+        poverty = ("﻿Municipios;Distritos;Secciones;Sexo;Distribución de la renta por unidad de consumo;Periodo;Total\n"
+                   f"28079 Madrid;;;Total;{below.format(60)};2024;18,2\n"
+                   f"28079 Madrid;;;Mujeres;{below.format(60)};2024;19\n"
+                   f"28079 Madrid;;;Total;{below.format(40)};2024;8\n"
+                   f"42173 Soria;;;Total;{below.format(60)};2024;\"\"\n")
+        out = self._process(IneAdrhIndicadores(), {"30832.csv": ages, "30829.csv": poverty})
+        self.assertEqual(out["years"], {"mean_age": 2024, "poverty": 2024})
+        self.assertEqual(out["mean_age"], {"28079": 44.5, "42173": 46.0})  # the district row is ignored
+        self.assertEqual(out["poverty"], {"28079": 0.182})  # both sexes, as a fraction; Soria is confidential
+
+    def test_census_by_section_levels(self):
+        from pipeline.sources.es.ine_people import IneCensoNacimiento
+
+        head = "﻿Total Nacional;Provincias;Municipios;Secciones;Sexo;Lugar de nacimiento;Periodo;Total\n"
+        rows = ["Total Nacional;;;;Total;Total;2026;49.618.622", "Total Nacional;;;;Total;Extranjero;2026;10.084.277",
+                "Total Nacional;;;;Total;España;2026;39.534.345", "Total Nacional;;;;Total;Total;2025;1",
+                "Total Nacional;28 Madrid;28079 Madrid;;Total;Total;2026;3.500.000",
+                "Total Nacional;28 Madrid;28079 Madrid;;Total;Extranjero;2026;900.000",
+                "Total Nacional;28 Madrid;28079 Madrid;;Mujeres;Extranjero;2026;480.000",
+                "Total Nacional;28 Madrid;28079 Madrid;2807901001 Madrid sección 01001;Total;Extranjero;2026;99"]
+        rows += [f"Total Nacional;{code} P;;;Total;Total;2026;1.000" for code in PROVINCES]
+        out = self._process(IneCensoNacimiento(), {"65031.csv": head + "\n".join(rows) + "\n"})
+        self.assertEqual(out["year"], 2026)
+        self.assertEqual(out["nation"], {"total": 49618622, "abroad": 10084277})
+        self.assertEqual(out["municipalities"], {"28079": {"total": 3500000, "abroad": 900000}})
+        self.assertEqual(out["provinces"]["28"], {"total": 1000})
+        with self.assertRaises(RuntimeError):  # a province missing
+            self._process(IneCensoNacimiento(), {"65031.csv": head + "\n".join(rows[:-1]) + "\n"})
+
+    def test_census_2021_tenure_sums_sections(self):
+        from pipeline.sources.es.ine_people import IneCenso2021Indicadores
+
+        head = "ccaa,cpro,cmun,dist,secc,t1_1,t19_1,t20_1,t20_2,t20_3\n"
+        rows = ["13,28,079,01,001,1000,400,300,80,20", "13,28,079,01,002,900,300,200,90,10",
+                "13,28,079,01,003,10,,,,",  # a confidential section
+                "08,42,900,01,001,20,,,,"]  # a municipality with no section published
+        rows += [f"01,04,{k:03d},01,001,10,4,3,1,0" for k in range(1, 5001)]
+        out = self._process(IneCenso2021Indicadores(), {"C2021_Indicadores.csv": head + "\n".join(rows) + "\n"})
+        self.assertEqual(out["year"], 2021)
+        self.assertEqual(out["municipalities"]["28079"], {"owned": 500, "rented": 170, "other": 30})
+        self.assertNotIn("42900", out["municipalities"])
+        with self.assertRaises(RuntimeError):  # too few municipalities: not the national file
+            self._process(IneCenso2021Indicadores(), {"C2021_Indicadores.csv": head + "\n".join(rows[:4]) + "\n"})
+
+    def test_shares(self):
+        from pipeline.build.spain_people import share, tenure_share
+
+        self.assertEqual(share({"total": 200, "abroad": 50}, "abroad"), 0.25)
+        self.assertIsNone(share({"total": 0, "abroad": 0}, "abroad"))
+        self.assertIsNone(share({"total": 10}, "abroad"))
+        self.assertIsNone(share(None, "abroad"))
+        self.assertEqual(tenure_share({"owned": 70, "rented": 20, "other": 10}), 0.7)
+        self.assertIsNone(tenure_share(None))
+
+    def test_lenses_keep_the_us_look_and_weight_by_population(self):
+        from unittest import mock
+
+        from pipeline.build import spain_people
+        from pipeline.build.lenses import COUNTY_LENSES
+
+        interims = {
+            "ine_adrh_indicadores": {"years": {"mean_age": 2024, "poverty": 2024}, "mean_age": {"28079": 44.0, "42173": 48.0},
+                                     "poverty": {"28079": 0.2}},
+            "ine_censo_nacimiento": {"year": 2026, "municipalities": {"28079": {"total": 100, "abroad": 30},
+                                                                        "42173": {"total": 100, "abroad": 10}}},
+            "ine_censo_formacion": {"year": 2024, "municipalities": {"28079": {"total": 100, "higher": 50}}},
+            "ine_censo2021_indicadores": {"year": 2021, "municipalities": {"28079": {"owned": 7, "rented": 2, "other": 1}}},
+        }
+        payload = lambda name: {"data": interims[name]}
+        geoids = ["28079", "42173", "44001"]
+        weights = [[(0, 300.0), (1, 100.0)], [(1, 50.0)], [(2, 10.0)], []]
+        with mock.patch.object(spain_people, "load_interim_payload", payload):
+            lenses = {l["id"]: l for l in spain_people.people_lenses(geoids, weights)}
+        self.assertEqual(list(lenses), ["poverty", "age", "foreign_born", "bachelors", "homeownership"])
+        for lid, lens in lenses.items():
+            us = COUNTY_LENSES[lid][1]
+            self.assertEqual({k: lens[k] for k in spain_people.SHARED}, {k: us[k] for k in spain_people.SHARED})
+            self.assertTrue(lens["source"].startswith("ine_"))
+        self.assertEqual(lenses["age"]["values"], [45.0, 48.0, None, None])
+        self.assertEqual(lenses["foreign_born"]["values"], [0.25, 0.1, None, None])
+        self.assertEqual(lenses["poverty"]["values"], [0.2, None, None, None])  # Soria has no figure: not a zero
+        self.assertEqual(lenses["homeownership"]["values"], [0.7, None, None, None])
+        self.assertIn("2021", lenses["homeownership"]["description"])
+        self.assertIn("15 años", lenses["bachelors"]["unit"])
+
+
 class SpainDistrictsTest(unittest.TestCase):
     def test_catalog_follows_the_us_order_without_encampment(self):
         from pipeline.build import districts, spain_districts

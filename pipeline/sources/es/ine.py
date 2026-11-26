@@ -203,7 +203,49 @@ class IneAdrh(IneTable):
         }
 
 
-class IneCensoActividad(IneTable):
+class CensoSecciones(IneTable):
+    """An Annual Population Census table by census section with one breakdown (relationship with activity,
+    birthplace, education…), both sexes: the categories in CATEGORIES (and the place's total, as "total", unless TOTAL
+    is None) for Spain, every province and every municipality, in the latest year. The exports are hundreds of MB with
+    the census sections, so they are read in a stream."""
+
+    CATEGORIES: dict[str, str]  # the breakdown's label → key
+    TOTAL: str | None = "total"  # the key of the breakdown's "Total" row, or None to leave it out
+    TOPIC = ""  # the table's subject in the vintage: "INE Censo anual de población (<TOPIC>), 1 January <year>"
+
+    def process(self):
+        by_year: dict[str, dict[str, dict[str, int]]] = {}  # year → geo → key → people
+        keys = {**({"Total": self.TOTAL} if self.TOTAL else {}), **self.CATEGORIES}
+        for row in stream_rows(self.raw_dir / self._file()):
+            if len(row) < 8 or row[3].strip() or row[4].strip() != "Total":
+                continue  # census sections, or one sex
+            key, v = keys.get(row[5].strip()), number(row[7])
+            if not key or v is None:
+                continue
+            label = row[2].strip() or row[1].strip()  # municipality, else province, else Spain
+            geo = split_geo(label)[0] if label else "nation"
+            if geo is None:
+                raise RuntimeError(f"table {self.TABLE}: no INE code in {row[:3]}")
+            by_year.setdefault(row[6].strip(), {}).setdefault(geo, {})[key] = int(v)
+        if not by_year:
+            raise RuntimeError(f"table {self.TABLE}: no rows for {sorted(keys)}")
+        year = max(by_year)
+        geos = by_year[year]
+        missing = sorted(set(PROVINCES) - set(geos))
+        if "nation" not in geos or missing:
+            raise RuntimeError(f"table {self.TABLE} {year}: no national row or no provinces {missing}")
+        topic = f" ({self.TOPIC})" if self.TOPIC else ""
+        return {
+            "vintage": f"INE Censo anual de población{topic}, 1 January {year}",
+            "_files": [self._file()],
+            "year": int(year),
+            "nation": geos["nation"],
+            "provinces": {c: v for c, v in sorted(geos.items()) if len(c) == 2},
+            "municipalities": {c: v for c, v in sorted(geos.items()) if len(c) == 5},
+        }
+
+
+class IneCensoActividad(CensoSecciones):
     info = SourceInfo(
         id="ine_censo_actividad",
         title="Annual Population Census: population aged 16 and over by relationship with economic activity, table 66594",
@@ -218,36 +260,9 @@ class IneCensoActividad(IneTable):
         used_for=["Unemployment rate of cities, provinces and Spain"],
     )
     TABLE = 66594
-    STATUS = {"Ocupado/a": "employed", "Parado/a": "unemployed"}
-
-    def process(self):
-        by_year: dict[str, dict[str, dict[str, int]]] = {}  # year → geo → {employed, unemployed}
-        for row in stream_rows(self.raw_dir / self._file()):
-            if len(row) < 8 or row[3].strip() or row[4].strip() != "Total":
-                continue  # census sections, or one sex
-            key, v = self.STATUS.get(row[5].strip()), number(row[7])
-            if not key or v is None:
-                continue
-            label = row[2].strip() or row[1].strip()  # municipality, else province, else Spain
-            geo = split_geo(label)[0] if label else "nation"
-            if geo is None:
-                raise RuntimeError(f"table {self.TABLE}: no INE code in {row[:3]}")
-            by_year.setdefault(row[6].strip(), {}).setdefault(geo, {})[key] = int(v)
-        if not by_year:
-            raise RuntimeError(f"table {self.TABLE}: no employed or unemployed rows")
-        year = max(by_year)
-        geos = by_year[year]
-        missing = sorted(set(PROVINCES) - set(geos))
-        if "nation" not in geos or missing:
-            raise RuntimeError(f"table {self.TABLE} {year}: no national row or no provinces {missing}")
-        return {
-            "vintage": f"INE Censo anual de población (Relación con la actividad), 1 January {year}",
-            "_files": [self._file()],
-            "year": int(year),
-            "nation": geos["nation"],
-            "provinces": {c: v for c, v in sorted(geos.items()) if len(c) == 2},
-            "municipalities": {c: v for c, v in sorted(geos.items()) if len(c) == 5},
-        }
+    CATEGORIES = {"Ocupado/a": "employed", "Parado/a": "unemployed"}
+    TOTAL = None
+    TOPIC = "Relación con la actividad"
 
 
 class CensoEmpleo(Source):
