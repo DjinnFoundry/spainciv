@@ -26,7 +26,7 @@ decisiones que salgan van a `DECISIONS.md`.
   dos dígitos).
 - Empleo de las áreas: sin los miembros de menos de 500 habitantes (tres áreas, unos 6.500 residentes).
 - El Padrón 2025 tiene 8.138 municipios y el SIANE 2026 8.132.
-- 671 hexágonos de mar del margen suroeste no tienen muestras de ETOPO (fuera de las ventanas descargadas).
+- 298 hexágonos de mar, sobre todo alrededor del recuadro de Canarias, no tienen muestras de ETOPO (bajo el recuadro se descartan a propósito).
 - En la vista inicial, el minimapa tapa parte del recuadro de Canarias.
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
