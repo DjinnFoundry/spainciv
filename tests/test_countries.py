@@ -680,3 +680,19 @@ class SpainBeachesTest(unittest.TestCase):
         lens = beaches_lens(beaches, munis, world, grid, lambda lon, lat: (lon, lat))
         self.assertEqual(lens["values"][:3], [0, 0, 2])  # both on the only coastal hex
         self.assertEqual([lens["names"][k] for k in lens["labels"][2]], ["Cabopino (Marbella)", "Venus (Marbella)"])
+
+
+class SpainDishesTest(unittest.TestCase):
+    def test_dishes_lens_lists_a_province_dishes_on_its_hexes(self):
+        from pipeline.build.spain import dishes_lens
+
+        world = {"owner": [0, 0, 1, -1], "states": ["09", "28"]}
+        lens = dishes_lens([{"name": "Morcilla de Burgos", "provinces": ["09"]},
+                            {"name": "Papas arrugadas", "provinces": ["35", "38"]}], world)
+        self.assertEqual(lens["values"], [1, 1, 0, None])
+        self.assertEqual([lens["names"][k] for k in lens["labels"][0]], ["Morcilla de Burgos"])
+
+    def test_category_slug(self):
+        from pipeline.sources.es.dishes import slug
+
+        self.assertEqual(slug("la provincia de Córdoba (España)"), "la_provincia_de_crdoba_espaa")

@@ -313,6 +313,16 @@ SOURCES = {
         "es cooficial en todo el territorio, dan las lenguas oficiales de cada municipio.",
         "used_for": ["Lente de lenguas"],
     },
+    "gastronomia_es": {
+        "title": "Platos y productos regionales por provincia (categorías de la Wikipedia en español, filtradas con "
+        "Wikidata)",
+        "publisher": "Wikipedia en español y Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "Wikipedia: CC BY-SA 4.0 (solo se usan los títulos); Wikidata: CC0",
+        "description": "Los artículos de la categoría «Gastronomía de …» de cada provincia en la Wikipedia en español que "
+        "Wikidata clasifica como comida o bebida: platos, embutidos, quesos, dulces, panes, vinos. Lo editan "
+        "voluntarios: unas provincias están mucho mejor cubiertas que otras, y Canarias comparte una sola categoría.",
+        "used_for": ["Lente de platos regionales"],
+    },
     "bandera_azul": {
         "title": "Playas con Bandera Azul 2026-2027 (ADEAC)",
         "publisher": "ADEAC (Asociación de Educación Ambiental y del Consumidor), programa Bandera Azul",

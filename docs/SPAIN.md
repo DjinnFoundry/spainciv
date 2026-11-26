@@ -37,6 +37,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `pleiades_iberia` | Pleiades: peoples of ancient Iberia (points) and the regions named after peoples | CC BY 3.0 | Ancient peoples lens |
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
 | `bandera_azul` | ADEAC Blue Flag 2026-27 list (PDF read into a CSV in the repo by `tools/bandera_azul_pdf.py`) | © ADEAC, cited | Blue Flag beaches lens |
+| `gastronomia_es` | Spanish Wikipedia provincial cuisine categories, filtered to foods and drinks with Wikidata | CC BY-SA 4.0 (titles); CC0 | Regional dishes lens |
 | `ine_padron` | INE table 29005 (Padrón revision by municipality) | CC BY 4.0, citing INE | Population, growth, density lens |
 | `ine_pib` | INE table 80109 (Contabilidad Regional, GDP by province) | CC BY 4.0, citing INE | Gold (GDP) by province |
 | `ine_censo_ocupados` | INE Annual Population Census, employed residents by CNAE section (tables 69962 and 69992) | CC BY 4.0, citing INE | Food, Production, Science, Culture yields, jobs and employed of cities, provinces and Spain |

@@ -38,7 +38,8 @@ from .world import localized
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es",
-            "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul"]
+            "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
+            "gastronomia_es"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -448,6 +449,26 @@ def peoples_lens(peoples: list[dict], proj, grid: HexGrid, owner: list[int]) -> 
     }
 
 
+def dishes_lens(dishes: list[dict], world: dict) -> dict:
+    """Regional dishes and foods per province (Spanish Wikipedia's provincial cuisine categories, filtered to foods
+    with Wikidata): every land hex lists its province's."""
+    by_province: dict[str, list[int]] = {}
+    for c, o in enumerate(world["owner"]):
+        if o >= 0:
+            by_province.setdefault(world["states"][o], []).append(c)
+    return {
+        "id": "dishes", "group": "food", "name": "Platos regionales", "icon": "l-dishes", "emoji": "🥘",
+        "unit": "platos y productos de la provincia", "format": "int", "scale": "linear", "higher_is": "neutral",
+        "ramp": ["#2a1708", "#5b3112", "#8f5119", "#c47c2a", "#e6ad55", "#fde3a7"], "source": "gastronomia_es",
+        "description": f"Los {len(dishes)} platos, embutidos, quesos, dulces, panes y vinos que la Wikipedia en español "
+        "pone en la gastronomía de cada provincia (y que Wikidata clasifica como comida o bebida). Pasa el ratón por un "
+        "hexágono para ver los de su provincia. Lo editan voluntarios: unas provincias están mucho mejor cubiertas que "
+        "otras.",
+        **named_counts([d["name"] for d in dishes],
+                       [[c for p in d["provinces"] for c in by_province.get(p, [])] for d in dishes], world["owner"]),
+    }
+
+
 def food_lens(names: list[dict], proj, grid: HexGrid, owner: list[int]) -> dict:
     """Protected food and drink names (DOP, IGP, wine denominations) whose area holds each land hex's centre. A name
     whose area holds no hex centre (a small vino de pago) goes to the land hex nearest its area's centre."""
@@ -567,6 +588,7 @@ def build() -> None:
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
+        dishes_lens(load_interim("gastronomia_es")["dishes"], world),
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
         beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj)] + [
