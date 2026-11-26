@@ -419,12 +419,17 @@ def place_first(resource: str, tiles: list[Tile], candidates) -> int:
     return -1
 
 
-def place_at(resource: str, grid: Grid, tiles: list[Tile], x: float, y: float) -> int:
-    """A resource found at a point: on its tile, or on the nearest neighbour where it fits; -1 if none."""
+def place_at(resource: str, grid: Grid, tiles: list[Tile], x: float, y: float, rings: int = 1) -> int:
+    """A resource found at a point: on its tile, or on the nearest tile within `rings` rings where it fits; -1 if
+    none."""
     t = grid.locate(x, y)
     if t < 0:
         return -1
-    nearest = sorted([t, *grid.ring(t)], key=lambda c: (c != t, math.dist(grid.center(c), (x, y)), c))
+    near, frontier = {t}, [t]
+    for _ in range(rings):
+        frontier = [n for c in frontier for n in grid.ring(c) if n not in near]
+        near.update(frontier)
+    nearest = sorted(near, key=lambda c: (c != t, math.dist(grid.center(c), (x, y)), c))
     return place_first(resource, tiles, nearest)
 
 

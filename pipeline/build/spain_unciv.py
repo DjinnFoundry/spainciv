@@ -56,6 +56,9 @@ SUBSTANCES = {
 # BDMIN substance → resource, for its large and medium deposits, worked or not (a deposit of several gives each).
 DEPOSITS = {"Hulla": "Coal", "Antracita": "Coal", "Lignito": "Coal", "Carbón": "Coal", "Uranio y radiactivos": "Uranium",
             "Bauxita": "Aluminum", "Hierro": "Iron", "Oro": "Gold Ore", "Cobre": "Copper", "Plata": "Silver"}
+# Resources Unciv allows on so few terrains that most deposits fall on none of them (uranium: forest, tundra, marsh;
+# aluminium: hill, desert, tundra, snow): they look for an allowed tile this many rings out (2 rings: up to ~50 km).
+RINGS = {"Uranium": 2, "Aluminum": 2}
 # Horses: the agricultural comarcas with at least HORSE_DENSITY times Spain's equines per km² (Censo Agrario 2020).
 HORSE_DENSITY = 4.0
 # Municipalities the 2019 list names as they were called then → their name in SIANE 2026; "SIN DEFINIR" (no
@@ -137,7 +140,7 @@ def place_points(resource: str, points: list[tuple[float, float]], grid: unciv.G
         t = grid.locate(x, y)
         if t >= 0 and any(tiles[c].resource == resource for c in [t, *grid.ring(t)]):
             continue
-        if unciv.place_at(resource, grid, tiles, x, y) >= 0:
+        if unciv.place_at(resource, grid, tiles, x, y, RINGS.get(resource, 1)) >= 0:
             placed += 1
         else:
             unplaced += 1

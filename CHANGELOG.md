@@ -6,6 +6,9 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
+  1 de aluminio). Los yacimientos del BDMIN con coordenadas en metros UTM (27 de 280) quedan en su sitio: el carbón de
+  Villablino, el oro de Salave y la bauxita de La Vansa ya están en el mapa (E63).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del

@@ -112,7 +112,9 @@ td.n { text-align: right; white-space: nowrap; }
   ya no se exploten (el carbón de León, Palencia o Asturias, el uranio de Salamanca o Jaén). Los productos van a la
   casilla con más superficie de su denominación de origen, y los caballos a las comarcas con más équidos por km². Unciv
   solo deja cada recurso sobre ciertos terrenos (el carbón en llanura, pradera, colina o bosque; el uranio en bosque,
-  tundra o marisma); si su casilla no vale, va a la vecina que valga, y si ninguna vale no se pone. Hay uno por casilla,
+  tundra o marisma); si su casilla no vale, va a la vecina que valga, y si ninguna vale no se pone. El uranio y el
+  aluminio, que caben en muy pocos terrenos, buscan hasta dos casillas más allá, así que su casilla puede estar hasta a
+  unos 50 km del yacimiento. Hay uno por casilla,
   y varios yacimientos de lo mismo juntos dan uno. Las cantidades de los recursos estratégicos son las de un yacimiento
   grande de Unciv.</p>
   <table>
@@ -120,7 +122,8 @@ td.n { text-align: right; white-space: nowrap; }
     $resource_rows
   </table>
   <p>Sin casilla se quedaron: $not_placed. Casi todas las canteras de piedra caen en llanura, donde Unciv no pone
-  piedra, y casi todo el uranio y la bauxita, en llanura o colina, donde Unciv no pone uranio ni aluminio. Estas
+  piedra, y casi todo el uranio, en llanuras de Salamanca y de Sierra Morena sin bosque, tundra ni marisma a menos de
+  50 km. Estas
   denominaciones no encontraron sitio libre que las admita: $designations.</p>
   <p>El cerdo ibérico es un recurso de lujo propio de este mod: Unciv no tiene cerdos. Va en pradera, llanura o colina,
   se mejora con un pastizal y da comida y oro. Es de lujo y no de los básicos (como el ganado o las ovejas) porque las
