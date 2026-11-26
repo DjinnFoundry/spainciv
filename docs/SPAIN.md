@@ -33,6 +33,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `puertos_estado` | Puertos del Estado: traffic 2025 by Port Authority (XLSX) + service areas (WFS, CC BY 4.0) | Puertos del Estado legal notice; WFS CC BY 4.0 | Ports |
 | `siiu_universidades` | SIIU (Ministerio de Ciencia, Innovación y Universidades): students by centre 2024-25 and centre municipalities (XLSX) | Reuse citing the Ministry | Great-university wonders |
 | `power_plants_es` | powerplantmatching (PyPSA, pinned commit) + OpenStreetMap power plants on the Canary Islands | CC BY 4.0; ODbL 1.0 | Power plants (resources) |
+| `igme_minas` | IGME: Estadística Minera de España 2019 active workings (XLSX published with Panorama Minero 2022), placed at the matching deposit of IGME's BDMIN (ArcGIS REST) | IGME licence of use: free reuse citing the source (Ley 37/2007) | Mines (resources) |
 | `calidad_diferenciada` | MAPA "Calidad diferenciada" areas (OGC API, 2017) + eAmbrosia EU register | CC BY 4.0 | Food & drink lens |
 | `pleiades_iberia` | Pleiades: peoples of ancient Iberia (points) and the regions named after peoples | CC BY 3.0 | Ancient peoples lens |
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
