@@ -687,9 +687,12 @@ def build() -> None:
                    "growth_years": years or None},
         "yields": yields_es(ss["year"], rd_p),
         "industries": INDUSTRIES,
-        # The living-standard fields come from other sources than the Padrón (docs/DATA_CONTRACTS.md, nation.json).
+        # The living-standard fields and the employed come from other sources than the Padrón, and no source gives
+        # home values (docs/DATA_CONTRACTS.md, nation.json).
         "field_vintages": {"unemployment": vintage(activity_p["vintage"]), "median_income": vintage(adrh_p["vintage"]),
-                           "median_rent": vintage(rent_p["vintage"])},
+                           "median_rent": vintage(rent_p["vintage"]),
+                           "employed": vintage(load_interim_payload("ine_censo_ocupados")["vintage"]),
+                           "home_value": "sin datos: el INE no lo publica"},
     }
 
     # --- lenses ------------------------------------------------------------------------------------------------

@@ -80,7 +80,7 @@ export function buildData(app) {
     F("affordability", t("adv.f.afford"), "ratio", { unit: t("adv.f.afford.unit"), higher_is: "bad", group: t("adv.group.prosperity"), description: t("adv.f.afford.desc"), derived: true }),
     F("rent_burden", t("adv.f.rentBurden"), "pct", { unit: t("adv.f.rentBurden.unit"), higher_is: "bad", source: src, group: t("adv.group.prosperity"), description: t("adv.f.rentBurden.desc") }),
     F("unemployment", t("adv.f.unemployment"), "pct", { unit: t("adv.f.unemployment.unit"), higher_is: "bad", source: src, group: t("adv.group.prosperity"), description: t("adv.f.unemployment.desc", { vintage: vintageOf("unemployment") }) }),
-    F("employed", t("adv.f.employed"), "int", { unit: t("adv.f.employed.unit"), source: src, description: t("adv.f.employed.desc", { vintage }) }),
+    F("employed", t("adv.f.employed"), "int", { unit: t("adv.f.employed.unit"), source: src, description: t("adv.f.employed.desc", { vintage: vintageOf("employed") }) }),
     ...(nation.yields || []).filter((y) => !isMoney(y.unit)).map((y) => F(`y_${y.key}`, t("adv.f.yieldWorkers", { label: y.label }), "int", { unit: t("adv.f.workers"), source: src, group: t("adv.group.yields"), description: y.description })),
   ];
   const rollupFields = () => counties ? [...ROLLUP.map((k) => {
