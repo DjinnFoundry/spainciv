@@ -51,7 +51,7 @@ export default {
   "cv.noSeries": "No hay serie anual para esta área.",
   "cv.stat.employed": "Residentes ocupados",
   "cv.stat.unemployment": "Paro",
-  "cv.stat.income": "Renta mediana de los hogares",
+  "cv.stat.income": "Renta neta media por hogar",
   "cv.stat.rent": "Alquiler mediano al mes",
   "cv.stat.home": "Valor mediano de la vivienda",
   "cv.stat.burden": "Esfuerzo del alquiler (alquiler ÷ renta)",
@@ -167,7 +167,7 @@ export default {
   "cv.cmp.housing": "Vivienda y empleo",
 
   // footer
-  "cv.foot.sources": "Censo anual de población del INE; Atlas Digital de las Áreas Urbanas (Ministerio de Vivienda)",
+  "cv.foot.sources": "Censo anual de población del INE (empleo y paro); Atlas de Distribución de Renta de los Hogares del INE; SERPAVI y Atlas Digital de las Áreas Urbanas (Ministerio de Vivienda)",
   "cv.foot": "Fuentes: {vintage}; {sources}{gdp}. Los puestos se cuentan entre las {n} {group} del mapa.",
 
   // the quick panel button, the dock and the map key
