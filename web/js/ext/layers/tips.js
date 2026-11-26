@@ -4,7 +4,7 @@
 import { esc, compact, int, pct, fixed, withPct, shownTons, shownWeight } from "../../format.js";
 import { FORT_KINDS, fortKind } from "../../render/art/sites.js";
 import { MODE_STYLE } from "../../render/art/improvements.js";
-import { t } from "../../i18n.js";
+import { t, usOr } from "../../i18n.js";
 
 const muted = (s) => `<span class="muted">${s}</span>`;
 const num = (n, d = 1) => (n == null || !Number.isFinite(n) ? "–" : compact(n));
@@ -53,23 +53,23 @@ export const tips = {
   },
   fort(f, m) {
     const comp = m.data.military?.components?.find((c) => c.id === f.component);
-    const name = comp?.name || FORT_KINDS[fortKind(f.component)]?.name || "Defense site";
-    const tier = { major: "Major installation", base: "Base", site: "Site" }[f.tier] || "";
-    const status = { act: "", semi: " · semi-active", care: " · caretaker status" }[f.status] ?? "";
+    const name = comp?.name || FORT_KINDS[fortKind(f.component)]?.name || t("tip.fort.site");
+    const tier = { major: t("tip.fort.major"), base: t("tip.fort.base"), site: t("tip.fort.siteTier") }[f.tier] || "";
+    const status = { act: "", semi: t("tip.fort.semi"), care: t("tip.fort.care") }[f.status] ?? "";
     const lines = [
       `<b>${esc(f.name)}</b> ${muted(esc(f.state || ""))}`,
-      `${esc(name)}${f.joint ? " · joint base" : ""} · ${esc(tier)}${esc(status)}`,
+      `${esc(name)}${f.joint ? t("tip.fort.joint") : ""} · ${esc(tier)}${esc(status)}`,
     ];
-    if (f.area_km2 != null) lines.push(`Boundary ${int(f.area_km2)} km²`);
-    lines.push(muted("DoD MIRTA. Sized by boundary area: no per-base headcount is published."));
+    if (f.area_km2 != null) lines.push(t("tip.fort.boundary", { area: int(f.area_km2) }));
+    lines.push(muted(usOr("tip.fort.note")));
     return lines.join("<br>");
   },
   range(r, m) {
     const comp = m.data.military?.components?.find((c) => c.id === r.component);
     return [
       `<b>${esc(r.name)}</b> ${muted(esc(r.state || ""))}`,
-      `Restricted ground · ${esc(comp?.name || "")} · ${int(r.area_km2)} km²`,
-      muted("One of the 30 largest DoD boundaries (MIRTA), drawn on the hexes it covers."),
+      t("tip.range.line", { comp: esc(comp?.name || ""), area: int(r.area_km2) }),
+      muted(usOr("tip.range.note", { n: m.ranges?.length || 0 })),
     ].join("<br>");
   },
   wonder(x, m) {

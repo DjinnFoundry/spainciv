@@ -31,6 +31,10 @@ export function t(key, vars) {
   return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] == null ? m : String(vars[k]))) : s;
 }
 
+/** The United States text of `key` (`key.us`) on the US map, the general text elsewhere. tests/test_i18n.py checks that
+ * both strings exist for every usOr() key. */
+export const usOr = (key, vars) => t(country().id === "us" ? `${key}.us` : key, vars);
+
 // The static text of web/index.html, which is written in English for the United States: [selector, attribute or
 // null for the text, key]. Another language replaces it when the page starts (tests/test_i18n.py checks that every
 // English entry still matches index.html).
