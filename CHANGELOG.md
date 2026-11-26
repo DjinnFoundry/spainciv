@@ -6,6 +6,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Capa **Denominaciones de origen** con los 398 nombres que España tiene en el registro de la UE (eran 292 zonas del
+  Ministerio de 2017): 108 con zona nueva, entre ellos los 43 vinos de la tierra, 14 vinos de pago y lo registrado desde 2017
+  (Torrezno de Soria, Miel de Málaga, Queso de Burgos…), con la zona de su documento único o pliego sobre los límites
+  municipales; el tooltip dice cómo se obtuvo cada zona. Penedès, Priorat, Idiazabal, los txakolis y otros que no
+  casaban por el nombre quedan enlazados a su registro. En el mapa de Unciv, el vino pasa de 81 a 132 casillas
+  (E58–E60, F27).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
