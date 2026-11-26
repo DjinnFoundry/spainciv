@@ -297,8 +297,13 @@ def holds_state_capital(city: dict) -> bool:
     return any(cap in parts and abbr in states for cap, abbr in STATE_CAPITALS)
 
 
+# The badge's own words: capital labels and the sentence; a country can give them in its language (texts_es).
+BADGE_TEXT = {"capital": "Capital city", "seat": "Seat of government", "share": "{name}: {ge}{lq}× the national share of jobs",
+              "decimal": "."}
+
+
 def badge_for(best: dict | None, capital: bool = False, state_capital: bool = False, by_id: dict = BY_ID,
-              basis: str = "qcew") -> dict | None:
+              basis: str = "qcew", texts: dict = BADGE_TEXT) -> dict | None:
     if not best:
         return None
     d = by_id[best["id"]]
@@ -306,15 +311,12 @@ def badge_for(best: dict | None, capital: bool = False, state_capital: bool = Fa
     use_sub = sub is not None and best["sub_lq"] is not None and best["sub_lq"] >= SPECIALTY_LQ
     label = d["badge"]["labels"].get(sub, d["badge"]["label"]) if use_sub else d["badge"]["label"]
     if capital and d["id"] == "government_plaza":
-        label = "Capital city"
+        label = texts["capital"]
     elif d["id"] == "government_plaza" and use_sub and sub == "921" and state_capital:
-        label = "Seat of government"
-    if use_sub:
-        ge = "≥" if best.get("sub_lower_bound") else ""
-        text = f"{d['sub'][sub]}: {ge}{best['sub_lq']:.1f}× the national share of jobs"
-    else:
-        ge = "≥" if best.get("lower_bound") else ""
-        text = f"{d['name']}: {ge}{best['lq']:.1f}× the national share of jobs"
+        label = texts["seat"]
+    name, lq, bound = (d["sub"][sub], best["sub_lq"], "sub_lower_bound") if use_sub else (d["name"], best["lq"], "lower_bound")
+    ge = "≥" if best.get(bound) else ""
+    text = texts["share"].format(name=name, ge=ge, lq=f"{lq:.1f}".replace(".", texts["decimal"]))
     return {"id": d["badge"]["id"], "label": label, "district": d["id"], "text": text, "basis": basis}
 
 

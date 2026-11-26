@@ -30,14 +30,15 @@ COUNTRIES = ("es",)
 
 RULES = [
     {"id": "world_heritage", "kind": "landmark", "kinds": ["landmark", "natural"], "year": None,
-     "text": "Every UNESCO World Heritage site with a component in Spain (50, as Wikidata records them), in order of their "
-             "UNESCO number, roughly the order of inscription. Natural sites are natural wonders."},
+     "text": "Todos los sitios del Patrimonio Mundial de la UNESCO con algún elemento en España (50, según Wikidata), por "
+             "su número UNESCO, que sigue más o menos el orden de inscripción. Los sitios naturales son maravillas naturales."},
     {"id": "national_park", "kind": "natural", "kinds": ["natural", "coastal"], "year": None,
-     "text": "Every one of Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by the area their declaring "
-             "law gives them. Spain publishes no downloadable table of park visitors yet, so they are not ranked by visits."},
+     "text": "Los 16 Parques Nacionales de España (Red de Parques Nacionales, OAPN), ordenados por la superficie que les da "
+             "su ley de declaración. España aún no publica una tabla descargable de visitantes, así que no se ordenan por "
+             "visitas."},
     {"id": "cathedral", "kind": "landmark", "kinds": ["landmark"], "year": None,
-     "text": "Every cathedral and co-cathedral in Spain that Wikidata records, alphabetically, except those that are part "
-             "of a World Heritage site (already a wonder)."},
+     "text": "Todas las catedrales y concatedrales de España que recoge Wikidata, por orden alfabético, salvo las que forman "
+             "parte de un sitio del Patrimonio Mundial (que ya es una maravilla)."},
 ]
 PREFIX = re.compile(r"^Parque Nacional (Marítimo-Terrestre )?(de las |de los |de la |del |de )?", re.IGNORECASE)
 # What stands on the plinth (web/js/render/art/sites.js WONDER_MOTIFS), by words in the wonder's name.

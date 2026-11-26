@@ -29,8 +29,10 @@ from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
-from .lenses import COUNTY_LENSES, DOMAIN_NOTE, GROUPS, land_lenses, percentile_domain, spread_population
+from .lenses import COUNTY_LENSES, GROUPS, land_lenses, percentile_domain, spread_population
 from .states import label_anchor, land_shares
+from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LABELS, vintage
+from .world import localized
 from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es"]
@@ -39,35 +41,38 @@ COUNTRIES = ("es",)
 
 SERIES_FROM = 2020  # pop_series spans the same years as the US map's (the full Padrón series is in the interim)
 
-WORKERS = "Employed residents, counted where they live (INE Annual Population Census, 1 January {year})"
+WORKERS = "Residentes ocupados, contados donde viven (Censo anual de población del INE, 1 de enero de {year})"
 YIELD_TEXT = {
-    "food": WORKERS + ": agriculture, livestock, forestry and fishing (CNAE section A).",
-    "production": WORKERS + ": mining (B), manufacturing (C) and construction (F), the US map's three industries.",
-    "gold": "Gross domestic product at market prices, current euros (INE Contabilidad Regional de España). INE publishes "
-    "it down to provinces, so cities have no Gold of their own.",
-    "science": WORKERS + ": information & communication (J) and professional, scientific & technical services (M).",
-    "culture": WORKERS + ": arts, entertainment & recreation (R).",
+    "food": WORKERS + ": agricultura, ganadería, silvicultura y pesca (sección A de la CNAE).",
+    "production": WORKERS + ": industrias extractivas (B), industria manufacturera (C) y construcción (F), los tres "
+    "sectores del mapa de EE. UU.",
+    "gold": "Producto interior bruto a precios de mercado, en euros corrientes (Contabilidad Regional de España del INE). "
+    "El INE lo publica hasta el nivel provincial, así que las ciudades no tienen oro propio.",
+    "science": WORKERS + ": información y comunicaciones (J) y actividades profesionales, científicas y técnicas (M).",
+    "culture": WORKERS + ": actividades artísticas, recreativas y de entretenimiento (R).",
 }
 # CNAE-2009 section → the industry key the map uses (yields.INDUSTRY_LINES), with the Spanish section's own label.
 CNAE = {
-    "A": ("agriculture", "Agriculture, livestock, forestry & fishing"), "B": ("mining", "Mining & quarrying"),
-    "C": ("manufacturing", "Manufacturing"), "D": ("utilities", "Energy, water & waste"), "E": ("utilities", None),
-    "F": ("construction", "Construction"), "G": ("retail", "Wholesale & retail trade, motor-vehicle repair"),
-    "H": ("transportation", "Transportation & storage"), "I": ("accommodation", "Accommodation & food services"),
-    "J": ("information", "Information & communication"), "K": ("finance", "Finance & insurance"),
-    "L": ("real_estate", "Real estate"), "M": ("professional", "Professional, scientific & technical"),
-    "N": ("admin", "Administrative & support services"), "O": ("public_admin", "Public administration & defence"),
-    "P": ("education", "Education"), "Q": ("health", "Health & social work"), "R": ("arts", "Arts, entertainment & recreation"),
-    "S": ("other", "Other services, households as employers, extraterritorial bodies"), "T": ("other", None), "U": ("other", None),
+    "A": ("agriculture", "Agricultura, ganadería, silvicultura y pesca"), "B": ("mining", "Industrias extractivas"),
+    "C": ("manufacturing", "Industria manufacturera"), "D": ("utilities", "Energía, agua y residuos"), "E": ("utilities", None),
+    "F": ("construction", "Construcción"), "G": ("retail", "Comercio y reparación de vehículos"),
+    "H": ("transportation", "Transporte y almacenamiento"), "I": ("accommodation", "Hostelería"),
+    "J": ("information", "Información y comunicaciones"), "K": ("finance", "Actividades financieras y de seguros"),
+    "L": ("real_estate", "Actividades inmobiliarias"), "M": ("professional", "Actividades profesionales, científicas y técnicas"),
+    "N": ("admin", "Actividades administrativas y servicios auxiliares"), "O": ("public_admin", "Administración pública y defensa"),
+    "P": ("education", "Educación"), "Q": ("health", "Sanidad y servicios sociales"),
+    "R": ("arts", "Actividades artísticas, recreativas y de entretenimiento"),
+    "S": ("other", "Otros servicios, hogares como empleadores y organismos extraterritoriales"), "T": ("other", None),
+    "U": ("other", None),
 }
 INDUSTRIES = {key: label for key, label in CNAE.values() if label}
 ECON_NULL = {"median_income": None, "median_rent": None, "home_value": None, "unemployment": None, "rent_burden": None}
 
 
 def yields_es(year: int | None = None) -> list[dict]:
-    """The US yield definitions (keys, icons, colours, industries) with Spain's sources; Gold is in euros."""
-    return [{**y, "unit": "eur" if y["key"] == "gold" else y["unit"], "description": YIELD_TEXT[y["key"]].format(year=year)}
-            for y in YIELDS]
+    """The US yield definitions (keys, icons, colours, industries) with Spain's names and sources; Gold is in euros."""
+    return [{**y, "label": YIELD_LABELS[y["key"]], "unit": "eur" if y["key"] == "gold" else y["unit"],
+             "description": YIELD_TEXT[y["key"]].format(year=year)} for y in YIELDS]
 
 
 def jobs_of(sections: dict[str, int] | None) -> dict[str, int | None] | None:
@@ -202,16 +207,16 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
         values.append(round(sum(v * p for v, p in vals) / wsum) if wsum else None)
     meta = COUNTY_LENSES["income"][1]
     return {
-        "id": "income", **{k: meta[k] for k in ("group", "name", "icon", "emoji", "scale", "higher_is", "ramp")},
-        "unit": "net income per person, €", "format": "eur", "source": "ine_adrh",
-        "description": f"Mean net income per person of the municipalities in each hex, weighted by population (INE Atlas "
-        f"de Distribución de Renta de los Hogares, {adrh['year']}: tax records matched to the Padrón). A mean per person, "
-        "not the US map's median per household.",
+        "id": "income", **{k: meta[k] for k in ("group", "icon", "emoji", "scale", "higher_is", "ramp")}, "name": "Renta",
+        "unit": "renta neta por persona, €", "format": "eur", "source": "ine_adrh",
+        "description": f"Renta neta media por persona de los municipios de cada hexágono, ponderada por población (Atlas "
+        f"de Distribución de Renta de los Hogares del INE, {adrh['year']}: registros tributarios cruzados con el Padrón). "
+        "Es una media por persona, no la mediana por hogar del mapa de EE. UU.",
         "values": values,
     }
 
 
-ES_GROUPS = [{"id": "heritage", "name": "Heritage"}]
+ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}]
 
 
 def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -222,11 +227,11 @@ def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
         if c >= 0 and values[c] is not None:
             values[c] += 1
     return {
-        "id": "heritage", "group": "heritage", "name": "Heritage", "icon": "l-heritage", "emoji": "🏛️",
-        "unit": "protected monuments (BIC)", "format": "int", "scale": "log", "higher_is": "neutral",
+        "id": "heritage", "group": "heritage", "name": "Patrimonio", "icon": "l-heritage", "emoji": "🏛️",
+        "unit": "monumentos protegidos (BIC)", "format": "int", "scale": "log", "higher_is": "neutral",
         "ramp": ["#2a1a0e", "#5a3418", "#8f5a25", "#c48a3a", "#e8c070", "#fff1c4"], "source": "wikidata_es",
-        "description": "Bienes de Interés Cultural (Spain's highest heritage protection: monuments, sites, historic "
-        "quarters) in each hex, as Wikidata locates them.",
+        "description": "Bienes de Interés Cultural (la máxima protección del patrimonio en España: monumentos, sitios, "
+        "conjuntos históricos) de cada hexágono, según los sitúa Wikidata.",
         "values": values,
     }
 
@@ -301,7 +306,7 @@ def build() -> None:
     # --- nation ------------------------------------------------------------------------------------------------
     nat_series = padron["nation"]
     nation = {
-        "vintage": padron_p["vintage"], "year": year, "gdp_vintage": pib_p["vintage"],
+        "vintage": vintage(padron_p["vintage"]), "year": year, "gdp_vintage": vintage(pib_p["vintage"]),
         "nation": {**econ(nat_series.get(str(year)), pib["nation"], gdp_year, ss["nation"]), "growth": growth_of(nat_series, years),
                    "growth_years": years or None},
         "yields": yields_es(ss["year"]),
@@ -315,22 +320,24 @@ def build() -> None:
         if world["counties"][k] in centre else None
     )
     lenses = [{
-        "id": "density", "group": "people", "name": "Population", "icon": "l-people", "emoji": "👥",
-        "unit": "people / km²", "format": "int", "scale": "log",
+        "id": "density", "group": "people", "name": "Población", "icon": "l-people", "emoji": "👥",
+        "unit": "habitantes / km²", "format": "int", "scale": "log",
         "ramp": ["#1b1035", "#4b2377", "#9a3b8a", "#e0645e", "#f9b24a", "#fff3a8"], "higher_is": "neutral",
         "source": "ine_padron",
-        "description": f"Residents per km² of land. Each municipality's population (INE Padrón, {year}) is spread over "
-        "its hexes in proportion to how much of the municipality each hex covers.",
+        "description": f"Residentes por km² de tierra. La población de cada municipio (Padrón del INE, {year}) se reparte "
+        "entre sus hexágonos en proporción a la parte del municipio que cubre cada uno.",
         "values": density,
     }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
-        heritage_lens(load_interim("wikidata_es")["bic"], proj, grid, owner)] + land_lenses(world, "corine")
+        heritage_lens(load_interim("wikidata_es")["bic"], proj, grid, owner)] + [
+        {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
     for lens in lenses:
         lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
         lens["description"] += DOMAIN_NOTE
-    groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
+    groups = [g for g in localized(GROUPS, {k: {"name": v} for k, v in LENS_GROUPS.items()}) + ES_GROUPS
+              if any(l["group"] == g["id"] for l in lenses)]
 
     write_web("cities.json", cities)
     write_web("nation.json", nation)
     write_web("states.json", states)
-    write_web("lenses.json", {"vintage": padron_p["vintage"], "groups": groups, "lenses": lenses})
+    write_web("lenses.json", {"vintage": vintage(padron_p["vintage"]), "groups": groups, "lenses": lenses})
     print(f"    {len(cities)} cities (AUDES large urban areas), {len(states)} provinces; GDP {gdp_year}, Padrón {year}")
