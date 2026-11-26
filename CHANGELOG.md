@@ -11,6 +11,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Aeropuertos (los 48 de AENA, con su tráfico de 2025 y la categoría de hub de la FAA por cuota de pasajeros) y puertos
+  (las 28 Autoridades Portuarias por toneladas de 2025) en el mapa.
+### Corregido
+- Los sitios de Patrimonio Mundial compartidos con otros países (hayedos, mercurio de Almadén) se colocan en su parte
+  española, y los de costa (Torre de Hércules) ya no se pierden en el agua.
 - Especialidades de la industria española en los distritos: calzado (Elda, «Shoe town»), textil (Alcoi), confección
   (A Coruña, «Fashion town»), bebidas (Logroño) y alimentación (Girona).
 - Lente de patrimonio: Bienes de Interés Cultural por hexágono (15.634, Wikidata), en un grupo nuevo «Heritage».

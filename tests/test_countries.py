@@ -513,3 +513,13 @@ class SpainWondersTest(unittest.TestCase):
         self.assertEqual(point("Point(-6.759002 42.458699)"), (-6.759, 42.4587))
         self.assertEqual(number("18.396,00"), 18396.0)
         self.assertIsNone(number(None))
+
+
+class SpainTransportTest(unittest.TestCase):
+    def test_hub_classes_and_words(self):
+        from pipeline.build.spain_infrastructure import hub_class
+        from pipeline.sources.es.transport import words
+
+        self.assertEqual([hub_class(p, 1000) for p in (10, 9, 3, 1, 0)], ["L", "M", "M", "S", "N"])
+        self.assertEqual(hub_class(5, 0), "N")
+        self.assertEqual(words("ALICANTE-ELCHE MIGUEL HDEZ. Aeropuerto"), {"alicante", "elche", "miguel", "hdez"})

@@ -78,11 +78,12 @@ class Placer:
         self.city_of = {g: c["id"] for c in load_web("cities.json") for g in c.get("counties") or []}
         self.taken: set[int] = set()
 
-    def place(self, lon: float, lat: float) -> dict:
+    def place(self, lon: float, lat: float, unique: bool = True) -> dict:
+        """Where a site at lon/lat goes: the nearest land hex (one site per hex when `unique`)."""
         grid, owner = self.grid, self.owner
         x, y = self.proj(lon, lat)
         cell = nearest_land(grid, owner, max(grid.cell_at(x, y), 0), x, y, -1)
-        if cell < 0 or cell in self.taken:
+        if cell < 0 or (unique and cell in self.taken):
             cx, cy = (x, y)
             cell = min((c for c in range(grid.size) if owner[c] >= 0 and c not in self.taken),
                        key=lambda c: math.dist(grid.center(*grid.col_row(c)), (cx, cy)))
@@ -91,6 +92,12 @@ class Placer:
         geoid = self.world["counties"][ci] if ci >= 0 else None
         return {"x": round(x, 1), "y": round(y, 1), "cell": cell, "county": geoid, "cbsa": self.city_of.get(geoid),
                 "state": self.abbrs[owner[cell]]}
+
+    def in_country(self, lon: float, lat: float) -> bool:
+        """True when lon/lat falls on the mapped country's land, or on water next to it (a lighthouse, a harbour front),
+        and not on a foreign component of a shared site."""
+        c = self.grid.cell_at(*self.proj(lon, lat))
+        return c >= 0 and (self.owner[c] >= 0 or (self.owner[c] == -1 and any(self.owner[n] >= 0 for n in self.grid.neighbours(c))))
 
     def covered(self, rings_lonlat: list) -> list[int] | None:
         shape = ShapeIndex([Shape([[self.proj(lon, lat) for lon, lat in r] for r in rings_lonlat if len(r) >= 3])], cell_km=50)
@@ -126,13 +133,14 @@ def build() -> None:
 
     heritage = []
     for site in sorted(wd["world_heritage"], key=lambda s: int(s["unesco_id"])):
-        if not site["components"] or slug(site["name"]) in park_names:
+        here = [c for c in site["components"] if placer.in_country(*c["coord"])]  # shared sites: Spanish parts only
+        if not here or slug(site["name"]) in park_names:
             continue
-        main = next((c for c in site["components"] if c["qid"] == site["qid"]), site["components"][0])
+        main = next((c for c in here if c["qid"] == site["qid"]), here[0])
         heritage.append({
             "id": f"whs-{site['unesco_id']}", "name": site["name"][:1].upper() + site["name"][1:], "short": None,
             "kind": "natural" if site["natural"] else "landmark", "rule": "world_heritage", "rank": len(heritage) + 1,
-            "metrics": {"unesco_id": int(site["unesco_id"]), "components": len(site["components"]),
+            "metrics": {"unesco_id": int(site["unesco_id"]), "components": len(here),
                         "criteria": site["criteria"], "wikidata": site["qid"]},
             **placer.place(*main["coord"]), "cells": None, "curated": False,
             "motif": motif(site["name"], site["natural"]),

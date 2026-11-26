@@ -26,6 +26,13 @@ SELECT ?s ?id ?sLabel ?coord ?crit WHERE {
   OPTIONAL { ?s wdt:P2614 ?c. ?c rdfs:label ?crit. FILTER(LANG(?crit) = "en") }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "%s". }
 }""",
+    # Spanish parts of World Heritage sites whose own items sit abroad or lack a Spanish position (beech forests, Almadén).
+    "world_heritage_parts": """
+SELECT ?s ?sLabel ?id ?coord WHERE {
+  ?site wdt:P1435 wd:Q9259; wdt:P757 ?id.
+  ?s wdt:P361 ?site; wdt:P17 wd:Q29; wdt:P625 ?coord.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "%s". }
+}""",
     # Cathedrals and co-cathedrals in Spain with coordinates.
     "cathedrals": """
 SELECT ?s ?sLabel ?coord ?whid WHERE {
@@ -95,6 +102,11 @@ class WikidataEs(Source):
             item["main"] = item["main"] or raw_id == site
             if value(b, "crit"):
                 s["criteria"].add(value(b, "crit"))
+        for b in self._rows("world_heritage_parts"):
+            site = re.match(r"\d+", value(b, "id")).group(0)
+            if site in sites:
+                sites[site]["items"].setdefault(qid(b["s"]["value"]), {"label": label(b), "coord": point(value(b, "coord")),
+                                                                      "main": False})
         heritage = []
         for site, s in sorted(sites.items(), key=lambda kv: int(kv[0])):
             items = [{"qid": k, **v} for k, v in s["items"].items()]
