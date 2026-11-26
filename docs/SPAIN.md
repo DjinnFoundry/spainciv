@@ -54,8 +54,9 @@ United States; `pipeline/site.py` gives Spain's page, when it is packaged or ser
 `page` (Spanish title and description, canonical, og:* and twitter:* pointing at `site_url`) and a credit line along
 the bottom of the map: the data sources, the SIANE attribution its CC BY 4.0 licence asks for, and usaciv's credit.
 The same values reach the browser in `<script id="country-page">`, so the share image prints the right address,
-sources and notice without rebuilding `world.json`. The social card is `sites/es/og-image.png` (1200×630, made from
-the map's own share image); files in `sites/es/` other than `data/` replace web/'s files of the same name.
+sources and notice without rebuilding `world.json`. The social card, `og-image.png` (1200×630), is drawn from
+`world.json`, `cities.json` and the country's `page` by `pipeline/card.py` whenever the site is packaged or served,
+so it follows the data; it is not kept in the repo.
 
 The site is a Cloudflare Pages project of its own (`spainciv`, account Djinn Foundry), deployed by hand:
 
