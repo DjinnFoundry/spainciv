@@ -141,10 +141,10 @@ class IgmeMinas(Source):
         self.fetch_bdmin(DEPOSIT_WHERE, "bdmin_yacimientos", force)
 
     def fetch_bdmin(self, where: str, prefix: str, force: bool) -> None:
-        """A BDMIN query, page by page, into <prefix>_<page>.json."""
+        """A BDMIN query, page by page, into <prefix>_<page>.json, with each deposit's point in WGS84 lon/lat."""
         page = 0
         while True:
-            query = urllib.parse.urlencode({"where": where, "outFields": "*", "returnGeometry": "false",
+            query = urllib.parse.urlencode({"where": where, "outFields": "*", "returnGeometry": "true", "outSR": 4326,
                                             "orderByFields": "Codigo_indicio", "resultOffset": page * PAGE,
                                             "resultRecordCount": PAGE, "f": "json"})
             path = self.download(f"{BDMIN}?{query}", f"{prefix}_{page}.json", force=force)
@@ -153,7 +153,10 @@ class IgmeMinas(Source):
             page += 1
 
     def deposits(self, prefix: str) -> tuple[list[dict], list[str]]:
-        """The deposits of the BDMIN query saved as <prefix>_<page>.json, and those files."""
+        """The deposits of the BDMIN query saved as <prefix>_<page>.json, and those files. The position is the
+        feature's geometry: about one deposit in ten has its X and Y fields in UTM metres instead of degrees (Salave,
+        the Villablino coal, the bauxite of La Vansa), and the geometry asked for in WGS84 is right for all of them;
+        rounded to the 8 decimals of the X and Y fields given in degrees."""
         out, files, page = [], [], 0
         while (path := self.raw_dir / f"{prefix}_{page}.json").exists():
             doc = json.loads(path.read_text())
@@ -166,7 +169,7 @@ class IgmeMinas(Source):
                 out.append({"code": a["Codigo_indicio"], "name": (a["Nombre_mina"] or "").strip(),
                             "municipality": a["Municipio"] or "", "province": province,
                             "substance": a["Sustancia"] or "", "size": a["Tamaño_indicio"],
-                            "lon": a["X"], "lat": a["Y"]})
+                            "lon": round(f["geometry"]["x"], 8), "lat": round(f["geometry"]["y"], 8)})
             if not doc.get("exceededTransferLimit"):
                 break
             page += 1
