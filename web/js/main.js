@@ -4,7 +4,7 @@ import * as mapRender from "./render/map.js";
 import { drawBanners } from "./render/banners.js";
 import { renderTopbar } from "./ui/topbar.js";
 import { showCellTooltip, showCityTooltip, showHtmlTooltip, hideTooltip } from "./ui/tooltip.js";
-import { initLensDock, formatLensValue, lensValueAt } from "./ui/lenses.js";
+import { initLensDock, formatLensValue, lensValueAt, namesFrom } from "./ui/lenses.js";
 import { openCityPanel, closeCityPanel } from "./ui/cityPanel.js";
 import { openStatePanel } from "./ui/statePanel.js";
 import { installSheetSwipe } from "./ui/infoPanel.js";
@@ -70,6 +70,8 @@ async function main() {
   };
   const states = Array.isArray(statesData) ? statesData : null;
   const lensById = new Map(lensFile.lenses.map((l) => [l.id, l]));
+  // The data file that names the people of the people lenses (lenses.json names_from), if this map has one.
+  const peopleFile = lensFile.lenses.find((l) => l.names_from)?.names_from ?? null;
   const cityById = new Map(cities.map((c) => [c.id, c]));
   const overlays = []; // app.registerOverlay(), sorted by z
   const staticLayers = []; // app.registerStaticLayer(), sorted by z (stable): drawn inside the cached static map
@@ -520,6 +522,8 @@ async function main() {
     const changed = lens !== state.lens;
     state.lens = lens;
     state.band = null;
+    if (personMark && state.highlight === personMark && !lens?.names_from) state.highlight = null;
+    loadNames(lens);
     applyLens(w, lens, null);
     dock.render(lens, null);
     rebuildMinimap();
@@ -527,6 +531,26 @@ async function main() {
     requestDraw();
     url.schedule();
     if (changed) events.emit("lens", lens);
+  }
+
+  // The names of a names_from lens arrive with its data file; every lens naming from the same file shares them.
+  function loadNames(lens) {
+    if (!lens?.names_from || lens.names) return;
+    loadData(lens.names_from).then((doc) => {
+      if (!doc) return;
+      const named = namesFrom(doc, w.grid.size);
+      for (const l of lensFile.lenses) if (l.names_from === lens.names_from) Object.assign(l, named);
+    });
+  }
+
+  // A person picked in the search: their people lens, a ring on their birthplace's hex and a toast.
+  let personMark = null;
+  function showPerson(p) {
+    if (state.lens?.names_from !== peopleFile) setLens(lensFile.lenses.find((l) => l.names_from === peopleFile));
+    personMark = { cells: [p.cell] };
+    state.highlight = personMark;
+    flyToVisible(w.grid.cx(p.cell), w.grid.cy(p.cell), Math.min(cam.maxScale, Math.max(cam.scale, 1.6)));
+    toast(t("search.bornIn", { name: p.name, place: p.place }));
   }
 
   function setBand(band) {
@@ -685,9 +709,16 @@ async function main() {
     states: w.raw.states.map((s, i) => ({ name: states?.[i]?.name || s.name, abbr: s.abbr, population: states?.[i]?.population })),
     onPick(r) {
       if (r.kind === "city") selectCity(r.city, { fly: true });
+      else if (r.kind === "person") showPerson(r.person);
       else selectState(r.index, { fly: true });
     },
   });
+  // People join the search the first time it is focused (their file is large and only some maps have one).
+  if (peopleFile) {
+    document.getElementById("search-input")?.addEventListener("focus", () => {
+      loadData(peopleFile).then((doc) => doc && search.addPeople(doc.people));
+    }, { once: true });
+  }
 
   const toastEl = document.getElementById("toast");
   let toastTimer = 0;

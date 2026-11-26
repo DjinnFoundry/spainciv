@@ -1,4 +1,6 @@
-// Top-bar search over cities and states: prefix matches first, then word-prefix, then substring; ties by population.
+// Top-bar search over cities and states, and the people of a map that has them (addPeople): prefix matches first,
+// then word-prefix, then substring; ties by population (people, who have none, keep their file's order: most famous
+// first). A person also matches by birthplace.
 import { esc, popShort } from "../format.js";
 import { icon } from "../ui/icon.js";
 import { country } from "./country.js";
@@ -6,9 +8,21 @@ import { t } from "../i18n.js";
 
 const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const MAX = 8;
+const ICONS = {
+  city: () => icon("pop", "🏙️", { size: 16 }),
+  state: () => icon("terrain", "🗺️", { size: 16 }),
+  person: () => icon("l-great-people", "⭐", { size: 16 }),
+};
+// What onPick receives for each kind of entry.
+const PICKS = {
+  city: (e) => ({ kind: "city", city: e.city }),
+  state: (e) => ({ kind: "state", index: e.index }),
+  person: (e) => ({ kind: "person", person: e.person }),
+};
 
 /**
- * opts: {cities, states (list of {name, abbr, population?}), onPick({kind:'city'|'state', city?, index?})}
+ * opts: {cities, states (list of {name, abbr, population?}),
+ *        onPick({kind: 'city'|'state'|'person', city?, index?, person?})}
  */
 export function initSearch(opts) {
   const input = document.getElementById("search-input");
@@ -75,7 +89,7 @@ export function initSearch(opts) {
     }
     box.innerHTML = results
       .map((e, i) => `<div class="sr-item ${i === sel ? "sel" : ""}" role="option" id="sr-${i}" aria-selected="${i === sel}" data-i="${i}">
-        <span class="sr-ic">${e.kind === "state" ? icon("terrain", "🗺️", { size: 16 }) : icon("pop", "🏙️", { size: 16 })}</span>
+        <span class="sr-ic">${ICONS[e.kind]()}</span>
         <span class="sr-main"><b>${esc(e.label)}</b><span class="sr-sub">${esc(e.sub)}</span></span>
         <span class="sr-pop">${e.pop ? popShort(e.pop) : ""}</span></div>`)
       .join("");
@@ -92,7 +106,7 @@ export function initSearch(opts) {
     close();
     input.value = "";
     input.blur();
-    opts.onPick(e.kind === "city" ? { kind: "city", city: e.city } : { kind: "state", index: e.index });
+    opts.onPick(PICKS[e.kind](e));
   }
 
   function close() {
@@ -103,17 +117,16 @@ export function initSearch(opts) {
     input.removeAttribute("aria-activedescendant");
   }
 
-  input.addEventListener("input", () => {
+  // Re-run the query and select its first result.
+  function refresh() {
     results = query(input.value);
     sel = results.length ? 0 : -1;
     render();
-  });
+  }
+
+  input.addEventListener("input", refresh);
   input.addEventListener("focus", () => {
-    if (input.value.trim()) {
-      results = query(input.value);
-      sel = results.length ? 0 : -1;
-      render();
-    }
+    if (input.value.trim()) refresh();
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -162,6 +175,14 @@ export function initSearch(opts) {
       input.blur();
     },
     query,
+    // people: [{name, note, place, cell}] (personajes.json), searchable by name and birthplace.
+    addPeople(people) {
+      for (const p of people || []) {
+        entries.push({ kind: "person", person: p, name: p.name, n: norm(p.name), full: norm(p.place), pop: 0,
+          sub: [p.note, p.place].filter(Boolean).join(" · "), label: p.name });
+      }
+      if (document.activeElement === input && input.value.trim()) refresh();
+    },
     get isOpen() { return document.activeElement === input || !box.hidden; },
   };
 }
