@@ -188,7 +188,8 @@ class SpanishDataTest(unittest.TestCase):
     CODES = {"id", "type", "kind", "key", "icon", "motif", "rule", "group", "format", "scale", "higher_is", "color", "dark",
              "source", "sources", "file", "files", "sha256", "url", "cbsa", "county", "state", "naics", "via", "basis",
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
-             "locale", "currency"}
+             "locale", "currency",
+             "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     ENGLISH = set("""the of and with from for by is are was not this that its which who people residents workers jobs
         county counties state states share median average farm wind plant plants power station airport airports
