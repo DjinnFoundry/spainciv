@@ -48,6 +48,7 @@ from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_popu
 from . import spain_daily
 from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
 from .spain_fiesta import FIESTA_REQUIRES, fiesta_lenses
+from . import spain_personajes
 from .spain_named import named_counts, shore_cell
 from .spain_wonders import place_key
 from .states import label_anchor, land_shares
@@ -57,8 +58,8 @@ from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
-            "gastronomia_es"] + spain_daily.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES
-PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
+            "gastronomia_es"] + spain_daily.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES + spain_personajes.REQUIRES
+PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json", f"{spain_personajes.FILE}.json"]
 COUNTRIES = ("es",)
 
 SERIES_FROM = 2020  # pop_series spans the same years as the US map's (the full Padrón series is in the interim)
@@ -319,7 +320,8 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
     }
 
 
-ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}, {"id": "food", "name": "Comida, bebida y fiestas"}]
+ES_GROUPS = [{"id": "heritage", "name": "Patrimonio"}, {"id": "great_people", "name": "Grandes personajes"},
+             {"id": "food", "name": "Comida, bebida y fiestas"}]
 
 
 def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
@@ -707,6 +709,8 @@ def build() -> None:
         *fiesta_lenses(world, proj, grid, lau["municipalities"], pops, weights, year)] + [
         {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
     lenses += spain_daily.lenses(world, weights, proj, grid)
+    great, people_doc = spain_personajes.great_people(world, proj, grid, lau["municipalities"])
+    lenses += great
     set_domains(lenses, DOMAIN_NOTE)
     groups = [g for g in localized(GROUPS, {k: {"name": v} for k, v in LENS_GROUPS.items()}) + ES_GROUPS
               if any(l["group"] == g["id"] for l in lenses)]
@@ -715,4 +719,5 @@ def build() -> None:
     write_web("nation.json", nation)
     write_web("states.json", states)
     write_web("lenses.json", {"vintage": vintage(padron_p["vintage"]), "groups": groups, "lenses": lenses})
+    write_web(f"{spain_personajes.FILE}.json", people_doc)
     print(f"    {len(cities)} cities (AUDES large urban areas), {len(states)} provinces; GDP {gdp_year}, Padrón {year}")
