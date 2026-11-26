@@ -195,9 +195,14 @@ Also, per state:
   "nation": { /* same economic shape as a city */ },
   "yields": [{"key": "food", "icon": "y-food", "emoji": "🌾", "label": "Food", "color": "#7fbf3f",
               "unit": "workers|usd", "description": "..."}],
-  "industries": {"agriculture": "Agriculture, forestry, fishing & hunting"}
+  "industries": {"agriculture": "Agriculture, forestry, fishing & hunting"},
+  "field_vintages": {"unemployment": "INE Censo anual de población …, 2024"}   // optional
 }
 ```
+
+`field_vintages` (optional) names the vintage of an economic field whose source is not the one `vintage` describes
+(Spain: unemployment, household income and rent come from other sources than the Padrón). A field it leaves out has
+`vintage`; the US nation.json has no such block.
 
 ## lenses.json
 

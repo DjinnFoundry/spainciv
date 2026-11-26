@@ -40,6 +40,15 @@ def read_rows(path) -> list[list[str]]:
     return rows[1:]
 
 
+def stream_rows(path):
+    """read_rows for a table too big to hold in memory (hundreds of MB): the rows one by one, header skipped. These
+    big exports are UTF-8; a file in another encoding fails instead of being misread."""
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        rows = csv.reader(f, delimiter=";")
+        next(rows, None)
+        yield from rows
+
+
 def split_geo(label: str) -> tuple[str | None, str]:
     """'28079 Madrid' → ('28079', 'Madrid'); 'Total Nacional' → (None, 'Total Nacional')."""
     m = re.match(r"(\d+)\s+(.*)", label.strip())
@@ -162,9 +171,11 @@ class IneAdrh(IneTable):
         license=LICENSE,
         description="Net income from the tax records of the Agencia Tributaria and the regional treasuries, matched to the "
         "Padrón, for every municipality (and its census districts and sections, which are not used here). The map uses "
-        "the mean net income per person of each municipality, the latest year INE publishes. Small municipalities can be "
-        "missing (statistical confidentiality); they stay without data.",
-        used_for=["Income lens"],
+        "the mean net income per person of each municipality for the income lens, and the mean net income per household "
+        "for the household income of cities, provinces and Spain (INE publishes no median per household by "
+        "municipality), the latest year INE publishes. Small municipalities can be missing (statistical "
+        "confidentiality); they stay without data.",
+        used_for=["Income lens", "Household income of cities, provinces and Spain", "Rent ÷ income"],
     )
     TABLE = 30824
     INDICATORS = {"Renta neta media por persona": "net_per_person", "Renta neta media por hogar": "net_per_household"}
@@ -189,6 +200,53 @@ class IneAdrh(IneTable):
             "municipalities": {
                 code: {k: s.get(year) for k, s in m.items()} for code, m in sorted(munis.items()) if any(year in s for s in m.values())
             },
+        }
+
+
+class IneCensoActividad(IneTable):
+    info = SourceInfo(
+        id="ine_censo_actividad",
+        title="Annual Population Census: population aged 16 and over by relationship with economic activity, table 66594",
+        publisher="Instituto Nacional de Estadística (INE)",
+        homepage="https://www.ine.es/jaxiT3/Tabla.htm?t=66594",
+        license=LICENSE,
+        description="Residents aged 16 and over who are employed, unemployed or inactive, for Spain, every province and "
+        "every municipality (and census sections, not used here), from the Annual Population Census, which INE builds "
+        "from administrative registers (Padrón, labour, tax, education). The map's unemployment rate is unemployed ÷ "
+        "(employed + unemployed), counted where people live, like the US map's ACS rate. It is neither the EPA (Labour "
+        "Force Survey) rate nor SEPE's registered unemployment, which is a count of job seekers with no denominator.",
+        used_for=["Unemployment rate of cities, provinces and Spain"],
+    )
+    TABLE = 66594
+    STATUS = {"Ocupado/a": "employed", "Parado/a": "unemployed"}
+
+    def process(self):
+        by_year: dict[str, dict[str, dict[str, int]]] = {}  # year → geo → {employed, unemployed}
+        for row in stream_rows(self.raw_dir / self._file()):
+            if len(row) < 8 or row[3].strip() or row[4].strip() != "Total":
+                continue  # census sections, or one sex
+            key, v = self.STATUS.get(row[5].strip()), number(row[7])
+            if not key or v is None:
+                continue
+            label = row[2].strip() or row[1].strip()  # municipality, else province, else Spain
+            geo = split_geo(label)[0] if label else "nation"
+            if geo is None:
+                raise RuntimeError(f"table {self.TABLE}: no INE code in {row[:3]}")
+            by_year.setdefault(row[6].strip(), {}).setdefault(geo, {})[key] = int(v)
+        if not by_year:
+            raise RuntimeError(f"table {self.TABLE}: no employed or unemployed rows")
+        year = max(by_year)
+        geos = by_year[year]
+        missing = sorted(set(PROVINCES) - set(geos))
+        if "nation" not in geos or missing:
+            raise RuntimeError(f"table {self.TABLE} {year}: no national row or no provinces {missing}")
+        return {
+            "vintage": f"INE Censo anual de población (Relación con la actividad), 1 January {year}",
+            "_files": [self._file()],
+            "year": int(year),
+            "nation": geos["nation"],
+            "provinces": {c: v for c, v in sorted(geos.items()) if len(c) == 2},
+            "municipalities": {c: v for c, v in sorted(geos.items()) if len(c) == 5},
         }
 
 

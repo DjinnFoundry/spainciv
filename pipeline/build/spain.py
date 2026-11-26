@@ -7,10 +7,10 @@ First cut (see docs/SPAIN.md):
   footprint add up the member municipalities (the US metro rule, cities.footprints). Employment leaves out the members
   of under 500 residents, which INE does not publish by section (three areas, a few thousand residents).
 * **Gold** is GDP at market prices (INE Contabilidad Regional), which INE publishes down to provinces: provinces and
-  the nation have it; cities don't (there is no official municipal GDP, and none is made up here).
+  the nation have it; cities don't (there is no official municipal GDP, and none is made up here: household income or
+  IRPF bases measure what residents earn, not what is produced there, so they are not used as a stand-in).
 * **Food, Production, Culture** count employed residents by CNAE section (INE Annual Population Census: cities,
-  provinces, Spain), mapped to the US industry keys so the US yield definitions apply unchanged. Median household
-  income, rent, home value and unemployment stay null.
+  provinces, Spain), mapped to the US industry keys so the US yield definitions apply unchanged.
 * **Science** is R&D personnel in full-time equivalents (INE R&D statistic, all sectors), counted where the R&D is
   done, where the US map counts Science workers (professional + information, ACS). INE publishes it by autonomous
   community only, so below that a community's R&D personnel is shared among its provinces and municipalities in
@@ -20,6 +20,10 @@ First cut (see docs/SPAIN.md):
   INE's national total. A community without a published figure (Ceuta and Melilla, statistical secrecy) leaves its
   provinces and cities null. Science keeps no industry list, so the yield report shows no census breakdown that
   would not add up to it.
+* **Living standards** (the US contract's fields, see living()): `unemployment` = unemployed ÷ (employed + unemployed)
+  of the Annual Population Census; `median_income` = ADRH *mean* net income per household (INE publishes no median);
+  `median_rent` = SERPAVI median monthly rent; `rent_burden` = rent × 12 ÷ income, the US formula. `home_value` stays
+  null: no official source gives a value per dwelling by municipality (the ministry's appraisals are in €/m²).
 * **Growth** is Padrón population change from BASELINE_YEAR to the Padrón year, like the US rule (cap ±25%).
 * **Lenses**: population density (each municipality's Padrón population spread over its hexes, lenses.spread_population),
   income (INE ADRH mean net income per person, population-weighted over each hex's municipalities) and the land-cover
@@ -47,8 +51,9 @@ from .texts_es import DOMAIN_NOTE, LAND_LENSES, LAND_UNIT, LENS_GROUPS, YIELD_LA
 from .world import localized
 from .yields import YIELDS
 
-REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_imasd",
-            "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul", "gastronomia_es"]
+REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
+            "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
+            "gastronomia_es"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -150,13 +155,48 @@ def rd_science(rows: dict[str, dict | None], rates: dict[str, float | None]) -> 
     return round(sum(parts)) if parts else None
 
 
+def unemployment_rate(rows: list[dict | None]) -> float | None:
+    """Unemployed ÷ (employed + unemployed) over the places with Census figures (INE leaves out municipalities of
+    under ~75 residents): the area's own rate, each member weighted by its labour force."""
+    known = [r for r in rows if r]
+    labour = sum(r["employed"] + r["unemployed"] for r in known)
+    return round(sum(r["unemployed"] for r in known) / labour, 4) if labour else None
+
+
+def household_income(rows: list[tuple[int | None, float | None, float | None]]) -> int | None:
+    """Mean net income per household of a group of municipalities from ADRH's per-person and per-household means:
+    rows of (population, per person, per household). A municipality's households are population × per person ÷ per
+    household, so the result is total income ÷ total households, the members' means weighted by their households.
+    Municipalities INE leaves out (confidentiality) are skipped."""
+    known = [(p, pp, ph) for p, pp, ph in rows if p and pp and ph]
+    households = sum(p * pp / ph for p, pp, ph in known)
+    return round(sum(p * pp for p, pp, _ in known) / households) if households else None
+
+
+def monthly_rent(groups: list[list[list[float]] | None]) -> int | None:
+    """SERPAVI median monthly rents (flats and houses of each place, [[rented dwellings, median], …]) combined into one
+    figure: their mean weighted by rented dwellings. A median of each part, so for a group it approximates the median."""
+    pairs = [pair for g in groups if g for pair in g]
+    leases = sum(n for n, _ in pairs)
+    return round(sum(n * m for n, m in pairs) / leases) if leases else None
+
+
+def living(unemployment: list[dict | None], income: list[tuple], rents: list[list[list[float]] | None]) -> dict:
+    """The US contract's living-standard fields (yields.economy) from Spain's sources; home_value has none."""
+    inc, rent = household_income(income), monthly_rent(rents)
+    return {"median_income": inc, "median_rent": rent, "home_value": None, "unemployment": unemployment_rate(unemployment),
+            "rent_burden": round(rent * 12 / inc, 4) if rent and inc else None}
+
+
 def econ(population: int | None, gdp: float | None, gdp_year: int | None, workers: dict[str, int] | None = None,
-         science: float | None = None) -> dict:
-    """The economy block of a place; `science` is its R&D personnel (rd_science), not a census count."""
+         science: float | None = None, living_fields: dict | None = None) -> dict:
+    """The economy block of a place; `science` is its R&D personnel (rd_science), not a census count, and
+    `living_fields` its living standards (living())."""
     jobs = jobs_of(workers)
     special = {"gold": gdp, "science": science}
     return {
-        "population": population, "employed": workers.get("total") if workers else None, "jobs": jobs or {}, **ECON_NULL,
+        "population": population, "employed": workers.get("total") if workers else None, "jobs": jobs or {},
+        **(living_fields or ECON_NULL),
         "yields": {y["key"]: special[y["key"]] if y["key"] in special else total(jobs, y["industries"]) for y in YIELDS},
         "gdp": gdp, "gdp_year": gdp_year if gdp is not None else None,
     }
@@ -558,6 +598,10 @@ def build() -> None:
     ss = load_interim("ine_censo_ocupados")
     rd_p = load_interim_payload("ine_imasd")
     rates = rd_rates(rd_p["data"], ss["provinces"])
+    activity_p, rent_p = load_interim_payload("ine_censo_actividad"), load_interim_payload("serpavi")
+    activity, rent = activity_p["data"], rent_p["data"]
+    adrh_p = load_interim_payload("ine_adrh")
+    adrh = adrh_p["data"]
     proj = active().world_projection(world)
     grid = HexGrid(**world["grid"])
     owner = world["owner"]
@@ -568,6 +612,15 @@ def build() -> None:
     centre = {m["geoid"]: m["centre"] for m in lau["municipalities"]}
     regions = {p["fips"]: p for p in lau["provinces"]}
     muni = padron["municipalities"]
+
+    def income_rows(codes) -> list[tuple]:
+        """(Padrón population of the ADRH year, ADRH per person, per household) of each municipality."""
+        rows = []
+        for c in codes:
+            a = adrh["municipalities"].get(c) or {}
+            rows.append((muni.get(c, {}).get("pop", {}).get(str(adrh["year"])), a.get("net_per_person"),
+                         a.get("net_per_household")))
+        return rows
 
     # --- cities: the large urban areas (AUDES), like the US metro areas ------------------------------------------
     areas = urban_areas(load_interim("audes")["areas"], muni, centre)
@@ -591,7 +644,9 @@ def build() -> None:
             "states": [regions[p]["abbr"] for p in provs], "metro": True, "capital": code == active().capital_city,
             "x": round(x, 1), "y": round(y, 1), "cell": cell,
             **econ(series.get(str(year)), None, None, add_sections([ss["municipalities"].get(c) for c in members]),
-                   rd_science({c: ss["municipalities"].get(c) for c in members}, rates)),
+                   rd_science({c: ss["municipalities"].get(c) for c in members}, rates),
+                   living([activity["municipalities"].get(c) for c in members], income_rows(members),
+                          [rent["municipalities"].get(c) for c in members])),
             "growth": growth_of(series, years), "growth_years": years or None,
             "counties": sorted(members),
             "footprint": sorted(feet.get(code, set()) | {cell}),
@@ -607,7 +662,9 @@ def build() -> None:
         states.append({
             "fips": fips, "abbr": p["abbr"], "name": p["name"],
             **econ(series.get(str(year)), pib["provinces"].get(fips), gdp_year, ss["provinces"].get(fips),
-                   rd_science({fips: ss["provinces"].get(fips)}, rates)),
+                   rd_science({fips: ss["provinces"].get(fips)}, rates),
+                   living([activity["provinces"].get(fips)], income_rows(c for c in muni if c[:2] == fips),
+                          [rent["provinces"].get(fips)])),
             "growth": growth_of(series, years), "growth_years": years or None,
             "ranks": {}, "label": label_anchor(grid, owner, i, p["name"]), "land": land_shares(world, i), "energy": None,
         })
@@ -624,10 +681,15 @@ def build() -> None:
     nation = {
         "vintage": vintage(padron_p["vintage"]), "year": year, "gdp_vintage": vintage(pib_p["vintage"]),
         "nation": {**econ(nat_series.get(str(year)), pib["nation"], gdp_year, ss["nation"],
-                          round(rd_p["data"]["nation"]["personnel_fte"])), "growth": growth_of(nat_series, years),
+                          round(rd_p["data"]["nation"]["personnel_fte"]),
+                          living([activity["nation"]], income_rows(muni), list(rent["provinces"].values()))),
+                   "growth": growth_of(nat_series, years),
                    "growth_years": years or None},
         "yields": yields_es(ss["year"], rd_p),
         "industries": INDUSTRIES,
+        # The living-standard fields come from other sources than the Padrón (docs/DATA_CONTRACTS.md, nation.json).
+        "field_vintages": {"unemployment": vintage(activity_p["vintage"]), "median_income": vintage(adrh_p["vintage"]),
+                           "median_rent": vintage(rent_p["vintage"])},
     }
 
     # --- lenses ------------------------------------------------------------------------------------------------
@@ -645,7 +707,7 @@ def build() -> None:
         "description": f"Residentes por km² de tierra. La población de cada municipio (Padrón del INE, {year}) se reparte "
         "entre sus hexágonos en proporción a la parte del municipio que cubre cada uno.",
         "values": density,
-    }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
+    }, income_lens(adrh_p, world["counties"], weights),
         heritage_lens(wikidata["bic"], proj, grid, owner), museums_lens(wikidata["museums"], proj, grid, owner),
         food_lens(load_interim("calidad_diferenciada")["names"], proj, grid, owner),
         dishes_lens(load_interim("gastronomia_es")["dishes"], world),

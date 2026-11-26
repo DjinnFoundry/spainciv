@@ -12,8 +12,10 @@ decisiones que salgan van a `DECISIONS.md`.
 - Minas: la lista por mina más reciente del IGME es la de 2019; La Parrilla (wolframio, desde 2020) y Alquife (hierro,
   2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
-- El oro de las ciudades queda vacío: no hay PIB municipal oficial.
-- Mediana de renta por hogar, alquiler, valor de la vivienda y paro de las ciudades: sin fuente municipal todavía.
+- El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E31).
+- Valor de la vivienda: no hay valor por vivienda municipal abierto; el valor tasado del Ministerio está en €/m² y en XLS binario (E30). Por decidir si entra como campo propio.
+- La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
+- Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
 - Los ciudadanos de la City View y los ejércitos, el comercio y los desastres siguen siendo solo de EE UU.
 - Distritos: describen el municipio núcleo de cada área (5 de las 86 áreas tienen un núcleo sin divisiones CNAE en el
   Censo y se quedan sin distritos); los municipios no tienen distritos propios. Sin Encampment (defensa no se separa a

@@ -430,6 +430,83 @@ class SpainScienceTest(unittest.TestCase):
         self.assertNotIn("vintage", ys["food"])
         self.assertEqual(ys["production"]["industries"], ["manufacturing", "construction", "mining"])
 
+class SpainLivingTest(unittest.TestCase):
+    """Unemployment, household income and rent of areas, provinces and Spain (spain.living)."""
+
+    def test_unemployment_is_the_areas_own_rate(self):
+        from pipeline.build import spain
+
+        rows = [{"employed": 90, "unemployed": 10}, {"employed": 270, "unemployed": 30}, None]  # None: not published
+        self.assertEqual(spain.unemployment_rate(rows), 0.1)
+        self.assertEqual(spain.unemployment_rate([{"employed": 900, "unemployed": 100}, {"employed": 50, "unemployed": 50}]), 0.1364)
+        self.assertIsNone(spain.unemployment_rate([None]))
+
+    def test_household_income_weights_by_households(self):
+        from pipeline.build import spain
+
+        # 1,000 people at 20,000 €/person in 400 households (50,000 €) + 1,000 at 10,000 in 500 households (20,000):
+        # 30 M € over 900 households, not the plain mean of 50,000 and 20,000.
+        rows = [(1000, 20000.0, 50000.0), (1000, 10000.0, 20000.0), (500, None, 30000.0), (None, 9000.0, 20000.0)]
+        self.assertEqual(spain.household_income(rows), 33333)
+        self.assertIsNone(spain.household_income([(100, None, None)]))
+
+    def test_rent_weights_medians_by_leases(self):
+        from pipeline.build import spain
+
+        self.assertEqual(spain.monthly_rent([[[300, 800.0], [100, 1200.0]], None, [[100, 400.0]]]), 800)
+        self.assertIsNone(spain.monthly_rent([None, []]))
+
+    def test_living_fields_follow_the_us_contract(self):
+        from pipeline.build import spain
+
+        e = spain.econ(1000, None, None, None, living_fields=spain.living([{"employed": 95, "unemployed": 5}], [(10, 1.0, 2.0)],
+                                                            [[[1, 100.0]]]))
+        self.assertEqual(list(spain.ECON_NULL), [k for k in e if k in spain.ECON_NULL], "same keys, same order")
+        self.assertEqual((e["unemployment"], e["median_income"], e["median_rent"]), (0.05, 2, 100))
+        self.assertEqual(e["rent_burden"], 600.0, "rent × 12 ÷ income, as in yields.economy")
+        self.assertIsNone(e["home_value"], "no official value per dwelling by municipality")
+        self.assertIsNone(spain.living([None], [], [None])["rent_burden"])
+
+    def test_censo_actividad_levels(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from pipeline.sources.es.ine import IneCensoActividad
+
+        head = "\ufeffTotal Nacional;Provincias;Municipios;Secciones;Sexo;Relación con la actividad;Periodo;Total\n"
+        rows = ["Total Nacional;;;;Total;Ocupado/a;2024;20.373.148", "Total Nacional;;;;Total;Parado/a;2024;2.648.306",
+                "Total Nacional;;;;Total;Estudiante;2024;2.544.369", "Total Nacional;;;;Total;Parado/a;2023;1",
+                "Total Nacional;28 Madrid;28079 Madrid;;Total;Ocupado/a;2024;1.564.226",
+                "Total Nacional;28 Madrid;28079 Madrid;;Total;Parado/a;2024;133.509",
+                "Total Nacional;28 Madrid;28079 Madrid;;Mujeres;Parado/a;2024;70.000",
+                "Total Nacional;28 Madrid;28079 Madrid;2807901001 Madrid sección 01001;Total;Parado/a;2024;99"]
+        rows += [f"Total Nacional;{code} P;;;Total;Ocupado/a;2024;1.000" for code in PROVINCES]
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "66594.csv").write_text(head + "\n".join(rows) + "\n", encoding="utf-8")
+            src = IneCensoActividad()
+            with mock.patch.object(type(src), "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                out = src.process()
+        self.assertEqual(out["year"], 2024)
+        self.assertEqual(out["nation"], {"employed": 20373148, "unemployed": 2648306})
+        self.assertEqual(out["municipalities"], {"28079": {"employed": 1564226, "unemployed": 133509}})
+        self.assertEqual(out["provinces"]["28"], {"employed": 1000})
+
+    def test_serpavi_rents(self):
+        from pipeline.sources.es import serpavi
+
+        header = ["CPRO", "NPRO", "CUMUN", "NMUN", "BI_ALVHEPCO_TVC_23", "BI_ALVHEPCO_TVU_23", "ALQTBID12_M_VC_23",
+                  "ALQTBID12_M_VU_23", "BI_ALVHEPCO_TVC_24", "BI_ALVHEPCO_TVU_24", "ALQTBID12_M_VC_24", "ALQTBID12_M_VU_24"]
+        rows = [header, ["28", "Madrid", "28079", "Madrid", "1", "1", "1", "1", "300447", "3248", "868.75", "1272.8083"],
+                ["26", "Rioja, La", "26001", "Ábalos", None, None, None, None, "4"],  # too few leases: no median
+                ["01", "Araba/Álava", "01001", "Alegría-Dulantzi", None, None, None, None, "95", None, "551.51"]]
+        self.assertEqual(serpavi.latest_year(header), "24")
+        self.assertEqual(serpavi.rents(rows, "CUMUN", "24"),
+                         {"28079": [[300447, 868.75], [3248, 1272.81]], "01001": [[95, 551.51]]})
+        with self.assertRaises(RuntimeError):
+            serpavi.latest_year(["CPRO"])
+
+
 class SpainDistrictsTest(unittest.TestCase):
     def test_catalog_follows_the_us_order_without_encampment(self):
         from pipeline.build import districts, spain_districts
@@ -564,6 +641,8 @@ class XlsxTest(unittest.TestCase):
                 for name, text in parts.items():
                     z.writestr(name, text)
             rows = sheets(path)["LISTADO"]
+            self.assertEqual(sheets(path, only={"LISTADO"})["LISTADO"], rows)
+            self.assertEqual(sheets(path, only={"OTRA"}), {}, "sheets left out are not read")
         self.assertEqual(rows, [["ÁREA URBANA DE MADRID", None, None, "6495480"], ["Madrid", "x"]])
 
 

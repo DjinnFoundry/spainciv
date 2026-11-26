@@ -19,7 +19,7 @@ export function mount(ctx) {
   el.insertAdjacentHTML("beforeend", tiles([
     { label: t("adv.pros.medianIncome"), value: dollars(n.median_income), sub: t("adv.pros.perHousehold") },
     { label: t("adv.pros.medianHome"), value: money(n.home_value), sub: fin(n.home_value / n.median_income) ? t("adv.pros.timesIncome", { x: fixed(n.home_value / n.median_income, 1) }) : "" },
-    { label: t("adv.f.unemployment.tile"), value: pct(n.unemployment), sub: data.vintage },
+    { label: t("adv.f.unemployment.tile"), value: pct(n.unemployment), sub: data.vintageOf("unemployment") },
   ]));
 
   // --- income vs home value -------------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ export function mount(ctx) {
   barList(rBody, { ...rOpts, rows: rentRows(lo), max: rmax, ariaLabel: t("adv.pros.lightestAria") });
 
   // --- unemployment ---------------------------------------------------------------------------------------------
-  const uBody = section(el, { title: t("adv.f.unemployment.tile"), note: t("adv.pros.unemp.note", { vintage: esc(data.vintage), min: count3(BIG_METRO) }) });
+  const uBody = section(el, { title: t("adv.f.unemployment.tile"), note: t("adv.pros.unemp.note", { vintage: esc(data.vintageOf("unemployment")), min: count3(BIG_METRO) }) });
   const uHost = document.createElement("div");
   let uLevel = "states";
   segmented(uBody, { label: t("adv.areas"), value: uLevel, options: [{ value: "states", label: states.label }, { value: "metros", label: t("adv.largeMetros") }], onChange: (v) => { uLevel = v; drawU(); } });

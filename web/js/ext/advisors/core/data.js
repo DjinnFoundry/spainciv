@@ -64,6 +64,8 @@ export function buildData(app) {
   const nat = nation.nation || {};
   const vintage = nation.vintage || "ACS 1-year";
   const countyVintage = counties?.vintage || "ACS 5-year";
+  // A field from another source than the nation's vintage (nation.json field_vintages, see docs/DATA_CONTRACTS.md).
+  const vintageOf = (key) => nation.field_vintages?.[key] || vintage;
 
   // --- fields ---------------------------------------------------------------------------------------------------
   const F = (key, label, format, o = {}) => ({ key, label, format, unit: o.unit || null, higher_is: o.higher_is || "neutral", source: o.source || "", description: o.description || "", lens: o.lens || null, group: o.group || t("adv.group.economy"), derived: !!o.derived });
@@ -72,12 +74,12 @@ export function buildData(app) {
     F("growth", t("adv.f.growth"), "signed", { unit: t("adv.f.growth.unit"), higher_is: "neutral", source: "pep_population", group: t("adv.group.people"), description: t("adv.f.growth.desc", { years: (nat.growth_years || []).join("–") }) }),
     F("gdp", t("adv.f.gdp"), "money", { unit: t("adv.f.gdp.unit"), source: "bea_gdp", description: t("adv.f.gdp.desc", { vintage: nation.gdp_vintage || "BEA" }) }),
     F("gdp_pc", t("adv.f.gdpPc"), "usd", { unit: t("adv.f.gdpPc.unit"), higher_is: "good", source: "bea_gdp", description: t("adv.f.gdpPc.desc") }),
-    F("median_income", t("adv.f.income"), "usd", { unit: t("adv.f.income.unit"), higher_is: "good", source: src, group: t("adv.group.prosperity"), description: t("adv.f.income.desc", { vintage }), lens: "income" }),
-    F("median_rent", t("adv.f.rent"), "usd", { unit: t("adv.f.rent.unit"), source: src, group: t("adv.group.prosperity"), description: t("adv.f.rent.desc", { vintage }) }),
-    F("home_value", t("adv.f.homeValue"), "usd", { unit: t("adv.f.homeValue.unit"), source: src, group: t("adv.group.prosperity"), description: t("adv.f.homeValue.desc", { vintage }), lens: "home" }),
+    F("median_income", t("adv.f.income"), "usd", { unit: t("adv.f.income.unit"), higher_is: "good", source: src, group: t("adv.group.prosperity"), description: t("adv.f.income.desc", { vintage: vintageOf("median_income") }), lens: "income" }),
+    F("median_rent", t("adv.f.rent"), "usd", { unit: t("adv.f.rent.unit"), source: src, group: t("adv.group.prosperity"), description: t("adv.f.rent.desc", { vintage: vintageOf("median_rent") }) }),
+    F("home_value", t("adv.f.homeValue"), "usd", { unit: t("adv.f.homeValue.unit"), source: src, group: t("adv.group.prosperity"), description: t("adv.f.homeValue.desc", { vintage: vintageOf("home_value") }), lens: "home" }),
     F("affordability", t("adv.f.afford"), "ratio", { unit: t("adv.f.afford.unit"), higher_is: "bad", group: t("adv.group.prosperity"), description: t("adv.f.afford.desc"), derived: true }),
     F("rent_burden", t("adv.f.rentBurden"), "pct", { unit: t("adv.f.rentBurden.unit"), higher_is: "bad", source: src, group: t("adv.group.prosperity"), description: t("adv.f.rentBurden.desc") }),
-    F("unemployment", t("adv.f.unemployment"), "pct", { unit: t("adv.f.unemployment.unit"), higher_is: "bad", source: src, group: t("adv.group.prosperity"), description: t("adv.f.unemployment.desc", { vintage }) }),
+    F("unemployment", t("adv.f.unemployment"), "pct", { unit: t("adv.f.unemployment.unit"), higher_is: "bad", source: src, group: t("adv.group.prosperity"), description: t("adv.f.unemployment.desc", { vintage: vintageOf("unemployment") }) }),
     F("employed", t("adv.f.employed"), "int", { unit: t("adv.f.employed.unit"), source: src, description: t("adv.f.employed.desc", { vintage }) }),
     ...(nation.yields || []).filter((y) => !isMoney(y.unit)).map((y) => F(`y_${y.key}`, t("adv.f.yieldWorkers", { label: y.label }), "int", { unit: t("adv.f.workers"), source: src, group: t("adv.group.yields"), description: y.description })),
   ];
@@ -276,7 +278,7 @@ export function buildData(app) {
 
   const countiesOffMap = counties_ ? counties_.rows.filter((r) => !counties_.cellsOf(r).length).length : 0; // no hex, not even a stand-in
   return {
-    app, nation, nat, vintage, countyVintage, countiesOffMap,
+    app, nation, nat, vintage, vintageOf, countyVintage, countiesOffMap,
     levels: { states: states_, metros, counties: counties_ },
     stateCells, countyCells, cellMetro, metroByCity,
     items, typeById,

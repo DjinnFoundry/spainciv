@@ -22,8 +22,10 @@ def _column(ref: str) -> int:
     return n - 1
 
 
-def sheets(path: Path) -> dict[str, list[list[str | None]]]:
-    """{sheet name: rows of cell values}, cells placed by their column letter."""
+def sheets(path: Path, only: set[str] | None = None) -> dict[str, list[list[str | None]]]:
+    """{sheet name: rows of cell values}, cells placed by their column letter; `only` reads just those sheets (a big
+    workbook's other sheets are skipped unread). Sheets are streamed, so a sheet of hundreds of MB fits in memory."""
+    row_tag = "{%s}row" % NS["m"]
     with zipfile.ZipFile(path) as z:
         shared = []
         if "xl/sharedStrings.xml" in z.namelist():
@@ -32,20 +34,26 @@ def sheets(path: Path) -> dict[str, list[list[str | None]]]:
         rels = {r.get("Id"): r.get("Target") for r in ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))}
         out = {}
         for sheet in ET.fromstring(z.read("xl/workbook.xml")).iter("{%s}sheet" % NS["m"]):
+            if only is not None and sheet.get("name") not in only:
+                continue
             target = rels[sheet.get(REL)].lstrip("/")
             part = target if target.startswith("xl/") else f"xl/{target}"
             rows = []
-            for r in ET.fromstring(z.read(part)).iter("{%s}row" % NS["m"]):
-                cells: dict[int, str | None] = {}
-                for c in r.findall("m:c", NS):
-                    v, kind = c.find("m:v", NS), c.get("t")
-                    if kind == "s" and v is not None:
-                        val = shared[int(v.text)]
-                    elif kind == "inlineStr":
-                        val = "".join(t.text or "" for t in c.iter("{%s}t" % NS["m"]))
-                    else:
-                        val = v.text if v is not None else None
-                    cells[_column(c.get("r"))] = val
-                rows.append([cells.get(i) for i in range(max(cells) + 1)] if cells else [])
+            with z.open(part) as f:
+                for _, r in ET.iterparse(f):
+                    if r.tag != row_tag:
+                        continue
+                    cells: dict[int, str | None] = {}
+                    for c in r.findall("m:c", NS):
+                        v, kind = c.find("m:v", NS), c.get("t")
+                        if kind == "s" and v is not None:
+                            val = shared[int(v.text)]
+                        elif kind == "inlineStr":
+                            val = "".join(t.text or "" for t in c.iter("{%s}t" % NS["m"]))
+                        else:
+                            val = v.text if v is not None else None
+                        cells[_column(c.get("r"))] = val
+                    rows.append([cells.get(i) for i in range(max(cells) + 1)] if cells else [])
+                    r.clear()
             out[sheet.get("name")] = rows
         return out
