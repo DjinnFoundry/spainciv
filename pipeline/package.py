@@ -1,7 +1,8 @@
 """Build the deploy package: one file, <product>.zip in the project root (usaciv.zip, or spainciv.zip with --country es).
 It unzips to a <product>/ folder holding the static site, ready to upload as /<product>/. (dist/<product>/ is the same
 folder unzipped, kept for local testing.) The site is web/ with the active country's data as its data/ folder, and the
-files pipeline/site.py makes from code over web/'s: index.html, and the social card of a country with a page.
+files pipeline/site.py makes from code over web/'s: index.html, the social card of a country with a page, and the
+Unciv mod, map and page of a country with an Unciv map.
 
 The site gets a copy of the source code as <product>-source.zip, linked from the in-app help, so anyone can download,
 run and remix it. Both zips are deterministic (sorted entries, fixed timestamps), so rebuilding from unchanged files
@@ -11,9 +12,9 @@ gives byte-identical archives.
 from __future__ import annotations
 
 import shutil
-import zipfile
 from pathlib import Path
 
+from .core.archive import zip_bytes
 from .core.paths import ROOT, WEB
 from .core.store import web_dir
 from .countries import active
@@ -28,8 +29,6 @@ SKIP_NAMES = {"__pycache__", ".DS_Store"}
 SKIP_SUFFIXES = {".pyc", ".part"}
 # Dev-only pages (art gallery, trailer maker) ship in the source zip but not on the public site.
 SITE_SKIP_DIRS = {"dev"}
-
-ZIP_TIME = (2026, 1, 1, 0, 0, 0)
 
 
 def _files(base: Path, rel_items):
@@ -46,12 +45,7 @@ def _files(base: Path, rel_items):
 def _zip(path: Path, files, base: Path, prefix: str) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".zip.part")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        for f in sorted(set(files), key=lambda f: f.relative_to(base).as_posix()):
-            info = zipfile.ZipInfo(f"{prefix}/{f.relative_to(base).as_posix()}", ZIP_TIME)
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
-            z.writestr(info, f.read_bytes(), compresslevel=9)
+    tmp.write_bytes(zip_bytes({f"{prefix}/{f.relative_to(base).as_posix()}": f.read_bytes() for f in set(files)}))
     tmp.replace(path)
     return path.stat().st_size
 
@@ -78,6 +72,7 @@ def cmd_package() -> None:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(f, dst)
     for name, make in generated.items():
+        (SITE / name).parent.mkdir(parents=True, exist_ok=True)
         (SITE / name).write_bytes(make())
     n_site = len(site_files.keys() | {Path(name) for name in generated})
 

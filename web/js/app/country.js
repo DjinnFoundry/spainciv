@@ -1,8 +1,8 @@
 // The country the loaded data describes: world.json `country` (pipeline/countries), with the original usaciv values
 // for data that predates the block, and the page's own settings on top (<script id="country-page">, written by
-// pipeline/site.py when the site is served or packaged: lang, site_url, data_credit, notices). The page's settings
-// apply from the start, so the interface language is known before the data loads; main.js calls setCountry(world)
-// once; everything else reads country().
+// pipeline/site.py when the site is served or packaged: lang, site_url, data_credit, notices, and `play`, the Unciv page
+// of a country with an Unciv map). The page's settings apply from the start, so the interface language is known before
+// the data loads; main.js calls setCountry(world) once; everything else reads country().
 
 const US = {
   id: "us", name: "United States", product: "usaciv", site_url: "karpathy.ai/usaciv", lang: "en", locale: "en-US",

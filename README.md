@@ -39,6 +39,10 @@ lists the public data behind the map.
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.
 - **Wonders**: the 16 National Parks.
+- **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
+  (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
+  salt, marble and iron where the IGME lists workings). How to install it:
+  [spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html).
 
 The interface is in Spanish (`web/js/i18n/`; the US map keeps its English). What is still missing, and why, is in
 [ROADMAP.md](ROADMAP.md): ports and airports, power plants, universities and the national-park visitor counts.
@@ -84,4 +88,6 @@ cubierta del suelo, provincias y municipios del IGN, las 86 grandes áreas urban
 Censo del INE, PIB provincial, renta, carreteras, ferrocarril y los 16 Parques Nacionales. Es un port del
 [usaciv](https://karpathy.ai/usaciv/) de Andrej Karpathy, con la misma licencia MIT. El mapa está en
 [spainciv.djinnfoundry.com](https://spainciv.djinnfoundry.com/); las fuentes y sus licencias, en
-[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). La interfaz está en castellano.
+[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). La interfaz está en castellano. El
+mismo mapa se juega en Unciv, la versión libre de Civilization V:
+[spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html).

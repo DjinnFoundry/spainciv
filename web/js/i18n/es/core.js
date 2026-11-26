@@ -139,6 +139,8 @@ export default {
   "core.help.esc": "Cerrar la ayuda, la búsqueda, el Almanaque y después el panel",
   "core.help.foot": "Cada cifra remite a datos públicos: abre el <b>Almanaque</b> para ver las fuentes.\n      El enlace de la barra de direcciones vuelve a abrir siempre esta misma vista.\n      Código fuente: {zip} (MIT; se ejecuta con uv, véase su README).",
   "core.help.basedOn": "\n      {product} está basado en {usaciv}, de Andrej Karpathy (licencia MIT, véase LICENSE).",
+  "core.help.play": "\n      Este mapa se puede jugar en Unciv, la versión libre de Civilization V: {link}.",
+  "core.help.playLink": "Jugar en Unciv",
 
   // Almanac (ui/pedia.js)
   "core.pedia.about": "Sobre este mapa",

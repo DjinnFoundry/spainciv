@@ -42,7 +42,8 @@ export function initHelp() {
         <div class="help-row"><span class="keys">${keys.map((k) => `<kbd>${k}</kbd>`).join("")}</span><span>${what}</span></div>`).join("")}
       </section>`).join("")}</div>
     <p class="help-foot">${t("core.help.foot", { zip: `<a href="${country().product}-source.zip" download>${country().product}-source.zip</a>` })}${country().product === "usaciv" ? "" : t("core.help.basedOn", {
-      product: esc(country().product), usaciv: '<a href="https://karpathy.ai/usaciv/" target="_blank" rel="noopener">usaciv</a>' })}</p>`;
+      product: esc(country().product), usaciv: '<a href="https://karpathy.ai/usaciv/" target="_blank" rel="noopener">usaciv</a>' })}${country().play ? t("core.help.play", {
+      link: `<a href="${esc(country().play)}">${t("core.help.playLink")}</a>` }) : ""}</p>`;
 
   const close = () => {
     if (modal.hidden) return;

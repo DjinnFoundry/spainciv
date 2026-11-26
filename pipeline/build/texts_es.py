@@ -371,8 +371,9 @@ SOURCES = {
         "mina. Se quedan las minas metálicas y las de potasa, fluorita, celestina, magnesita y sulfato sódico, y su "
         "número por sustancia coincide con las tablas del Panorama. La estadística no da la posición ni la producción de "
         "cada mina: la posición es la del yacimiento de su mineral y su municipio en el BDMIN del IGME (base de datos de "
-        "indicios minerales) y, si no hay ninguno, el centro del municipio.",
-        "used_for": ["Minas del mapa (recursos)"],
+        "indicios minerales) y, si no hay ninguno, el centro del municipio. Del resto de la lista se guardan la "
+        "sustancia y el municipio de cada explotación, para el mapa de Unciv.",
+        "used_for": ["Minas del mapa (recursos)", "Recursos del mapa de Unciv (hierro, petróleo, mármol, sal, piedra)"],
     },
     "calidad_diferenciada": {
         "title": "Denominaciones de calidad: sus zonas (MAPA) y el registro de la UE (eAmbrosia)",

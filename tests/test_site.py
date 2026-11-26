@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 import pipeline.__main__ as cli
-from pipeline import countries, package, site
+from pipeline import countries, package, play, site
 from pipeline.core.paths import ROOT, WEB
 
 TEMPLATE = (WEB / "index.html").read_text(encoding="utf-8")
@@ -94,7 +94,8 @@ class RenderTest(unittest.TestCase):
         self.assertNotIn("EuroGeographics", html)  # GISCO boundaries were replaced by the IGN's SIANE
         self.assertIn("Basado en usaciv, de Andrej Karpathy (MIT)", h.credits)
         self.assertIn('<a href="https://karpathy.ai/usaciv/"', html)
-        self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": es.page.data_credit, "notices": list(es.page.notices)})
+        self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": es.page.data_credit, "notices": list(es.page.notices),
+                                    "play": "jugar.html"})
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.
         self.assertLess(html.index('id="map-credits"'), html.index('id="lens-area"'))
 
@@ -119,10 +120,11 @@ class GeneratedFilesTest(unittest.TestCase):
         self.assertEqual(set(files), {"index.html"})
         self.assertEqual(files["index.html"](), (WEB / "index.html").read_bytes())
 
-    def test_spain_draws_its_card(self):
+    def test_spain_draws_its_card_and_ships_its_unciv_map(self):
         es = countries.COUNTRIES["es"]
         files = site.generated_files(es)
-        self.assertEqual(set(files), {"index.html", "og-image.png"})
+        self.assertEqual(set(files), {"index.html", "og-image.png"} | set(play.files(es)))
+        self.assertIn(play.PAGE, files)
         self.assertEqual(files["index.html"](), site.index_bytes(es))
         with mock.patch.object(site, "card_png", return_value=b"card") as card:
             self.assertEqual(files["og-image.png"](), b"card")
@@ -214,6 +216,8 @@ class PackageTest(unittest.TestCase):
         self.assertEqual((out / "og-image.png").read_bytes(), b"\x89PNG card")
         self.assertEqual((out / "data" / "world.json").read_bytes(), (es.web_data_dir / "world.json").read_bytes())
         self.assertFalse((out / "data" / "military.json").exists())  # US data never leaks into Spain's site
+        for path in play.files(es):
+            self.assertTrue((out / path).is_file(), path)
         for name in ("LICENSE", "NOTICE"):
             self.assertTrue((out / name).is_file())
 
