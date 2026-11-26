@@ -34,7 +34,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `puertos_estado` | Puertos del Estado: traffic 2025 by Port Authority (XLSX) + service areas (WFS, CC BY 4.0) | Puertos del Estado legal notice; WFS CC BY 4.0 | Ports |
 | `siiu_universidades` | SIIU (Ministerio de Ciencia, Innovación y Universidades): students by centre 2024-25 and centre municipalities (XLSX) | Reuse citing the Ministry | Great-university wonders |
 | `power_plants_es` | powerplantmatching (PyPSA, pinned commit) + OpenStreetMap power plants on the Canary Islands | CC BY 4.0; ODbL 1.0 | Power plants (resources) |
-| `igme_minas` | IGME: Estadística Minera de España 2019 active workings (XLSX published with Panorama Minero 2022), placed at the matching deposit of IGME's BDMIN (ArcGIS REST) | IGME licence of use: free reuse citing the source (Ley 37/2007) | Mines (resources); every working by substance and municipality for the Unciv map |
+| `igme_minas` | IGME: Estadística Minera de España 2019 active workings (XLSX published with Panorama Minero 2022), placed at the matching deposit of IGME's BDMIN (ArcGIS REST) | IGME licence of use: free reuse citing the source (Ley 37/2007) | Mines (resources); for the Unciv map, every working by substance and municipality and BDMIN's large and medium deposits of coal, uranium, bauxite, iron, gold, copper and silver |
 | `calidad_diferenciada` | MAPA "Calidad diferenciada" areas (OGC API, 2017) + eAmbrosia EU register | CC BY 4.0 | Food & drink lens |
 | `pleiades_iberia` | Pleiades: peoples of ancient Iberia (points) and the regions named after peoples | CC BY 3.0 | Ancient peoples lens |
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
@@ -61,6 +61,7 @@ Almanac entry in `texts_es.SOURCES`.
 | `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
 | `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers |
+| `ine_censo_agrario` | INE Censo Agrario 2020, tables 51175 (equine heads by agricultural comarca) and 75479 (each municipality's comarca) | CC BY 4.0, citing INE | Horses of the Unciv map: the comarcas with at least 4 times Spain's equines per km² |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).
 
@@ -85,12 +86,17 @@ across, base ruleset Civ V - Gods & Kings) and a summary of what is on it. `pipe
 the rivers on tile edges and the resource placement that keeps every resource on a terrain the ruleset allows. When
 the site is served or packaged, `pipeline/play.py` makes from it:
 
-- `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`, `maps/España` (the
-  map, gzip + base64 as Unciv saves it), `preview.png`, `README.md` and `LICENSE` (CC BY 4.0);
-- `unciv/espana`: the bare map, saved as `España` by the page's link;
+- `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
+  `jsons/TileResources.json` (its own resource, the Iberian pig), `maps/España` (the map, gzip + base64 as Unciv saves
+  it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
+  with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
+  `README.md` and `LICENSE` (CC BY 4.0);
+- `unciv/espana`: the bare map for the game without mods (the same map without the pig), saved as `España` by the
+  page's link;
 - `jugar.html`: how to play it and what is real data and what is game convention, linked from the help dialog.
 
-The rules and the reasons are DECISIONS.md E51–E57, A15 and F26. The map was checked in Unciv 5.0.1 (the jar of the
+The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
+The rules and the reasons are DECISIONS.md E51–E57, E60–E62, A15, A17, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the
 GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
 every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
 locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).

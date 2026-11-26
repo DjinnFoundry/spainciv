@@ -73,8 +73,13 @@ WATER_TERRAINS = {"Ocean", "Coast", "Lakes"}
 # strategic one its `majorDepositAmount` "default" (the amount the map generator gives a major deposit).
 RESOURCES = {
     "Iron": ("Strategic", {"Grassland", "Plains", "Desert", "Tundra", "Snow", "Hill", "Marsh"}, 6),
+    "Horses": ("Strategic", {"Plains", "Grassland", "Hill"}, 4),
+    "Coal": ("Strategic", {"Grassland", "Plains", "Hill", "Jungle", "Forest", "Marsh"}, 7),
     "Oil": ("Strategic", {"Desert", "Coast", "Tundra", "Snow", "Marsh", "Jungle"}, 7),
+    "Aluminum": ("Strategic", {"Desert", "Tundra", "Hill", "Snow", "Jungle"}, 8),
+    "Uranium": ("Strategic", {"Marsh", "Jungle", "Forest", "Tundra", "Snow"}, 4),
     "Gold Ore": ("Luxury", {"Desert", "Hill", "Forest", "Jungle"}, 0),
+    "Silver": ("Luxury", {"Hill", "Forest", "Jungle", "Tundra", "Grassland"}, 0),
     "Copper": ("Luxury", {"Hill", "Forest", "Jungle", "Grassland", "Tundra"}, 0),
     "Marble": ("Luxury", {"Desert", "Plains", "Hill", "Grassland"}, 0),
     "Salt": ("Luxury", {"Desert", "Tundra", "Plains", "Forest"}, 0),
@@ -87,6 +92,15 @@ RESOURCES = {
     "Stone": ("Bonus", {"Grassland", "Desert", "Tundra"}, 0),
     "Bananas": ("Bonus", {"Jungle"}, 0),
 }
+# Resources a mod adds to the base ruleset: its TileResources.json entry (TileResource.kt fields). "Doesn't generate
+# naturally" keeps the map generator from scattering it on other maps while the mod is on.
+MOD_RESOURCES = {
+    "Cerdo ibérico": {
+        "resourceType": "Luxury", "terrainsCanBeFoundOn": ["Plains", "Grassland", "Hill"], "food": 1, "gold": 1,
+        "improvement": "Pasture", "improvementStats": {"gold": 1}, "uniques": ["Doesn't generate naturally"],
+    },
+}
+RESOURCES |= {name: (r["resourceType"], set(r["terrainsCanBeFoundOn"]), 0) for name, r in MOD_RESOURCES.items()}
 # Terrains.json "RGB" of each terrain, for the preview image (Forest and Marsh have none: these are their map colours).
 RGB = {"Ocean": (43, 87, 151), "Coast": (70, 138, 216), "Lakes": (0, 171, 169), "Grassland": (0, 163, 0),
        "Plains": (153, 180, 51), "Tundra": (124, 62, 57), "Desert": (230, 172, 0), "Snow": (230, 238, 255),
@@ -450,17 +464,28 @@ def tile_json(position: tuple[int, int], tile: Tile) -> dict:
     return out
 
 
-def tile_map(grid: Grid, tiles: list[Tile], name: str, description: str, starts: list[tuple[int, str, str]]) -> dict:
-    """The TileMap JSON: a rectangular custom map for the base ruleset; starts are (tile, nation, usage)."""
+def tile_map(grid: Grid, tiles: list[Tile], name: str, description: str, starts: list[tuple[int, str, str]],
+             mod: str | None = None) -> dict:
+    """The TileMap JSON: a rectangular custom map for the base ruleset; starts are (tile, nation, usage). A map that
+    uses MOD_RESOURCES names its `mod` in mapParameters.mods: choosing the map in a new game turns the mod on
+    (MapFileSelectTable.onFileSelectBoxChange), and the map editor loads it with the mod's ruleset."""
     return {
         "mapParameters": {"name": name, "type": "Empty", "shape": "Rectangular", "mapSize": grid.map_size(),
-                          "baseRuleset": BASE_RULESET, "mods": [], "worldWrap": False,
+                          "baseRuleset": BASE_RULESET, "mods": [mod] if mod else [], "worldWrap": False,
                           "createdWithVersion": f"{UNCIV_RELEASE} (exported by the spainciv pipeline)"},
         "tileList": [tile_json(grid.positions[i], tile) for i, tile in enumerate(tiles)],
         "startingLocations": [{"position": position_json(grid.positions[t]), "nation": nation, "usage": usage}
                               for t, nation, usage in starts],
         "description": description,
     }
+
+
+def without_mod(map_json: dict) -> dict:
+    """The same map for the base ruleset alone: no mod in its parameters and no mod resource on its tiles (for the bare
+    map file, which works without installing the mod)."""
+    tiles = [{k: v for k, v in t.items() if k not in ("resource", "resourceAmount")} if t.get("resource") in MOD_RESOURCES
+             else t for t in map_json["tileList"]]
+    return map_json | {"mapParameters": map_json["mapParameters"] | {"mods": []}, "tileList": tiles}
 
 
 def tiles_from_map(map_json: dict) -> list[Tile]:
@@ -486,9 +511,29 @@ def decode(data: bytes) -> dict:
 
 
 def mod_options(author: str, url: str) -> dict:
-    """jsons/ModOptions.json of a mod that only adds maps (ModOptions.kt fields; the mod manager fills in the rest
-    from GitHub when the mod is installed from there)."""
+    """jsons/ModOptions.json of a mod that adds maps and resources to the base ruleset, an extension mod (ModOptions.kt
+    fields; the mod manager fills in the rest from GitHub when the mod is installed from there)."""
     return {"isBaseRuleset": False, "author": author, "modUrl": url, "topics": ["unciv-mod-maps"], "uniques": []}
+
+
+def tile_resources_json() -> list[dict]:
+    """jsons/TileResources.json of the mod: MOD_RESOURCES. Unciv merges an extension mod's resources into the base
+    ruleset's (Ruleset.kt: add), and draws each with the image ResourceIcons/<name> of the mod's atlas."""
+    return [{"name": name, **fields} for name, fields in MOD_RESOURCES.items()]
+
+
+ICON_PX = 100  # the size of Unciv's own resource icons (android/assets/Icons.atlas: ResourceIcons/*)
+
+
+def atlas(page: str, size: tuple[int, int], regions: dict[str, tuple[int, int]]) -> str:
+    """A libGDX texture atlas in the layout Unciv's own atlases use (android/assets/Icons.atlas): one page and the
+    ICON_PX square regions at the given positions. Desktop Unciv repacks a mod's Images/ itself (ImagePacker.kt), but
+    Android only reads the atlas the mod ships (ImageGetter.loadModAtlases, through Atlases.json)."""
+    lines = [page, f"size: {size[0]}, {size[1]}", "format: RGBA8888", "filter: MipMapLinearLinear, Linear", "repeat: none"]
+    for name, (x, y) in regions.items():
+        lines += [name, "  rotate: false", f"  xy: {x}, {y}", f"  size: {ICON_PX}, {ICON_PX}",
+                  f"  orig: {ICON_PX}, {ICON_PX}", "  offset: 0, 0", "  index: -1"]
+    return "\n".join(lines) + "\n"
 
 
 def preview_png(grid: Grid, tiles: list[Tile], width_px: int = 640) -> bytes:
