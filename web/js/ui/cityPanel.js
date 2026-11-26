@@ -1,8 +1,8 @@
 import { css } from "../color.js";
 import { esc } from "../format.js";
 import { isCapital } from "../world.js";
-import { country } from "../app/country.js";
-import { yieldGrid, amenities, industries, gdpRow, popLine, growthSpan, showPanel, hidePanel } from "./infoPanel.js";
+import { t } from "../i18n.js";
+import { yieldGrid, amenities, industries, gdpRow, gdpSource, popLine, growthSpan, showPanel, hidePanel } from "./infoPanel.js";
 
 /**
  * ctx: {w, nation, onClose, onPedia, onState(stateIndex)}
@@ -17,7 +17,7 @@ export function openCityPanel(city, ctx) {
   const states = (city.states || [])
     .map((abbr) => ({ abbr, i: w.raw.states.findIndex((s) => s.abbr === abbr) }))
     .map(({ abbr, i }) => (i >= 0 && ctx.onState
-      ? `<button class="chip" data-state="${i}" title="Open ${esc(w.raw.states[i].name)}">${esc(abbr)}</button>`
+      ? `<button class="chip" data-state="${i}" title="${t("core.panel.open", { name: esc(w.raw.states[i].name) })}">${esc(abbr)}</button>`
       : `<span class="chip">${esc(abbr)}</span>`))
     .join("");
 
@@ -27,18 +27,15 @@ export function openCityPanel(city, ctx) {
     kind: "city",
     stripe: col,
     title: city.name,
-    titleHtml: `${isCapital(city) ? `<span class="cap" title="National capital">★</span> ` : ""}${esc(city.name)}`,
+    titleHtml: `${isCapital(city) ? `<span class="cap" title="${t("core.panel.capital")}">★</span> ` : ""}${esc(city.name)}`,
     sub: `${esc(city.full || "")}${states ? `<div class="chips">${states}</div>` : ""}`,
     headExtra: popLine(city, growth),
     sections: [
-      { title: "Yields", html: `<div class="yield-grid">${yieldGrid(nation, city.yields)}</div>` },
-      { title: "Amenities &amp; Housing", html: amenities(city, n) + gdpRow(city) },
-      { title: "Districts · where people work", html: industries(city, nation) },
+      { title: t("core.panel.yields"), html: `<div class="yield-grid">${yieldGrid(nation, city.yields)}</div>` },
+      { title: t("core.panel.amenities"), html: amenities(city, n) + gdpRow(city) },
+      { title: t("core.panel.districts"), html: industries(city, nation) },
     ],
-    foot: country().id === "us"
-      ? `Source: ${esc(nation.vintage)} (tables C24030, B19025, B19013, B25064, B25077, B23025)${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}.
-      Green ×N = this industry's share of jobs is N× the U.S. share.`
-      : `Source: ${esc(nation.vintage)}${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}. Fields without a source for this country show –.`,
+    foot: t("core.panel.cityFoot", { vintage: esc(nation.vintage), gdp: gdpSource(nation) }),
     onClose: ctx.onClose,
     onPedia: ctx.onPedia,
     wire(panel) {

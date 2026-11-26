@@ -1,8 +1,9 @@
 import { css } from "../color.js";
 import { esc, popShort } from "../format.js";
 import { isCapital } from "../world.js";
-import { yieldGrid, amenities, industries, gdpRow, popLine, growthSpan, showPanel } from "./infoPanel.js";
+import { yieldGrid, amenities, industries, gdpRow, gdpSource, popLine, growthSpan, showPanel } from "./infoPanel.js";
 import { country } from "../app/country.js";
+import { t } from "../i18n.js";
 
 /**
  * Opens the panel for state `idx` (index into world.json states / states.json).
@@ -31,23 +32,23 @@ export function openStatePanel(idx, ctx) {
             <span class="cr-pop">${popShort(c.population)}</span><span class="cr-go" aria-hidden="true">›</span></button>`;
         })
         .join("")}</div>`
-    : `<p class="muted">No metro or micro areas in this state's data.</p>`;
+    : `<p class="muted">${t("core.panel.noCities")}</p>`;
 
   const hasEcon = st.population != null || st.yields;
   showPanel({
     kind: "state",
     stripe: css(w.stateColor[idx] || [190, 190, 190]),
     title: name,
-    sub: `${esc(abbr)}${geo.fips ? ` · ${country().id === "us" ? "FIPS" : "INE"} ${esc(geo.fips)}` : ""}`,
+    sub: `${esc(abbr)}${geo.fips ? ` · ${t("core.panel.code", { code: esc(geo.fips) })}` : ""}`,
     headExtra: hasEcon ? popLine(st, growthSpan(st, n)) : "",
     sections: [
-      st.yields && { title: `Yields · rank among ${R.many.toLowerCase()}`, html: `<div class="yield-grid">${yieldGrid(nation, st.yields, st.ranks, count)}</div>` },
-      hasEcon && { title: "Amenities &amp; Housing", html: amenities(st, n) + gdpRow(st) },
-      st.jobs && { title: "Top industries · where people work", html: industries(st, nation, 8) },
-      { title: "Biggest cities", html: cityRows },
-      !hasEcon && { title: "Data", html: `<p class="muted">State statistics are not in this data build (states.json is missing).</p>` },
+      st.yields && { title: t("core.panel.yieldsRank", { levels: R.many.toLowerCase() }), html: `<div class="yield-grid">${yieldGrid(nation, st.yields, st.ranks, count)}</div>` },
+      hasEcon && { title: t("core.panel.amenities"), html: amenities(st, n) + gdpRow(st) },
+      st.jobs && { title: t("core.panel.topIndustries"), html: industries(st, nation, 8) },
+      { title: t("core.panel.biggestCities"), html: cityRows },
+      !hasEcon && { title: t("core.panel.data"), html: `<p class="muted">${t("core.panel.noStates")}</p>` },
     ],
-    foot: `Source: ${esc(nation.vintage)}${nation.gdp_vintage ? `; GDP: ${esc(nation.gdp_vintage)}` : ""}. Ranks are among the ${count} mapped ${R.many.toLowerCase()}${country().id === "us" ? " + DC" : ""} (1 = largest).`,
+    foot: t("core.panel.stateFoot", { vintage: esc(nation.vintage), gdp: gdpSource(nation), count, levels: R.many.toLowerCase() }),
     onClose: ctx.onClose,
     onPedia: ctx.onPedia,
     wire(panel) {
