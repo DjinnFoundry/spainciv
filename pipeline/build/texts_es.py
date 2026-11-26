@@ -372,8 +372,19 @@ SOURCES = {
         "número por sustancia coincide con las tablas del Panorama. La estadística no da la posición ni la producción de "
         "cada mina: la posición es la del yacimiento de su mineral y su municipio en el BDMIN del IGME (base de datos de "
         "indicios minerales) y, si no hay ninguno, el centro del municipio. Del resto de la lista se guardan la "
-        "sustancia y el municipio de cada explotación, para el mapa de Unciv.",
-        "used_for": ["Minas del mapa (recursos)", "Recursos del mapa de Unciv (hierro, petróleo, mármol, sal, piedra)"],
+        "sustancia y el municipio de cada explotación, y del BDMIN los yacimientos grandes y medianos de carbón, uranio, "
+        "bauxita, hierro, oro, cobre y plata, se exploten o no, para el mapa de Unciv.",
+        "used_for": ["Minas del mapa (recursos)", "Recursos del mapa de Unciv (carbón, uranio, aluminio, hierro, oro, cobre, "
+                     "plata, petróleo, mármol, sal, piedra)"],
+    },
+    "ine_censo_agrario": {
+        "title": "Censo Agrario 2020: cabezas de équidos por comarca agraria (tabla 51175) y la comarca de cada municipio "
+        "(tabla 75479)",
+        "license": _INE_LICENCE,
+        "description": "Las cabezas de ganado equino (caballos, mulos y asnos) de las explotaciones agrarias en 2020, por "
+        "comarca agraria del INE, y los municipios de cada comarca. Las explotaciones que solo tienen équidos no están en "
+        "el censo. El censo equino del Ministerio de Agricultura (REGA) solo se publica por comunidad autónoma.",
+        "used_for": ["Caballos del mapa de Unciv"],
     },
     "calidad_diferenciada": {
         "title": "Denominaciones de calidad: sus zonas (MAPA) y el registro de la UE (eAmbrosia)",

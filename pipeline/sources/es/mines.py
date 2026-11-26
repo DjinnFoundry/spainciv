@@ -7,7 +7,9 @@ statistic does not publish output per mine). Its counts per substance must equal
 one without such a deposit is left without coordinates, for the builder to put at the municipality's centre.
 
 Every working of the list, of any substance, is also kept with its substance and municipality only (`workings`), for
-what places a substance by municipality: the Unciv map's quarries, salt works and oil fields.
+what places a substance by municipality: the Unciv map's quarries, salt works and oil fields. And the BDMIN's large and
+medium deposits of coal, uranium, bauxite, iron, gold, copper and silver, worked or not (`deposits`), are the Unciv
+map's deposits of those minerals.
 """
 
 from __future__ import annotations
@@ -50,8 +52,15 @@ KIND = {
 # provincia y empresa» for strontium (611), fluorspar (640), magnesite (671), potash (726) and sodium sulphate (793).
 PANORAMA_2019 = {"COBRE": 5, "ORO-PLATA (MIN.)": 1, "WOLFRAMIO": 1, "ESTAÑO-TÁNTALO": 1, "SALES POTAS.(MIN.)": 2,
                  "ESPATO FLÚOR": 6, "ESTRONCIO": 2, "MAGNESITA CRUDA": 3, "GLAUBERITA": 3, "THENARDITA": 1}
-BDMIN_WHERE = " OR ".join(f"Sustancia LIKE '%{s}%'" for s in sorted({s for _, subs in KIND.values() for s in subs}))
 SIZE_RANK = {"grande": 0, "mediano": 1}  # BDMIN's 'Tamaño_indicio'; 'pequeño' and 'desconocido' never stand alone
+BDMIN_WHERE = " OR ".join(f"Sustancia LIKE '%{s}%'" for s in sorted({s for _, subs in KIND.values() for s in subs}))
+# The BDMIN's large and medium deposits of the minerals a strategy game knows (coal, uranium, bauxite, iron, gold,
+# copper, silver), worked or not: the Unciv map's deposits. A deposit is kept when one of its substances is one of these
+# exactly (BDMIN lists them comma-separated: "Plomo, Zinc, Plata").
+DEPOSIT_SUBSTANCES = ("Hulla", "Antracita", "Lignito", "Carbón", "Uranio y radiactivos", "Bauxita", "Hierro", "Oro",
+                      "Cobre", "Plata")
+DEPOSIT_WHERE = (f"Tamaño_indicio IN ({', '.join(repr(z) for z in SIZE_RANK)}) AND ("
+                 + " OR ".join(f"Sustancia LIKE '%{s}%'" for s in DEPOSIT_SUBSTANCES) + ")")
 # Older or shortened province names IGME uses → INE code (the others match INE's names).
 PROVINCE_ALIASES = {"orense": "32", "gerona": "17", "lerida": "25", "vizcaya": "48", "guipuzcoa": "20",
                     "baleares": "07", "coruna": "15", "la coruna": "15", "santa cruz tenerife": "38"}
@@ -118,27 +127,35 @@ class IgmeMinas(Source):
         "them with Panorama Minero 2022 (EXPLOTACIONES_2019.xlsx); the metal mines and the potash, fluorspar, "
         "celestine, magnesite and sodium-sulphate mines are kept, and their count per substance matches the "
         "Panorama's tables. Positions are those of the matching deposit in IGME's BDMIN mineral-occurrence database. "
-        "Every other working of the list is kept by substance and municipality, for the Unciv map.",
-        used_for=["Mines on the map (resources)", "Resources of the Unciv map (iron, oil, marble, salt, stone)"],
+        "Every other working of the list is kept by substance and municipality, and the BDMIN's large and medium "
+        "deposits of coal, uranium, bauxite, iron, gold, copper and silver, for the Unciv map.",
+        used_for=["Mines on the map (resources)", "Resources of the Unciv map (coal, uranium, aluminium, iron, gold, "
+                  "copper, silver, oil, marble, salt, stone)"],
     )
 
     def fetch(self, force=False):
         self.download(LIST_URL, LIST_FILE, force=force, expect_binary=True)
         # The Panorama whose tables the counts are checked against, cached for provenance.
         self.download(PANORAMA_URL, PANORAMA_FILE, force=force, expect_binary=True)
+        self.fetch_bdmin(BDMIN_WHERE, "bdmin_indicios", force)
+        self.fetch_bdmin(DEPOSIT_WHERE, "bdmin_yacimientos", force)
+
+    def fetch_bdmin(self, where: str, prefix: str, force: bool) -> None:
+        """A BDMIN query, page by page, into <prefix>_<page>.json."""
         page = 0
         while True:
-            query = urllib.parse.urlencode({"where": BDMIN_WHERE, "outFields": "*", "returnGeometry": "false",
+            query = urllib.parse.urlencode({"where": where, "outFields": "*", "returnGeometry": "false",
                                             "orderByFields": "Codigo_indicio", "resultOffset": page * PAGE,
                                             "resultRecordCount": PAGE, "f": "json"})
-            path = self.download(f"{BDMIN}?{query}", f"bdmin_indicios_{page}.json", force=force)
+            path = self.download(f"{BDMIN}?{query}", f"{prefix}_{page}.json", force=force)
             if not json.loads(path.read_text()).get("exceededTransferLimit"):
                 break
             page += 1
 
-    def deposits(self) -> tuple[list[dict], list[str]]:
+    def deposits(self, prefix: str) -> tuple[list[dict], list[str]]:
+        """The deposits of the BDMIN query saved as <prefix>_<page>.json, and those files."""
         out, files, page = [], [], 0
-        while (path := self.raw_dir / f"bdmin_indicios_{page}.json").exists():
+        while (path := self.raw_dir / f"{prefix}_{page}.json").exists():
             doc = json.loads(path.read_text())
             files.append(path.name)
             for f in doc["features"]:
@@ -162,7 +179,7 @@ class IgmeMinas(Source):
         got = Counter(m["Sustancia"] for m in mines)
         if got != Counter(PANORAMA_2019):
             raise RuntimeError(f"IGME {YEAR}: workings per substance {dict(got)} != Panorama Minero 2022 {PANORAMA_2019}")
-        deposits, files = self.deposits()
+        deposits, files = self.deposits("bdmin_indicios")
         out = []
         for m in mines:
             mine = {"name": " ".join(m["Explotacion"].split()), "company": " ".join(m["Empresa"].split()),
@@ -174,5 +191,12 @@ class IgmeMinas(Source):
         workings = [{"name": " ".join(m["Explotacion"].split()), "substance": m["Sustancia"],
                      "municipality": m["Municipio_Explotacion"], "province": province_code(m["Provincia_Explotacion"])}
                     for m in records]
+        large, large_files = self.deposits("bdmin_yacimientos")
+        game = []
+        for d in large:
+            substances = [s for s in map(str.strip, d.pop("substance").split(",")) if s in DEPOSIT_SUBSTANCES]
+            if substances:
+                game.append(d | {"substances": substances})
         return {"vintage": f"Estadística Minera de España {YEAR} (IGME, Panorama Minero 2022); BDMIN",
-                "_files": [LIST_FILE, PANORAMA_FILE, *files], "year": YEAR, "mines": out, "workings": workings}
+                "_files": [LIST_FILE, PANORAMA_FILE, *files, *large_files], "year": YEAR, "mines": out,
+                "workings": workings, "deposits": game}
