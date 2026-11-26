@@ -11,6 +11,7 @@ import json
 import re
 import urllib.parse
 
+from ...core.fetch import read_manifest
 from ...core.source import Source, SourceInfo
 
 ENDPOINT = "https://query.wikidata.org/sparql?format=json&query="
@@ -114,7 +115,7 @@ class WikidataEs(Source):
                 c["world_heritage"] = re.match(r"\d+", value(b, "whid")).group(0)
         bic = {qid(b["s"]["value"]): point(value(b, "coord")) for b in self._rows("bic")}
         return {
-            "vintage": "Wikidata, as cached on the fetch date (see the Almanac's file dates)",
+            "vintage": f"Wikidata, {read_manifest(self.id)['world_heritage.json']['retrieved'][:10]}",
             "_files": [f"{n}.json" for n in QUERIES],
             "world_heritage": heritage,
             "cathedrals": sorted(cathedrals.values(), key=lambda c: c["label"] or c["qid"]),

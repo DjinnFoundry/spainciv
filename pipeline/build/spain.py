@@ -33,7 +33,7 @@ from .lenses import COUNTY_LENSES, DOMAIN_NOTE, GROUPS, land_lenses, percentile_
 from .states import label_anchor, land_shares
 from .yields import YIELDS
 
-REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados"]
+REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "wikidata_es"]
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json"]
 COUNTRIES = ("es",)
 
@@ -211,6 +211,26 @@ def income_lens(adrh_p: dict, geoids: list[str], weights: list) -> dict:
     }
 
 
+ES_GROUPS = [{"id": "heritage", "name": "Heritage"}]
+
+
+def heritage_lens(points: list, proj, grid: HexGrid, owner: list[int]) -> dict:
+    """Bienes de Interés Cultural per land hex (a count, 0 included: the lens shows where heritage is dense)."""
+    values = [0 if o >= 0 else None for o in owner]
+    for lon, lat in points:
+        c = grid.cell_at(*proj(lon, lat))
+        if c >= 0 and values[c] is not None:
+            values[c] += 1
+    return {
+        "id": "heritage", "group": "heritage", "name": "Heritage", "icon": "l-heritage", "emoji": "🏛️",
+        "unit": "protected monuments (BIC)", "format": "int", "scale": "log", "higher_is": "neutral",
+        "ramp": ["#2a1a0e", "#5a3418", "#8f5a25", "#c48a3a", "#e8c070", "#fff1c4"], "source": "wikidata_es",
+        "description": "Bienes de Interés Cultural (Spain's highest heritage protection: monuments, sites, historic "
+        "quarters) in each hex, as Wikidata locates them.",
+        "values": values,
+    }
+
+
 def build() -> None:
     world = load_interim("_world")
     lau = load_interim("siane")
@@ -302,11 +322,12 @@ def build() -> None:
         "description": f"Residents per km² of land. Each municipality's population (INE Padrón, {year}) is spread over "
         "its hexes in proportion to how much of the municipality each hex covers.",
         "values": density,
-    }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights)] + land_lenses(world, "corine")
+    }, income_lens(load_interim_payload("ine_adrh"), world["counties"], weights),
+        heritage_lens(load_interim("wikidata_es")["bic"], proj, grid, owner)] + land_lenses(world, "corine")
     for lens in lenses:
         lens["domain"] = percentile_domain(lens["values"], lens["scale"] == "log")
         lens["description"] += DOMAIN_NOTE
-    groups = [g for g in GROUPS if any(l["group"] == g["id"] for l in lenses)]
+    groups = [g for g in GROUPS + ES_GROUPS if any(l["group"] == g["id"] for l in lenses)]
 
     write_web("cities.json", cities)
     write_web("nation.json", nation)

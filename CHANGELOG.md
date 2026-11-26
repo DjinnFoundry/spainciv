@@ -11,6 +11,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
 
 ### Añadido
+- Lente de patrimonio: Bienes de Interés Cultural por hexágono (15.634, Wikidata), en un grupo nuevo «Heritage».
 - Maravillas repensadas: los 50 sitios de Patrimonio Mundial (la Alhambra, Altamira, la Mezquita…), los 16 Parques
   Nacionales y 81 catedrales, 144 en total, cada una con su dibujo (campanario, casco antiguo, cueva, palacio…).
   Fuente nueva `wikidata_es` (CC0).
