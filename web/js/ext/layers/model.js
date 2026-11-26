@@ -40,6 +40,7 @@ export const WONDER_MOTIF_BY_ID = {
 const UNI_MOTIFS = ["hall", "redhall", "spire"];
 
 export function wonderMotif(x) {
+  if (x?.motif) return x.motif; // chosen by the pipeline (other countries' wonders.json)
   const m = WONDER_MOTIF_BY_ID[x?.id];
   if (m) return m;
   if (x?.kind === "university") return UNI_MOTIFS[hashStr(x.id) % 3];

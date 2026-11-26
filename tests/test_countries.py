@@ -500,5 +500,16 @@ class SpainWondersTest(unittest.TestCase):
         self.assertEqual(short_name("Parque Nacional Marítimo-Terrestre del Archipiélago de Cabrera"), "Archipiélago de Cabrera")
         self.assertEqual(short_name("Parque Nacional del Teide"), "Teide")
         self.assertEqual(slug("Parque Nacional de Doñana"), "donana")
+        from pipeline.build.spain_wonders import motif
+        from pipeline.sources.es.wikidata import label, point
+
+        self.assertEqual(motif("Catedral de Burgos", False), "spire")
+        self.assertEqual(motif("Alhambra, Generalife y Albaicín de Granada", False), "rotunda")
+        self.assertEqual(motif("Cueva de Altamira", False), "mound")
+        self.assertEqual(motif("Parque Nacional del Teide", True), "peak")
+        self.assertEqual(motif("Las Médulas", False), "obelisk")
+        self.assertIsNone(label({"sLabel": {"value": "Q696803"}}), "the label service echoes the QID when it has no label")
+        self.assertEqual(label({"sLabel": {"value": "Las Médulas"}}), "Las Médulas")
+        self.assertEqual(point("Point(-6.759002 42.458699)"), (-6.759, 42.4587))
         self.assertEqual(number("18.396,00"), 18396.0)
         self.assertIsNone(number(None))

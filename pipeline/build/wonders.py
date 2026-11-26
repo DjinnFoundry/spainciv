@@ -393,6 +393,6 @@ def check(web_dir) -> list[tuple[str, str]]:
     by_rule = Counter(x.get("rule") for x in d.get("wonders") or [])
     if not bad:
         out.append(("PASS", f"wonders.json: {n} wonders ({', '.join(f'{v} {k}' for k, v in by_rule.items())})"))
-    if not 10 <= n <= 60:
-        out.append(("WARN", f"wonders.json: {n} wonders (expected about 10-60)"))
+    if not 10 <= n <= 200:
+        out.append(("WARN", f"wonders.json: {n} wonders (expected about 10-200)"))
     return out

@@ -18,6 +18,7 @@ Decisions (and why) are in `DECISIONS.md`, what is missing in `ROADMAP.md`, what
 | `corine` | Copernicus CLC 2018, read from the IGN/IDEE land-cover WMS by legend colour | CC BY 4.0 (IDEE); Copernicus free, full and open data policy | Land cover |
 | `audes` | Ministerio de Vivienda y Agenda Urbana, Atlas Digital de las Áreas Urbanas: large urban areas 2025 and their municipalities | Public-sector information, reuse citing the source (Ley 37/2007) | Cities (urban areas) and their members |
 | `oapn_parques` | OAPN (Red de Parques Nacionales), boundaries via its WFS | Public-sector information, reuse citing the source (Ley 37/2007) | National Park wonders, protected land |
+| `wikidata_es` | Wikidata SPARQL: World Heritage sites, cathedrals, Bienes de Interés Cultural | CC0 | World Heritage and cathedral wonders |
 | `ine_padron` | INE table 29005 (Padrón revision by municipality) | CC BY 4.0, citing INE | Population, growth, density lens |
 | `ine_pib` | INE table 80109 (Contabilidad Regional, GDP by province) | CC BY 4.0, citing INE | Gold (GDP) by province |
 | `ine_censo_ocupados` | INE Annual Population Census, employed residents by CNAE section (tables 69962 and 69992) | CC BY 4.0, citing INE | Food, Production, Science, Culture yields, jobs and employed of cities, provinces and Spain |
