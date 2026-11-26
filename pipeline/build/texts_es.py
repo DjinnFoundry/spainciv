@@ -113,7 +113,9 @@ MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agost
 _EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
               "November", "December"]
 _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
-_VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición ")]
+_VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
+                  (" (final)", " (datos definitivos)"), ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
+                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
 
 
 def vintage(text: str | None) -> str | None:

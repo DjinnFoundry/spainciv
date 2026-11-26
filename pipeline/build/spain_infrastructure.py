@@ -18,7 +18,7 @@ from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from .infrastructure import RAIL_MAIN_SCALERANK, RAIL_MAX_SCALERANK, RAIL_TIERS, SAMPLE_KM, build_rail, build_roads
 from .spain_wonders import Placer
-from .texts_es import HUBS, num
+from .texts_es import HUBS, num, vintage
 from .texts_es import RAIL_TIERS as RAIL_TIER_NAMES
 
 REQUIRES = ["_world", "natural_earth_roads_es", "natural_earth_es", "aena_airports", "puertos_estado", "cities.json",
@@ -73,7 +73,7 @@ def build() -> None:
                              cell_km=100)
     roads = build_roads(grid, proj, owner, ne, es_road_class)
     rail = build_rail(grid, proj, owner, ne, foreign_idx)
-    vintage = load_interim_payload("natural_earth_roads_es")["vintage"]
+    ne = vintage(load_interim_payload("natural_earth_roads_es")["vintage"])
     placer = Placer(world)
     aena_p, ports_p = load_interim_payload("aena_airports"), load_interim_payload("puertos_estado")
     total = sum(a.get("passengers") or 0 for a in aena_p["data"]["airports"])
@@ -90,7 +90,7 @@ def build() -> None:
     } for k, p in enumerate(ports_p["data"]["ports"])]
     write_web("infrastructure.json", {
         "version": 1,
-        "vintage": {"roads": vintage, "rail": vintage, "ports": ports_p["vintage"], "airports": aena_p["vintage"]},
+        "vintage": {"roads": ne, "rail": ne, "ports": vintage(ports_p["vintage"]), "airports": vintage(aena_p["vintage"])},
         "sources": ["natural_earth_roads_es", "aena_airports", "puertos_estado"],
         "rules": RULES,
         "road_classes": ROAD_CLASSES,

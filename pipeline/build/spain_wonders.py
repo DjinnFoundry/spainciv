@@ -27,6 +27,7 @@ from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..countries import active
 from ..sources.es.oapn import short_name
 from .cities import nearest_land
+from .texts_es import vintage
 
 REQUIRES = ["_world", "oapn_parques", "wikidata_es", "siiu_universidades", "siane", "cities.json", "world.json"]
 PRODUCES = ["wonders.json"]
@@ -221,8 +222,8 @@ def build() -> None:
     wonders = heritage + parks + universities + cathedrals  # rule order, as in RULES
     write_web("wonders.json", {
         "version": 1,
-        "vintage": {"parks": parks_p["vintage"], "boundaries": parks_p["vintage"], "heritage": wd_p["vintage"],
-                    "universities": uni_p["vintage"]},
+        "vintage": {"parks": vintage(parks_p["vintage"]), "boundaries": vintage(parks_p["vintage"]),
+                    "heritage": vintage(wd_p["vintage"]), "universities": vintage(uni_p["vintage"])},
         "sources": ["wikidata_es", "oapn_parques", "siiu_universidades"],
         "rules": RULES,
         "national": {"park_visits": sum(p["visitors"] for p in parks_p["data"]["parks"]), "park_visits_year": year,
