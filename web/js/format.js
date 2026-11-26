@@ -68,6 +68,13 @@ export function count3(n) {
   return int(n);
 }
 
+// Weights in the data are in the original US units, short tons and pounds (docs/DATA_CONTRACTS.md,
+// infrastructure.json); any other locale shows both in tonnes.
+/** A weight given in short tons, in the unit the country's map shows ("t" is a short ton in en-US, a tonne else). */
+export const shownTons = (shortTons) => (shortTons == null || original() ? shortTons : shortTons * 0.90718474);
+/** A weight given in pounds (air cargo), in the unit the country's map shows: pounds in en-US, tonnes else. */
+export const shownWeight = (lb) => (lb == null || original() ? lb : lb * 0.00045359237);
+
 export function yieldValue(y, v) {
   return isMoney(y.unit) ? money(v) : compact(v);
 }

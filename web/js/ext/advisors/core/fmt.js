@@ -1,12 +1,12 @@
 // Number formatting for the advisor kit, built on web/js/format.js.
 // Formats follow lenses.json / counties.json: int | usd | pct (0..1 fraction) | float | minutes | years | km2 | text,
 // plus a few of our own: money (compact $), signed (signed %), lq (×1.23), mw, count, ratio (×4.2).
-import { compact, count3, dollars, fixed, int, money, pct, sig3, signedPct, trimmed as trim, withCurrency, withPct } from "../../../format.js";
+import { compact, count3, dollars, fixed, int, money, pct, shownTons, shownWeight, sig3, signedPct, trimmed as trim, withCurrency, withPct } from "../../../format.js";
 import { country } from "../../../app/country.js";
 import { t } from "../../../i18n.js";
 import { fin } from "./util.js";
 
-export { compact, count3, dollars, fixed, int, money, pct, signedPct };
+export { compact, count3, dollars, fixed, int, money, pct, signedPct, shownTons, shownWeight };
 
 const original = () => (country().locale || "en-US") === "en-US";
 /** "×1.23" with d decimals. */
