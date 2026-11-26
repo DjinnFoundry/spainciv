@@ -14,6 +14,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - La vista de ciudad de España cita el Padrón, el Censo del INE y el atlas de áreas urbanas. Los distritos comparan
   con España y la sección de economía indica la escala provincial del PIB.
 - Los enlaces compartidos abren la vista de ciudad aunque la cámara se actualice antes de cargar esa vista.
+- El consejero de Energía y recursos sale en castellano en España: grupos, filtros, tabla de sitios y notas. Las
+  notas de EE UU (umbrales, EIA, MSHA) solo salen allí; en España explican que las minas no tienen tamaño y hablan
+  de provincias. Sin yacimientos de petróleo y gas no sale su tarjeta, y la potencia por provincia ya no da todas las
+  provincias como «sin centrales» cuando faltan sus datos.
 
 ### Añadido
 - La tarjeta social de spainciv (`og-image.png`) se dibuja desde los datos al empaquetar o servir
