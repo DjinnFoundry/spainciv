@@ -687,6 +687,6 @@ def check(web_dir) -> list[tuple[str, str]]:
                             f"ranges, {len(d.get('states') or {})} states, {len(cs)} Encampment cities "
                             f"({sum(c['tier'] == 'fortress' for c in cs.values())} fortress)"))
         no_sp = [a for a, s in (d.get("states") or {}).items() if s.get("spending") is None]
-        if no_sp:
+        if no_sp and len(no_sp) < len(d.get("states") or {}):  # a file with no spending at all (Spain) has none to miss
             out.append(("NOTE", f"military.json: no OLDCC spending for {', '.join(no_sp)}"))
     return out
