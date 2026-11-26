@@ -7,7 +7,9 @@ web/index.html is written for the United States and is published as is for it. A
   `site_url`; the card image is `https://<site_url>/og-image.png`, drawn from the country's data (pipeline/card.py);
 - a credit line on the map: its data sources, the licence notices its sources require, and usaciv's credit;
 - `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
-  the world.json `country` block (so a new address or credit needs no data rebuild).
+  the world.json `country` block (so a new address or credit needs no data rebuild), and `play` when the country has
+  an Unciv map;
+- the Unciv page and downloads (pipeline/play.py) when its build made an Unciv map.
 
 generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.
 """
@@ -19,6 +21,7 @@ import re
 from html import escape
 from typing import Callable
 
+from . import play
 from .card import card_png
 from .core.paths import WEB
 from .countries import Country, active
@@ -51,8 +54,12 @@ def credits_html(country: Country) -> str:
 
 
 def page_config(country: Country) -> dict:
-    """What the browser takes from the page rather than from world.json (see web/js/app/country.js)."""
-    return {"lang": country.lang, "site_url": country.site_url, "data_credit": country.page.data_credit, "notices": list(country.page.notices)}
+    """What the browser takes from the page rather than from world.json (see web/js/app/country.js); `play` is the
+    "Jugar en Unciv" page of a country with an Unciv map (pipeline/play.py), which the help dialog links to."""
+    config = {"lang": country.lang, "site_url": country.site_url, "data_credit": country.page.data_credit, "notices": list(country.page.notices)}
+    if play.load(country) is not None:
+        config["play"] = play.PAGE
+    return config
 
 
 def render_index(html: str, country: Country | None = None) -> str:
@@ -95,10 +102,11 @@ def index_bytes(country: Country | None = None) -> bytes:
 
 
 def generated_files(country: Country | None = None) -> dict[str, Callable[[], bytes]]:
-    """Site files made from code, by path in the site: index.html, and og-image.png for a country with a `page`
-    (the US keeps web/og-image.png)."""
+    """Site files made from code, by path in the site: index.html, og-image.png for a country with a `page` (the US
+    keeps web/og-image.png), and the Unciv page and downloads of a country with an Unciv map (pipeline/play.py)."""
     c = country or active()
     files = {"index.html": lambda: index_bytes(c)}
     if c.page is not None:
         files["og-image.png"] = lambda: card_png(c)
+        files |= play.files(c)
     return files

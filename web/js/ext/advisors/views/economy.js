@@ -21,46 +21,61 @@ export function mount(ctx) {
   const n = nation.nation || {};
   const metros = data.levels.metros;
   const rows = metros.rows;
-  const gdpInd = n.gdp_by_industry || {};
+  const states = app.data.states || [];
   const jobInd = Object.keys(nation.industries || {});
+  // Industries by GDP where the country publishes it (US: BEA), else by the residents they employ (Spain: INE Censo).
+  const gdpInd = n.gdp_by_industry || {};
+  const byGdp = Object.values(gdpInd).some(fin);
+  const ind = byGdp
+    ? { values: gdpInd, total: n.gdp, names: nation.gdp_industries, fmt: money, share: (s, k) => ratio(s.gdp_by_industry?.[k], s.gdp) }
+    : { values: n.jobs || {}, total: n.employed, names: nation.industries, fmt: count3, share: (s, k) => ratio(s.jobs?.[k], s.employed) };
+  // The bar list keys BEA's "government"; the jobs table (and the specialisation picker) call it "public_admin".
+  const toBar = (k) => (byGdp && k === "public_admin" ? "government" : k);
+  const fromBar = (k) => (byGdp && k === "government" ? "public_admin" : k);
+  // GDP by place: metros where they have it (US), else the regions (Spain: the INE stops at the province, DECISIONS E9/E31).
+  const metroGdp = rows.some((r) => fin(r.v.gdp));
+  const place = metroGdp
+    ? { level: metros, min: METRO_MIN, name: t("adv.metro"), open: (r) => app.selectCity(r.ref), at: (r) => [app.w.grid.cx(r.ref.cell), app.w.grid.cy(r.ref.cell)] }
+    : { level: data.levels.states, min: 0, name: data.levels.states.field("name").label, open: (r) => data.levels.states.focus(r), at: (r) => [states[r.ref].label.x, states[r.ref].label.y] };
+  const pRows = place.level.rows;
+  const placeHi = (list, o) => rowsHighlight(place.level, list, o);
 
   // --- headline -------------------------------------------------------------------------------------------------
-  const topInd = Object.entries(gdpInd).filter(([, v]) => fin(v)).sort((a, b) => b[1] - a[1])[0];
+  const topInd = Object.entries(ind.values).filter(([, v]) => fin(v)).sort((a, b) => b[1] - a[1])[0];
   el.insertAdjacentHTML("beforeend", tiles([
     { label: t("adv.eco.gdpYear", { year: n.gdp_year || "" }), value: money(n.gdp), sub: t("adv.eco.currentDollars") },
     { label: t("adv.eco.perPerson"), value: money(ratio(n.gdp, n.population)), sub: t("adv.eco.gdpPerResident") },
-    { label: t("adv.eco.topIndustry"), value: topInd ? short(nation.gdp_industries?.[topInd[0]] || topInd[0]) : "–", sub: topInd ? t("adv.eco.ofGdp", { share: pct(topInd[1] / n.gdp) }) : "" },
+    { label: t("adv.eco.topIndustry"), value: topInd ? short(ind.names?.[topInd[0]] || topInd[0]) : "–", sub: topInd ? t(byGdp ? "adv.eco.ofGdp" : "adv.eco.ofJobs", { share: pct(topInd[1] / ind.total) }) : "" },
   ]));
 
-  // --- GDP by industry ------------------------------------------------------------------------------------------
-  const stRows = data.levels.states.rows;
-  const indBody = section(el, { title: t("adv.eco.byIndustry"), kicker: country().name, note: t("adv.eco.byIndustry.note") });
-  const indRows = Object.entries(gdpInd).filter(([, v]) => fin(v)).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({
-    key: k, label: short(nation.gdp_industries?.[k] || k), full: nation.gdp_industries?.[k], value: v, text: money(v), sub: pct(v / n.gdp), icon: indIcon(k),
+  // --- GDP (or jobs) by industry --------------------------------------------------------------------------------
+  const indTitle = t(byGdp ? "adv.eco.byIndustry" : "adv.eco.jobsByIndustry");
+  const indBody = section(el, { title: indTitle, kicker: country().name, note: t(byGdp ? "adv.eco.byIndustry.note" : "adv.eco.jobsByIndustry.note") });
+  const indRows = Object.entries(ind.values).filter(([, v]) => fin(v)).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({
+    key: k, label: short(ind.names?.[k] || k), full: ind.names?.[k], value: v, text: ind.fmt(v), sub: pct(v / ind.total), icon: indIcon(k),
   }));
-  const states = app.data.states || [];
   const indBars = barList(indBody, {
-    rows: indRows, ariaLabel: t("adv.eco.byIndustry"),
+    rows: indRows, ariaLabel: indTitle,
     onHover: (r) => {
       if (!r) return link.hover(null);
-      const top = states.map((s, i) => ({ i, v: ratio(s.gdp_by_industry?.[r.key], s.gdp) })).filter((x) => fin(x.v)).sort((a, b) => b.v - a.v).slice(0, 8);
+      const top = states.map((s, i) => ({ i, v: ind.share(s, r.key) })).filter((x) => fin(x.v)).sort((a, b) => b.v - a.v).slice(0, 8);
       link.hover({ states: new Set(top.map((x) => x.i)), dimOthers: true });
     },
-    onClick: (r) => { setIndustry(r.key === "government" ? "public_admin" : r.key); specBody.scrollIntoView({ behavior: "smooth", block: "start" }); },
+    onClick: (r) => { setIndustry(fromBar(r.key)); specBody.scrollIntoView({ behavior: "smooth", block: "start" }); },
   });
 
-  // --- map: metro GDP circles -----------------------------------------------------------------------------------
-  const mapBody = section(el, { title: t("adv.eco.map.title"), note: t("adv.eco.map.note") });
-  const ppDomain = robustDomain(rows.filter((r) => r.v.population >= 100000).map((r) => r.v.gdp_pc), 0.03, true) || [30000, 120000];
+  // --- map: GDP circles -----------------------------------------------------------------------------------------
+  const mapBody = section(el, { title: t(metroGdp ? "adv.eco.map.title" : "adv.eco.map.title.region"), note: t(metroGdp ? "adv.eco.map.note" : "adv.eco.map.note.region") });
+  const ppDomain = robustDomain(pRows.filter((r) => r.v.population >= 100000).map((r) => r.v.gdp_pc), 0.03, true) || [30000, 120000];
   const ppColor = colorScale({ type: "seq", domain: ppDomain, ramp: RAMPS.gold });
-  const gMax = Math.max(...rows.map((r) => r.v.gdp || 0));
+  const gMax = Math.max(...pRows.map((r) => r.v.gdp || 0));
   const bubbles = ctx.bubbles("gdp", {
     rMax: 30, minR: 1.5, alpha: 0.6,
     tip: (b) => `<b>${esc(b.row.name)}</b> <span class="sub">${esc(b.row.sub)}</span><br>${t("adv.eco.tip", { gdp: money(b.row.v.gdp), pc: money(b.row.v.gdp_pc), people: count3(b.row.v.population) })}`,
-    onHover: (b) => { table.setHot(b ? b.key : null); scatter.setHot(b ? b.key : null); link.hover(b ? rowsHighlight(metros, [b.row]) : null); },
-    onClick: (b) => app.selectCity(b.row.ref),
+    onHover: (b) => { table.setHot(b ? b.key : null); scatter.setHot(b ? b.key : null); link.hover(b ? placeHi([b.row]) : null); },
+    onClick: (b) => place.open(b.row),
   });
-  const bubbleItems = rows.filter((r) => fin(r.v.gdp)).map((r) => ({ key: r.key, x: app.w.grid.cx(r.ref.cell), y: app.w.grid.cy(r.ref.cell), value: r.v.gdp, color: ppColor(r.v.gdp_pc), row: r }));
+  const bubbleItems = pRows.filter((r) => fin(r.v.gdp)).map((r) => { const [x, y] = place.at(r); return { key: r.key, x, y, value: r.v.gdp, color: ppColor(r.v.gdp_pc), row: r }; });
   bubbles.set(bubbleItems, { vMax: gMax });
   const showBubbles = document.createElement("label");
   showBubbles.className = "adv-check";
@@ -71,24 +86,25 @@ export function mount(ctx) {
     + sizeLegend([1e10, 1e11, 1e12].filter((v) => v <= gMax), (v) => 30 * Math.sqrt(v / gMax) , money, t("adv.eco.circleArea")));
 
   // --- leaders --------------------------------------------------------------------------------------------------
-  const lBody = section(el, { title: t("adv.eco.leaders"), note: t("adv.eco.leaders.note", { min: count3(METRO_MIN) }) });
+  const lBody = section(el, { title: t(metroGdp ? "adv.eco.leaders" : "adv.eco.leaders.region"), note: metroGdp ? t("adv.eco.leaders.note", { min: count3(METRO_MIN) }) : t("adv.eco.leaders.note.region") });
   const big = rows.filter((r) => (r.v.population || 0) >= METRO_MIN);
+  const pBig = pRows.filter((r) => (r.v.population || 0) >= place.min);
   segmented(lBody, {
     label: t("adv.rankBy"), value: "gdp",
     options: [{ value: "gdp", label: t("adv.eco.largestGdp") }, { value: "gdp_pc", label: t("adv.eco.gdpPc") }, { value: "growth", label: t("adv.eco.fastest") }],
-    onChange: (v) => { table.setRows(v === "gdp" ? rows : big); table.setColumns(cols, { key: v, dir: "desc" }); },
+    onChange: (v) => { table.setRows(v === "gdp" ? pRows : pBig); table.setColumns(cols, { key: v, dir: "desc" }); },
   });
   const cols = [
-    { key: "name", label: t("adv.metro"), align: "l", value: (r) => r.name, html: (r) => `${esc(r.name)} <span class="sub">${esc(r.sub)}</span>` },
+    { key: "name", label: place.name, align: "l", value: (r) => r.name, html: (r) => `${esc(r.name)} <span class="sub">${esc(r.sub)}</span>` },
     { key: "gdp", label: t("adv.gdp"), value: (r) => r.v.gdp, text: (r) => money(r.v.gdp), bar: { max: gMax, color: "rgba(224,181,76,.35)" } },
     { key: "gdp_pc", label: t("adv.eco.perPerson"), value: (r) => r.v.gdp_pc, text: (r) => money(r.v.gdp_pc) },
     { key: "growth", label: t("adv.growth"), value: (r) => r.v.growth, text: (r) => signedPct(r.v.growth) },
   ];
   const table = createTable(lBody, {
-    caption: t("adv.eco.metrosByGdp"), columns: cols, rows, sort: { key: "gdp", dir: "desc" }, rank: true, maxHeight: 280,
-    search: t("adv.searchMetros"),
-    onHover: (r) => { link.hover(r ? rowsHighlight(metros, [r]) : null); bubbles.setHot(r ? r.key : null); scatter.setHot(r ? r.key : null); },
-    onClick: (r) => app.selectCity(r.ref),
+    caption: t(metroGdp ? "adv.eco.metrosByGdp" : "adv.eco.regionsByGdp"), columns: cols, rows: pRows, sort: { key: "gdp", dir: "desc" }, rank: true, maxHeight: 280,
+    search: metroGdp ? t("adv.searchMetros") : t("adv.ex.search", { level: place.level.label.toLowerCase() }),
+    onHover: (r) => { link.hover(r ? placeHi([r]) : null); bubbles.setHot(r ? r.key : null); scatter.setHot(r ? r.key : null); },
+    onClick: (r) => place.open(r),
   });
 
   // --- specialisation -------------------------------------------------------------------------------------------
@@ -103,7 +119,7 @@ export function mount(ctx) {
   specInfo.className = "adv-note";
   specBody.appendChild(specInfo);
   const lq = (r, k = industry) => {
-    const o = r.ref;
+    const o = r.level === "states" ? states[r.ref] : r.ref; // a state row's ref is its index in states.json
     const us = ratio(n.jobs?.[k], n.employed);
     return us ? ratio(ratio(o.jobs?.[k], o.employed), us) : null;
   };
@@ -121,7 +137,7 @@ export function mount(ctx) {
   });
 
   // --- scatter --------------------------------------------------------------------------------------------------
-  const scBody = section(el, { title: t("adv.eco.scatter.title"), note: t("adv.eco.scatter.note") });
+  const scBody = section(el, { title: t("adv.eco.scatter.title"), note: t(metroGdp ? "adv.eco.scatter.note" : "adv.eco.scatter.note.region") });
   const scCtl = document.createElement("div");
   scCtl.className = "adv-row";
   scBody.appendChild(scCtl);
@@ -131,7 +147,7 @@ export function mount(ctx) {
     options: [{ value: "lq", label: t("adv.eco.specChosen") }, { value: "unemployment", label: t("adv.f.unemployment.tile") }, { value: "median_income", label: t("adv.income") }, { value: "none", label: t("adv.none") }],
     onChange: (v) => { colorBy = v; drawScatter(); },
   });
-  segmented(scCtl, { label: t("adv.metros"), value: "big", options: [{ value: "big", label: `${count3(METRO_MIN)}+` }, { value: "all", label: t("adv.all") }], onChange: (v) => { allMetros = v === "all"; drawScatter(); } });
+  if (place.min) segmented(scCtl, { label: t("adv.metros"), value: "big", options: [{ value: "big", label: `${count3(METRO_MIN)}+` }, { value: "all", label: t("adv.all") }], onChange: (v) => { allMetros = v === "all"; drawScatter(); } });
   const legendEl = document.createElement("div");
   const scatter = createScatter(scBody, {
     points: [], height: 300,
@@ -139,11 +155,11 @@ export function mount(ctx) {
     y: { label: t("adv.eco.popGrowth"), fmt: (v) => fmtShort("signed", v) },
     size: { label: t("adv.population"), fmt: count3, max: 15, min: 2 },
     refY: [{ v: n.growth ?? 0, label: t("adv.nationValue", { v: signedPct(n.growth) }) }],
-    onHover: (p) => { link.hover(p ? rowsHighlight(metros, [p.row]) : null); bubbles.setHot(p ? p.key : null); table.setHot(p ? p.key : null, false); },
-    onClick: (p) => app.selectCity(p.row.ref),
+    onHover: (p) => { link.hover(p ? placeHi([p.row]) : null); bubbles.setHot(p ? p.key : null); table.setHot(p ? p.key : null, false); },
+    onClick: (p) => place.open(p.row),
     onBrush: (set) => {
-      const sel = set ? rows.filter((r) => set.has(r.key)) : [];
-      link.base(sel.length ? rowsHighlight(metros, sel, { dim: true }) : specHighlight(), { frame: sel.length > 1 });
+      const sel = set ? pRows.filter((r) => set.has(r.key)) : [];
+      link.base(sel.length ? placeHi(sel, { dim: true }) : specHighlight(), { frame: sel.length > 1 });
       bubbles.setSelected(set);
       brushInfo.innerHTML = sel.length ? brushSummary(sel) : "";
     },
@@ -155,12 +171,12 @@ export function mount(ctx) {
   function brushSummary(sel) {
     const pop = sel.reduce((a, r) => a + (r.v.population || 0), 0);
     const gdp = sel.reduce((a, r) => a + (r.v.gdp || 0), 0);
-    return `${t("adv.eco.brush", { n: sel.length, people: count3(pop), gdp: money(gdp), share: pct(gdp / n.gdp) })} ${frameBtn()}<button type="button" class="adv-mini" data-clear>${t("adv.clear")}</button>`;
+    return `${t(metroGdp ? "adv.eco.brush" : "adv.eco.brush.region", { n: sel.length, people: count3(pop), gdp: money(gdp), share: pct(gdp / n.gdp) })} ${frameBtn()}<button type="button" class="adv-mini" data-clear>${t("adv.clear")}</button>`;
   }
   brushInfo.addEventListener("click", (e) => { if (e.target.closest("[data-clear]")) { scatter.setSelected(null); link.base(specHighlight()); bubbles.setSelected(null); brushInfo.innerHTML = ""; } });
 
   function drawScatter() {
-    const list = rows.filter((r) => allMetros || (r.v.population || 0) >= METRO_MIN);
+    const list = pRows.filter((r) => allMetros || (r.v.population || 0) >= place.min);
     const cv = (r) => (colorBy === "lq" ? lq(r) : colorBy === "none" ? null : r.v[colorBy]);
     let color = null, legend = "";
     if (colorBy !== "none") {
@@ -198,7 +214,7 @@ export function mount(ctx) {
     const us = ratio(n.jobs?.[k], n.employed);
     specInfo.innerHTML = t("adv.eco.specInfo", { share: pct(us), people: count3(n.jobs?.[k]), industry: esc(short(nation.industries[k]).toLowerCase()) });
     if (!scatter.selected) link.base(specHighlight());
-    indBars.setSelected(k === "public_admin" ? "government" : k);
+    indBars.setSelected(toBar(k));
     drawScatter();
   }
   setIndustry(industry);
@@ -212,7 +228,8 @@ export function mount(ctx) {
   return {
     onMapHover(h) {
       const r = h.cell >= 0 ? metros.rowAtCell(h.cell) : null;
-      scatter.setHot(r ? r.key : null);
+      const p = h.cell >= 0 ? place.level.rowAtCell(h.cell) : null;
+      scatter.setHot(p ? p.key : null);
       specTable.setHot(r ? r.key : null);
     },
     onEscape() {

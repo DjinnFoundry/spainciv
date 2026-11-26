@@ -603,17 +603,20 @@ class SpainPeopleTest(unittest.TestCase):
                                                                         "42173": {"total": 100, "abroad": 10}}},
             "ine_censo_formacion": {"year": 2024, "municipalities": {"28079": {"total": 100, "higher": 50}}},
             "ine_censo2021_indicadores": {"year": 2021, "municipalities": {"28079": {"owned": 7, "rented": 2, "other": 1}}},
+            "mivau_valor_tasado": {"year": 2026, "quarter": 2, "spain": 2355.0, "provinces": {"28": 4000.0, "42": 1200.0}},
         }
         payload = lambda name: {"data": interims[name]}
         geoids = ["28079", "42173", "44001"]
         weights = [[(0, 300.0), (1, 100.0)], [(1, 50.0)], [(2, 10.0)], []]
         with mock.patch.object(spain_people, "load_interim_payload", payload):
             lenses = {l["id"]: l for l in spain_people.people_lenses(geoids, weights)}
-        self.assertEqual(list(lenses), ["poverty", "age", "foreign_born", "bachelors", "homeownership"])
+        self.assertEqual(list(lenses), ["poverty", "age", "foreign_born", "bachelors", "homeownership", "home"])
         for lid, lens in lenses.items():
             us = COUNTY_LENSES[lid][1]
-            self.assertEqual({k: lens[k] for k in spain_people.SHARED}, {k: us[k] for k in spain_people.SHARED})
-            self.assertTrue(lens["source"].startswith("ine_"))
+            shared = [k for k in spain_people.SHARED if not (lid == "home" and k == "format")]  # euros, not dollars
+            self.assertEqual({k: lens[k] for k in shared}, {k: us[k] for k in shared})
+        self.assertEqual(lenses["home"]["format"], "eur")
+        self.assertEqual(lenses["home"]["values"], [3300.0, 1200.0, None, None])  # every municipality, its province's
         self.assertEqual(lenses["age"]["values"], [45.0, 48.0, None, None])
         self.assertEqual(lenses["foreign_born"]["values"], [0.25, 0.1, None, None])
         self.assertEqual(lenses["poverty"]["values"], [0.2, None, None, None])  # Soria has no figure: not a zero
@@ -799,6 +802,13 @@ class SpainWondersTest(unittest.TestCase):
 
 
 class SpainTransportTest(unittest.TestCase):
+    def test_airport_names(self):
+        from pipeline.sources.es.transport import airport_name
+
+        self.assertEqual(airport_name("AEROPUERTO INTL. REGIÓN MURCIA (**)"), "Aeropuerto Intl. Región Murcia")
+        self.assertEqual(airport_name("CEUTA /HELIPUERTO"), "Ceuta (helipuerto)")
+        self.assertEqual(airport_name("MÁLAGA-COSTA DEL SOL"), "Málaga-Costa del Sol")
+
     def test_hub_classes_and_words(self):
         from pipeline.build.spain_infrastructure import hub_class
         from pipeline.sources.es.transport import words
@@ -862,7 +872,7 @@ class SpainPowerTest(unittest.TestCase):
                        ("La Cabana Wind Farm Spain", "Parque eólico La Cabana"),
                        ("Renopool Solar Farm (+5)", "Planta solar Renopool (+5)"),
                        ("Llevant Solar Solar Farm", "Planta solar Llevant"), ("Mula Solar Photovoltaic", "Planta solar Mula"),
-                       ("Alcala De Guadaira Solar Park (+4)", "Planta solar Alcala De Guadaira (+4)"),
+                       ("Alcala De Guadaira Solar Park (+4)", "Planta solar Alcala de Guadaira (+4)"),
                        ("Guzman Thermosolar Farm", "Central termosolar Guzman"), ("Aste Csp Solar Farm", "Central termosolar Aste"),
                        ("Castile La Mancha Solar Xxxiii", "Castilla-La Mancha Solar Xxxiii"), ("Alcudia Phase", "Alcudia"),
                        ("Bajo Aragon Solar", "Bajo Aragón Solar"), ("Almaraz", "Almaraz")]:
@@ -878,20 +888,142 @@ class SpainFoodTest(unittest.TestCase):
                          "Orujo de Galicia (IGP)")
         self.assertEqual(label("Dehesa del Carrizal", "Vino de Pago"), "Dehesa del Carrizal (Vino de pago)")
 
-    def test_food_lens_counts_and_small_areas(self):
-        from pipeline.build.spain import food_lens
+    def test_names_match_across_spellings(self):
+        from pipeline.sources.es.food import matches
+
+        same = [(["Penedés, Comunidad de Cataluña", "Penedés"], ["Penedès"], "Wine"),
+                (["Priorato, Comunidad de Cataluña", "Priorato"], ["Priorat", "Priorato"], "Wine"),
+                (["Queso Idiazábal"], ["Idiazabal"], "Food"),
+                (["Pago de Calzadilla", "Pago de Calzadilla"], ["Calzadilla"], "Wine"),
+                (["Las Islas Canarias"], ["Islas Canarias"], "Wine"),
+                (["Pimiento del Piquillo de Lodosa"], ["Pimientos del Piquillo de Lodosa"], "Food"),
+                (["Aceite de Monterrubio"], ["Aceite Monterrubio"], "Food"),
+                (["Jijona / Xixona"], ["Jijona"], "Food"),
+                (["Ternera de Navarra o Nafarroako Aratxea"], ["Nafarroako Aratxea", "Ternera de Navarra"], "Food"),
+                (["Chacolí de Getaria-Getariako Txakolina"],
+                 ["Getariako Txakolina", "Chacolí de Getaria", "Txakoli de Getaria"], "Wine")]
+        for ministry, protected, product in same:
+            self.assertTrue(matches(ministry, protected, product), ministry)
+        # one part of a hyphenated name is not enough; a product word comes off only where it is generic
+        self.assertFalse(matches(["Alubia de La Bañeza-León"], ["León"], "Food"))
+        self.assertFalse(matches(["Queso de Murcia"], ["Murcia"], "Wine"))
+        self.assertFalse(matches(["Queso de Murcia"], ["Jumilla"], "Food"))
+
+    def test_register_matching_by_product_and_renames(self):
+        from pipeline.sources.es.food import match_register
+
+        def gi(gid, names, product, file="X"):
+            return {"giIdentifier": gid, "protectedNames": names, "productType": product,
+                    "registration": {"fileNumber": file}}
+
+        def zone(name, family, cal=None):
+            return {"zon_ds_nombre": name, "cal_ds_nombre": cal or name, "fam_ds_nombre": family}
+
+        register = [gi("W", ["Murcia"], "Wine"), gi("F", ["Queso de Murcia"], "Food"),
+                    gi("L", ["León"], "Wine", "PDO-ES-A0882"), gi("S", ["Pacharán Navarro"], "Spirit drink")]
+        got = match_register({"DO09": zone("Queso de Murcia", "Quesos y Mantequillas"),
+                              "DO83": zone("Tierra de León", "Vinos", "D.O.Tierra de León"),
+                              "DO99": zone("Pacharán Navarro", "Bebidas Espirituosas", "I.G.P.Pacharán Navarro"),
+                              "DO307": zone("Aceite de la Comunitat Valenciana", "Aceites de Oliva Virgen")}, register)
+        self.assertEqual({code: g["giIdentifier"] for code, g in got.items()}, {"DO09": "F", "DO83": "L", "DO99": "S"})
+        with self.assertRaises(RuntimeError):
+            match_register({"A": zone("Murcia", "Vinos"), "B": zone("D.O.Murcia", "Vinos")}, register)
+
+    def test_area_units_and_labels(self):
+        from pipeline.sources.es.food import area_label, parse_units
+
+        self.assertEqual(parse_units("provincia:42 municipio:05057* isla:Mallorca comunidad:07"),
+                         ["provincia:42", "municipio:05057*", "isla:Mallorca", "comunidad:07"])
+        for bad in ("provincia:99", "municipio:5057", "isla:Atlántida", "comarca:Bierzo", "comunidad:42"):
+            with self.assertRaises(ValueError):
+                parse_units(bad)
+        self.assertEqual(area_label("Torrezno de Soria", "IGP", ["provincia:42"]), "Torrezno de Soria (IGP · provincia)")
+        self.assertEqual(area_label("X", "IGP", ["provincia:07", "municipio:05057"]), "X (IGP · provincia, municipios)")
+        self.assertEqual(area_label("Urbezo", "Vino de pago", ["municipio:50080"]), "Urbezo (Vino de pago · finca)")
+        self.assertEqual(area_label("Y", "DOP", []), "Y (DOP · sin zona)")
+
+    def test_every_registered_name_needs_an_area(self):
+        from pipeline.sources.es.food import register_areas
+
+        def gi(gid, names, product):
+            return {"giIdentifier": gid, "protectedNames": names, "productType": product, "giType": "PGI",
+                    "registration": {"fileNumber": gid}}
+
+        ministry = {"DO1": {"zon_ds_nombre": "Rioja", "cal_ds_nombre": "D.O.Ca.Rioja", "fam_ds_nombre": "Vinos",
+                            "tpr_ds_descripcion": "Denominación de Origen Calificada"},
+                    "DO2": {"zon_ds_nombre": "Aceite Viejo", "cal_ds_nombre": "Aceite Viejo",
+                            "fam_ds_nombre": "Aceites de Oliva Virgen", "tpr_ds_descripcion": "Denominación de Origen Protegida"}}
+        rings = {"DO1": [[(0, 0), (1, 0), (1, 1)]], "DO2": [[(0, 0), (1, 0), (1, 1)]]}
+        row = {"eambrosia": "T", "nombre": "Torrezno de Soria", "figura": "IGP", "familia": "Embutidos y Productos Cárnicos",
+               "units": ["provincia:42"], "fuente": "DOUE C/2024/4674", "nota": ""}
+        register = [gi("R", ["Rioja"], "Wine"), gi("T", ["Torrezno de Soria"], "Food")]
+        out = register_areas(register, ministry, rings, [row])
+        self.assertEqual([(n["name"], n["area"]) for n in out["names"]],
+                         [("Rioja (DOP)", "mapa"), ("Torrezno de Soria (IGP · provincia)", "unidades")])
+        self.assertEqual(out["not_registered"], ["Aceite Viejo (DOP)"])
+        self.assertEqual((out["eu_registered"], out["eu_register"]), (2, {"PGI Wine": 1, "PGI Food": 1}))
+        with self.assertRaises(RuntimeError):  # a registered name with no area anywhere
+            register_areas(register, ministry, rings, [])
+        with self.assertRaises(RuntimeError):  # a row for a name the Ministry maps
+            register_areas(register, ministry, rings, [row, {**row, "eambrosia": "R"}])
+        with self.assertRaises(RuntimeError):  # a row for a name not in the register
+            register_areas(register, ministry, rings, [row, {**row, "eambrosia": "Z"}])
+
+    def test_the_areas_csv_reads(self):
+        from pipeline.sources.es.food import read_areas
+
+        rows = read_areas()
+        self.assertTrue(rows)
+        self.assertEqual(len({r["eambrosia"] for r in rows}), len(rows))
+        for r in rows:
+            self.assertIn(r["figura"], ("DOP", "IGP", "Vino de pago"))
+            self.assertTrue(r["fuente"] and r["url"].startswith("https://"), r["nombre"])
+            self.assertTrue(r["units"] or r["nota"], r["nombre"])  # no area: the note says why
+
+
+class SpainFoodLensTest(unittest.TestCase):
+    """A 4 × 4 grid in which every hex is land; municipalities are unit squares around hex centres."""
+
+    def setUp(self):
         from pipeline.core.hexgrid import HexGrid
 
-        grid = HexGrid(radius=10.0, cols=4, rows=4)
-        owner = [0] * grid.size
-        cx, cy = grid.center(*grid.col_row(5))
+        self.grid = HexGrid(radius=10.0, cols=4, rows=4)
+        self.centre = [self.grid.center(*self.grid.col_row(c)) for c in range(self.grid.size)]
+        codes = [f"07{c:03d}" for c in range(self.grid.size)]
+        self.world = {"owner": [0] * self.grid.size, "county": list(range(self.grid.size)), "counties": codes}
+        self.munis = [{"geoid": g, "state_fips": "07", "centre": self.centre[c],
+                       "rings": [[(self.centre[c][0] + dx, self.centre[c][1] + dy) for dx, dy in
+                                  ((0, 0), (1, 0), (1, 1), (0, 1))]]} for c, g in enumerate(codes)]
+
+    def lens(self, names):
+        from pipeline.build.spain_food import food_lens
+
+        return food_lens(names, lambda lon, lat: (lon, lat), self.grid, self.world, self.munis, [])
+
+    def test_polygons_units_estates_and_order(self):
+        cx, cy = self.centre[5]
         big = [[(-100, -100), (1000, -100), (1000, 1000), (-100, 1000)]]
         tiny = [[(cx - 1, cy - 1), (cx - 0.5, cy - 1), (cx - 0.5, cy - 0.5)]]
-        lens = food_lens([{"name": "A (DOP)", "rings": big}, {"name": "B (IGP)", "rings": tiny}],
-                         lambda lon, lat: (lon, lat), grid, owner)
-        self.assertEqual(lens["values"][5], 2)
-        self.assertEqual([lens["names"][k] for k in lens["labels"][5]], ["A (DOP)", "B (IGP)"])
-        self.assertEqual(sum(lens["values"]), grid.size + 1)
+        lens = self.lens([{"name": "A (DOP)", "area": "mapa", "rings": big},
+                          {"name": "B (IGP)", "area": "mapa", "rings": tiny},
+                          {"name": "C (IGP · municipios)", "area": "unidades", "units": ["municipio:07005", "municipio:07006*"]},
+                          {"name": "D (Vino de pago · finca)", "area": "finca", "units": ["municipio:07006"]},
+                          {"name": "E (IGP · sin zona)", "area": "ninguna", "units": [], "note": "sin pliego"}])
+        self.assertEqual(lens["names"], ["A (DOP)", "B (IGP)", "C (IGP · municipios)", "D (Vino de pago · finca)"])
+        named = lambda c: [lens["names"][k] for k in lens["labels"][c]]
+        self.assertEqual(named(5), ["B (IGP)", "C (IGP · municipios)", "A (DOP)"])  # smallest area first
+        self.assertEqual(named(6), ["D (Vino de pago · finca)", "C (IGP · municipios)", "A (DOP)"])
+        self.assertEqual(sum(lens["values"]), self.grid.size + 4)
+        self.assertIn("Sin zona: E (IGP · sin zona), sin pliego.", lens["description"])
+
+    def test_whole_province_and_island(self):
+        from pipeline.build.spain_food import island, unit_municipalities
+
+        # hexes 0 and 1 touch (shared corner); the rest stand apart
+        self.munis[1]["rings"] = [[(x, y) for x, y in self.munis[1]["rings"][0]] + [self.munis[0]["rings"][0][2]]]
+        self.assertEqual(island(self.munis, "07000"), {"07000", "07001"})
+        self.assertEqual(len(unit_municipalities(["provincia:07"], self.munis)), self.grid.size)
+        self.assertEqual(unit_municipalities(["municipio:07003*"], self.munis), {"07003"})
 
 
 class SpainNamedLensTest(unittest.TestCase):
@@ -989,7 +1121,7 @@ class SpainMinesTest(unittest.TestCase):
         self.assertIsNone(locate(sotiel, [self.dep("2", "Sorpresa", "pequeño")]))  # a small one never stands alone
 
     def test_names_and_provinces(self):
-        from pipeline.build.spain_resources import title_es
+        from pipeline.sources.es.names import title_es
         from pipeline.sources.es.mines import norm, province_code
 
         self.assertEqual(norm("Santos (Los)"), norm("Santos, Los"))
@@ -1000,6 +1132,13 @@ class SpainMinesTest(unittest.TestCase):
         self.assertEqual(title_es("MINA FATIMA (FATIMA, JARAMA, Y FATIMA FR. II)"),
                          "Mina Fatima (Fatima, Jarama, y Fatima Fr. II)")
         self.assertEqual(title_es("PENOUTA Olga"), "PENOUTA Olga")  # mixed case is left alone
+        self.assertEqual(title_es("JEREZ DE LA FRONTERA"), "Jerez de la Frontera")
+        self.assertEqual(title_es("TENERIFE NORTE-C. LA LAGUNA"), "Tenerife Norte-C. La Laguna")
+        self.assertEqual(title_es("FGL GRANADA-JAÉN"), "FGL Granada-Jaén")
+        self.assertEqual(title_es("A CORUÑA"), "A Coruña")
+        self.assertEqual(title_es("MINERALES Y PRODUCTOS DERIVADOS, S.A"), "Minerales y Productos Derivados, S.A")
+        self.assertEqual(title_es("Central termosolar Palma Del Rio"), "Central termosolar Palma del Rio")
+
 
 
 class SpainVintageTest(unittest.TestCase):
@@ -1254,18 +1393,28 @@ class SpainFiestasTest(unittest.TestCase):
 
 class SpainFiestaLensesTest(unittest.TestCase):
     def test_per_inhabitant_is_the_hex_share_of_counts_over_its_residents(self):
-        from pipeline.build.spain_fiesta import per_inhabitant
+        from pipeline.build.spain_fiesta import hex_totals, per_inhabitant
 
         # Hex 0 holds all of A (1,000 people, 10 bars) and half of B (2,000 of 4,000 people, 4 bars): 12 / 3,000.
         weights = [[(0, 1000), (1, 2000)], [(1, 2000)], [], [(2, 50)]]
-        values = per_inhabitant({"A": 10, "B": 4, "C": None}, ["A", "B", "C"], [1000, 4000, 50], weights)
-        self.assertEqual(values, [4.0, 1.0, None, None])
+        totals = hex_totals({"A": 10, "B": 4, "C": None}, ["A", "B", "C"], [1000, 4000, 50], weights)
+        self.assertEqual(totals, [(12.0, 3000), (2.0, 2000), None, None])
+        self.assertEqual(per_inhabitant(totals), [4.0, 1.0, None, None])
 
-    def test_percentiles_and_party_index(self):
-        from pipeline.build.spain_fiesta import party_index, percentiles
+    def test_times_spain_draws_small_hexes_towards_spain(self):
+        from pipeline.build.spain_fiesta import times_spain
 
-        self.assertEqual(percentiles([0, 0, 2, None, 5]), [0, 0, 2 / 3, None, 1])
-        self.assertEqual(party_index([[0, 1, 2], [2, 1, 0], [0, 0, None]]), [33, 33, None])
+        # Spain: 40 bars for 20,000 people (2 per 1,000). A hamlet of 50 with 1 bar reads 20 per 1,000 raw, but
+        # (1 + 1,000 × 0.002) / 1,050 = 1.43× Spain's with a prior of 1,000; a town of 19,950 with 39 barely moves.
+        hamlet, town = times_spain([(1, 50), (39, 19950), None], 1000)[:2]
+        self.assertAlmostEqual(hamlet, 3 / 1050 / 0.002)
+        self.assertAlmostEqual(town, 41 / 20950 / 0.002)
+        self.assertIsNone(times_spain([(1, 50), None], 1000)[1])
+
+    def test_party_index_is_the_geometric_mean(self):
+        from pipeline.build.spain_fiesta import party_index
+
+        self.assertEqual(party_index([[2, 1, 1], [4, 1, None], [1, 1, 3]]), [2.0, 1.0, None])
 
     def test_a_fiesta_counts_once_per_hex(self):
         from pipeline.build.spain_fiesta import fiesta_cells, fiestas_lens
@@ -1300,3 +1449,205 @@ class SpainFiestaLensesTest(unittest.TestCase):
         source._rows = lambda name: rows
         self.assertEqual(source._named("castles"), [{"qid": "Q1", "label": "Castillo de Loarre",
                                                      "coord": (-0.6127, 42.3256)}])
+
+
+def person(**kw) -> dict:
+    """A processed great person (wikidata_personajes) with what a test does not care about filled in."""
+    return {"qid": "Q1", "name": "X", "description": None, "female": False, "born": None, "died": None,
+            "kinds": ["writers"], "primary": "writers", "role": "Q36180", "word": None, "trade": None,
+            "sitelinks": 50, "birthplaces": [], **kw}
+
+
+class SpainGreatPeopleRulesTest(unittest.TestCase):
+    """The category, fame and primary-category rules of pipeline/sources/es/personajes.py."""
+
+    TREES = {"Q36180": {"Q36180", "Q49757"}, "Q1028181": {"Q1028181", "Q3374326"}, "Q81096": {"Q81096", "Q2079935"},
+             "Q116": {"Q116", "Q3847454", "Q49967564"}}
+
+    def trees(self):
+        from pipeline.sources.es.personajes import DEEP
+
+        return {c: self.TREES.get(c, {c}) for c in DEEP}
+
+    def test_every_rule_class_has_a_noun_and_every_category_a_style(self):
+        from pipeline.build.spain_personajes import NOUNS, STYLE
+        from pipeline.sources.es.personajes import KIND_IDS, KINDS, WORDS
+
+        self.assertEqual(list(STYLE), KIND_IDS)
+        self.assertEqual({r.cls for k in KINDS for r in k.rules} - set(NOUNS), set())
+        self.assertLessEqual(set(WORDS), set(KIND_IDS))
+        self.assertEqual(len({c for _, c in STYLE.values()}), len(STYLE))  # one colour each
+
+    def test_trees_count_subclasses_exact_classes_do_not_and_excluded_classes_never(self):
+        from pipeline.sources.es.personajes import BY_ID, hits
+
+        trees = self.trees()
+        self.assertEqual(list(hits(BY_ID["writers"], {"P106": {"Q49757"}}, trees)), [BY_ID["writers"].rules[0]])
+        sailor = {"P106": {"Q476246"}}  # a sport sailor: under sailor (Q45199), which counts without its tree
+        self.assertEqual(hits(BY_ID["explorers"], sailor, {**trees, "Q45199": {"Q45199", "Q476246"}}), {})
+        bishop = {"P39": {"Q49967564"}}  # the bishop of Urgell, which Wikidata files under monarch
+        self.assertEqual(hits(BY_ID["monarchs"], bishop, trees), {})
+        self.assertTrue(hits(BY_ID["monarchs"], {"P39": {"Q3847454"}}, trees))
+
+    def test_classify_keeps_categories_whose_threshold_the_person_meets(self):
+        from pipeline.sources.es.personajes import BY_ID, classify
+
+        values = {"P106": {"Q36180", "Q1028181"}}
+        self.assertIsNone(classify(values, BY_ID["artists"].min_sitelinks - 1, self.trees()))
+        c = classify(values, BY_ID["artists"].min_sitelinks, self.trees())
+        self.assertEqual((c["kinds"], c["kept"]), (["artists", "writers"], ["artists"]))
+        # A conquistador counts whatever his fame.
+        self.assertEqual(classify({"P106": {"Q126236"}}, 0, self.trees())["kept"], ["conquistadors"])
+        # A Guanche king is named by his own title: mencey in Tenerife, guanarteme in Gran Canaria.
+        from pipeline.sources.es.personajes import GUANARTEME, MENCEY
+        for title in (MENCEY, GUANARTEME):
+            c = classify({"P39": {title, "Q116"}}, BY_ID["monarchs"].min_sitelinks, self.trees())
+            self.assertEqual(c["roles"]["monarchs"], title)
+
+    def test_primary_decisive_then_description_then_most_occupations(self):
+        from pipeline.sources.es.personajes import classify, primary
+
+        trees = self.trees()
+        picasso = classify({"P106": {"Q1028181", "Q3374326", "Q1281618", "Q36180", "Q2079935"}}, 266, trees)
+        self.assertEqual(picasso["counts"], {"engineers": 1, "artists": 3, "writers": 1})
+        self.assertEqual(primary(picasso, None)["primary"], "artists")  # most occupations
+        self.assertEqual(primary(picasso, None)["role"], "Q1028181")  # a painter before a sculptor
+        writer = primary(picasso, "poeta y pintor español")  # the description's first trade wins over the count
+        self.assertEqual((writer["primary"], writer["word"], writer["trade"]), ("writers", "poeta", "poeta"))
+        pizarro = classify({"P106": {"Q126236", "Q189290", "Q1402561", "Q11900058"}}, 90, trees)
+        self.assertEqual(primary(pizarro, "militar y explorador español")["primary"], "conquistadors")  # decisive
+        tie = classify({"P106": {"Q36180", "Q1028181"}}, 266, trees)
+        self.assertEqual(primary(tie, "diplomático")["primary"], "artists")  # a tie goes to the first in KINDS
+
+    def test_described_matches_phrases_and_only_the_persons_categories(self):
+        from pipeline.sources.es.personajes import described
+
+        self.assertEqual(described("Director de orquesta y compositor español", ["musicians"]),
+                         [("musicians", "director de orquesta"), ("musicians", "compositor")])
+        self.assertEqual(described("cineasta y escritor hispanomexicano", ["writers"]), [("writers", "escritor")])
+        self.assertEqual(described(None, ["writers"]), [])
+
+    def test_dates_years_before_christ_precision_and_rank(self):
+        from pipeline.build.spain_personajes import date_text, years
+        from pipeline.sources.es.personajes import best_date, year
+
+        self.assertEqual(year("-0003-01-01T00:00:00Z"), -3)
+        self.assertEqual(year("1881-10-25T00:00:00Z"), 1881)
+        self.assertIsNone(year("http://www.wikidata.org/.well-known/genid/abc"))
+        self.assertEqual(best_date([("NormalRank", 1500, 7), ("NormalRank", 1547, 11), ("NormalRank", 1546, 11)]),
+                         {"year": 1546, "precision": 11})
+        self.assertEqual(best_date([("NormalRank", 1547, 11), ("PreferredRank", 1548, 9)]),
+                         {"year": 1548, "precision": 9})
+        self.assertEqual(date_text({"year": -3, "precision": 9}), "4 a. C.")  # SPARQL counts a year 0
+        self.assertEqual(date_text({"year": 1550, "precision": 8}), "h. 1550")
+        self.assertEqual(date_text({"year": 1501, "precision": 7}), "s. XVI")
+        self.assertIsNone(date_text({"year": 1000, "precision": 6}))
+        self.assertEqual(years({"year": 1881, "precision": 11}, {"year": 1973, "precision": 11}), "1881–1973")
+        self.assertEqual(years({"year": 1986, "precision": 11}, None), "n. 1986")
+        self.assertEqual(years(None, {"year": 1550, "precision": 9}), "m. 1550")
+
+    def test_noun_is_the_descriptions_word_a_nobels_trade_or_the_roles_noun_in_the_persons_gender(self):
+        from pipeline.build.spain_personajes import noun, note
+
+        self.assertEqual(noun(person(word="poeta")), "poeta")
+        self.assertEqual(noun(person(primary="nobel", role="Q7191", trade="médico")), "médico, premio Nobel")
+        self.assertEqual(noun(person(primary="artists", role="Q1028181", female=True)), "pintora")
+        self.assertEqual(note(person(born={"year": 1547, "precision": 11}, died={"year": 1616, "precision": 11})),
+                         "escritor, 1547–1616")
+
+    def test_birthplace_without_coordinates_takes_the_place_it_is_in_and_regions_do_not_count(self):
+        from pipeline.sources.es.personajes import birthplace
+
+        oratorio = {"qid": "Q9", "name": "Oratorio", "coord": None, "types": {"Q1"},
+                    "up": {"Q30": {"coord": (1.0, 2.0), "types": set()}, "Q20": {"coord": (3.0, 4.0), "types": set()}}}
+        self.assertEqual(birthplace(oratorio), {"qid": "Q9", "name": "Oratorio", "coord": (3.0, 4.0), "via": "P131",
+                                                "area": False})
+        spain = {"qid": "Q29", "name": "España", "coord": (-4.0, 40.0), "types": {"Q3624078"}, "up": {}}
+        self.assertTrue(birthplace(spain)["area"])
+        self.assertIsNone(birthplace({**spain, "coord": None, "types": set()})["via"])
+
+
+class SpainGreatPeopleMapTest(unittest.TestCase):
+    """Placement and lenses of pipeline/build/spain_personajes.py on a row of six hexes, 17 km apart: the sea, three of
+    Spain (the first two inside a municipality), France and the sea again."""
+
+    MUNI = {"rings": [[[8, -8], [44, -8], [44, 8], [8, 8]]]}  # holds the centres of hexes 1 and 2
+
+    def setUp(self):
+        from pipeline.build.spain_personajes import Placer
+        from pipeline.build.world import FOREIGN, WATER
+        from pipeline.core.hexgrid import HexGrid
+
+        self.grid = HexGrid(radius=10.0, cols=6, rows=1)
+        self.owner = [WATER, 0, 0, 0, FOREIGN, WATER]
+        self.at = [self.grid.center(c, 0) for c in range(6)]  # lon/lat = map km (identity projection)
+        self.placer = Placer(lambda lon, lat: (lon, lat), self.grid, self.owner, [self.MUNI])
+
+    def test_placer(self):
+        self.assertEqual(self.placer.cell(*self.at[1]), 1)  # inside a municipality
+        self.assertEqual(self.placer.cell(*self.at[0]), 1)  # a port on a sea hex: the Spanish land next to it
+        self.assertIsNone(self.placer.cell(*self.at[3]))  # outside every outline, next to France
+        self.assertIsNone(self.placer.cell(*self.at[4]))  # France
+        self.assertIsNone(self.placer.cell(500.0, 0.0))  # off the map
+
+    def test_place_takes_the_first_birthplace_in_spain_or_says_why_not(self):
+        from pipeline.build.spain_personajes import place
+
+        def bp(coord, area=False):
+            return {"qid": "Q2", "name": "P", "coord": coord, "via": "P625" if coord else None, "area": area}
+
+        self.assertEqual(place(person(birthplaces=[bp(self.at[4]), bp(self.at[2])]), self.placer)[0], 2)
+        self.assertEqual(place(person(birthplaces=[bp(self.at[4])]), self.placer), "abroad")
+        self.assertEqual(place(person(birthplaces=[bp(self.at[1], area=True)]), self.placer), "area")
+        self.assertEqual(place(person(birthplaces=[bp(None)]), self.placer), "no_coordinates")
+        self.assertEqual(place(person(birthplaces=[]), self.placer), "no_coordinates")
+
+    def test_lenses_and_people_file(self):
+        from unittest import mock
+
+        from pipeline.build import spain_personajes as sp
+        from pipeline.sources.es.personajes import KIND_IDS
+
+        def at(c, **kw):
+            return person(birthplaces=[{"qid": "Q2", "name": f"Lugar {c}", "coord": self.at[c], "via": "P625",
+                                        "area": False}], **kw)
+
+        people = [at(1, name="Pintor A", primary="artists", role="Q1028181"),
+                  at(1, name="Escritor", born={"year": 1547, "precision": 11}),
+                  at(1, name="Pintor B", primary="artists", role="Q1028181"),
+                  at(2, name="Escritora", female=True), at(4, name="Francés"), person(name="Sin lugar")]
+        payload = {"vintage": "Wikidata, 2026-11-26", "data": {"people": people, "conquistadors_without_birthplace": 2}}
+        with mock.patch.object(sp, "load_interim_payload", return_value=payload):
+            (count, kind), doc = sp.great_people({"owner": self.owner}, lambda lon, lat: (lon, lat), self.grid,
+                                                 [self.MUNI])
+        self.assertEqual(count["values"], [None, 3, 1, 0, None, None])
+        artists, writers = KIND_IDS.index("artists"), KIND_IDS.index("writers")
+        self.assertEqual(kind["values"], [None, artists, writers, None, None, None])  # two painters, one writer
+        self.assertEqual(kind["categories"][artists]["name"], "Pintores y escultores")
+        self.assertEqual({count["names_from"], kind["names_from"]}, {sp.FILE})
+        self.assertNotIn("names", count)  # the names stay in the people file
+        self.assertEqual([(p["name"], p["note"], p["place"], p["cell"]) for p in doc["people"]],
+                         [("Pintor A", "pintor", "Lugar 1", 1), ("Escritor", "escritor, n. 1547", "Lugar 1", 1),
+                          ("Pintor B", "pintor", "Lugar 1", 1), ("Escritora", "escritora", "Lugar 2", 2)])
+        self.assertIn("Fuera quedan 2: 1 nacieron fuera de la España actual", count["description"])
+
+    def test_check_matches_the_lenses_against_the_people_file(self):
+        import tempfile
+
+        from pipeline.build import spain_personajes as sp
+        from pipeline.sources.es.personajes import KIND_IDS
+
+        people = {"categories": [{"id": k} for k in KIND_IDS],
+                  "people": [{"name": "A", "cell": 1, "kind": KIND_IDS.index("writers")}]}
+        lenses = {"lenses": [{"id": "great_people", "names_from": sp.FILE, "values": [None, 1, 0, 0, None, None]},
+                             {"id": "great_people_kind", "names_from": sp.FILE,
+                              "values": [None, KIND_IDS.index("writers"), None, None, None, None]}]}
+        with tempfile.TemporaryDirectory() as d:
+            for name, doc in (("lenses", lenses), ("world", {"owner": self.owner}), (sp.FILE, people)):
+                Path(d, f"{name}.json").write_text(json.dumps(doc))
+            self.assertEqual(sp.check(d)[0][0], "PASS")
+            lenses["lenses"][0]["values"][2] = 5
+            Path(d, "lenses.json").write_text(json.dumps(lenses))
+            self.assertEqual(sp.check(d), [("FAIL", "lens great_people: values differ from personajes.json")])
+            Path(d, "lenses.json").write_text(json.dumps({"lenses": [{"id": "density", "values": []}]}))
+            self.assertEqual(sp.check(d), [])  # a map without people lenses (the US)

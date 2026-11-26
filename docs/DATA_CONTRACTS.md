@@ -231,6 +231,19 @@ categories' colours in the same order, `"scale": "linear"`, `"domain": [0, n - 1
 colours). The legend shows swatches (click one to show only it) and tooltips show the category name. `check` enforces all
 of this.
 
+**Named lenses** (optional keys): `names` (strings) and `labels` (per cell, the indices of the names in it, or null) make
+the tooltip list what a hex holds, up to 8 (Spain's museums, castles, fiestas). A lens whose names are too many for
+lenses.json says `"names_from": "<file>"` instead: the map loads `data/<file>.json` the first time such a lens opens and
+builds `names`/`labels` from its `people: [{name, note?, cell}]`, in file order (names read "name (note)"); every lens
+naming from the same file shares them, and the search box adds its people (by name and by `place`) once it is first
+focused. `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
+lens: "Nadie", nobody born there).
+
+**`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
+`great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",
+"note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
+`check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
+
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
 | id | group | format | values | note (legend caveat) |

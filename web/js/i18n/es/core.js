@@ -3,8 +3,8 @@
 export default {
   // index.html (i18n.js PAGE_STRINGS)
   "page.yields": "Rendimientos nacionales",
-  "page.search.placeholder": "Buscar ciudad o provincia",
-  "page.search.label": "Buscar ciudades y provincias (/ o Ctrl K)",
+  "page.search.placeholder": "Buscar ciudad, provincia o personaje",
+  "page.search.label": "Buscar ciudades, provincias y personajes (/ o Ctrl K)",
   "page.share.label": "Compartir esta vista",
   "page.share.title": "Compartir: copiar un enlace o descargar una imagen",
   "page.help.label": "Ayuda de teclado y ratón",
@@ -132,13 +132,15 @@ export default {
   "core.help.jump": "Clic o arrastre para saltar",
   "core.help.openCity": "Abrir la pantalla de la ciudad",
   "core.help.openState": "Abrir esa provincia",
-  "core.help.search": "Buscar ciudades y provincias",
+  "core.help.search": "Buscar ciudades, provincias y personajes",
   "core.help.lens": "Lente siguiente / anterior",
   "core.help.resources": "Mostrar u ocultar los recursos",
   "core.help.help": "Esta ayuda",
   "core.help.esc": "Cerrar la ayuda, la búsqueda, el Almanaque y después el panel",
   "core.help.foot": "Cada cifra remite a datos públicos: abre el <b>Almanaque</b> para ver las fuentes.\n      El enlace de la barra de direcciones vuelve a abrir siempre esta misma vista.\n      Código fuente: {zip} (MIT; se ejecuta con uv, véase su README).",
   "core.help.basedOn": "\n      {product} está basado en {usaciv}, de Andrej Karpathy (licencia MIT, véase LICENSE).",
+  "core.help.play": "\n      Este mapa se puede jugar en Unciv, la versión libre de Civilization V: {link}.",
+  "core.help.playLink": "Jugar en Unciv",
 
   // Almanac (ui/pedia.js)
   "core.pedia.about": "Sobre este mapa",

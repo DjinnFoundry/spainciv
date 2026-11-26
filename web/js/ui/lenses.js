@@ -14,7 +14,7 @@ const intish = (v) =>
   Number.isInteger(v) || Math.abs(v) >= 10 ? compact(v) : Math.abs(v) < 1 ? plain(+v.toPrecision(1)) : fixed(v, 1);
 
 export function formatLensValue(lens, v) {
-  if (v == null || !Number.isFinite(v)) return t("core.lens.noData");
+  if (v == null || !Number.isFinite(v)) return lens.null_label ?? t("core.lens.noData");
   switch (lens.format) {
     case "category": return lens.categories?.[Math.round(v)]?.name ?? t("core.lens.noData");
     case "usd": case "eur": return money(v);
@@ -26,6 +26,18 @@ export function formatLensValue(lens, v) {
   }
   if (lens.unit?.includes("$") || lens.unit?.includes("€")) return money(v);
   return (v < 10 ? fixed(v, 1) : compact(v)) + (perKm2(lens) ? t("core.lens.perKm2") : "");
+}
+
+// A lens with `names_from` names its hexes from that data file, loaded the first time the lens opens (main.js):
+// {people: [{name, note?, cell}]}, most famous first. names[k] = "name (note)"; labels[cell] = the people born there.
+export function namesFrom(doc, n) {
+  const names = [];
+  const labels = new Array(n);
+  (doc?.people || []).forEach((p, k) => {
+    names.push(p.note ? `${p.name} (${p.note})` : p.name);
+    (labels[p.cell] ||= []).push(k);
+  });
+  return { names, labels };
 }
 
 // A density unit ("people / km²", "habitantes / km²") prints as " /km²" after the number.

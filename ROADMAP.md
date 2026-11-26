@@ -17,7 +17,7 @@ decisiones que salgan van a `DECISIONS.md`.
   2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
 - El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E31).
-- Valor de la vivienda: no hay valor por vivienda municipal abierto; el valor tasado municipal del Ministerio está en €/m², en XLS binario y en un servidor que responde 503, y su CSV abierto llega solo a provincias (E30, E44). Por decidir si entra como campo propio.
+- Valor de la vivienda: la lente es provincial (E49); el valor tasado municipal (más de 25.000 habitantes) solo está en un XLS binario de un servidor que responde 503. Si vuelve, la lente puede bajar a municipio.
 - Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.

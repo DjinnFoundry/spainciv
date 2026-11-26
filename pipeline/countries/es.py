@@ -55,7 +55,7 @@ COUNTRY = Country(
             " de población y renta, con datos públicos del INE, el IGN, Copernicus, la NOAA y Natural Earth."
         ),
         image_alt="Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
-        data_credit="Datos: INE, IGN (SIANE, CORINE vía IDEE), Ministerio de Vivienda (AUDES), NOAA ETOPO, Natural Earth",
+        data_credit="Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap",
         # SIANE boundaries are CC BY 4.0: the attribution the IGN asks for stays visible on the map (docs/SPAIN.md).
         notices=("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",),
         based_on="Basado en {usaciv}, de Andrej Karpathy (MIT)",

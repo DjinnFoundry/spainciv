@@ -326,6 +326,18 @@ SOURCES = {
         "used_for": ["Maravillas de Patrimonio Mundial y catedrales", "Lente de patrimonio (Bienes de Interés Cultural)",
                      "Lente de museos", "Lentes de castillos y de plazas de toros"],
     },
+    "wikidata_personajes": {
+        "title": "Wikidata: personajes famosos nacidos en España (oficios, cargos, premios, lugares y fechas)",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (cesión al dominio público)",
+        "description": "Las personas cuyo lugar de nacimiento sitúa Wikidata en España (o, en lugares históricos, en un "
+        "reino o un estado de la península: Calagurris en la Antigua Roma, una villa de la Corona de Castilla), con "
+        "sus ocupaciones, cargos (monarcas, papas, cardenales), premios Nobel, estado de canonización, número de "
+        "enlaces a proyectos de Wikimedia, fechas de nacimiento y muerte y coordenadas del lugar de nacimiento, del "
+        "servicio SPARQL de Wikidata. Lo editan voluntarios: quién tiene ficha y qué oficios lista sigue la "
+        "cobertura de Wikipedia, no un registro.",
+        "used_for": ["Lentes de grandes personajes", "Búsqueda de personajes"],
+    },
     "aena_airports": {
         "title": "Pasajeros, operaciones y mercancías por aeropuerto de la red de AENA (2025, definitivos)",
         "publisher": "Aena; posiciones de los aeropuertos de OurAirports",
@@ -371,17 +383,34 @@ SOURCES = {
         "mina. Se quedan las minas metálicas y las de potasa, fluorita, celestina, magnesita y sulfato sódico, y su "
         "número por sustancia coincide con las tablas del Panorama. La estadística no da la posición ni la producción de "
         "cada mina: la posición es la del yacimiento de su mineral y su municipio en el BDMIN del IGME (base de datos de "
-        "indicios minerales) y, si no hay ninguno, el centro del municipio.",
-        "used_for": ["Minas del mapa (recursos)"],
+        "indicios minerales) y, si no hay ninguno, el centro del municipio. Del resto de la lista se guardan la "
+        "sustancia y el municipio de cada explotación, y del BDMIN los yacimientos grandes y medianos de carbón, uranio, "
+        "bauxita, hierro, oro, cobre y plata, se exploten o no, para el mapa de Unciv.",
+        "used_for": ["Minas del mapa (recursos)", "Recursos del mapa de Unciv (carbón, uranio, aluminio, hierro, oro, cobre, "
+                     "plata, petróleo, mármol, sal, piedra)"],
+    },
+    "ine_censo_agrario": {
+        "title": "Censo Agrario 2020: cabezas de équidos por comarca agraria (tabla 51175) y la comarca de cada municipio "
+        "(tabla 75479)",
+        "license": _INE_LICENCE,
+        "description": "Las cabezas de ganado equino (caballos, mulos y asnos) de las explotaciones agrarias en 2020, por "
+        "comarca agraria del INE, y los municipios de cada comarca. Las explotaciones que solo tienen équidos no están en "
+        "el censo. El censo equino del Ministerio de Agricultura (REGA) solo se publica por comunidad autónoma.",
+        "used_for": ["Caballos del mapa de Unciv"],
     },
     "calidad_diferenciada": {
-        "title": "Denominaciones de calidad: sus zonas (MAPA) y el registro de la UE (eAmbrosia)",
-        "publisher": "Ministerio de Agricultura, Pesca y Alimentación; Comisión Europea (eAmbrosia)",
-        "license": "MAPA: CC BY 4.0; eAmbrosia: aviso de reutilización de la Comisión Europea (CC BY 4.0)",
-        "description": "La zona geográfica de cada denominación de origen protegida (DOP), indicación geográfica "
-        "protegida (IGP), vino de calidad y vino de pago de España, tal como las cartografía el Ministerio (revisión de "
-        "2017: las registradas después aún no tienen zona), y los nombres que España tiene en el registro de la UE.",
-        "used_for": ["Lente de denominaciones de origen"],
+        "title": "Denominaciones de calidad: el registro de la UE (eAmbrosia) y sus zonas (MAPA y pliegos)",
+        "publisher": "Comisión Europea (eAmbrosia, Diario Oficial); Ministerio de Agricultura, Pesca y Alimentación; "
+        "gobiernos autonómicos (pliegos de condiciones)",
+        "license": "eAmbrosia y EUR-Lex: aviso de reutilización de la Comisión Europea (CC BY 4.0); MAPA: CC BY 4.0; "
+        "pliegos: textos oficiales",
+        "description": "Todos los nombres que España tiene en el registro de la UE (denominaciones de origen protegidas, "
+        "indicaciones geográficas protegidas, vinos y bebidas espirituosas) con su zona geográfica: la del mapa del "
+        "Ministerio cuando la tiene (revisión de 2017) y, si no, la que delimita su pliego o el documento único de la "
+        "UE, pasada a pipeline/sources/es/data/calidad_diferenciada_zonas.csv como comunidades, provincias, islas o "
+        "municipios. Un vino de pago es una finca y va en su municipio.",
+        "used_for": ["Lente de denominaciones de origen",
+                     "Recursos del mapa de Unciv (vino, cítricos, especias, ganado, ovejas, pescado, plátanos)"],
     },
     "pleiades_iberia": {
         "title": "Pueblos de la Iberia antigua (Pleiades)",
@@ -433,6 +462,16 @@ SOURCES = {
         "mediana del conjunto, no es la mediana exacta. España junta así sus provincias. Es la renta que declara el "
         "arrendador; la del mapa de EE. UU. es el alquiler bruto, con suministros, que declara el inquilino.",
         "used_for": ["Alquiler mensual de áreas urbanas, provincias y España", "Alquiler ÷ renta"],
+    },
+    "mivau_valor_tasado": {
+        "title": "Valor tasado de la vivienda libre por m², por provincia (Ministerio de Vivienda, VDP006)",
+        "publisher": "Ministerio de Vivienda y Agenda Urbana",
+        "license": _REUSE,
+        "description": "Valor medio por m² construido de las viviendas libres según las tasaciones que las sociedades "
+        "tasadoras hacen cada trimestre, por provincia. Las comunidades de una sola provincia (Madrid, Asturias, Navarra, "
+        "Murcia, Cantabria, La Rioja, Baleares) vienen como fila de comunidad. La serie municipal solo se publica en un "
+        "XLS que hoy no se puede descargar, así que todo hexágono lleva el valor de su provincia.",
+        "used_for": ["Lente de valor de la vivienda (€/m², por provincia)"],
     },
     "cobertura_banda_ancha": {
         "title": "Cobertura de banda ancha en España 2021-2025 por municipio, provincia, comunidad autónoma y España",

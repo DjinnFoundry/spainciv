@@ -10,6 +10,7 @@ import unicodedata
 from ...core.geo import geojson_rings, load_geojson, ring_area, ring_centroid
 from ...core.source import Source, SourceInfo
 from ...core.xlsx import sheets
+from .names import title_es
 
 AENA_YEAR = 2025
 AENA_URL = ("https://www.aena.es/sites/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs"
@@ -22,6 +23,12 @@ STOP = {"aeropuerto", "airport", "int", "intl", "internacional", "helipuerto", "
         "las", "san"}
 # AENA names that the word match would pair with the wrong OurAirports entry: AENA name → OurAirports name.
 AIRPORT_ALIASES = {"LA PALMA": "La Palma Airport", "SABADELL": "Sabadell Airfield"}
+
+
+def airport_name(name: str) -> str:
+    """AENA's name in capitals → the map's: 'PALMA DE MALLORCA' → 'Palma de Mallorca', without the table's footnote
+    marks ('(**)'); a heliport's '/HELIPUERTO' → '(helipuerto)'."""
+    return re.sub(r"\s*/\s*Helipuerto$", " (helipuerto)", title_es(re.sub(r"\s*\(\*+\)", "", name)))
 
 
 def words(text: str) -> set[str]:
@@ -74,7 +81,7 @@ class AenaAirports(Source):
         airports = []
         for name, t in traffic.items():
             r = match(name)
-            airports.append({"id": r["icao_code"] or r["gps_code"], "iata": r["iata_code"] or None, "name": name.title(),
+            airports.append({"id": r["icao_code"] or r["gps_code"], "iata": r["iata_code"] or None, "name": airport_name(name),
                              "matched": r["name"], "lon": float(r["longitude_deg"]), "lat": float(r["latitude_deg"]), **t})
         dup = {a["id"] for a in airports if sum(b["id"] == a["id"] for b in airports) > 1}
         if dup:

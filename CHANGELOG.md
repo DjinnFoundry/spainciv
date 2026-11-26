@@ -6,6 +6,30 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
+  1 de aluminio). Los yacimientos del BDMIN con coordenadas en metros UTM (27 de 280) quedan en su sitio: el carbón de
+  Villablino, el oro de Salave y la bauxita de La Vansa ya están en el mapa (E63).
+- Capa **Denominaciones de origen** con los 398 nombres que España tiene en el registro de la UE (eran 292 zonas del
+  Ministerio de 2017): 108 con zona nueva, entre ellos los 43 vinos de la tierra, 14 vinos de pago y lo registrado desde 2017
+  (Torrezno de Soria, Miel de Málaga, Queso de Burgos…), con la zona de su documento único o pliego sobre los límites
+  municipales; el tooltip dice cómo se obtuvo cada zona. Penedès, Priorat, Idiazabal, los txakolis y otros que no
+  casaban por el nombre quedan enlazados a su registro. En el mapa de Unciv, el vino pasa de 81 a 132 casillas
+  (E64–E66, F31).
+- **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
+  y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
+  (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
+  suelo del mapa; recursos de datos: vino en 81 denominaciones de origen, sal, mármol, piedra, hierro y petróleo de las
+  explotaciones del IGME, cobre y oro de sus minas, ganado, ovejas, pescado, cítricos y especias de sus IGP y DOP. El
+  Peñón de Gibraltar es la maravilla natural. España empieza en Madrid y los demás en las grandes áreas urbanas.
+  Probado en Unciv 5.0.1: el mod se instala desde su enlace, el mapa se abre en el editor y una partida de 40 turnos
+  corre sobre él (E51–E57).
+- **Grandes personajes**: 6.119 personas famosas nacidas en la España actual, de Wikidata, en el hexágono de su lugar de nacimiento, en 19 categorías al estilo de los grandes personajes de Civilization (de premios Nobel y conquistadores a cantantes y deportistas) con un umbral de fama cada una (E58, E59, F27). Dos lentes: personajes por hexágono y categoría con más personajes; la ayuda emergente da nombre, oficio y fechas («Pablo Picasso (pintor, 1881–1973)»). El buscador encuentra a las personas y por su pueblo: «Cervantes» lleva a Alcalá de Henares.
+- Mapa de Unciv: carbón, uranio, hierro, oro, plata y cobre de los yacimientos grandes y medianos del BDMIN del IGME,
+  se exploten o no; caballos en las 20 comarcas con más équidos por km² del Censo Agrario 2020; y un recurso propio
+  del mod, el **cerdo ibérico**, en las cuatro DOP de jamón ibérico. El mod pasa a ser de extensión y Unciv lo activa
+  al elegir el mapa; el mapa suelto es el mismo sin el cerdo. El README del mod está en castellano e inglés. Probado
+  de nuevo en Unciv 5.0.1 (E60–E62).
+- Lente de **valor de la vivienda** por provincia: valor tasado de la vivienda libre del Ministerio de Vivienda, 2.º trimestre de 2026 (España 2.355 €/m²; de Ciudad Real, 854, a Madrid, 4.090). Va en €/m²: no hay fuente con el valor de una vivienda entera.
 - Lentes de Conocimiento, Vida diaria, Fe y Riesgos para España, equivalentes a las de EE UU con datos oficiales
   (E32–E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la
   Transformación Digital, junio de 2025; España 97,9 %). **Trabajan fuera**: ocupados que trabajan en otro municipio
@@ -15,11 +39,19 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   2025 según los perímetros del EFFIS (1,28 M ha). Las tres del INE llevan dato propio en unos 150 municipios y el del
   resto de su provincia en los demás. No hay lente de personas sin seguro médico: la sanidad pública es universal.
 - Lentes de pobreza, edad media, nacidos en el extranjero, estudios superiores y vivienda en propiedad, con los iconos y grupos del mapa de EE. UU. Pobreza: residentes por debajo del 60 % de la mediana nacional de renta por unidad de consumo (Atlas de Distribución de Renta de los Hogares, 2024). Edad media: del mismo atlas (2024). Nacidos en el extranjero: Censo anual de población, 1 de enero de 2026. Estudios superiores: población de 15 años o más del Censo anual, 2024. Vivienda en propiedad: Censo de 2021. Madrid: 17,4 %, 43,9 años, 29,9 %, 46,8 %, 70,1 %; Zamora: 19,6 %, 48,7 años, 10,7 %, 35,6 %, 78,8 %. El valor de la vivienda sigue sin lente: no hay fuente municipal que lo dé por vivienda (E44).
-- Lentes de fiesta. **Fiestas de interés turístico**: las 90 Internacionales y 164 Nacionales de la Secretaría de Estado de Turismo, con su nombre al pasar el ratón (Murcia tiene cuatro Internacionales: Semana Santa, Bando de la Huerta, Entierro de la Sardina y Moros y Cristianos). **Bares**: bares y pubs de OpenStreetMap por 1.000 habitantes (Benidorm, 5,3; Donostia y Salamanca, 2,5; Madrid, 0,7), con el aviso de que OSM cubre mucho mejor las ciudades que los pueblos. **Viviendas turísticas** por 1.000 habitantes, de la estadística experimental del INE (mayo de 2026: La Oliva 133, Roses 124, Nerja 123; España 6,9). **Índice de fiesta**, propio de este mapa: la media de los percentiles de fiestas, bares y viviendas turísticas (La Alberca, Llanes y Villajoyosa arriba). El grupo «Comida y bebida» pasa a «Comida, bebida y fiestas».
+- Lentes de fiesta. **Fiestas de interés turístico**: las 90 Internacionales y 164 Nacionales de la Secretaría de Estado de Turismo, con su nombre al pasar el ratón (Murcia tiene cuatro Internacionales: Semana Santa, Bando de la Huerta, Entierro de la Sardina y Moros y Cristianos). **Bares**: bares y pubs de OpenStreetMap por 1.000 habitantes (Benidorm, 5,3; Donostia y Salamanca, 2,5; Madrid, 0,7), con el aviso de que OSM cubre mucho mejor las ciudades que los pueblos. **Viviendas turísticas** por 1.000 habitantes, de la estadística experimental del INE (mayo de 2026: La Oliva 133, Roses 124, Nerja 123; España 6,9). **Índice de fiesta**, propio de este mapa: cuántas veces lo habitual en España tiene un hexágono de bares, viviendas turísticas y fiestas, como media geométrica, con lo habitual en oscuro (Sallent de Gállego, Peñíscola, Llanes y Naut Aran arriba). El grupo «Comida y bebida» pasa a «Comida, bebida y fiestas».
 - Lentes de **castillos** (3.009) y **plazas de toros** (650) de Wikidata en el grupo de patrimonio, con sus nombres al pasar el ratón.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Los reyes guanches de Tenerife salen como «mencey» en vez de «monarca», con el cargo que les da Wikidata; un guanarteme de Gran Canaria saldría igual con el suyo.
+- Mayúsculas de los nombres como se escriben en castellano: «Palma de Mallorca», «Jerez de la Frontera», «Torre de Garay», «FGL Granada-Jaén», en aeropuertos, centrales, minas y lugares de Wikidata. Los aeropuertos pierden las marcas de nota de AENA («(**)») y los helipuertos salen como «Ceuta (helipuerto)».
+- Museos y castillos sin nombre en castellano toman el gallego, catalán o euskera antes que el inglés (antes salían 19 en inglés; quedan 12, que Wikidata solo nombra en inglés).
+- La franja de créditos nombra las fuentes nuevas: MITECO, MAPA, AENA, Puertos del Estado, IGME, Wikidata y OpenStreetMap.
+- Consejeros de España sin gráficos vacíos ni «0 puntos» (E50): Economía muestra el empleo por sector y pone el mapa
+  de PIB, la clasificación y el gráfico de crecimiento por provincias; Prosperidad compara la renta con el alquiler
+  anual; el Explorador quita las columnas sin datos y abre con renta frente a crecimiento; Cultura oculta la sección
+  de desastres cuando no hay datos.
 - La potencia por provincia (consejero de Energía y Explorador) ya no sale vacía en España: `spain_resources` la
   rellena en `states.json` al terminar, con la misma suma que EE UU.
 - Restos de inglés y de EE UU en el mapa de España: los tooltips de puertos y aeropuertos («Large hub», «short tons»,

@@ -12,15 +12,19 @@ municipalities in each hex (lenses.spread_population weights), null where none o
 * `poverty`: share of residents below 60 % of the national median income per consumption unit (ADRH, table 30829),
   the EU at-risk-of-poverty threshold; not the US fixed poverty line.
 
-The US `home` lens (median value of a dwelling) has no Spanish counterpart: see DECISIONS E30.
+* `home`: appraised value of a free-market dwelling per m² (Ministerio de Vivienda), by province: every municipality
+  takes its province's value. The US lens is the median value of a whole dwelling, which no Spanish source gives by
+  municipality (DECISIONS E30, E49).
 """
 
 from __future__ import annotations
 
 from ..core.store import load_interim_payload
 from .lenses import COUNTY_LENSES, _spread
+from .texts_es import num
 
-REQUIRES = ["ine_adrh_indicadores", "ine_censo_nacimiento", "ine_censo_formacion", "ine_censo2021_indicadores"]
+REQUIRES = ["ine_adrh_indicadores", "ine_censo_nacimiento", "ine_censo_formacion", "ine_censo2021_indicadores",
+            "mivau_valor_tasado"]
 SHARED = ("group", "icon", "emoji", "format", "scale", "higher_is", "ramp")  # what each lens takes from the US one
 
 
@@ -46,11 +50,12 @@ def municipal_lens(lens_id: str, by_code: dict[str, float | None], geoids: list[
 
 
 def people_lenses(geoids: list[str], weights: list) -> list[dict]:
-    """Mean age, born abroad, higher education, homeowners and relative poverty, in the US lens order."""
+    """Relative poverty, mean age, born abroad, higher education, homeowners and home value, in the US lens order."""
     adrh = load_interim_payload("ine_adrh_indicadores")["data"]
     birth = load_interim_payload("ine_censo_nacimiento")["data"]
     school = load_interim_payload("ine_censo_formacion")["data"]
     census = load_interim_payload("ine_censo2021_indicadores")["data"]
+    value = load_interim_payload("mivau_valor_tasado")["data"]
     tenure = census["municipalities"]
     adrh_year = adrh["years"]
     small = "Los municipios pequeños pueden no tener dato (secreto estadístico) y no cuentan en su hexágono."
@@ -93,4 +98,14 @@ def people_lenses(geoids: list[str], weights: list) -> list[dict]:
             f"Viviendas del INE, 1 de enero de {census['year']}: indicadores por sección censal sumados "
             "por municipio), ponderada por población. Los municipios más pequeños no tienen dato: el INE no publica sus "
             "secciones (secreto estadístico)."),
+        {**municipal_lens(
+            "home", {g: value["provinces"].get(g[:2]) for g in geoids}, geoids, weights, 0,
+            name="Valor de la vivienda", source="mivau_valor_tasado", unit="valor tasado de la vivienda libre, €/m²",
+            description="Valor medio por m² construido de la vivienda libre según las tasaciones del "
+            f"{value['quarter']}.º trimestre de {value['year']} (estadística de valor tasado del Ministerio de "
+            f"Vivienda; en España, {num(round(value['spain']))} €/m²). El dato es de la provincia, porque la serie por "
+            "municipio no se puede descargar: un hexágono lleva el de su provincia, o la media ponderada por población "
+            "si toca dos. Es precio por m², no el valor "
+            "mediano de una vivienda entera del mapa de EE. UU."),
+         "format": "eur"},
     ]

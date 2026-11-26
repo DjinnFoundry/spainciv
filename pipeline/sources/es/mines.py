@@ -5,6 +5,11 @@ The list gives each working's name, company, municipality and substance, not its
 statistic does not publish output per mine). Its counts per substance must equal Panorama Minero 2022's tables
 (PANORAMA_2019). A working takes the position of a BDMIN deposit of its mineral in its municipality (see locate);
 one without such a deposit is left without coordinates, for the builder to put at the municipality's centre.
+
+Every working of the list, of any substance, is also kept with its substance and municipality only (`workings`), for
+what places a substance by municipality: the Unciv map's quarries, salt works and oil fields. And the BDMIN's large and
+medium deposits of coal, uranium, bauxite, iron, gold, copper and silver, worked or not (`deposits`), are the Unciv
+map's deposits of those minerals.
 """
 
 from __future__ import annotations
@@ -47,11 +52,18 @@ KIND = {
 # provincia y empresa» for strontium (611), fluorspar (640), magnesite (671), potash (726) and sodium sulphate (793).
 PANORAMA_2019 = {"COBRE": 5, "ORO-PLATA (MIN.)": 1, "WOLFRAMIO": 1, "ESTAÑO-TÁNTALO": 1, "SALES POTAS.(MIN.)": 2,
                  "ESPATO FLÚOR": 6, "ESTRONCIO": 2, "MAGNESITA CRUDA": 3, "GLAUBERITA": 3, "THENARDITA": 1}
-BDMIN_WHERE = " OR ".join(f"Sustancia LIKE '%{s}%'" for s in sorted({s for _, subs in KIND.values() for s in subs}))
 SIZE_RANK = {"grande": 0, "mediano": 1}  # BDMIN's 'Tamaño_indicio'; 'pequeño' and 'desconocido' never stand alone
-# Older province names IGME uses → INE code (the others match INE's names).
+BDMIN_WHERE = " OR ".join(f"Sustancia LIKE '%{s}%'" for s in sorted({s for _, subs in KIND.values() for s in subs}))
+# The BDMIN's large and medium deposits of the minerals a strategy game knows (coal, uranium, bauxite, iron, gold,
+# copper, silver), worked or not: the Unciv map's deposits. A deposit is kept when one of its substances is one of these
+# exactly (BDMIN lists them comma-separated: "Plomo, Zinc, Plata").
+DEPOSIT_SUBSTANCES = ("Hulla", "Antracita", "Lignito", "Carbón", "Uranio y radiactivos", "Bauxita", "Hierro", "Oro",
+                      "Cobre", "Plata")
+DEPOSIT_WHERE = (f"Tamaño_indicio IN ({', '.join(repr(z) for z in SIZE_RANK)}) AND ("
+                 + " OR ".join(f"Sustancia LIKE '%{s}%'" for s in DEPOSIT_SUBSTANCES) + ")")
+# Older or shortened province names IGME uses → INE code (the others match INE's names).
 PROVINCE_ALIASES = {"orense": "32", "gerona": "17", "lerida": "25", "vizcaya": "48", "guipuzcoa": "20",
-                    "baleares": "07", "coruna": "15", "la coruna": "15"}
+                    "baleares": "07", "coruna": "15", "la coruna": "15", "santa cruz tenerife": "38"}
 STOP = {"mina", "minas", "grupo", "minero", "otras", "otros", "fraccion", "concesion", "explotacion", "derivada",
         "del", "las", "los", "indicio", "indicios"}
 
@@ -70,7 +82,8 @@ PROVINCE_CODES = {norm(part): code for code, (_, n) in PROVINCES.items() for par
 
 
 def province_code(name: str) -> str:
-    code = PROVINCE_CODES.get(norm(name))
+    """INE code of a province as IGME writes it, in either official language ('ALICANTE/ALACANT', 'PALMAS (LAS)')."""
+    code = next((c for part in [name, *name.split("/")] if (c := PROVINCE_CODES.get(norm(part)))), None)
     if not code:
         raise RuntimeError(f"IGME: unknown province {name!r}")
     return code
@@ -113,27 +126,39 @@ class IgmeMinas(Source):
         description=f"The workings active in {YEAR} that the Estadística Minera de España lists, as IGME publishes "
         "them with Panorama Minero 2022 (EXPLOTACIONES_2019.xlsx); the metal mines and the potash, fluorspar, "
         "celestine, magnesite and sodium-sulphate mines are kept, and their count per substance matches the "
-        "Panorama's tables. Positions are those of the matching deposit in IGME's BDMIN mineral-occurrence database.",
-        used_for=["Mines on the map (resources)"],
+        "Panorama's tables. Positions are those of the matching deposit in IGME's BDMIN mineral-occurrence database. "
+        "Every other working of the list is kept by substance and municipality, and the BDMIN's large and medium "
+        "deposits of coal, uranium, bauxite, iron, gold, copper and silver, for the Unciv map.",
+        used_for=["Mines on the map (resources)", "Resources of the Unciv map (coal, uranium, aluminium, iron, gold, "
+                  "copper, silver, oil, marble, salt, stone)"],
     )
 
     def fetch(self, force=False):
         self.download(LIST_URL, LIST_FILE, force=force, expect_binary=True)
         # The Panorama whose tables the counts are checked against, cached for provenance.
         self.download(PANORAMA_URL, PANORAMA_FILE, force=force, expect_binary=True)
+        self.fetch_bdmin(BDMIN_WHERE, "bdmin_indicios", force)
+        self.fetch_bdmin(DEPOSIT_WHERE, "bdmin_yacimientos", force)
+
+    def fetch_bdmin(self, where: str, prefix: str, force: bool) -> None:
+        """A BDMIN query, page by page, into <prefix>_<page>.json, with each deposit's point in WGS84 lon/lat."""
         page = 0
         while True:
-            query = urllib.parse.urlencode({"where": BDMIN_WHERE, "outFields": "*", "returnGeometry": "false",
+            query = urllib.parse.urlencode({"where": where, "outFields": "*", "returnGeometry": "true", "outSR": 4326,
                                             "orderByFields": "Codigo_indicio", "resultOffset": page * PAGE,
                                             "resultRecordCount": PAGE, "f": "json"})
-            path = self.download(f"{BDMIN}?{query}", f"bdmin_indicios_{page}.json", force=force)
+            path = self.download(f"{BDMIN}?{query}", f"{prefix}_{page}.json", force=force)
             if not json.loads(path.read_text()).get("exceededTransferLimit"):
                 break
             page += 1
 
-    def deposits(self) -> tuple[list[dict], list[str]]:
+    def deposits(self, prefix: str) -> tuple[list[dict], list[str]]:
+        """The deposits of the BDMIN query saved as <prefix>_<page>.json, and those files. The position is the
+        feature's geometry: about one deposit in ten has its X and Y fields in UTM metres instead of degrees (Salave,
+        the Villablino coal, the bauxite of La Vansa), and the geometry asked for in WGS84 is right for all of them;
+        rounded to the 8 decimals of the X and Y fields given in degrees."""
         out, files, page = [], [], 0
-        while (path := self.raw_dir / f"bdmin_indicios_{page}.json").exists():
+        while (path := self.raw_dir / f"{prefix}_{page}.json").exists():
             doc = json.loads(path.read_text())
             files.append(path.name)
             for f in doc["features"]:
@@ -144,7 +169,7 @@ class IgmeMinas(Source):
                 out.append({"code": a["Codigo_indicio"], "name": (a["Nombre_mina"] or "").strip(),
                             "municipality": a["Municipio"] or "", "province": province,
                             "substance": a["Sustancia"] or "", "size": a["Tamaño_indicio"],
-                            "lon": a["X"], "lat": a["Y"]})
+                            "lon": round(f["geometry"]["x"], 8), "lat": round(f["geometry"]["y"], 8)})
             if not doc.get("exceededTransferLimit"):
                 break
             page += 1
@@ -152,12 +177,12 @@ class IgmeMinas(Source):
 
     def process(self):
         rows = next(iter(sheets(self.raw_dir / LIST_FILE).values()))
-        head = rows[0]
-        mines = [dict(zip(head, r)) for r in rows[1:] if r and r[head.index("Sustancia")] in KIND]
+        records = [dict(zip(rows[0], r)) for r in rows[1:] if r]
+        mines = [m for m in records if m["Sustancia"] in KIND]
         got = Counter(m["Sustancia"] for m in mines)
         if got != Counter(PANORAMA_2019):
             raise RuntimeError(f"IGME {YEAR}: workings per substance {dict(got)} != Panorama Minero 2022 {PANORAMA_2019}")
-        deposits, files = self.deposits()
+        deposits, files = self.deposits("bdmin_indicios")
         out = []
         for m in mines:
             mine = {"name": " ".join(m["Explotacion"].split()), "company": " ".join(m["Empresa"].split()),
@@ -166,5 +191,15 @@ class IgmeMinas(Source):
             d = locate(mine, deposits) or {}
             out.append(mine | {"lon": d.get("lon"), "lat": d.get("lat"), "deposit": d.get("name") or None,
                                "deposit_size": d.get("size")})
+        workings = [{"name": " ".join(m["Explotacion"].split()), "substance": m["Sustancia"],
+                     "municipality": m["Municipio_Explotacion"], "province": province_code(m["Provincia_Explotacion"])}
+                    for m in records]
+        large, large_files = self.deposits("bdmin_yacimientos")
+        game = []
+        for d in large:
+            substances = [s for s in map(str.strip, d.pop("substance").split(",")) if s in DEPOSIT_SUBSTANCES]
+            if substances:
+                game.append(d | {"substances": substances})
         return {"vintage": f"Estadística Minera de España {YEAR} (IGME, Panorama Minero 2022); BDMIN",
-                "_files": [LIST_FILE, PANORAMA_FILE, *files], "year": YEAR, "mines": out}
+                "_files": [LIST_FILE, PANORAMA_FILE, *files, *large_files], "year": YEAR, "mines": out,
+                "workings": workings, "deposits": game}
