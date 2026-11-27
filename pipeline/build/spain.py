@@ -719,7 +719,7 @@ def build() -> None:
     lenses += spain_daily.lenses(world, weights, proj, grid)
     lenses += spain_crime.lenses(load_interim("balance_criminalidad"), padron, lau["municipalities"], world["counties"],
                                  weights)
-    lenses += spain_fauna.lenses(world, proj, grid)
+    lenses += spain_fauna.lenses(world, proj, grid, lau["municipalities"])
     great, people_doc = spain_personajes.great_people(world, proj, grid, lau["municipalities"])
     lenses += great
     set_domains(lenses, DOMAIN_NOTE)

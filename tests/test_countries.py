@@ -1671,7 +1671,7 @@ class SpainFaunaTest(unittest.TestCase):
         """A zipped art. 17 / art. 12 report: rows of (species, cell, sensitive, maptype)."""
         import zipfile
 
-        from test_geo import make_dbf
+        from test_dbf import make_dbf
 
         dbf = make_dbf(cls.FIELDS + [(name_field, "C", 40, 0)],
                        [["X", maptype, "EEA-10km GRID", sensitive, cell, name] for name, cell, sensitive, maptype in rows])
@@ -1757,11 +1757,23 @@ class SpainFaunaTest(unittest.TestCase):
         from pipeline.core.hexgrid import HexGrid
 
         self.grid = HexGrid(radius=countries.COUNTRIES["es"].hex_radius_km, cols=4, rows=1)
+        self.split_x = self.grid.center(1, 0)[0]  # the square edge through the centre of hex 1
+        self.munis = [self.muni("41", -100, 200)]  # one municipality of Sevilla under all four hexes
+
+    @staticmethod
+    def muni(province, x0, x1):
+        """A rectangular municipality of `province` from x0 to x1 km of map (lon/lat under the Identity projection)."""
+        return {"state_fips": province, "rings": [[[x0, -100], [x1, -100], [x1, 100], [x0, 100]]]}
+
+    def codes(self, munis=None):
+        from pipeline.build import spain_fauna as sf
+
+        return sf.cell_codes(self.OWNER, self.Identity(), self.grid, munis or self.munis, self.laea)
 
     def shares(self, cells):
         from pipeline.build import spain_fauna as sf
 
-        codes, points = sf.cell_codes(self.OWNER, self.Identity(), self.grid, self.laea)
+        codes, points = self.codes()
         return sf.shares(codes, points, set(cells), len(self.OWNER)), points
 
     def test_share_of_each_hex_in_the_reported_squares(self):
@@ -1773,6 +1785,19 @@ class SpainFaunaTest(unittest.TestCase):
         self.assertIsNone(values[3])  # at sea
         self.assertEqual(self.shares(set())[0], [0, 0, 0, None])
 
+    def test_a_square_reaches_the_community_its_points_are_in(self):
+        # Every land hex belongs to Sevilla by majority, but from the middle of hex 1 eastward the ground is Ávila
+        # (Castilla y León): the square E3N2 there reaches Castilla y León, not Andalucía.
+        from pipeline.build.spain_fauna import reached
+
+        codes, _ = self.codes([self.muni("41", -100, self.split_x), self.muni("05", self.split_x, 200)])
+        self.assertEqual(reached(codes, {"10kmE3N2"}), {"07"})
+        self.assertEqual(reached(codes, {"10kmE2N2"}), {"01"})
+        self.assertEqual(reached(codes, set()), set())
+        # A point in no Spanish municipality (abroad, or a gap of the generalised boundaries) reaches no community.
+        codes, _ = self.codes([self.muni("41", -100, self.split_x)])
+        self.assertEqual(reached(codes, {"10kmE3N2"}), set())
+
     def census(self, name):
         from pipeline.sources.es.censos_fauna import CENSUSES
 
@@ -1781,23 +1806,46 @@ class SpainFaunaTest(unittest.TestCase):
     def test_census_names_the_communities_the_map_does_not_reach(self):
         from pipeline.build.spain_fauna import census_text
 
-        lynx = census_text(self.census("Lynx pardinus"), [1.0, 0.5, 0, None], self.OWNER, self.STATES, [2013, 2018])
-        self.assertTrue(lynx["es"].startswith("El censo de 2025 cuenta 2269 ejemplares en Andalucía, "))
-        self.assertTrue(lynx["es"].endswith("el mapa de 2013-2018 no llega a Castilla-La Mancha, Extremadura, Murcia, "
-                                            "Castilla y León y Madrid."), lynx["es"])
-        self.assertTrue(lynx["en"].startswith("The 2025 census counts 2,269 individuals in Andalucía, "))
-        self.assertTrue(lynx["en"].endswith("the 2013-2018 map does not reach Castilla-La Mancha, Extremadura, Murcia, "
-                                            "Castilla y León and Madrid."), lynx["en"])
+        lynx = census_text(self.census("Lynx pardinus"), {"01"}, [2013, 2018])
+        # what the squares miss comes before the list, so the legend's three lines show it
+        self.assertEqual(lynx["es"], "El censo de 2025 cuenta 2269 ejemplares en 6 comunidades; las cuadrículas de "
+                                     "2013-2018 no llegan a Castilla-La Mancha, Extremadura, Región de Murcia, Castilla "
+                                     "y León ni Comunidad de Madrid. Son Andalucía, Castilla-La Mancha, Extremadura, "
+                                     "Región de Murcia, Castilla y León y Comunidad de Madrid.")
+        self.assertEqual(lynx["en"], "The 2025 census counts 2,269 individuals in 6 communities; the 2013-2018 squares "
+                                     "do not reach Castilla–La Mancha, Extremadura, Region of Murcia, Castile and León or "
+                                     "Community of Madrid. They are Andalusia, Castilla–La Mancha, Extremadura, Region "
+                                     "of Murcia, Castile and León and Community of Madrid.")
         only = {**self.census("Lynx pardinus"), "communities": ["01"]}
-        self.assertIn("el mapa de 2013-2018 llega a todas.", census_text(only, [1.0, 0, 0, None], self.OWNER,
-                                                                         self.STATES, [2013, 2018])["es"])
-        self.assertIn("no llega a Andalucía", census_text(only, [0, 0, 0, None], self.OWNER, self.STATES,
-                                                          [2013, 2018])["es"])
-        wolf = census_text({**self.census("Canis lupus"), "map_cells": 552}, [1.0, 0, 0, None], self.OWNER,
-                           self.STATES, [2013, 2018])
-        self.assertIn("El mapa oficial de 2013-2018 tiene 552 cuadrículas; el censo 2021-2024 da 1357 de presencia "
-                      "estable y 37 esporádica", wolf["es"])
-        self.assertIn("the 2021-2024 census gives 1,357 of stable presence and 37 of sporadic presence", wolf["en"])
+        self.assertIn("las cuadrículas de 2013-2018 llegan a todas.", census_text(only, {"01"}, [2013, 2018])["es"])
+        self.assertIn("no llegan a Andalucía.", census_text(only, set(), [2013, 2018])["es"])
+        wolf = census_text({**self.census("Canis lupus"), "map_cells": 552}, {"12", "07"}, [2013, 2018])
+        self.assertIn("La distribución de 2019-2024 del censo tiene 1357 cuadrículas de presencia estable y 37 de "
+                      "presencia esporádica; su mapa (Figura 1) es solo una imagen. Esas cuadrículas y las 552 de "
+                      "2013-2018 salen de dos trabajos distintos", wolf["es"])
+        self.assertIn("The census's 2019-2024 distribution has 1,357 squares of stable presence and 37 of sporadic "
+                      "presence", wolf["en"])
+        self.assertIn("El censo de 2021-2024 cuenta 333 manadas en 9 comunidades", wolf["es"])
+        self.assertIn("Son Galicia, Castilla y León", wolf["es"])
+        self.assertIn("Basque Country", wolf["en"])
+        self.assertNotIn("País Vasco", wolf["en"])
+
+    def test_note_gives_the_article_and_the_latest_census(self):
+        from pipeline.build.spain_fauna import note
+        from pipeline.core.lang import tr
+
+        period = [2013, 2018]
+        self.assertEqual(note({"directive": "art17"}, self.census("Lynx pardinus"), period),
+                         tr("Cuadrículas de 10 km notificadas a la UE para 2013-2018 (art. 17 de la Directiva de "
+                            "Hábitats). El censo de 2025 cuenta 2269 ejemplares. Una cuadrícula vacía no prueba que la "
+                            "especie no esté.",
+                            "10 km squares reported to the EU for 2013-2018 (Habitats Directive, Art. 17). The 2025 "
+                            "census counts 2,269 individuals. An empty square does not prove the species is absent."))
+        self.assertIn("Para 2019-2024, el censo da 1357 cuadrículas de presencia estable.",
+                      note({"directive": "art17"}, self.census("Canis lupus"), period)["es"])
+        self.assertEqual(note({"directive": "art12"}, None, period)["es"],
+                         "Cuadrículas de 10 km notificadas a la UE para 2013-2018 (art. 12 de la Directiva de Aves, "
+                         "área de cría). Una cuadrícula vacía no prueba que la especie no esté.")
 
     def interim(self, cells: dict[str, list[str]]):
         from pipeline.sources.es.censos_fauna import CENSUSES
@@ -1816,21 +1864,31 @@ class SpainFaunaTest(unittest.TestCase):
         world = {"owner": self.OWNER, "states": self.STATES}
         with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Ursus arctos": ["10kmE3N2"]})), \
                 contextlib.redirect_stdout(io.StringIO()):
-            out = sf.lenses(world, self.Identity(), self.grid, self.laea)
+            out = sf.lenses(world, self.Identity(), self.grid, self.munis, self.laea)
         self.assertEqual([l["id"] for l in out], ["lynx", "bear", "wolf", "imperial_eagle", "bearded_vulture"])
         lynx, bear, wolf = out[:3]
         self.assertEqual((lynx["group"], lynx["format"], lynx["domain"], lynx["source"]),
                          ("fauna", "pct", [0, 1], "bdn_especies"))
+        # a share on its natural range, in whole percent, the tooltip saying of what
+        self.assertEqual((lynx["bounded"], lynx["decimals"], lynx["unit_in_value"]), (True, 0, True))
+        self.assertEqual(lynx["scale_text"]["es"], "Escala fija de 0 a 100 %")
         self.assertEqual(lynx["values"][0], 1.0)
         self.assertEqual(bear["values"][0], 0)
-        self.assertEqual(lynx["note"]["es"], "Cuadrículas de 10 km con la especie en 2013-2018; una vacía no prueba que "
-                                              "no esté.")
-        self.assertIn("El censo de 2025 cuenta 2269 ejemplares", lynx["description"]["es"])
+        self.assertIn("El censo de 2025 cuenta 2269 ejemplares.", lynx["note"]["es"])
+        self.assertIn("(Habitats Directive, Art. 17)", bear["note"]["en"])
+        self.assertNotIn("censo", bear["note"]["es"])
+        # the description opens with the census, before the method; the title already names the species
+        self.assertTrue(lynx["description"]["es"].startswith("El censo de 2025 cuenta 2269 ejemplares en 6 "
+                                                             "comunidades;"), lynx["description"]["es"])
+        self.assertTrue(lynx["description"]["en"].startswith("The 2025 census counts"))
+        self.assertIn("donde España notificó el lince ibérico (Lynx pardinus) a la Unión Europea",
+                      lynx["description"]["es"])
+        self.assertIn("where Spain reported the Iberian lynx (Lynx pardinus) to the European Union",
+                      lynx["description"]["en"])
         self.assertIn("The 2021-2024 census counts 333 packs", wolf["description"]["en"])
-        self.assertNotIn("censo", bear["description"]["es"])
+        self.assertTrue(bear["description"]["es"].startswith("Cada hexágono muestra"))
         self.assertIn("área de cría", out[3]["description"]["es"])
-        self.assertIn("Lince ibérico (Lynx pardinus)", lynx["description"]["es"])
-        self.assertIn("Iberian lynx (Lynx pardinus)", lynx["description"]["en"])
+        self.assertNotIn("Canarias", " ".join(l["description"]["es"] for l in out))
 
     def test_squares_off_the_map_beyond_the_limit_fail(self):
         from unittest import mock
@@ -1842,7 +1900,7 @@ class SpainFaunaTest(unittest.TestCase):
         with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Canis lupus": far})):
             with self.assertRaisesRegex(RuntimeError, "Canis lupus: 3 of 4 squares touch no land hex"), \
                     contextlib.redirect_stdout(io.StringIO()):
-                sf.lenses(world, self.Identity(), self.grid, self.laea)
+                sf.lenses(world, self.Identity(), self.grid, self.munis, self.laea)
 
     def test_lenses_and_species_lists_must_agree(self):
         from pipeline.build.spain_fauna import LENSES, same_species
