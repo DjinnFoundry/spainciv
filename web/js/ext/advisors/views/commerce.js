@@ -33,9 +33,10 @@ export async function mount(ctx) {
   // The file's measure: "tons" (Spain, thousand tonnes) or value (the US, million dollars).
   const tons = trade?.measure === "tons";
   const size = (r) => routeSize(trade, r);
-  // Every tonne figure of the section takes three significant digits ("54,6 M t", "932 mil t"), the table's too.
-  const fmt = tons ? (kt) => (fin(kt) ? t("adv.tons", { v: count3(kt * 1e3) }) : "–") : (musd) => money(musd * MUSD);
-  const nb = (s) => s.replace(/ /g, "\u00a0"); // an amount never breaks between number and unit ("9,5 M t")
+  // Every tonne figure of the section takes three significant digits ("54,6 M t", "932 mil t"), the table's too, and
+  // never breaks between number and unit.
+  const nb = (s) => s.replace(/ /g, "\u00a0");
+  const fmt = tons ? (kt) => (fin(kt) ? nb(t("adv.tons", { v: count3(kt * 1e3) })) : "–") : (musd) => money(musd * MUSD);
   // A community's cells: those of its provinces (zone.provinces, the world's state fips).
   const fips = (app.w.raw.states || []).map((st) => st.fips);
   const zoneOfProvince = new Map((trade?.zones || []).flatMap((z) => (z.provinces || []).map((p) => [p, z.id])));
@@ -125,7 +126,7 @@ export async function mount(ctx) {
         rank: !st.mode && !st.zone, wrap: tons, ariaLabel: t("adv.com.routesAria"), max: vMax,
         rows: vis.map((r) => ({
           key: r.key, label: r.label, value: size(r), text: fmt(size(r)), color: MODE_COLOR[r.top_mode],
-          sub: tons ? t("adv.com.dirs", { a: zName(r.a), b: zName(r.b), ab: nb(fmt(r.ab_k)), ba: nb(fmt(r.ba_k)) }) // barList escapes it
+          sub: tons ? t("adv.com.dirs", { a: zName(r.a), b: zName(r.b), ab: fmt(r.ab_k), ba: fmt(r.ba_k) }) // barList escapes it
             : `${modeName.get(r.top_mode) || r.top_mode} · ${comm[r.top_commodity] || "–"}`,
           full: `#${r.rank} ${zoneById.get(r.a)?.name || r.a} ⇄ ${zoneById.get(r.b)?.name || r.b}`,
         })),
@@ -353,8 +354,9 @@ export async function mount(ctx) {
     };
     portBars = stackedBars(pBody, {
       wrap: country().id !== "us", // Spain's port names are long ("Bahía de Algeciras"); the US list stays as it was
-      rows: ports.slice(0, 15).map((p) => ({ key: p.key, label: p.name, sub: p.state, parts: { domestic: p.domestic, imports: p.imports, exports: p.exports }, total: p.tons, text: t("adv.tons", { v: count3(p.tons) }) })),
-      keys: PK, fmt: (x) => t("adv.tons", { v: count3(x) }), ariaLabel: t("adv.com.portsAria"),
+      // a port with a total only (Spain) is one bar of that total
+      rows: ports.slice(0, 15).map((p) => ({ key: p.key, label: p.name, sub: p.state, parts: split ? { domestic: p.domestic, imports: p.imports, exports: p.exports } : { total: p.tons }, total: p.tons, text: t("adv.tons", { v: count3(p.tons) }) })),
+      keys: split ? PK : [{ key: "total", label: t("adv.com.ports"), color: PORT_COLOR }], fmt: (x) => t("adv.tons", { v: count3(x) }), ariaLabel: t("adv.com.portsAria"),
       onHover: (x) => portHover(x ? ports.find((p) => p.key === x.row.key) : null),
       onClick: (x) => flyTo(ports.find((p) => p.key === x.row.key)),
     });
