@@ -1432,6 +1432,77 @@ class SpainFiestasTest(unittest.TestCase):
         self.assertTrue(all(len(m) == 5 and m.isdigit() and m[:2] in PROVINCES for f in found for m in f["municipalities"]))
 
 
+class SpainRegionalFiestasTest(unittest.TestCase):
+    def test_months_named_in_a_date_text(self):
+        from pipeline.sources.es.fiestas_autonomicas import months
+
+        self.assertEqual(months("del 30 de abril al 3 de mayo"), [4, 5])
+        self.assertEqual(months("Julio: Primer fin de semana"), [7])
+        self.assertEqual(months("o último domingo de xullo"), [7])  # Galician
+        self.assertEqual(months("el cap de setmana més proper al 24 de juny"), [6])  # Catalan
+        self.assertEqual(months("Semana Santa"), [])  # movable: no month
+
+    def test_rows_are_checked(self):
+        from pipeline.sources.es.fiestas_autonomicas import fiestas
+
+        def row(**kw):
+            return {"community": "galicia", "name": "FESTA DO PULPO", "place": "O Carballiño", "municipalities": "32019",
+                    "when": "Agosto: segundo domingo", "state_same": "", "source": "https://www.turismo.gal/", **kw}
+
+        found = fiestas([row(), row(place="Outro")], {"Fiesta del Pulpo (1969)"})
+        self.assertEqual((found[0]["municipalities"], found[0]["months"], found[0]["state_same"]), (["32019"], [8], None))
+        for bad in ([row(), row()], [row(community="atlantida")], [row(municipalities="3201")],
+                    [row(state_same="Fiesta que no existe (1999)")], [row(source="")]):
+            with self.assertRaises(RuntimeError):
+                fiestas(bad, {"Fiesta del Pulpo (1969)"})
+        self.assertEqual(fiestas([row(municipalities="", when="")], set())[0]["municipalities"], [])
+
+    def test_a_machine_readable_list_must_match_the_table(self):
+        from pipeline.sources.es.fiestas_autonomicas import check_lists
+
+        rows = [{"community": "andalucia", "name": n} for n in ("Semana Santa", "Semana Santa", "Feria")]
+        check_lists(rows, {"andalucia": ["Feria", "Semana Santa", "Semana Santa"]})
+        for listed in (["Feria", "Semana Santa"], ["Feria", "Semana Santa", "Semana Santa", "Romería nueva"]):
+            with self.assertRaises(RuntimeError):
+                check_lists(rows, {"andalucia": listed})
+
+    def test_list_readers(self):
+        from pipeline.sources.es.fiestas_autonomicas import (andalucia_names, canarias_names, cantabria_names,
+                                                              extremadura_names, galicia_names)
+
+        csv_text = ('DECLARACIÓN DE INTERÉS TURÍSTICO =LOCALIDAD=PROVINCIA=FECHA DE RESOLUCIÓN=ÁMBITO=PROMOTOR=TIPO\n'
+                    'Romería de  los Ángeles =Alajar=Huelva =24/01/1970=Autonómico=Ayto.=Fiesta\n'
+                    'Cabalgata =Linares=Jaén=01/01/2000=Autonómico=Ayto.=Acontecimiento\n'
+                    'Semana Santa de Sevilla=Sevilla=Sevilla=1980=Internacional=Ayto.=Fiesta\n')
+        self.assertEqual(andalucia_names(csv_text), ["Romería de los Ángeles"])
+        self.assertEqual(galicia_names('<a href="/recurso/-/detalle/x/y" class="title mod-href">FESTA DE  EXALTACIÓN '
+                                       'DO PAN DE CEA</a>'), ["FESTA DE EXALTACIÓN DO PAN DE CEA"])
+        page = ('<tr data-estacion="v" data-tipo="regional" data-url="u"><td>Fiesta de la Anchoa</td><td>Santoña</td>'
+                '<td>Septiembre</td></tr><tr data-estacion="v" data-tipo="nacional" data-url="u"><td>La Folía</td>'
+                '<td>San Vicente</td><td>Abril</td></tr>')
+        self.assertEqual(cantabria_names(page), ["Fiesta de la Anchoa"])
+        register = ('<p>(Registro)</p><table><thead><tr><td>Fiesta</td></tr></thead><tbody><tr><td><a href="x">Fiesta '
+                    'de la Manzana</a></td><td>BOC</td></tr></tbody></table>')
+        self.assertEqual(canarias_names(register), ["Fiesta de la Manzana"])
+        self.assertEqual(extremadura_names('<h2 class="titu2" position="lrr1">\n <a href="/es/explora/x/" alt="y"> '
+                                           'Los Empalaos</a></h2>'), ["Los Empalaos"])
+
+    def test_table_places_every_fiesta_in_a_municipality_of_spain(self):
+        """The table in the repository: valid rows, INE codes of real municipalities; the machine-readable lists, when
+        cached, match it."""
+        from pipeline.core.paths import RAW
+        from pipeline.sources.es.fiestas import TABLE as STATE
+        from pipeline.sources.es.fiestas_autonomicas import LISTS, cache_name, check_lists, fiestas, listed, read_table
+
+        rows = read_table()
+        found = fiestas(rows, {r["name"] for r in read_table(STATE)})
+        self.assertGreater(len(found), 1000)
+        self.assertTrue(all(m[:2] in PROVINCES for f in found for m in f["municipalities"]))
+        raw = RAW / "fiestas_autonomicas"
+        check_lists(rows, {c: listed(raw, c) for c, (urls, _) in LISTS.items()
+                           if all((raw / cache_name(u)).exists() for u in urls)})
+
+
 class SpainFiestaLensesTest(unittest.TestCase):
     def test_per_inhabitant_is_the_hex_share_of_counts_over_its_residents(self):
         from pipeline.build.spain_fiesta import hex_totals, per_inhabitant
@@ -1462,9 +1533,52 @@ class SpainFiestaLensesTest(unittest.TestCase):
 
         cells = fiesta_cells([{"municipalities": ["10107", "10183", "10035"]}], {"10107": 4, "10183": 4, "10035": 5})
         self.assertEqual(cells, [[4, 5]])
-        lens = fiestas_lens([{"name": "El Cerezo en Flor", "category": "nacional"}], cells, [0] * 6)
+        lens = fiestas_lens([{"name": "El Cerezo en Flor", "category": "nacional", "declaration": None,
+                              "community": "Extremadura"}], cells, [0] * 6)
         self.assertEqual(lens["values"][4:], [1, 1])
         self.assertEqual(lens["names"], [{"es": "El Cerezo en Flor (Nacional)", "en": "El Cerezo en Flor (National)"}])
+
+    def test_regional_fiestas_join_the_states_once(self):
+        from pipeline.build.spain_fiesta import FIESTA_WEIGHT, all_fiestas, fiesta_calendar, fiesta_label
+
+        state = [{"name": "Fiesta del Pulpo", "category": "nacional", "year": 1969, "community": "Galicia",
+                  "municipalities": ["32019"]}]
+        regional = {"communities": {"galicia": {"name": "Galicia", "declaration": "Festa de Interese Turístico de Galicia"}},
+                    "fiestas": [
+                        {"name": "FESTA DO PULPO", "community": "galicia", "place": "O Carballiño",
+                         "municipalities": ["32019"], "when": "Agosto", "months": [8], "state_same": "Fiesta del Pulpo (1969)"},
+                        {"name": "ENTROIDO DE LAZA", "community": "galicia", "place": "Laza", "municipalities": ["32041"],
+                         "when": None, "months": [], "state_same": None}]}
+        found = all_fiestas(state, regional)
+        self.assertEqual([(f["name"], f["category"]) for f in found],
+                         [("Fiesta del Pulpo", "nacional"), ("ENTROIDO DE LAZA", "autonomica")])
+        self.assertEqual(fiesta_label(found[1]), {"es": "ENTROIDO DE LAZA (Autonómica · Festa de Interese Turístico de "
+                                                        "Galicia)",
+                                                  "en": "ENTROIDO DE LAZA (Regional · Festa de Interese Turístico de "
+                                                        "Galicia)"})
+        self.assertEqual(FIESTA_WEIGHT["autonomica"] * 2, FIESTA_WEIGHT["nacional"])
+        doc = fiesta_calendar(found, [[3], [5]], "2026-11-27")
+        self.assertEqual(doc["fiestas"][1], {"name": "ENTROIDO DE LAZA", "category": "autonomica",
+                                             "declaration": "Festa de Interese Turístico de Galicia",
+                                             "community": "Galicia", "place": "Laza", "municipalities": ["32041"],
+                                             "cells": [5], "when": None, "months": []})
+
+    def test_the_calendar_must_match_the_lens(self):
+        import tempfile
+
+        from pipeline.build.spain_fiesta import check
+
+        with tempfile.TemporaryDirectory() as d:
+            web = Path(d)
+            (web / "lenses.json").write_text(json.dumps({"lenses": [
+                {"id": "fiestas", "names": ["A", "B"], "labels": [[0], [0, 1], None]}]}))
+            items = [{"name": "A", "cells": [0, 1], "when": "agosto", "months": [8]},
+                     {"name": "B", "cells": [1], "when": None, "months": []}]
+            (web / "fiestas.json").write_text(json.dumps({"fiestas": items}))
+            self.assertEqual(check(web)[0][0], "PASS")
+            items[1]["cells"] = [2]
+            (web / "fiestas.json").write_text(json.dumps({"fiestas": items}))
+            self.assertEqual(check(web)[0][0], "FAIL")
 
     def test_bars_go_to_their_municipality_or_the_nearest_capital(self):
         from pipeline.build.spain_fiesta import locate

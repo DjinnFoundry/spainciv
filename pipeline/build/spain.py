@@ -49,7 +49,7 @@ from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
 from . import spain_daily
 from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
-from .spain_fiesta import FIESTA_REQUIRES, fiesta_lenses
+from .spain_fiesta import FIESTA_FILE, FIESTA_REQUIRES, fiesta_lenses
 from . import spain_personajes
 from .spain_food import food_lens
 from .spain_named import named_counts, shore_cell
@@ -62,7 +62,8 @@ from .yields import YIELDS
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es", "bandera_azul",
             "gastronomia_es"] + spain_daily.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES + spain_personajes.REQUIRES
-PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json", f"{spain_personajes.FILE}.json"]
+PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json", f"{spain_personajes.FILE}.json",
+            f"{FIESTA_FILE}.json"]
 COUNTRIES = ("es",)
 
 SERIES_FROM = 2020  # pop_series spans the same years as the US map's (the full Padrón series is in the interim)
@@ -750,6 +751,7 @@ def build() -> None:
         world, proj, pops, lambda k: (*centre[world["counties"][k]], muni.get(world["counties"][k], {}).get("display", ""))
         if world["counties"][k] in centre else None
     )
+    fiesta_lens_list, fiesta_doc = fiesta_lenses(world, proj, grid, lau["municipalities"], pops, weights, year)
     lenses = [{
         "id": "density", "group": "people", "name": tr("Población", "Population"), "icon": "l-people", "emoji": "👥",
         "unit": tr("habitantes / km²", "inhabitants / km²"), "format": "int", "scale": "log",
@@ -768,7 +770,7 @@ def build() -> None:
         peoples_lens(load_interim("pleiades_iberia")["peoples"], proj, grid, owner),
         languages_lens(load_interim("lenguas_es"), lau["municipalities"], world),
         beaches_lens(load_interim("bandera_azul")["beaches"], lau["municipalities"], world, grid, proj),
-        *fiesta_lenses(world, proj, grid, lau["municipalities"], pops, weights, year)] + [
+        *fiesta_lens_list] + [
         {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
     lenses += spain_daily.lenses(world, weights, proj, grid)
     great, people_doc = spain_personajes.great_people(world, proj, grid, lau["municipalities"])
@@ -782,4 +784,5 @@ def build() -> None:
     write_web("states.json", states)
     write_web("lenses.json", {"vintage": vintage(padron_p["vintage"]), "groups": groups, "lenses": lenses})
     write_web(f"{spain_personajes.FILE}.json", people_doc)
+    write_web(f"{FIESTA_FILE}.json", fiesta_doc)
     print(f"    {len(cities)} cities (AUDES large urban areas), {len(states)} provinces; GDP {gdp_year}, Padrón {year}")

@@ -4,32 +4,41 @@ index, castles and bullrings.
 * **Per inhabitant** (tourist dwellings, bars): a municipality's count ÷ its Padrón residents, × 1,000; a hex takes
   the population-weighted mean of its municipalities (the weights that spread the density lens), which is the hex's
   share of their counts ÷ its residents.
-* **Fiestas** go to the hex of the capital of each municipality the official list places them in (data table in
-  pipeline/sources/es/data/fiestas_interes_turistico.csv), named in the tooltip.
+* **Fiestas**: the State's Internacional and Nacional and each community's own (autonómica) go to the hex of the
+  capital of each municipality the official list places them in (data tables in pipeline/sources/es/data:
+  fiestas_interes_turistico.csv and fiestas_autonomicas.csv), named in the tooltip. A community's fiesta the State has
+  since declared counts once, at the State's category; one with no municipality in its source (declared for a whole
+  community, or held in a different village each year) is in the calendar but on no hex. `fiestas.json` lists them
+  all with their dates, where the source gives them.
 * **Bars** (OpenStreetMap amenity=bar and pub) are counted in the municipality whose SIANE outline holds them; one
   outside every outline (the 1:3M coast is simplified) goes to the municipality with the nearest capital.
 * **Party index**: how many times Spain's usual a hex is, as the geometric mean of three factors: its bars and its
-  tourist dwellings per inhabitant, each ÷ Spain's rate, and 1 + its fiesta points (Internacional 2, Nacional 1). The
-  two rates are first drawn towards Spain's as if the hex had `PARTY_PRIOR` more residents at that rate, so a hamlet
-  with one bar does not outshine Benidorm. 1 is Spain's usual; the lens leaves everything up to it dark. It is this
-  map's own index, not an official statistic.
+  tourist dwellings per inhabitant, each ÷ Spain's rate, and 1 + its fiesta points (Internacional 2, Nacional 1,
+  autonómica 0.5). The two rates are first drawn towards Spain's as if the hex had `PARTY_PRIOR` more residents at
+  that rate, so a hamlet with one bar does not outshine Benidorm. 1 is Spain's usual; the lens leaves everything up to
+  it dark. It is this map's own index, not an official statistic.
 """
 
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
 from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
 from ..core.lang import tr
-from ..core.store import load_interim
+from ..core.store import load_interim, load_interim_payload
 from .cities import nearest_land
 from .spain_named import named_counts, shore_cell
 
-FIESTA_REQUIRES = ["fiestas_interes_turistico", "ine_viviendas_turisticas", "osm_bares"]
+FIESTA_REQUIRES = ["fiestas_interes_turistico", "fiestas_autonomicas", "ine_viviendas_turisticas", "osm_bares"]
+FIESTA_FILE = "fiestas"  # the calendar: every fiesta with its dates (fiestas.json)
 PER = 1000  # per 1,000 inhabitants
-CATEGORY = {"internacional": tr("Internacional", "International"), "nacional": tr("Nacional", "National")}
-FIESTA_WEIGHT = {"internacional": 2, "nacional": 1}  # in the party index
+CATEGORY = {"internacional": tr("Internacional", "International"), "nacional": tr("Nacional", "National"),
+            "autonomica": tr("Autonómica", "Regional")}
+# Points in the party index: each step down the ladder halves, so a community's fiesta adds half a Nacional (E75).
+FIESTA_WEIGHT = {"internacional": 2, "nacional": 1, "autonomica": 0.5}
 PARTY_PRIOR = 1000  # residents: the weight of Spain's rate in a hex's bars and tourist dwellings for the party index
 
 
@@ -90,34 +99,96 @@ def party_index(factors: list[list]) -> list:
     return [None if any(f is None for f in fs) else round(math.prod(fs) ** (1 / len(fs)), 2) for fs in zip(*factors)]
 
 
+def all_fiestas(state: list[dict], regional: dict) -> list[dict]:
+    """The State's fiestas and the communities' own, each once: a community's fiesta the State has since declared
+    (`state_same`) is left to the State's entry. A regional one carries its community's name for the declaration."""
+    communities = regional["communities"]
+    return [{**f, "declaration": None, "place": None, "when": None, "months": []} for f in state] + [
+        {**f, "category": "autonomica", "community": communities[f["community"]]["name"],
+         "declaration": communities[f["community"]]["declaration"]}
+        for f in regional["fiestas"] if not f["state_same"]]
+
+
+def fiesta_label(f: dict):
+    """'Semana Santa de Zamora (Internacional)'; a community's: 'Semana Santa (Autonómica · Fiesta de Interés
+    Turístico de Castilla y León)', its declaration as the community names it."""
+    declaration = f" · {f['declaration']}" if f["declaration"] else ""
+    return CATEGORY[f["category"]].map(lambda c, _l: f"{f['name']} ({c}{declaration})")
+
+
 def fiesta_cells(fiestas: list[dict], cell_of: dict[str, int]) -> list[list[int]]:
-    """The hexes of each fiesta: its municipalities' capitals, each hex once (a valley's towns can share one)."""
+    """The hexes of each fiesta: its municipalities' capitals, each hex once (a valley's towns can share one); none for
+    one with no municipality in its source."""
     return [sorted({cell_of[m] for m in f["municipalities"]}) for f in fiestas]
 
 
 def fiestas_lens(fiestas: list[dict], cells: list[list[int]], owner: list[int]) -> dict:
     n = {c: sum(f["category"] == c for f in fiestas) for c in CATEGORY}
+    unplaced = [f["name"] for f, c in zip(fiestas, cells) if not c]
+    communities = len({f["community"] for f in fiestas if f["category"] == "autonomica"})
+    unplaced_note = tr(" Sin municipio en su fuente (declaradas para toda una comunidad o celebradas cada año en un "
+                       "lugar distinto), no van en ningún hexágono: {names}.",
+                       " With no municipality in their source (declared for a whole community or held in a different "
+                       "place each year), these are on no hex: {names}.").format(
+        names=", ".join(f"«{name}»" for name in unplaced)) if unplaced else ""
     return {
         "id": "fiestas", "group": "food", "name": tr("Fiestas de interés turístico", "Fiestas of tourist interest"),
         "icon": "l-fiestas", "emoji": "🎉", "unit": tr("fiestas de interés turístico", "fiestas of tourist interest"),
         "format": "int", "scale": "linear", "higher_is": "neutral",
-        "domain": [0, 3], "ramp": ["#2a0f24", "#5e1838", "#9b2442", "#d34a3a", "#f39a3c", "#ffe08a"],
+        "domain": [0, 4], "ramp": ["#2a0f24", "#5e1838", "#9b2442", "#d34a3a", "#f39a3c", "#ffe08a"],
         "source": "fiestas_interes_turistico",
         "description": tr(
             "Las {intl} Fiestas de Interés Turístico Internacional y las {nat} de Interés Turístico Nacional que declara "
             "la Secretaría de Estado de Turismo (Sanfermines, Fallas, la Tomatina, el Rocío, la Semana Santa de "
-            "Sevilla…), cada una en el hexágono de la capital de su municipio; una ruta o un valle, en los de todos sus "
-            "municipios, una vez por hexágono. Una fiesta ascendida a Internacional cuenta una vez. Pasa el ratón por un "
-            "hexágono para ver sus nombres.",
+            "Sevilla…) y las {reg} que declaran de interés turístico {comm} comunidades autónomas, cada una con su "
+            "nombre (Fiesta de Interés Turístico de Andalucía, Festa de Interese Turístico de Galicia…), cada fiesta "
+            "en el hexágono de la capital de su municipio; una ruta o un valle, en los de todos sus municipios, una vez "
+            "por hexágono. Una fiesta ascendida cuenta una vez, en su categoría más alta.{unplaced} Pasa el ratón por "
+            "un hexágono para ver sus nombres.",
             "The {intl} Fiestas of International Tourist Interest and the {nat} of National Tourist Interest declared "
             "by the Secretaría de Estado de Turismo (Sanfermines, Fallas, the Tomatina, El Rocío, Holy Week in "
-            "Seville…), each on the hex of its municipality's capital; a route or a valley, on those of all its "
-            "municipalities, once per hex. A fiesta promoted to International counts once. Hover a hex to see their "
-            "names.",
-        ).format(intl=n["internacional"], nat=n["nacional"]),
-        **named_counts([CATEGORY[f["category"]].map(lambda c, _l, f=f: f"{f['name']} ({c})") for f in fiestas],
-                       cells, owner),
+            "Seville…) and the {reg} that {comm} autonomous communities declare of regional tourist interest, each "
+            "under its own name (Fiesta de Interés Turístico de Andalucía, Festa de Interese Turístico de Galicia…), "
+            "each fiesta on the hex of its municipality's capital; a route or a valley, on those of all its "
+            "municipalities, once per hex. A promoted fiesta counts once, at its highest category.{unplaced} Hover a "
+            "hex to see their names.",
+        ).format(intl=n["internacional"], nat=n["nacional"], reg=n["autonomica"], comm=communities,
+                 unplaced=unplaced_note),
+        **named_counts([fiesta_label(f) for f in fiestas], cells, owner),
     }
+
+
+def fiesta_calendar(fiestas: list[dict], cells: list[list[int]], vintage: str) -> dict:
+    """fiestas.json: every fiesta with its category, community, place, hexes and the dates its source gives (`when`,
+    verbatim, and the months it names), so a calendar can find the fiestas of a week."""
+    return {"vintage": vintage, "fiestas": [
+        {"name": f["name"], "category": f["category"], "declaration": f["declaration"], "community": f["community"],
+         "place": f["place"], "municipalities": f["municipalities"], "cells": c, "when": f["when"],
+         "months": f["months"]} for f, c in zip(fiestas, cells)]}
+
+
+def check(web_dir) -> list[tuple[str, str]]:
+    """fiestas.json against the fiestas lens: one entry per name, in its order, each on the hexes that list it, every
+    month 1–12. Nothing to check on a map without the lens."""
+    web_dir = Path(web_dir)
+    lens = next((l for l in json.loads((web_dir / "lenses.json").read_text())["lenses"] if l["id"] == "fiestas"), None)
+    if lens is None:
+        return []
+    path = web_dir / f"{FIESTA_FILE}.json"
+    if not path.exists():
+        return [("FAIL", f"{FIESTA_FILE}.json: missing, and the fiestas lens names its fiestas")]
+    items = json.loads(path.read_text())["fiestas"]
+    held: dict[int, set[int]] = {}
+    for c, labels in enumerate(lens["labels"]):
+        for k in labels or []:
+            held.setdefault(k, set()).add(c)
+    bad = [f["name"] for k, f in enumerate(items) if set(f["cells"]) != held.get(k, set())
+           or not all(1 <= m <= 12 for m in f["months"])]
+    if len(items) != len(lens["names"]) or bad:
+        return [("FAIL", f"{FIESTA_FILE}.json: {len(items)} fiestas for {len(lens['names'])} names in the lens; "
+                         f"{len(bad)} off their hexes or months ({', '.join(bad[:5])})")]
+    dated = sum(bool(f["when"]) for f in items)
+    return [("PASS", f"{FIESTA_FILE}.json: {len(items)} fiestas matching the fiestas lens, {dated} with dates")]
 
 
 def points_lens(items: list[dict], proj, grid: HexGrid, owner: list[int], **meta) -> dict:
@@ -128,10 +199,12 @@ def points_lens(items: list[dict], proj, grid: HexGrid, owner: list[int], **meta
 
 
 def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], pops: list, weights: list,
-                  padron_year: int) -> list[dict]:
-    """The lenses of this module, in the order the lens list shows them."""
+                  padron_year: int) -> tuple[list[dict], dict]:
+    """The lenses of this module, in the order the lens list shows them, and the fiesta calendar (fiestas.json)."""
     owner, geoids = world["owner"], world["counties"]
-    fiestas = load_interim("fiestas_interes_turistico")["fiestas"]
+    state = load_interim_payload("fiestas_interes_turistico")
+    regional = load_interim_payload("fiestas_autonomicas")
+    fiestas = all_fiestas(state["data"]["fiestas"], regional["data"])
     homes = load_interim("ine_viviendas_turisticas")
     bars = load_interim("osm_bares")
     wikidata = load_interim("wikidata_es")
@@ -148,10 +221,11 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
     for f, fc in zip(fiestas, cells):
         for c in fc:
             points[c] += FIESTA_WEIGHT[f["category"]]
-    print(f"    {len(fiestas)} fiestas; {len(codes)} bars ({outside} outside every municipal outline); tourist "
-          f"dwellings {homes['period']}")
+    print(f"    {len(fiestas)} fiestas ({sum(f['category'] == 'autonomica' for f in fiestas)} autonómicas); "
+          f"{len(codes)} bars ({outside} outside every municipal outline); tourist dwellings {homes['period']}")
 
     period = f"{homes['period'][5:]}/{homes['period'][:4]}"
+    calendar = fiesta_calendar(fiestas, cells, f"{state['vintage']}; {regional['vintage']}")
     return [
         {"id": "tourist_homes", "group": "life", "name": tr("Viviendas turísticas", "Tourist dwellings"),
          "icon": "l-tourist-homes", "emoji": "🧳",
@@ -193,13 +267,13 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
              "hexágono de bares, de viviendas turísticas y de fiestas de interés turístico, como media geométrica de "
              "tres factores. Bares y viviendas turísticas: su número por habitante ÷ el de España, contando cada "
              "hexágono con {prior} residentes más a la tasa de España, para que una aldea con un bar no pase por "
-             "Benidorm. Fiestas: 1 + sus puntos (Internacional 2, Nacional 1). 1 es lo habitual; todo lo que no llega "
-             "queda oscuro.",
+             "Benidorm. Fiestas: 1 + sus puntos (Internacional 2, Nacional 1, autonómica 0,5). 1 es lo habitual; todo "
+             "lo que no llega queda oscuro.",
              "This map's own index, not an official statistic: how many times Spain's usual a hex has in bars, tourist "
              "dwellings and fiestas of tourist interest, as the geometric mean of three factors. Bars and tourist "
              "dwellings: their number per inhabitant ÷ Spain's, counting each hex with {prior} more residents at "
              "Spain's rate, so a hamlet with one bar does not pass for Benidorm. Fiestas: 1 + their points "
-             "(International 2, National 1). 1 is the usual; everything up to it stays dark.",
+             "(International 2, National 1, regional 0.5). 1 is the usual; everything up to it stays dark.",
          ).format(prior=PARTY_PRIOR),
          "values": party_index([times_spain(bar_totals, PARTY_PRIOR), times_spain(home_totals, PARTY_PRIOR),
                                 [None if p is None else 1 + p for p in points]])},
@@ -226,4 +300,4 @@ def fiesta_lenses(world: dict, proj, grid: HexGrid, municipalities: list[dict], 
                         "Hover a hex to see their names. Volunteer-edited: the coverage is not that of the official "
                         "register.",
                     ).format(n=len(wikidata["bullrings"]))),
-    ]
+    ], calendar
