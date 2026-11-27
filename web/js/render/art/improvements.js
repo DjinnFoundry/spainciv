@@ -12,6 +12,8 @@
 //
 // Exports
 //   prepareNetwork(w, infra) → net                     once per data load
+//   buildPieces(w, links, classes, offsetOf) → tiles, visibleTiles(tiles, vp, pad), strokeAll(ctx, tiles, cls)
+//                                                       the link pieces themselves, for another network (ext/transit)
 //   drawRoads(ctx, net, vp, o) / drawRail(ctx, net, vp, o)   world transform (km), o = the static-layer options
 //   ROAD_MIN_RPX, MAJOR_MIN_RPX, RAIL2_MIN_RPX           zoom thresholds (hex radius in css px)
 //   portTier(port), drawPort(ctx, x, y, sizeKm, opts), drawAirport(ctx, x, y, sizeKm, opts)   (any transform)
@@ -45,7 +47,7 @@ function dirTo(grid, a, b) {
  * offsetOf(a, b) → km to shift the link sideways (0 = on the centre line). The shift goes to one fixed physical side
  * of the line (below it, leaning right), so it is the same seen from either end and a run of links never swaps sides.
  */
-function buildPieces(w, links, classes, offsetOf = null) {
+export function buildPieces(w, links, classes, offsetOf = null) {
   const { grid } = w;
   const R = grid.R;
   const byCell = new Map(); // cell → [{d, cls, vx, vy}]
@@ -112,7 +114,8 @@ export function prepareNetwork(w, infra) {
   };
 }
 
-function visibleTiles(tiles, vp, pad) {
+/** The tiles of pieces that reach into the view (world km) grown by `pad` km. */
+export function visibleTiles(tiles, vp, pad) {
   const out = [];
   for (const t of tiles) {
     if (t.x1 < vp.x0 - pad || t.x0 > vp.x1 + pad || t.y1 < vp.y0 - pad || t.y0 > vp.y1 + pad) continue;
@@ -121,7 +124,8 @@ function visibleTiles(tiles, vp, pad) {
   return out;
 }
 
-function strokeAll(ctx, tiles, cls) {
+/** Stroke the pieces of class `cls` of the tiles with the context's current style. */
+export function strokeAll(ctx, tiles, cls) {
   for (const t of tiles) if (t.paths[cls]) ctx.stroke(t.paths[cls]);
 }
 

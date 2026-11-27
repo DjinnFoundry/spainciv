@@ -423,6 +423,9 @@ class EnglishDataTest(unittest.TestCase):
         # military installations and their parts as OpenStreetMap names them
         ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
         ("military.json", ".ranges[].name"),
+        # stations and train lines as the timetables write them; the stop pairs check() lists by those names
+        ("transit.json", ".stations[].name"), ("transit.json", ".stations[].best.to"),
+        ("transit.json", ".stations[].best.legs[][]"), ("transit.json", ".matching.unmatched_pairs[][]"),
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.
