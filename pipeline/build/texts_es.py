@@ -616,6 +616,18 @@ SOURCES = {
         "used_for": ["Lente de criminalidad (infracciones penales conocidas por 1.000 habitantes)",
                      "Lente del delito que más destaca sobre la tasa de España"],
     },
+    "bdn_especies": {
+        "title": "Distribución de especies y de aves reproductoras en España, 2013-2018 (informes del artículo 17 de la "
+        "Directiva de Hábitats y del artículo 12 de la Directiva de Aves, cuadrícula de 10 km)",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO): Banco de Datos de la "
+        "Naturaleza, Inventario Español del Patrimonio Natural y de la Biodiversidad",
+        "license": "CC BY 4.0, nombrando la fuente: Ministerio para la Transición Ecológica y el Reto Demográfico",
+        "description": "Las cuadrículas de 10 km de la red de referencia europea (ETRS89-LAEA) donde España notificó cada "
+        "especie de la Directiva de Hábitats y cada ave reproductora de la Directiva de Aves en sus informes sexenales a "
+        "la UE. El mapa lee las del lince ibérico, el oso pardo, el lobo, el águila imperial ibérica y el "
+        "quebrantahuesos: cada hexágono muestra qué parte de su superficie cae en ellas.",
+        "used_for": ["Lentes de fauna"],
+    },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
         "publisher": "Ministerio de Industria y Turismo, Secretaría de Estado de Turismo",
