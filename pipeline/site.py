@@ -56,8 +56,10 @@ def credits_inner(country: Country, lang: str) -> str:
     """The map's credit line in `lang`, as HTML: data sources, licence notices, usaciv's credit."""
     page = country.page.in_lang(lang)
     link = f'<a href="{USACIV_URL}" target="_blank" rel="noopener">usaciv</a>'
-    parts = [escape(page.data_credit), *map(escape, page.notices), escape(page.based_on).replace("{usaciv}", link)]
-    return " · ".join(parts)
+    text = " · ".join([escape(page.data_credit), *map(escape, page.notices)])
+    for label, url in page.links:
+        text = text.replace(escape(label), f'<a href="{_attr(url)}" target="_blank" rel="noopener">{escape(label)}</a>', 1)
+    return f'{text} · {escape(page.based_on).replace("{usaciv}", link)}'
 
 
 def credits_html(country: Country) -> str:
