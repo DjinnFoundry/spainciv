@@ -162,7 +162,8 @@ Object.assign(globalThis, {
 const node = () => {
   const kids = new Map();
   return { classList: { add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, querySelectorAll: () => [],
-           querySelector: (s) => (kids.has(s) || kids.set(s, node()), kids.get(s)) };
+           querySelector: (s) => (kids.has(s) || kids.set(s, node()), kids.get(s)),
+           on: [], addEventListener(type, f) { this.on.push(f); }, removeEventListener(type, f) { this.on = this.on.filter((g) => g !== f); } };
 };
 const { createEmitter, createHashState, createModes } = await import('./web/js/app/api.js');
 const lenses = read('lenses').lenses;
@@ -264,6 +265,21 @@ class TimelineLinkTest(unittest.TestCase):
         self.assertEqual((got["open"]["mode"], got["open"]["year"], got["open"]["lens"]),
                          ("timeline", "1520", "Personajes vivos en 1520"))
         self.assertEqual((got["closed"]["mode"], got["closed"]["hash"]), (None, ""))
+        self.assertEqual((got["again"]["mode"], got["again"]["year"]), ("timeline", "1520"))
+
+    def test_the_close_button_closes_the_timeline_and_back_reopens_it_at_its_year(self):
+        # The ✕ is a click on the dock (app/lensPanel.js listens there): the lenses go back to the download year.
+        got = drive("""
+            await go('#lens=great_people_year&anio=1520');
+            dock.on[0]({ target: { closest: (s) => (s === '[data-close]' ? {} : null) } });
+            await settle();
+            const closed = shown();
+            const names = ['great_people_year', 'great_people_year_kind'].map((id) => lensById.get(id).name);
+            await back();
+            out({ closed, names, again: shown() });
+        """)
+        self.assertEqual((got["closed"]["mode"], got["closed"]["hash"]), (None, ""))
+        self.assertEqual(got["names"], ["Personajes vivos en 2026", "Oficios en 2026"])
         self.assertEqual((got["again"]["mode"], got["again"]["year"]), ("timeline", "1520"))
 
 

@@ -24,27 +24,40 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 
 // An element that takes anything; querySelector gives the same child for the same selector, so a test can read what a
 // panel wrote there. A dock (strict) has no child of a class its HTML does not name, as a real one would not: a panel
-// that reads its parts before writing them fails as it does in the browser.
+// that reads its parts before writing them fails as it does in the browser. querySelectorAll('[data-x]') gives one
+// element per data-x="…" in the HTML, the same ones until the HTML changes, so a test can read their attributes.
 const fakeEl = (strict = false) => {
-  const classes = new Set(), listeners = [], kids = new Map();
+  const classes = new Set(), listeners = [], kids = new Map(), lists = new Map(), attrs = {};
   const el = {
-    classes, listeners, innerHTML: '', value: '', textContent: '', style: { setProperty() {} },
+    classes, listeners, attrs, innerHTML: '', value: '', textContent: '', style: { setProperty() {} },
     classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), toggle() {}, contains: (c) => classes.has(c) },
-    setAttribute() {}, removeAttribute() {}, focus() {}, scrolled: 0, scrollIntoView() { el.scrolled++; },
+    setAttribute: (k, v) => (attrs[k] = String(v)), removeAttribute: (k) => delete attrs[k], focus() {}, scrolled: 0, scrollIntoView() { el.scrolled++; },
     addEventListener: (type, fn) => listeners.push(fn), removeEventListener: (type, fn) => listeners.splice(listeners.indexOf(fn), 1),
     querySelector(sel) {
       const cls = /^\\.([\\w-]+)/.exec(sel)?.[1];
       if (strict && cls && !el.innerHTML.split(/class="([^"]*)"/).some((c, k) => k % 2 && c.split(' ').includes(cls))) return null;
       return kids.has(sel) ? kids.get(sel) : kids.set(sel, fakeEl()).get(sel);
     },
-    querySelectorAll: () => [],
+    querySelectorAll(sel) {
+      const name = /^\\[data-([\\w-]+)\\]$/.exec(sel)?.[1];
+      if (!name) return [];
+      const key = name.replace(/-(\\w)/g, (_, c) => c.toUpperCase());
+      if (lists.get(sel)?.html !== el.innerHTML) {
+        const found = [...el.innerHTML.matchAll(new RegExp(`data-${name}="([^"]*)"`, 'g'))];
+        lists.set(sel, { html: el.innerHTML, els: found.map(([, v]) => Object.assign(fakeEl(), { dataset: { [key]: v } })) });
+      }
+      return lists.get(sel).els;
+    },
   };
   return el;
 };
 // What the app's emitter reports when a handler throws (createEmitter logs and carries on).
 const errors = [];
-console.error = (...a) => { const m = a.map(String).join(" "); if (m.includes("handler failed")) errors.push(m); };
-globalThis.document = { body: fakeEl() };
+console.error = (...a) => {
+  const m = a.map(String).join(" ");
+  if (["handler failed", "enter() failed", "exit() failed"].some((f) => m.includes(f))) errors.push(m);
+};
+globalThis.document = { body: fakeEl(), hidden: false, addEventListener() {}, removeEventListener() {} };
 
 function makeApp(link = '', extra = {}) {
   const hash = new URLSearchParams(link.replace(/^#/, ''));
@@ -464,6 +477,129 @@ class ReservoirsPanelTest(unittest.TestCase):
         self.assertEqual(got["count"], "No se ha podido cargar la serie semanal: los anillos y los embalses solo están "
                                         "en la última semana.")
         self.assertIn("No se ha podido cargar la serie semanal", got["res"])
+
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class TimelinePanelTest(unittest.TestCase):
+    """The great people timeline (web/js/ext/timeline) on Spain's personajes.json: two lenses, one panel."""
+
+    def open(self, link: str, then: str = ""):
+        return run(f"""
+            setCountry({{ country: {{ ...world.country, lang: 'es', locale: 'es-ES', data: ['personajes'] }} }}, null);
+            const app = spainApp({json.dumps(link)});
+            const overlays = [], labels = [];
+            let loads = 0;
+            const dock = app.ui.dock;
+            Object.assign(app, {{
+              registerOverlay: (o) => (overlays.push(o.id), () => overlays.push(`-${{o.id}}`)),
+              loadData: async (n) => (loads++, file(n)),
+              ui: {{ ...app.ui, dock: (side, o) => (labels.push(o.label), dock(side, o)) }},
+            }});
+            (await import('./web/js/ext/timeline/index.js')).install(app);
+            const lens = (id) => app.lensById.get(id);
+            const snap = () => ({{ mode: app.mode, lens: app.state.lens?.id ?? null, log: app.log.splice(0), undocks: app.undocks,
+              panel: app.dockEl?.classes.has('lens-panel') ?? false, year: app.keys.get('anio').get(),
+              slider: app.dockEl?.innerHTML.includes('tl-slider') ?? false, refreshed: app.refreshed, overlays: overlays.splice(0),
+              names: [lens('great_people_year').name, lens('great_people_year_kind').name],
+              pressed: (app.dockEl?.querySelectorAll('[data-lens]') ?? []).map((b) => [b.dataset.lens, b.attrs['aria-pressed']]),
+              famousHead: app.dockEl?.querySelector('.tl-h3')?.hidden ?? null,
+              text: app.dockEl?.innerHTML.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim() ?? null }});
+            for (let i = 0; i < 3; i++) await tick();
+            const s = [snap()];
+            {then}
+            out({{ s, loads, labels, errors }});
+        """, PRELUDE + SPAIN)
+
+    def test_a_link_with_the_kind_lens_and_a_year_opens_the_timeline_on_both(self):
+        got = self.open("#lens=great_people_year_kind&anio=1520")
+        first = {k: v for k, v in got["s"][0].items() if k not in ("text", "famousHead")}
+        self.assertEqual(first | {"refreshed": 0}, {
+            "mode": "timeline", "lens": "great_people_year_kind", "log": ["dock left 360"], "undocks": 0, "panel": True,
+            "year": "1520", "slider": True, "refreshed": 0, "overlays": ["timeline-dots"],
+            "names": ["Personajes vivos en 1520", "Oficios en 1520"],
+            "pressed": [["great_people_year", "false"], ["great_people_year_kind", "true"]]})
+        self.assertEqual((got["loads"], got["labels"], got["errors"]), (1, ["Personajes en el tiempo"], []))
+
+    def test_a_year_alone_opens_it_on_the_people_alive(self):
+        got = self.open("#anio=1520")
+        self.assertEqual((got["s"][0]["mode"], got["s"][0]["lens"], got["s"][0]["year"]),
+                         ("timeline", "great_people_year", "1520"))
+
+    def test_moving_between_its_two_lenses_keeps_the_panel(self):
+        got = self.open("#lens=great_people_year&anio=1520", then="""
+            app.setLens(lens('great_people_year_kind')); await tick(); s.push(snap());
+            app.setLens(lens('great_people_year')); await tick(); s.push(snap());
+        """)
+        count, kind = (["great_people_year", "true"], ["great_people_year_kind", "false"]), \
+            (["great_people_year", "false"], ["great_people_year_kind", "true"])
+        self.assertEqual([(x["mode"], x["lens"], x["log"], x["undocks"], x["pressed"]) for x in got["s"]], [
+            ("timeline", "great_people_year", ["dock left 360"], 0, list(count)),
+            ("timeline", "great_people_year_kind", [], 0, list(kind)),
+            ("timeline", "great_people_year", [], 0, list(count))])
+        self.assertEqual(got["loads"], 1)
+
+    def test_another_lens_closes_the_panel_and_stays(self):
+        got = self.open("#lens=great_people_year&anio=1520", then="app.setLens(lens('great_people')); s.push(snap());")
+        self.assertEqual({k: got["s"][1][k] for k in ("mode", "lens", "log", "undocks", "overlays", "panel")}, {
+            "mode": None, "lens": "great_people", "log": ["undock left"], "undocks": 1, "overlays": ["-timeline-dots"],
+            "panel": False})
+
+    def test_esc_and_the_close_button_close_both_without_repainting_the_map(self):
+        # lensPanel calls close() with the lens still on: renaming the lenses to the download year must not repaint.
+        got = self.open("#lens=great_people_year&anio=1520", then="""
+            app.escape(); s.push(snap());
+            app.setLens(lens('great_people_year')); for (let i = 0; i < 3; i++) await tick(); s.push(snap());
+            app.keys.get('anio').set('1520'); s.push(snap());
+            app.dockEl.listeners[0]({ target: { closest: (sel) => (sel === '[data-close]' ? {} : null) } }); s.push(snap());
+        """)
+        opened, esc, reopened, moved, closed = got["s"]
+        for c, before in ((esc, opened), (closed, moved)):
+            self.assertEqual((c["mode"], c["lens"], c["panel"], c["log"]), (None, None, False, ["undock left"]))
+            self.assertEqual(c["refreshed"], before["refreshed"])
+            self.assertEqual(c["names"], ["Personajes vivos en 2026", "Oficios en 2026"])
+        self.assertEqual((reopened["mode"], reopened["year"], reopened["names"][0]),
+                         ("timeline", None, "Personajes vivos en 2026"))  # from the picker: the download year
+        self.assertEqual(moved["names"][0], "Personajes vivos en 1520")
+        self.assertEqual(closed["undocks"], 2)
+        # The dock's name is the panel's own, not the year's that paint() wrote on the lenses.
+        self.assertEqual(got["labels"], ["Personajes en el tiempo"] * 2)
+        self.assertEqual((got["loads"], got["errors"]), (1, []))
+
+    def test_closing_while_the_people_load_leaves_the_dock_alone(self):
+        got = self.open("", then="""
+            let resolve;
+            app.loadData = () => (loads++, new Promise((r) => (resolve = r)));
+            app.setLens(lens('great_people_year')); await tick();
+            const loading = app.dockEl;
+            app.escape();
+            resolve(file('personajes')); for (let i = 0; i < 3; i++) await tick();
+            s.push(snap(), loading.innerHTML.includes('tl-slider'));
+        """)
+        self.assertEqual((got["s"][0]["mode"], got["s"][1]["mode"], got["s"][2]), (None, None, False))
+        self.assertEqual((got["loads"], got["errors"]), (1, []))
+
+    def test_a_year_with_nobody_alive_has_no_famous_heading(self):
+        alive, nobody = self.open("#lens=great_people_year&anio=1520", then="""
+            app.keys.get('anio').set('-101'); s.push(snap());
+        """)["s"]
+        self.assertEqual((alive["famousHead"], nobody["year"], nobody["famousHead"]), (False, "-101", True))
+
+    def test_the_panel_has_its_head_and_close_button_when_the_people_fail_to_load(self):
+        for link, fail, line in (("#lens=great_people_year", "async () => { throw new Error('blocked'); }",
+                                  "No se han podido cargar los personajes."),
+                                 ("#lens=great_people_year", "async () => ({ people: [{ name: 'x' }] })",
+                                  "Este mapa no tiene fechas de los personajes.")):
+            with self.subTest(line=line):
+                got = self.open("", then=f"""
+                    app.loadData = {fail};
+                    app.setLens(lens('great_people_year')); for (let i = 0; i < 3; i++) await tick(); s.push(snap());
+                    s.push(app.dockEl.innerHTML.includes('data-close'));
+                    app.dockEl.listeners[0]({{ target: {{ closest: (sel) => (sel === '[data-close]' ? {{}} : null) }} }}); s.push(snap());
+                """)
+                failed, close, closed = got["s"][1:]
+                self.assertEqual((failed["mode"], failed["text"], close), ("timeline", f"Personajes en el tiempo ✕ {line}", True))
+                self.assertEqual((closed["mode"], closed["lens"]), (None, None))
 
 
 if __name__ == "__main__":
