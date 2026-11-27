@@ -238,9 +238,11 @@ async function main() {
 
   // --- sprite warm-up ----------------------------------------------------------------------------------------
   // The first render at a new zoom paints that zoom's terrain and city sprites (150-300 ms when zoomed in). Once the
-  // view settles, idle time paints them for the next zoom step in and out, a strip at a time, so a wheel notch or a
-  // +/- key lands on warm caches. Any camera move, lens or toggle change abandons the remaining work.
-  const WARM_STEPS = [1.25, 0.8]; // ~one wheel notch (e^±0.22) and one sprite bucket (2^±0.25) in, then out
+  // view settles, idle time paints them for the next zoom steps, a strip at a time, so a wheel flick or a +/- key
+  // lands on warm caches. Any camera move, lens or toggle change abandons the remaining work.
+  // One wheel notch (e^0.22, about one sprite bucket 2^0.25) in and out, then two and three notches in: from the
+  // home view three notches are where the relief first shows, the dearest render of all when cold.
+  const WARM_STEPS = [1.25, 0.8, 1.55, 1.93];
   const WARM_STRIPS = 6;
   const warm = { cv: null, ctx: null, handle: 0, jobs: [], sig: "" };
   const idle = typeof requestIdleCallback === "function"
