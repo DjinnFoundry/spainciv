@@ -6,7 +6,9 @@
 // lang/: the language switch of a country published in several languages.
 // game/: the daily game "Adivina el hexágono", for a country whose page settings enable it.
 // fiestas/: the fiesta calendar, for a country whose data has fiestas.json.
-const MODULES = ["./cityView/index.js", "./advisors/index.js", "./layers/index.js", "./lang/index.js", "./game/index.js", "./fiestas/index.js"];
+// sun/: the sun lens "Sol y reloj", for a country whose page settings enable it.
+const MODULES = ["./cityView/index.js", "./advisors/index.js", "./layers/index.js", "./lang/index.js", "./game/index.js", "./fiestas/index.js",
+  "./sun/index.js"];
 
 export async function installExtensions(app, list = MODULES) {
   const loads = list.map((spec) => import(spec).then((m) => ({ m }), (err) => ({ err })));

@@ -8,6 +8,7 @@
 //   URL hash: #lens=fiestas_mes&mes=8
 // fiestas.json is loaded the first time the calendar opens; the month rules live in calendar.js.
 import { country } from "../../app/country.js";
+import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
 import * as C from "./calendar.js";
@@ -37,7 +38,7 @@ export function install(app) {
   let month = C.currentMonth();
   let doc = null; // fiestas.json once loaded
   let list = []; // the month's fiestas, in order
-  let dock = null, mark = null, token = 0, leaving = false;
+  let mark = null, token = 0;
 
   // --- the lens --------------------------------------------------------------------------------------------------
   function paint() {
@@ -47,40 +48,23 @@ export function install(app) {
     if (app.state.lens === lens) app.refreshLens();
   }
 
-  // The lens and the mode come and go together; `leaving` keeps the mode's own lens change from re-entering it.
-  app.on("lens", (l) => {
-    if (l === lens) {
-      if (app.mode !== MODE) app.setMode(MODE);
-    } else if (app.mode === MODE && !leaving) app.setMode(null);
-  });
-
-  app.registerMode(MODE, {
-    enter() {
-      dock = app.ui.dock("left", { width: 360, label: t("fiestas.lens.name") });
-      dock.classList.add("fiestas-dock");
+  const panel = lensPanel(app, lens, {
+    mode: MODE,
+    open(dock) {
       dock.innerHTML = `<p class="muted">${esc(t("fiestas.loading"))}</p>`;
-      if (app.state.lens !== lens) app.setLens(lens);
-      open(++token);
+      load(++token);
     },
-    exit() {
-      leaving = true;
-      try {
-        token++;
-        if (mark && app.state.highlight === mark) app.setHighlight(null);
-        mark = null;
-        dock?.classList.remove("fiestas-dock");
-        app.ui.undock("left");
-        dock = null;
-        if (app.state.lens === lens) app.setLens(null);
-      } finally {
-        leaving = false;
-      }
+    close() {
+      token++;
+      if (mark && app.state.highlight === mark) app.setHighlight(null);
+      mark = null;
     },
   });
 
-  async function open(my) {
+  async function load(my) {
     const data = await app.loadData("fiestas").catch(() => null);
     if (my !== token) return; // closed meanwhile
+    const { dock } = panel;
     if (!data?.fiestas) {
       dock.innerHTML = `<p class="muted">${esc(t("fiestas.loadError"))}</p>`;
       return;
@@ -106,16 +90,15 @@ export function install(app) {
     get: () => (app.mode === MODE ? String(month) : null),
     set(v) {
       const m = C.parseMonth(v);
-      if (m == null) return; // without the key the lens key decides (no lens = no calendar)
+      if (m == null) return; // without the key the lens key decides (#lens=fiestas_mes: this month's calendar)
       setMonth(m);
       if (app.mode !== MODE) app.setMode(MODE);
     },
   });
-  // A link with the lens and no month (#lens=fiestas_mes) opens this month's calendar.
-  if (app.hash.value("lens") === LENS && app.hash.value(HASH_KEY) == null) app.setLens(lens);
 
   // --- a fiesta on the map ---------------------------------------------------------------------------------------
   function show(f) {
+    const { dock } = panel;
     mark = { cells: new Set(f.cells) };
     app.setHighlight(mark);
     const b = app.highlightBounds(mark);
@@ -126,6 +109,7 @@ export function install(app) {
 
   // --- the dock --------------------------------------------------------------------------------------------------
   function render() {
+    const { dock } = panel;
     if (!dock || !doc) return;
     const per = C.perMonth(doc.fiestas);
     const top = Math.max(1, ...per);
@@ -143,13 +127,11 @@ export function install(app) {
     }).join("");
     const title = month === C.currentMonth() ? t("fiestas.title.now") : t("fiestas.title", { month: monthName(month) });
     dock.innerHTML = `
-      <header class="fc-head"><h2>${esc(title)}</h2>
-        <button type="button" class="icon-btn fc-close" data-close aria-label="${esc(t("fiestas.close"))}">✕</button></header>
+      ${panelHead(title, t("fiestas.close"))}
       <div class="fc-months" role="radiogroup" aria-label="${esc(t("fiestas.months"))}">${months}</div>
       <p class="fc-sum">${esc(t("fiestas.summary", { n: list.length, month: monthName(month) }))}</p>
       ${groups}
       <p class="fc-undated muted">${esc(t("fiestas.undated", { n: C.undated(doc.fiestas) }))}</p>`;
-    dock.querySelector("[data-close]").onclick = () => app.setMode(null);
     const strip = dock.querySelector(".fc-months");
     strip.onclick = (e) => {
       const b = e.target.closest("[data-m]");

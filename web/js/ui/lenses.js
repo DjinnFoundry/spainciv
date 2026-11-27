@@ -1,6 +1,6 @@
 // Lens dock: a quick row (Terrain + the 3 most recent lenses), a grouped lens picker, and a rich legend with a
 // histogram of hex values whose ramp can be hovered or dragged to highlight a band of values on the map.
-import { compact, esc, fixed, money, pct, plain } from "../format.js";
+import { clock, compact, esc, fixed, money, pct, plain } from "../format.js";
 import { t } from "../i18n.js";
 import { lensScale } from "../world.js";
 import { rampColor, parseHex } from "../color.js";
@@ -13,6 +13,16 @@ export { glyph };
 const intish = (v) =>
   Number.isInteger(v) || Math.abs(v) >= 10 ? compact(v) : Math.abs(v) < 1 ? plain(+v.toPrecision(1)) : fixed(v, 1);
 
+/** "15 h 24 min"; "54 min" under an hour, "2 h" on the hour. */
+export function formatDuration(minutes) {
+  const m = Math.round(minutes), h = Math.floor(m / 60);
+  if (!h) return t("core.lens.minutes", { n: m });
+  return m % 60 ? t("core.lens.hoursMinutes", { h, m: m % 60 }) : t("core.lens.hours", { n: h });
+}
+
+/** A lens's scale is a time of day or a duration: its numbers are minutes, shown as such (legend, tooltip, Almanac). */
+export const isTimeLens = (lens) => lens.format === "clock" || lens.format === "duration";
+
 export function formatLensValue(lens, v) {
   if (v == null || !Number.isFinite(v)) return lens.null_label ?? t("core.lens.noData");
   switch (lens.format) {
@@ -21,6 +31,8 @@ export function formatLensValue(lens, v) {
     case "pct": return pct(v, v < 0.1 ? 1 : 0);
     case "int": return intish(v) + (perKm2(lens) ? t("core.lens.perKm2") : lens.unit ? " " + lens.unit : "");
     case "minutes": return t("core.lens.minutes", { n: fixed(v, 0) });
+    case "clock": return clock(v);
+    case "duration": return formatDuration(v);
     case "years": return t("core.lens.years", { n: fixed(v, 1) });
     case "float": return (v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
   }
@@ -85,6 +97,19 @@ const loadRecent = () => {
 const saveRecent = (ids) => {
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(ids)); } catch { /* private mode: fine */ }
 };
+
+/** The legend's source line of a lens: its source's title (or publisher) and vintage, else the lens file's vintage, but
+ *  only for the lenses the file had when this was made. A lens built in the browser (app.addLens) never takes the
+ *  file's vintage: the municipal register's date is not the date of a calendar or of the sun's equations. */
+export function lensSourceLine(lensFile, sources = []) {
+  const fromFile = new Set(lensFile?.lenses || []);
+  return (lens) => {
+    const src = sources.find((s) => s.id === lens.source);
+    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : lens.source;
+    const vintage = src?.vintage || (fromFile.has(lens) ? lensFile.vintage : "") || "";
+    return [name, vintage].filter(Boolean).map(esc).join(" · ");
+  };
+}
 
 /**
  * opts: {lenses (lenses.json), sources (sources.json list), w (prepared world), onPick(lens|null), onBand(band|null)}
@@ -222,12 +247,7 @@ export function initLensDock(opts) {
     return { counts, n, max: Math.max(1, ...counts) };
   });
 
-  function sourceLine(lens) {
-    const src = sources.find((s) => s.id === lens.source);
-    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : lens.source;
-    const vintage = src?.vintage || lensFile?.vintage || "";
-    return [name, vintage].filter(Boolean).map(esc).join(" · ");
-  }
+  const sourceLine = lensSourceLine(lensFile, sources);
 
   // Categorical lenses (format "category"): values are indices into lens.categories, whose colours are the ramp
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
@@ -252,7 +272,7 @@ export function initLensDock(opts) {
   });
   const noteHtml = (l) => (l.note ? `<div class="lg-note">${esc(l.note)}</div>` : "");
   // Both legends' title row: the lens, the details toggle and the close button.
-  const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.name)}</span>
+  const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.heading || l.name)}</span>
         <button class="icon-btn lg-more" aria-expanded="${legendExpanded}" aria-label="${t("core.lens.showFull")}" title="${t("core.lens.details")}">${legendExpanded ? "−" : "+"}</button>
         <button class="icon-btn lg-close" aria-label="${t("core.lens.off")}" title="${t("core.lens.backToTerrain")}">${icon("close", "✕", { size: 11 })}</button></div>`;
 

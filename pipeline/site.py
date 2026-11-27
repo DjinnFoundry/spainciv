@@ -9,8 +9,8 @@ web/index.html is written for the United States and is published as is for it. A
 - `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
   the world.json `country` block (so a new address or credit needs no data rebuild), and `play` when the country has
   an Unciv map, and `data`, the names of its data files; a country in several languages adds `langs` (each language's
-  number locale) and `texts`, the page's texts in every language but the first; and `game: true` when the country
-  has the daily game (web/js/ext/game);
+  number locale) and `texts`, the page's texts in every language but the first; `game: true` when the country
+  has the daily game (web/js/ext/game) and `sunset: true` when it has the sun lens (web/js/ext/sun);
 - the Unciv page and downloads (pipeline/play.py) when its build made an Unciv map.
 
 generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.
@@ -78,8 +78,7 @@ def page_config(country: Country) -> dict:
     # The data files the site has, so the browser does not ask for the US-only ones (and log a 404 for each).
     data = sorted(p.stem for p in country.web_data_dir.glob("*.json") if "." not in p.stem)
     config = {"lang": country.lang, "site_url": country.site_url, **texts(country.lang), "data": data}
-    if country.page.game:
-        config["game"] = True
+    config |= {flag: True for flag in ("game", "sunset") if getattr(country.page, flag)}
     if len(country.langs) > 1:
         config["langs"] = dict(country.locales)
         config["texts"] = {lang: texts(lang) | {"description": country.page.in_lang(lang).description,

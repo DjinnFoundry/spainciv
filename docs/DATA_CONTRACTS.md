@@ -807,7 +807,9 @@ several languages, with the `lang` hash key) and `game` (the daily game "Adivina
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
 also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `sun` (the sun lens "Sol y reloj",
+only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, hash keys `dia` and `sol`, e.g.
+`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
@@ -898,6 +900,14 @@ when renaming a field in those files.
 (the advisors' do). `app.addLens(lens, {after: id})` also puts one in the lens picker, after that lens of lenses.json, so
 `#lens=<its id>` opens it once added (throws on a taken id). After replacing the active lens's `values` (a new array),
 `names`, `labels` or texts, `app.refreshLens()` paints it again, legend and minimap included, keeping the band.
+Such a lens can hold minutes: `format: "clock"` shows them as a time of day ("22:01") and `format: "duration"` as hours
+and minutes ("15 h 24 min"), in the tooltip, the legend's ticks and the Almanac; `note` is a line under the legend's
+title. Optional for such a lens: `heading`, the name of what it shows now, for the legend's title and the tooltip
+(`name` stays in the picker); `tip(cell)`, a line of plain text the tooltip asks for the hex under the pointer, instead
+of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
+the user's choices. Its `source` is an id of sources.json, and the legend never gives it the lenses.json `vintage`.
+A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
+{mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).

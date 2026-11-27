@@ -234,10 +234,13 @@ kbd {
 .gm-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 @media (max-width: 700px) { .game-dock { padding-top: 18px; } }
 
-/* ---------- the fiesta calendar (ext/fiestas), in the left dock ---------- */
-.fiestas-dock { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
-.fc-head { display: flex; align-items: flex-start; gap: 8px; }
-.fc-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
+/* ---------- a lens's panel in the left dock (app/lensPanel.js: the fiesta calendar, the sun lens) ---------- */
+.lens-panel { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
+.lens-panel-head { display: flex; align-items: flex-start; gap: 8px; }
+.lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
+@media (max-width: 700px) { .lens-panel { padding-top: 18px; } }
+
+/* ---------- the fiesta calendar (ext/fiestas) ---------- */
 .fc-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
 .fc-month {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; height: 58px; padding: 3px 0;
@@ -262,7 +265,25 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .fc-where, .fc-when { font-size: 12px; overflow-wrap: anywhere; }
 .fc-where { color: var(--ink-dim); }
 .fc-undated { margin: 14px 0 0; font-size: 12px; }
-@media (max-width: 700px) { .fiestas-dock { padding-top: 18px; } }
+
+/* ---------- the sun lens (ext/sun) ---------- */
+.sn-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 10px 0; }
+.sn-mode {
+  padding: 6px 4px; background: none; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font: inherit; cursor: pointer;
+}
+.sn-mode:hover { color: var(--ink); }
+.sn-mode.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.sn-day { display: flex; align-items: center; gap: 8px; }
+.sn-day input { flex: 1; min-width: 0; padding: 4px 6px; background: rgba(0,0,0,.3); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: inherit; color-scheme: dark; }
+.lens-panel .chip.on { background: rgba(201,164,92,.35); }
+.sn-note { margin: 12px 0 8px; color: var(--gold-bright); }
+/* The colour key and the spread are the legend's; they show in the panel only on phones, where the sheet covers it. */
+.sn-key { margin: 12px 0 0; }
+.sn-ramp { display: block; height: 10px; border-radius: 2px; }
+.sn-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
+@media (min-width: 701px) { .sn-key, .sn-note { display: none; } }
+/* The minimap sits over the Canaries' inset, which the lens's text names: it gives way while the panel is open. */
+body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
 
 @media (max-width: 1360px) and (min-width: 701px) {
   body.dock-open #minimap-wrap { display: none; }
