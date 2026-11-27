@@ -8,6 +8,8 @@ minus its listed municipalities; a rate (life expectancy) can't be split that wa
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ...core.source import Source, SourceInfo
 from .ine import CSV, LICENSE, PROVINCES, number, read_rows, split_geo
 
@@ -32,18 +34,23 @@ class IneTables(Source):
 Counts = dict[str, dict[str, int]]
 
 
-def rest_of_provinces(provinces: Counts, municipalities: Counts) -> Counts:
+def province_of(code: str) -> str:
+    return code[:2]
+
+
+def rest_of_provinces(provinces: Counts, municipalities: Counts, unit_of: Callable[[str], str] = province_of) -> Counts:
     """Each province's counts minus those of its listed municipalities (a negative remainder fails: the tables don't add
-    up)."""
+    up). `unit_of` names the unit a municipality is in, when the units are not provinces (the islands)."""
     rest = {p: dict(v) for p, v in provinces.items()}
     for code, counts in municipalities.items():
-        r = rest.get(code[:2])
+        unit = unit_of(code)
+        r = rest.get(unit)
         if r is None:
-            raise RuntimeError(f"municipality {code} in no province")
+            raise RuntimeError(f"municipality {code}: no counts for its unit {unit}")
         for k, v in counts.items():
             r[k] = r.get(k, 0) - v
             if r[k] < 0:
-                raise RuntimeError(f"province {code[:2]}: its municipalities have more {k} than the province")
+                raise RuntimeError(f"{unit}: its listed municipalities have more {k} than it has")
     return rest
 
 

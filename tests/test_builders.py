@@ -14,6 +14,19 @@ import pipeline.__main__ as cli
 from pipeline.build import BUILDERS, _order
 
 
+_last_output = [0.0]
+
+
+def write_output(path):
+    """Write a fake output stamped strictly after the previous one. Linux stamps files with a coarse clock (a tick
+    is a few milliseconds), so two outputs written in one tick share an mtime and is_stale(), which takes equal times
+    as stale, rebuilds the second builder. Fast runners hit that; a real build takes far longer than a tick."""
+    path.write_text("{}")
+    t = max(time.time(), _last_output[0] + 0.01)
+    _last_output[0] = t
+    os.utime(path, (t, t))
+
+
 def fake(name, requires, produces, run_last=False, file=None, log=None):
     m = ModuleType(name)
     m.REQUIRES, m.PRODUCES = requires, produces
@@ -27,7 +40,7 @@ def fake(name, requires, produces, run_last=False, file=None, log=None):
         for out in produces:
             p = cli.output_path(out)
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text("{}")
+            write_output(p)
 
     m.build = build
     return m

@@ -4,18 +4,22 @@
 //   app mode "game"; URL hash #juego (the link a finished game shares opens the game)
 //   top-bar button "Juego" / "Game"
 // The rules, clues and points live in puzzle.js; this module docks the game beside the map, takes map clicks as
-// guesses, marks them on the map and flies to the answer at the end. Today's progress and the stats are kept in
-// localStorage when the browser allows it; without it the game still plays, it just forgets.
+// guesses, marks them on the map and flies to the answer at the end. Today's progress, the stats and the province
+// album (album.js, drawn by albumPanel.js in the dock's second tab) are kept in localStorage when the browser allows
+// it; without it the game still plays, it just forgets.
 import { country } from "../../app/country.js";
-import { copyText } from "../../app/share.js";
+import { copyText, downloadCanvas } from "../../app/share.js";
 import { t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
 import { mapProjection } from "../../geo.js";
 import { hexPath } from "../../render/map.js";
 import { showCellTooltip } from "../../ui/tooltip.js";
 import * as P from "./puzzle.js";
+import * as A from "./album.js";
+import { albumCard, renderAlbum } from "./albumPanel.js";
 
 const MODE = "game";
+const TABS = ["today", "album"];
 const HASH_KEY = "juego";
 const ANSWER_SCALE = 2.4; // css px per km when the answer flies into view (a hex about 14 px across)
 const FONT = '-apple-system, "Segoe UI", system-ui, sans-serif';
@@ -38,6 +42,16 @@ function save(s) {
     /* not remembered */
   }
 }
+function canStore() {
+  try {
+    const k = `${storeKey()}.probe`;
+    globalThis.localStorage.setItem(k, "1");
+    globalThis.localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function install(app) {
   if (!country().game) return;
@@ -51,9 +65,19 @@ export function install(app) {
     return unit && region ? `${unit} (${region})` : region || unit || "";
   };
 
+  // The album needs each province's community (states.json, Spain's), in world.json's order: a province is states[i]
+  // for the hexes whose owner is i.
+  const states = app.data.states;
+  const albumOn = !!states?.length && states.length === w.raw.states.length
+    && states.every((s, i) => s.fips && s.fips === w.raw.states[i].fips && s.community?.code);
+  const fipsSet = new Set(albumOn ? states.map((s) => s.fips) : []);
+  const fipsOf = (cell) => states[w.raw.owner[cell]]?.fips;
+
   let saved = loadSaved();
   let game = null; // {day, cell, guesses: [cell], clues: n, list: buildClues()}
   let gameData = null; // a promise of P.gameData(), made the first time the game opens
+  let data = null; // what it resolved to
+  let tab = "today"; // the dock's tab: "today" (the game) or "album"; every opening starts on "today"
   let dock = null, mark = null, offOverlay = null, token = 0;
   const now = () => P.standing({ grid: w.grid, proj, cell: game.cell, guesses: game.guesses, clues: game.clues });
 
@@ -102,6 +126,7 @@ export function install(app) {
   // --- the mode -------------------------------------------------------------------------------------------------
   app.registerMode(MODE, {
     enter() {
+      tab = "today";
       app.clearSelection();
       dock = app.ui.dock("left", { width: 360, label: t("game.title") });
       dock.classList.add("game-dock");
@@ -132,7 +157,7 @@ export function install(app) {
   }
 
   async function start(my) {
-    const data = await (gameData ||= loadGameData());
+    data = await (gameData ||= loadGameData());
     if (my !== token) return; // the game was closed meanwhile
     if (!data.pool.length) {
       dock.innerHTML = `<p class="gm-loading muted">${esc(t("game.unavailable"))}</p>`;
@@ -147,20 +172,36 @@ export function install(app) {
       clues: Math.max(1, Math.min(P.CLUES.length, today?.clues | 0)),
       list: P.buildClues(data, cell),
     };
+    if (now().won) recordWin(); // a game won before the album existed, or in another tab
     render();
     if (now().over) reveal();
     app.requestDraw();
   }
 
   app.on("mapclick", (ev) => {
-    if (app.mode !== MODE || (game && now().over)) return false; // a finished game lets the map open its panels
+    // A finished game, or the album tab, lets the map open its panels.
+    if (app.mode !== MODE || (game && now().over) || tab === "album") return false;
     if (game) guess(ev.cell);
     return true;
   });
 
-  function persist() {
-    saved = { ...loadSaved(), today: { day: game.day, cell: game.cell, guesses: game.guesses, clues: game.clues } };
+  // Writes over what is stored now, so what another tab saved meanwhile (its stats, its album) is kept.
+  function store(change) {
+    saved = { ...saved, ...loadSaved() };
+    saved = { ...saved, ...change(saved) };
     save(saved);
+  }
+
+  function persist() {
+    store(() => ({ today: { day: game.day, cell: game.cell, guesses: game.guesses, clues: game.clues } }));
+  }
+
+  const album = () => A.normalize(saved.album, fipsSet);
+
+  // Today's win in the album: the province of the day's hex (the winning guess may be in a neighbouring one).
+  function recordWin() {
+    const fips = albumOn && fipsOf(game.cell);
+    if (fips) store((x) => ({ album: A.addWin(A.normalize(x.album, fipsSet), fips, game.day) }));
   }
 
   function guess(cell) {
@@ -171,8 +212,8 @@ export function install(app) {
     if (!s.won) game.clues = Math.min(P.CLUES.length, Math.max(game.clues, game.guesses.length + 1));
     persist();
     if (s.over) {
-      saved = { ...saved, stats: P.recordResult(saved.stats, game.day, s.won) };
-      save(saved);
+      store((x) => ({ stats: P.recordResult(x.stats, game.day, s.won) }));
+      if (s.won) recordWin();
       reveal();
     }
     render();
@@ -210,8 +251,29 @@ export function install(app) {
     return `https://${c.site_url}/#${HASH_KEY}${lang}`;
   }
 
+  const view = () => A.albumView({ album: album(), states, raw: w.raw, pool: data.pool, firstFits: data.firstFits, stats: saved.stats });
+
+  // The header, with the tabs when there is an album: one panel, labelled by the selected tab (roving tabindex).
+  function head() {
+    const tabBtn = (id, label) => `<button type="button" role="tab" class="gm-tab" id="gm-tab-${id}" data-tab="${id}"
+      aria-controls="gm-panel" aria-selected="${tab === id}" tabindex="${tab === id ? 0 : -1}">${esc(label)}</button>`;
+    const v = albumOn && view();
+    return `
+      <header class="gm-head"><h2>${esc(t("game.title"))} <span class="gm-day">${esc(t("game.day", { n: game.day }))}</span></h2>
+        <button type="button" class="icon-btn gm-close" data-close aria-label="${esc(t("game.close"))}">✕</button></header>
+      ${v ? `<div class="gm-tabs" role="tablist" aria-label="${esc(t("game.tabs"))}">${tabBtn("today", t("game.tab.today"))}${tabBtn("album", t("game.tab.album", { got: v.got, total: v.total }))}</div>` : ""}`;
+  }
+  const panel = (html) => (albumOn ? `<div class="gm-panel" id="gm-panel" role="tabpanel" aria-labelledby="gm-tab-${tab}">${html}</div>` : html);
+
+  function showTab(id) {
+    tab = id;
+    render();
+    dock?.querySelector(`[data-tab="${id}"]`)?.focus();
+  }
+
   function render() {
     if (!dock || !game) return;
+    if (tab === "album" && albumOn) return renderAlbumTab();
     const s = now();
     const shown = s.over ? P.CLUES.length : game.clues;
     const clues = game.list.map((c, k) => {
@@ -227,23 +289,63 @@ export function install(app) {
       return `<li><span class="gm-sq" aria-hidden="true">${P.square(km)}</span>${esc(t("game.guess", {
         place: placeOf(g), km: t("game.km", { n: int(km) }), arrow: P.arrow(w.grid, g, game.cell) }))}${trend}</li>`;
     }).join("");
-    dock.innerHTML = `
-      <header class="gm-head"><h2>${esc(t("game.title"))} <span class="gm-day">${esc(t("game.day", { n: game.day }))}</span></h2>
-        <button type="button" class="icon-btn gm-close" data-close aria-label="${esc(t("game.close"))}">✕</button></header>
+    dock.innerHTML = head() + panel(`
       ${game.guesses.length ? "" : `<p class="gm-rules muted">${esc(t("game.rules", { max: P.MAX_GUESSES }))}</p>`}
       ${s.over ? end(s) : ""}
       ${guesses ? `<h3 class="gm-sub">${esc(t("game.guesses"))} <span class="muted">${game.guesses.length}/${P.MAX_GUESSES}</span></h3><ol class="gm-guesses">${guesses}</ol>` : ""}
       ${s.over ? "" : `<div class="gm-actions">
         <button type="button" class="btn gm-more"${game.clues >= P.CLUES.length ? " disabled" : ""}>${esc(t("game.moreClue", { cost: P.CLUE_COST }))}</button>
         <p class="gm-prompt">${esc(t("game.prompt"))}</p></div>`}
-      <ol class="gm-clues">${clues}</ol>`;
-    dock.querySelector("[data-close]").onclick = () => app.setMode(null);
+      <ol class="gm-clues">${clues}</ol>`);
+    wireHead();
     const more = dock.querySelector(".gm-more");
     if (more) more.onclick = moreClue;
     const copy = dock.querySelector(".gm-copy");
     if (copy) copy.onclick = async () => app.ui.toast(t((await copyText(text(s))) ? "game.copied" : "game.copyFailed"));
     const native = dock.querySelector(".gm-native");
     if (native) native.onclick = () => navigator.share({ text: text(s) }).catch(() => {});
+    const open = dock.querySelector(".gm-album");
+    if (open) open.onclick = () => showTab("album");
+  }
+
+  function wireHead() {
+    dock.querySelector("[data-close]").onclick = () => app.setMode(null);
+    dock.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+    const tabs = dock.querySelector(".gm-tabs");
+    if (tabs) tabs.onkeydown = (e) => {
+      const k = TABS.indexOf(tab), to = { ArrowRight: k + 1, ArrowLeft: k - 1, Home: 0, End: TABS.length - 1 }[e.key];
+      if (to == null) return;
+      e.preventDefault();
+      showTab(TABS[(to + TABS.length) % TABS.length]);
+    };
+  }
+
+  function renderAlbumTab() {
+    const v = view(), albumText = () => A.shareText(v, shareUrl());
+    dock.innerHTML = head() + panel("");
+    wireHead();
+    renderAlbum(dock.querySelector("#gm-panel"), v, {
+      w, g: data, storageOk: canStore(), from: game.day + (now().over ? 1 : 0), canShare: typeof navigator.share === "function",
+      onCopy: async () => app.ui.toast(t((await copyText(albumText())) ? "game.album.copied" : "game.copyFailed")),
+      onShare: () => navigator.share({ text: albumText() }).catch(() => {}),
+      onImage: async () => {
+        let ok = false;
+        try {
+          ok = await downloadCanvas(albumCard(v, w), t("game.album.imageName", { product: country().product }));
+        } catch (err) {
+          console.warn(err);
+        }
+        if (!ok) app.ui.toast(t("share.failed"));
+      },
+    });
+  }
+
+  // After a win: the day's province, new in the album or already there.
+  function albumLine() {
+    const news = albumOn && A.albumNews(view(), fipsOf(game.cell), game.day);
+    if (!news) return "";
+    const line = news.fresh ? t("game.album.new", news) : t("game.album.again", news);
+    return `<p class="gm-album-line">${esc(line)} <button type="button" class="btn gm-album">${esc(t("game.album.open"))}</button></p>`;
   }
 
   const text = (s) => P.shareText({ day: game.day, kms: s.kms, won: s.won, clues: s.clues, url: shareUrl() });
@@ -254,6 +356,7 @@ export function install(app) {
     return `<section class="gm-end">
       <p class="gm-verdict">${esc(s.won ? t("game.won", { km: t("game.km", { n: int(s.best) }) }) : t("game.lost"))}</p>
       <p class="gm-answer">${esc(t("game.answer", { place: placeOf(game.cell) }))}</p>
+      ${s.won ? albumLine() : ""}
       <p>${esc(t("game.result", { points, tries: s.kms.length, max: P.MAX_GUESSES, clues: s.clues, cluesMax: P.CLUES.length }))}</p>
       <p class="muted">${esc(t("game.stats", { played: st.played, won: st.won, streak: P.currentStreak(st, game.day), best: st.best }))}</p>
       <pre class="gm-share">${esc(text(s))}</pre>

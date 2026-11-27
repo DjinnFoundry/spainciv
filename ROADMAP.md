@@ -42,10 +42,15 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
-- Embalses (E85–E87): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 16
+- Embalses (E90–E92): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
   embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
-  no los da). Falta contrastar la cifra nacional con las notas semanales de prensa del MITECO de 1995, 2022, 2023 y la
-  última semana.
+  no los da). Contraste hecho con 20 notas semanales de prensa del MITECO: 26-9, 3-10, 10-10, 17-10, 24-10, 31-10, 14-11
+  y 21-11-2023; 8-10, 15-10, 22-10 y 26-11-2024; 4-11 y 18-11-2025; 24-2, 29-9, 3-11 y 17-11-2026 coinciden con la cifra
+  nacional de la lente (y con las cuencas que nombran). Difiere la del 18-8-2026: la nota dio 37.107 hm³ (66,2 %) y la
+  base da hoy 37.187 (66,4 %), por una revisión posterior, sobre todo en el Duero; la nota del 3-11-2026 da 56.043 hm³
+  de capacidad y la lente 56.049. Las posiciones de 16 grandes embalses (Alcántara, Buendía, Mequinenza, Almendra,
+  Entrepeñas, Iznájar, Cenajo, Yesa, Contreras, Alarcón, Valdecañas, Riaño, Belesar, Sau, Canelles, Ricobayo) y sus hm³
+  coinciden con `Embalses_Mapa`; las situadas con Wikidata son verosímiles. Falta contrastar 1995 con una nota de prensa.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
@@ -57,6 +62,19 @@ decisiones que salgan van a `DECISIONS.md`.
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
 
+## Más adelante
+
+- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E89). Los datos están:
+  `wonders.json` tiene los 16 parques con sus límites del OAPN y sus hexágonos, y un mod puede añadir terrenos
+  `"type": "NaturalWonder"` en `jsons/Terrains.json` (`TileNormalizer` conserva el `naturalWonder` de una casilla si
+  el ruleset lo tiene). Lo que cuesta, visto en el código de Unciv 5.0.1: el tileset por defecto es HexaRealm, con
+  FantasyHex de reserva, y `TileLayerTerrain` se salta las imágenes que no existen, así que una maravilla sin imagen
+  propia sale como un hexágono vacío; hacen falta 16 imágenes, o una registrada con 16 nombres, y el atlas de
+  `pipeline/play.py` hoy guarda un icono por página. Rendimientos, `occursOn` y `turnsInto` de cada parque serían
+  convenciones del juego nuevas, a explicar en las páginas de jugar; `unciv.without_mod` tendría que quitarlas del
+  mapa sin mod y el arnés comprobar que cada maravilla sobrevive al editor. Toca los mismos ficheros que
+  `feat/unciv-comunidades` (`spain_unciv.py`, `play.py`, traducciones del mod): mejor después de que esa rama entre.
+
 ## Publicación
 
 - Despliegue del mapa a mano (`pipeline package --country es` y `wrangler pages deploy`, D16); automatizarlo cuando
@@ -65,4 +83,6 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Por decidir (David)
 
+- Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
+  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E89).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.

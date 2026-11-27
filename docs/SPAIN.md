@@ -61,8 +61,8 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `pleiades_iberia` | Pleiades: peoples of ancient Iberia (points) and the regions named after peoples | CC BY 3.0 | Ancient peoples lens |
 | `lenguas_es` | Navarre language zones (IDENA WFS) + Llei 4/1983 art. 36 (BOE API) | CC BY 4.0; legal text | Languages lens |
 | `bandera_azul` | ADEAC Blue Flag 2026-27 list (PDF read into a CSV in the repo by `tools/bandera_azul_pdf.py`) | © ADEAC, cited | Blue Flag beaches lens: which beaches, in which municipality |
-| `boletin_hidrologico` | MITECO Boletín Hidrológico: BD-Embalses (Access database in a zip, weekly since 1988, provisional), read by `pipeline/core/mdb.py`, and the Boletín map's two ArcGIS layers, `Embalses_Mapa` (reservoir points) and `DDHH` (the 16 basins) | Public-sector information, reuse citing the source and keeping its update date (Ley 37/2007; MITECO legal notice) | Reservoirs lens: water held by basin and reservoir, week by week (E85–E87, F35) |
-| `wikidata_presas` | Wikidata SPARQL: reservoirs (Q131681) and dams (Q12323), with subclasses, in Spain with coordinates, labels and aliases in es/ca/gl/eu | CC0 | Reservoirs lens: the position of 11 reservoirs the Boletín no longer reports (E87) |
+| `boletin_hidrologico` | MITECO Boletín Hidrológico: BD-Embalses (Access database in a zip, weekly since 1988, provisional), read by `pipeline/core/mdb.py`, and the Boletín map's two ArcGIS layers, `Embalses_Mapa` (reservoir points) and `DDHH` (the 16 basins) | Public-sector information, reuse citing the source and keeping its update date (Ley 37/2007; MITECO legal notice) | Reservoirs lens: water held by basin and reservoir, week by week (E90–E92, F36) |
+| `wikidata_presas` | Wikidata SPARQL: reservoirs (Q131681) and dams (Q12323), with subclasses (which tree each item is in), in Spain with coordinates, labels and aliases in es/ca/gl/eu | CC0 | Reservoirs lens: the position of 12 reservoirs the Boletín no longer reports (E92) |
 | `wikidata_playas` | Wikidata SPARQL: beaches (Q40080 and subclasses) in Spain with coordinates, their labels and aliases in the languages of Spain and the INE code (P772) of the places they are in (P131, transitive) | CC0 | Blue Flag beaches lens: each beach at its position, matched by name and municipality (`pipeline/build/spain_beaches.py`, DECISIONS E74, F33) |
 | `osm_playas` | OpenStreetMap natural=beach with a name, one cached Overpass query (`out center`), ten name keys | ODbL 1.0 | Blue Flag beaches lens: the position of the beaches Wikidata does not match. MITECO's beach guide is not published any more (F33) |
 | `gastronomia_es` | Spanish Wikipedia provincial cuisine categories, filtered to foods and drinks with Wikidata | CC BY-SA 4.0 (titles); CC0 | Regional dishes lens |
@@ -90,6 +90,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
 | `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers |
+| `balance_criminalidad` | Ministerio del Interior, Balance de Criminalidad 2025 Q4 (January to December), Portal Estadístico de Criminalidad: CSV exports of tables 1509011 (provinces, Spain, abroad) and 1509012 (islands and municipalities over 20,000) | Public-sector information, reuse citing the source (Ley 37/2007) | Crime lens: known offences per 1,000 Padrón inhabitants (2025); the 427 listed municipalities have their own rate, every other one the rest of its province or, in the Balearic and Canary Islands, of its island; standout offence lens: per listed municipality or rest, the type most times Spain's rate, painted at 1.25 times or more in units of 20,000 residents or more (E85, E86, F35) |
 | `ine_censo_agrario` | INE Censo Agrario 2020, tables 51175 (equine heads by agricultural comarca) and 75479 (each municipality's comarca) | CC BY 4.0, citing INE | Horses of the Unciv map: the comarcas with at least 4 times Spain's equines per km² |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).
@@ -116,20 +117,27 @@ the rivers on tile edges and the resource placement that keeps every resource on
 the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
-  `jsons/TileResources.json` (its own resource, the Iberian pig), `maps/España` (the map, gzip + base64 as Unciv saves
-  it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
-  with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
+  `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Nations.json` (the 17 autonomous communities
+  as civilizations, Ceuta and Melilla as city-states), `jsons/translations/Spanish.properties` (their texts in
+  Spanish; English is the mod's own text), `maps/España` (the map, gzip + base64 as Unciv saves it, naming the mod in
+  `mapParameters.mods` so choosing it turns the mod on, with each community's starting location at its capital),
+  `Images/ResourceIcons/Cerdo ibérico.png`, `Images/NationPortraits/` (each nation's flag on a disc) and
+  `Images/NationIcons/` (the city-banner icon of each community; a city-state's banner uses Unciv's own icon of its
+  type), all in one atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
   `README.md` and `LICENSE` (CC BY 4.0);
-- `unciv/espana`: the bare map for the game without mods (the same map without the pig), saved as `España` by the
-  page's link;
+- `unciv/espana`: the bare map for the game without mods, saved as `España` by the page's link: the same map without
+  the pig and without the communities, which only exist with the mod; Spain starts in Madrid and "Any Civ" players in
+  the largest urban areas;
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
-The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
-The rules and the reasons are DECISIONS.md E51–E57, E60–E62, A15, A17, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the
-GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
-every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
-locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).
+The page, the README, the resource names and the nations' texts in Spanish and English are templates in
+`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E87, E88, A15, A17,
+A28, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with `java -jar`): the
+mod installed through "Download mod from URL", the map in the editor with every resource kept
+(`docs/images/es-unciv-editor.jpg`), the 19 nations in the nation picker, and a 45-turn game with Galicia against the
+other 16 communities, each at its capital or beside it and Spain left without a starting location
+(`docs/images/es-unciv-partida.jpg`, the north with the capitals of Euskadi, Navarra, Cantabria and La Rioja).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

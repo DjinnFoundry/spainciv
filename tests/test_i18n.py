@@ -299,7 +299,7 @@ class LanguageJsTest(unittest.TestCase):
                 pickLang(langs, { loc: at(""), saved: "es", browser: ["en-US"] }),
                 pickLang(langs, { loc: at("#lang=xx"), saved: null, browser: ["fr-FR", "en-GB"] }),
                 pickLang(langs, { loc: at(""), saved: null, browser: ["fr-FR"] }),
-                pickLang(langs, { loc: at(""), saved: null, browser: undefined }),
+                pickLang(langs, { loc: at(""), saved: null, browser: [] }),
                 pickLang(undefined, { loc: at("#lang=en"), saved: "en", browser: ["en"] }),
             ]));
         """))
@@ -320,7 +320,8 @@ class SpanishDataTest(unittest.TestCase):
              "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
              "locale", "currency",
-             "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
+             "map", "natural_wonders",  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
+             "bare", "start_bias", "resource", "seat"}  # the bare map like the map; a nation's Unciv terrain, resource, seat
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
     # Toledo") and some surnames are English words ("Eva Forest").
@@ -410,7 +411,7 @@ class EnglishDataTest(unittest.TestCase):
         ("personajes.json", ".people[].name"), ("personajes.json", ".people[].place"),
         ("world.json", ".counties[].name"), ("world.json", ".states[].name"), ("world.json", ".rivers[].name"),
         ("world.json", ".country.projection.insets[].name"),
-        ("cities.json", "[].name"), ("states.json", "[].name"),
+        ("cities.json", "[].name"), ("states.json", "[].name"), ("states.json", "[].community.name"),
         ("infrastructure.json", ".airports[].name"), ("infrastructure.json", ".ports[].name"),
         ("resources.json", ".items[].name"),
         ("wonders.json", ".wonders[].name"), ("wonders.json", ".wonders[].short"), ("wonders.json", ".wonders[].metrics.municipality"),
@@ -419,6 +420,7 @@ class EnglishDataTest(unittest.TestCase):
         *(("fiestas.json", f".fiestas[].{k}") for k in ("name", "community", "place", "declaration", "when")),
         ("unciv.json", ".summary.starts[].city"), ("unciv.json", ".summary.map_name"),
         ("unciv.json", ".summary.not_placed_designations[]"),  # denomination names; their kind is checked as a suffix
+        ("unciv.json", ".summary.nations[].name"), ("unciv.json", ".summary.nations[].cities[]"),  # communities, municipalities
         ("sources.json", "[].publisher"),  # bodies by their own names (Instituto Nacional de Estadística, ADEAC…)
         # military installations and their parts as OpenStreetMap names them
         ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
@@ -432,6 +434,7 @@ class EnglishDataTest(unittest.TestCase):
         ("cities.json", "[].full"): [re.compile(r"^.+(?= urban area$)")],
         ("resources.json", ".items[].detail"): [re.compile(r"(?<=including ).+?(?= \()"), re.compile(r"^[^;]+; [^;]+;")],
         ("military.json", ".components[].name"): [re.compile(r"\([^()]+\)$")],  # the branch's official Spanish name
+        ("unciv.json", ".summary.nations[].leader"): [re.compile(r"Junta de Comunidades")],  # Castilla-La Mancha's institution
     }
     # An id made from a name ("base-aerea-de-zaragoza-ea", military.json), never shown.
     SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
@@ -464,7 +467,8 @@ class EnglishDataTest(unittest.TestCase):
                    r"Indicadores Demográficos Básicos|Movimiento Natural de la Población|Censo anual de población|"
                    r"Censos de Población y Viviendas|calidad_diferenciada_zonas|vino de pago|Vinos? de la Tierra|"
                    r"Estadística sobre actividades de I\+D|Relación con la actividad|Grandes Áreas Urbanas|"
-                   r"Calidad diferenciada|Estadística de Matrimonios|Convenio de Cooperación para la Defensa|"
+                   r"Calidad diferenciada|Estadística de Matrimonios|Balance de Criminalidad|Sistema Estadístico de Criminalidad|"
+                   r"Portal Estadístico de Criminalidad|Policía (?:Nacional|Foral de Navarra)|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",
