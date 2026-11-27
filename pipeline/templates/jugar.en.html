@@ -27,6 +27,8 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
 td.n { text-align: right; white-space: nowrap; }
+main code { overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -37,8 +39,8 @@ td.n { text-align: right; white-space: nowrap; }
   and open-source Civilization V for Windows, macOS, Linux and Android. It has $width × $height tiles of
   $tile_km km: the peninsula, the Balearic Islands, the Canary Islands (in their inset, as on the map), Ceuta,
   Melilla and the neighbouring land of Portugal, France and North Africa. Each autonomous community is a
-  civilization that starts in its capital, with its flag and its municipalities, and Ceuta and Melilla are
-  city-states.</p>
+  civilization that starts in its capital (or beside it, when another one is too close), with its flag and its
+  municipalities, and Ceuta and Melilla are city-states.</p>
 
   <div class="panel box downloads">
     <a href="$zip_href" download>Unciv mod ($zip_name)</a>
@@ -110,32 +112,34 @@ td.n { text-align: right; white-space: nowrap; }
       Gibraltar.</td></tr>
     <tr><td>Communities and capitals</td><td>Real: the name and the capital or seat of government that each one's
       Statute of Autonomy gives (or the law it refers to), with the other official name in brackets. Canarias has two
-      capitals and its Presidency alternates between them: it starts in the larger, Las Palmas de Gran Canaria. Unciv
+      capitals and its Presidency alternates between them: it starts in the more populous of the two, Las Palmas de Gran Canaria. Unciv
       lets no city be founded $city_gap tiles or less from another, so the less populous community of each pair too
       close together starts on the nearest free tile of its land (tiles from its capital: $moved).</td></tr>
     <tr><td>Cities</td><td>Real: its $city_names most populous municipalities in the $padron_year Padrón (INE), the
       capital first, with the IGN's official name. Where each city is founded is up to the game: the fifth city you
       found takes the fifth municipality's name, wherever it is.</td></tr>
-    <tr><td>Leader</td><td>The office the Statute names ("President of the Junta of Andalucía"), never a
-      person.</td></tr>
+    <tr><td>Leader</td><td>The office the Statute names ("President of the Junta of Andalucía"; for Euskadi,
+      "Lendakari", the other name its Statute gives it), never a person.</td></tr>
     <tr><td>Flags and colours</td><td>Real: the design the Statute describes, simplified and without the arms of
       Aragón, La Rioja, Ceuta and Melilla (Navarra keeps the chains, without the crown and the emerald). Convention: the exact shade of each colour (only Asturias fixes it
       in a law) and which two are each civilization's in the game, which Unciv wants to contrast.</td></tr>
     <tr><td>Advantage</td><td>Real: the map resource of which the community holds the most tiles in its land and
-      coast relative to its size (among those it holds $unique_min or more tiles of). Convention: what it gives, one
-      more food, production and gold on each tile of that resource its cities work.</td></tr>
+      coast relative to its size (among those it holds $unique_min or more tiles of$unique_fallback). Convention: what it
+      gives, one more food, production and gold on each tile of that resource its cities work. Horses, iron and the
+      other strategic resources stay hidden until their technology is discovered, and until then their tiles give
+      nothing.</td></tr>
     <tr><td>Start bias</td><td>Real: the terrain (or the coast) most over-represented in its land on this map
-      compared with Spain, if it covers at least $bias_pct% of it. It only counts on other maps: on this one each
-      starts in its capital.</td></tr>
+      compared with Spain, if it covers at least $bias_pct% of it, under the game's name for it (Plains, Hill,
+      Forest...). It only counts on other maps: on this one each starts in its capital.</td></tr>
     <tr><td>Ceuta and Melilla</td><td>City-states. Convention: maritime, for their ports. Melilla's icon is the sky
       blue field of its flag, without the arms, and the white the game pairs with it is convention.</td></tr>
   </table>
 
   <h2>Play as your community</h2>
-  <table>
-    <tr><th>Civilization</th><th>Starts in</th><th>Advantage</th><th>Start bias</th></tr>
+  <div class="scroll"><table id="nations">
+    <tr><th>Civilization</th><th>Starts in</th><th>Advantage</th></tr>
     $nation_rows
-  </table>
+  </table></div>
 
   <h2>Resources</h2>
   <p>Each resource comes from data. Minerals go to the tile of their deposit or their mine: a Civilization resource

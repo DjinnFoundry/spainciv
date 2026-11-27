@@ -32,8 +32,9 @@ Android. Everything below was read in its source at the release the map is teste
   "Select players from starting locations" makes one player of each major nation with a "Player" or "Human" location,
   and one of the "Human" ones, at random, the human (MapFileSelectTable.onUseNationsFromMap).
 * A nation's emblem (Portrait.kt: PortraitNation) is the image NationPortraits/<name> drawn as it is, at three
-  quarters of a disc of its outerColor ringed in its innerColor; city banners show NationIcons/<name> tinted with its
-  innerColor (CityTable.addCivIcon). The texts of a mod are translated by its jsons/translations/<Language>.properties,
+  quarters of a disc of its outerColor ringed in its innerColor; a major civilization's city banners show
+  NationIcons/<name> tinted with its innerColor, and a city-state's show CityStateIcons/<its type> instead
+  (CityTable.addCivIcon), so a city-state's NationIcon is never seen. The texts of a mod are translated by its jsons/translations/<Language>.properties,
   lines "English text = translation" (TranslationFileReader); English is the game's own text and has no file.
 * A mod is a folder with `jsons/ModOptions.json`, `maps/` and `preview.png` (preview.jpg or .png, shown by the mod
   manager: core/src/com/unciv/ui/screens/modmanager/ModInfoAndActionPane.kt). The in-game mod browser lists the GitHub
@@ -113,6 +114,10 @@ MOD_RESOURCES = {
     },
 }
 RESOURCES |= {name: (r["resourceType"], set(r["terrainsCanBeFoundOn"]), 0) for name, r in MOD_RESOURCES.items()}
+# TileResources.json "revealedBy": the technology before which a strategic resource does not show on the map, and a
+# tile of it counts for no tile filter (Tile.kt: matchesSingleTerrainFilter needs canSeeResource).
+REVEALED_BY = {"Horses": "Animal Husbandry", "Iron": "Iron Working", "Coal": "Industrialization", "Oil": "Biology",
+               "Aluminum": "Electricity", "Uranium": "Atomic Theory"}
 # Terrains.json "RGB" of each terrain, for the preview image (Forest and Marsh have none: these are their map colours).
 RGB = {"Ocean": (43, 87, 151), "Coast": (70, 138, 216), "Lakes": (0, 171, 169), "Grassland": (0, 163, 0),
        "Plains": (153, 180, 51), "Tundra": (124, 62, 57), "Desert": (230, 172, 0), "Snow": (230, 238, 255),

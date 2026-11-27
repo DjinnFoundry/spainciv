@@ -412,6 +412,9 @@ class DesignationsTest(unittest.TestCase):
         texts = json.loads((play.TEMPLATES / "unciv-resources.json").read_text(encoding="utf-8"))
         for lang in ("es", "en"):
             self.assertEqual(set(texts[lang]), set(unciv.RESOURCES), lang)
+            self.assertTrue(all(len(v) == 3 for v in texts[lang].values()), lang)  # name, source, word in a sentence
+        self.assertEqual(texts["en"]["Horses"][2], "horse")  # "the map's 19 horse tiles"
+        self.assertTrue(set(unciv.REVEALED_BY) <= {r for r, (kind, _, _) in unciv.RESOURCES.items() if kind == "Strategic"})
 
     def test_the_iberian_ham_dops_give_the_mod_pig(self):
         pig = {n for n, r in spain_unciv.DESIGNATIONS.items() if r == "Cerdo ibérico"}
@@ -500,7 +503,9 @@ class ModAndPageTest(unittest.TestCase):
                                  "Images/ResourceIcons/Cerdo ibérico.png", "game.png", "game.atlas", "Atlases.json",
                                  "preview.png", "README.md", "LICENSE",
                                  *(f"Images/NationPortraits/{n}.png" for n in nations),
-                                 *(f"Images/NationIcons/{n}.png" for n in nations)})
+                                 # a city-state's banner shows its type's icon, never a NationIcon (unciv.py)
+                                 *(f"Images/NationIcons/{n['name']}.png" for n in self.doc["summary"]["nations"]
+                                   if not n["city_state"])})
         read = lambda p: z.read(f"{self.folder}/{p}")
         options = json.loads(read("jsons/ModOptions.json"))
         self.assertEqual((options["isBaseRuleset"], options["topics"]), (False, ["unciv-mod-maps"]))
@@ -548,8 +553,14 @@ class ModAndPageTest(unittest.TestCase):
             for start in s["starts"][1:]:
                 self.assertIn(start["city"], html)
             for row in play.nation_rows(s, lang):
-                self.assertIn("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>", html)
+                self.assertIn("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row[:play.PAGE_COLUMNS]) + "</tr>", html)
+            # The nations' table fits a phone: three columns, in a box that scrolls rather than clips; long words and
+            # the mod's address break.
+            table = html.split('<div class="scroll"><table id="nations">', 1)[1].split("</table></div>", 1)[0]
+            self.assertEqual(table.count("<th>"), play.PAGE_COLUMNS)
+            self.assertIn("main code { overflow-wrap: anywhere; }", html)
             self.assertIn(play.moved_starts(s), html)
+            self.assertIn(escape(play.unique_fallback(s, lang)), html)
             for name in s["not_placed_designations"]:
                 self.assertIn(escape(pick(name, lang)), html)
         self.assertIn("(PDO)", self.files[play.PAGES["en"]]().decode("utf-8"))
@@ -623,7 +634,7 @@ class NationsTest(unittest.TestCase):
             self.assertNotIn("/", n["name"])  # the name is a file name in Images/
         by_name = {n["name"]: n for n in self.nations_json}
         self.assertEqual(by_name["Ceuta"]["cityStateType"], "Maritime")
-        self.assertEqual(by_name["Euskadi (País Vasco)"]["leaderName"], "President of the Government")
+        self.assertEqual(by_name["Euskadi (País Vasco)"]["leaderName"], "Lendakari")  # LO 3/1979 art. 24.1
 
     def test_every_nation_starts_at_its_seat_far_enough_from_the_others(self):
         by_pos = {p: i for i, p in enumerate(self.grid.positions)}
@@ -671,10 +682,54 @@ class NationsTest(unittest.TestCase):
             self.assertEqual(j["uniques"], [unciv.NATION_UNIQUE.format(resource=n["resource"])])
             self.assertLessEqual(n["resource_tiles"], n["resource_map_tiles"])
             self.assertTrue(n["start_bias"] is None or n["start_bias"] in spain_unciv.BIAS_TERRAINS)
-            self.assertTrue(pick(n["leader"], "es").startswith("Presidencia"))
-            for key in (j["leaderName"], j["uniqueName"], j["startIntroPart1"]):
-                self.assertIn(f"{key} = ", self.spanish)  # every English text has its Spanish line
+            self.assertTrue(pick(n["leader"], "es").startswith("Presidencia") or n["code"] == "16", n["name"])
+            en, es = (play.nation_texts(self.summary, n, lang) for lang in ("en", "es"))
+            for key, field in ((j["leaderName"], "leader"), (j["uniqueName"], "unique_name"), (j["startIntroPart1"], "intro")):
+                self.assertEqual(key, en[field])
+                if es[field] != key:  # every English text has its Spanish line, unless it is the same ("Lendakari")
+                    self.assertIn(f"{key} = {es[field]}\n", self.spanish)
         self.assertIn("Tierra de vino", self.spanish)
+
+    def test_municipalities_are_those_of_the_last_padron(self):
+        # The Padrón's series keeps the codes of merged municipalities (Cerdedo and Cotobade, Cesuras and Oza dos Ríos
+        # in Galicia) without a population in its last year: they are not counted.
+        padron = json.loads((ROOT / "data" / "interim" / "es" / "ine_padron.json").read_text(encoding="utf-8"))["data"]
+        year = spain_unciv.padron_year(padron)
+        live = [m for m in padron["municipalities"].values() if m["pop"].get(year) is not None]
+        cities = sum(len(spain_unciv.community_municipalities(padron, n["code"])) for n in self.nations if n["city_state"])
+        self.assertEqual(sum(n.get("municipalities", 0) for n in self.nations) + cities, len(live))
+        by_name = {n["name"]: n for n in self.nations}
+        self.assertEqual(by_name["Galicia"]["municipalities"], 313)
+        self.assertEqual(sum(n.get("population", 0) for n in self.nations) + sum(
+            spain_unciv.population(m, year) for n in self.nations if n["city_state"]
+            for m in spain_unciv.community_municipalities(padron, n["code"]).values()),
+            sum(spain_unciv.population(m, year) for m in live))
+
+    def test_the_texts_say_where_a_moved_nation_starts_and_when_its_resource_shows(self):
+        by_name = {n["name"]: n for n in self.nations}
+        clm, rioja, cyl = by_name["Castilla-La Mancha"], by_name["La Rioja"], by_name["Castilla y León"]
+        self.assertIn("Empiezas a 1 casilla de Toledo.", play.nation_texts(self.summary, clm, "es")["intro"])
+        self.assertIn("You start 2 tiles from Logroño.", play.nation_texts(self.summary, rioja, "en")["intro"])
+        self.assertEqual(play.nation_texts(self.summary, rioja, "es")["starts_in"], "Logroño (a 2 casillas)")
+        self.assertEqual(play.nation_texts(self.summary, by_name["Galicia"], "es")["starts_in"], "Santiago de Compostela")
+        self.assertEqual(cyl["resource"], "Uranium")  # dormant until Atomic Theory: the texts say so
+        self.assertIn("hasta que descubres Teoría atómica", play.nation_texts(self.summary, cyl, "es")["intro"])
+        self.assertIn("revealed by Atomic Theory", play.nation_texts(self.summary, cyl, "en")["advantage"])
+        self.assertNotIn("revealed", play.nation_texts(self.summary, by_name["Canarias"], "en")["advantage"])
+
+    def test_terrain_and_technology_names_are_unciv_s_own(self):
+        # Unciv 5.0.1, android/assets/jsons/translations/Spanish.properties: what its nation picker shows.
+        spanish = {"Coast": "Costa", "Hill": "Colinas", "Mountain": "Montaña", "Forest": "Bosque", "Marsh": "Pantano",
+                   "Grassland": "Pradera", "Plains": "Sabana", "Desert": "Desierto", "Tundra": "Tundra"}
+        techs = {"Animal Husbandry": "Ganadería", "Iron Working": "Trabajo del hierro",
+                 "Industrialization": "Industrialización", "Biology": "Biología", "Electricity": "Electricidad",
+                 "Atomic Theory": "Teoría atómica"}
+        es, en = play.nation_templates("es"), play.nation_templates("en")
+        self.assertEqual(es["terrains"], spanish)
+        self.assertEqual(en["terrains"], {t: t for t in spain_unciv.BIAS_TERRAINS})
+        self.assertEqual(es["techs"], techs)
+        self.assertEqual(en["techs"], {t: t for t in techs})
+        self.assertEqual(set(techs), set(unciv.REVEALED_BY.values()))
 
     def test_colours_contrast_as_unciv_asks_and_no_two_nations_share_both(self):
         pairs = [(tuple(n["outer"]), tuple(n["inner"])) for n in self.nations]

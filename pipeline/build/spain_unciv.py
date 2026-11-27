@@ -100,15 +100,19 @@ WONDER = ("Rock of Gibraltar", "Gibraltar")  # Unciv's natural wonder, and the N
 # The autonomous communities as Unciv nations, by INE code (pipeline/sources/es/provinces.py COMMUNITIES): the nation's
 # name, the INE code of the municipality where its government sits, and its leader. Each is read in the community's
 # Statute of Autonomy, in the BOE's consolidated text (DECISIONS.md, E87):
-# * name: INE's, in reading order ("Madrid, Comunidad de" → "Madrid"), with the other name in brackets: the one the
-#   Statute itself gives ("Euskadi o País Vasco", LO 3/1979 art. 1, in its order) or the one in the co-official
-#   language where it differs (Catalunya). Brackets and not a slash: the name is also the file name of its icon;
+# * name: the short form of INE's ("Madrid, Comunidad de" → "Madrid", "Balears, Illes" → "Illes Balears"), because
+#   Unciv writes the leader as "<title> de <name>" ("Presidencia de la Comunidad de Madrid"), with the other name in
+#   brackets: the one the Statute itself gives ("Euskadi o País Vasco", LO 3/1979 art. 1, in its order) or the one in
+#   the co-official language where it differs (Catalunya). Brackets and not a slash: the name is also the file name of
+#   its icon;
 # * seat: the capital or seat of its government the Statute names, or the law it leaves that to (Castilla y León, Ley
 #   13/1987; Castilla-La Mancha, Ley 3/1983; Galicia, Ley 1/1982; Euskadi, Decreto Legislativo 6/2023). Canarias has
 #   two capitals (LO 1/2018 art. 5.1) and its Presidency sits in each in turn by legislature: the nation starts in the
-#   larger by population, Las Palmas de Gran Canaria, and Santa Cruz de Tenerife is the next city in its list;
+#   more populous of the two, Las Palmas de Gran Canaria, and Santa Cruz de Tenerife is the next city in its list;
 # * leader: the office, never a person: the Statute's title of the head of government, which Unciv shows as
-#   "<title> de <name>" ("Presidencia de la Junta de Andalucía"; English "President of the Junta of Andalucía").
+#   "<title> de <name>" ("Presidencia de la Junta de Andalucía"; English "President of the Junta of Andalucía"); for
+#   Euskadi its other name in the Statute, "Lendakari" (LO 3/1979 art. 24.1 and chapter II), since "Presidente del
+#   Gobierno Vasco" does not take "de Euskadi" after it.
 COMMUNITY_NATIONS = {
     "01": ("Andalucía", "41091", tr("Presidencia de la Junta", "President of the Junta")),
     "02": ("Aragón", "50297", tr("Presidencia", "President")),
@@ -125,7 +129,7 @@ COMMUNITY_NATIONS = {
     "13": ("Madrid", "28079", tr("Presidencia de la Comunidad", "President of the Community")),
     "14": ("Murcia", "30030", tr("Presidencia de la Comunidad Autónoma", "President of the Autonomous Community")),
     "15": ("Navarra", "31201", tr("Presidencia de la Comunidad Foral", "President of the Foral Community")),
-    "16": ("Euskadi (País Vasco)", "01059", tr("Presidencia del Gobierno", "President of the Government")),
+    "16": ("Euskadi (País Vasco)", "01059", tr("Lendakari", "Lendakari")),
     "17": ("La Rioja", "26089", tr("Presidencia de la Comunidad Autónoma", "President of the Autonomous Community")),
 }
 # The autonomous cities, city-states of the type of their port (Unciv's CityStateTypes.json: Maritime).
@@ -310,8 +314,12 @@ def population(municipality: dict, year: str) -> int:
 
 
 def community_municipalities(padron: dict, code: str) -> dict[str, dict]:
-    """INE code → Padrón entry of the municipalities of the community (or autonomous city) `code`."""
-    return {g: m for g, m in padron["municipalities"].items() if COMMUNITY_OF.get(g[:2]) == code}
+    """INE code → Padrón entry of the municipalities of the community (or autonomous city) `code` in the Padrón's last
+    year. The Padrón's series also holds the codes of municipalities merged or renumbered since, without a population
+    that year (Cerdedo and Cotobade, now Cerdedo-Cotobade): they are left out."""
+    year = padron_year(padron)
+    return {g: m for g, m in padron["municipalities"].items()
+            if COMMUNITY_OF.get(g[:2]) == code and m["pop"].get(year) is not None}
 
 
 def city_names(code: str, seat: str, padron: dict, names: dict[str, str]) -> list[str]:

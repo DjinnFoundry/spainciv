@@ -3,7 +3,8 @@ pipeline/build/spain_unciv.py), as pipeline/site.py serves and packages them:
 
 * unciv/<Mod>.zip: the mod, one folder with jsons/ModOptions.json, jsons/TileResources.json (its own resources),
   jsons/Nations.json (the autonomous communities and cities) and jsons/translations/Spanish.properties (their texts in
-  Spanish), maps/<map name>, Images/ (the resource's icon and each nation's flag, NationPortraits/ and NationIcons/)
+  Spanish), maps/<map name>, Images/ (the resource's icon, each nation's flag in NationPortraits/ and each major
+  nation's city-banner icon in NationIcons/)
   and the atlas of those images (game.atlas, game.png, Atlases.json), preview.png, README.md and LICENSE; Unciv's
   "Download mod from URL" takes it as is, and its contents are what the mod's GitHub repository holds;
 * unciv/<map file>: the bare map for the base ruleset alone (without the mod's resources), for the `maps` folder of a
@@ -93,7 +94,10 @@ def mod_entries(country: Country, doc: dict) -> dict[str, bytes]:
     options = unciv.mod_options(AUTHOR, f"https://github.com/{summary['mod']['repo']}")
     images = {ICON.format(name=name): pig_icon() for name in unciv.MOD_RESOURCES}  # region → RGBA pixels
     for n in summary["nations"]:
-        images[PORTRAIT.format(name=n["name"])], images[NATION_ICON.format(name=n["name"])] = flag_images(n)
+        portrait, icon = flag_images(n)
+        images[PORTRAIT.format(name=n["name"])] = portrait
+        if not n["city_state"]:  # a city-state's banner shows its type's icon (pipeline/build/unciv.py)
+            images[NATION_ICON.format(name=n["name"])] = icon
     return {
         "jsons/ModOptions.json": json_bytes(options),
         "jsons/TileResources.json": json_bytes(unciv.tile_resources_json()),
@@ -201,17 +205,26 @@ def nation_templates(lang: str) -> dict:
 
 
 def nation_texts(summary: dict, nation: dict, lang: str) -> dict[str, str]:
-    """A major nation's leader title, unique's name, start text and advantage in `lang` (unciv-nations.json), with its
-    numbers as the language writes them."""
-    templates = nation_templates(lang)
-    resource = resource_texts(summary, lang)[nation["resource"]][0]
-    fields = {"name": nation["name"], "capital": nation["cities"][0], "year": summary["padron_year"],
+    """A major nation's leader title, unique's name, start text, advantage and starting city in `lang`
+    (unciv-nations.json), with its numbers as the language writes them. A nation that starts off its seat's tile says
+    how far; a strategic resource says the technology that reveals it (unciv.REVEALED_BY), before which its tiles
+    give nothing."""
+    t = nation_templates(lang)
+    sub = lambda key, **fields: Template(t[key]).substitute(fields)
+    name, _, word = resource_texts(summary, lang)[nation["resource"]]
+    capital, off = nation["cities"][0], nation["start_off_seat"]
+    distance = Template(t["tiles"][off != 1]).substitute(n=off)  # "1 casilla", "2 casillas"
+    tech = unciv.REVEALED_BY.get(nation["resource"])
+    fields = {"name": nation["name"], "capital": capital, "year": summary["padron_year"],
               "population": num(nation["population"], lang=lang), "municipalities": num(nation["municipalities"], lang=lang),
-              "land_tiles": nation["land_tiles"], "resource": resource, "resource_lower": resource.lower(),
-              "resource_tiles": nation["resource_tiles"], "resource_map_tiles": nation["resource_map_tiles"]}
-    out = {"leader": pick(nation["leader"], lang),
-           **{k: Template(templates[k]).substitute(fields) for k in ("unique_name", "intro")}}
-    return out | {"advantage": Template(templates["advantage"]).substitute(fields, unique_name=out["unique_name"])}
+              "start": sub("start_near", distance=distance, capital=capital) if off else sub("start", capital=capital),
+              "land_tiles": nation["land_tiles"], "resource": name, "resource_word": word,
+              "resource_tiles": nation["resource_tiles"], "resource_map_tiles": nation["resource_map_tiles"],
+              "hidden": sub("hidden", tech=t["techs"][tech]) if tech else "",
+              "hidden_short": sub("hidden_short", tech=t["techs"][tech]) if tech else ""}
+    return {"leader": pick(nation["leader"], lang), "unique_name": sub("unique_name", **fields),
+            "intro": sub("intro", **fields), "advantage": sub("advantage", **fields),
+            "starts_in": sub("start_cell_near", capital=capital, distance=distance) if off else capital}
 
 
 def nation_json(summary: dict, nation: dict) -> dict:
@@ -236,15 +249,29 @@ def translations(summary: dict, lang: str) -> dict[str, str]:
 
 
 def nation_rows(summary: dict, lang: str) -> list[tuple[str, str, str, str]]:
-    """(name, first city, advantage, start bias) of each nation, in `lang`, for the page and the README."""
+    """(name, where it starts, advantage, start bias) of each nation, in `lang`: the README shows the four, the page
+    the first three (the start bias only counts on other maps)."""
     templates, rows = nation_templates(lang), []
     for n in summary["nations"]:
         if n["city_state"]:
             rows.append((n["name"], n["cities"][0], templates["city_state"], ""))
         else:
             bias = templates["terrains"][n["start_bias"]] if n["start_bias"] else templates["no_bias"]
-            rows.append((n["name"], n["cities"][0], nation_texts(summary, n, lang)["advantage"], bias))
+            t = nation_texts(summary, n, lang)
+            rows.append((n["name"], t["starts_in"], t["advantage"], bias))
     return rows
+
+
+PAGE_COLUMNS = 3  # the columns of nation_rows the page shows
+
+
+def unique_fallback(summary: dict, lang: str) -> str:
+    """What the page adds to the unique's rule for the nations that hold no resource on UNIQUE_MIN_TILES tiles (their
+    resource is chosen among all they hold): "; si no llega a 2 en ninguno, entre todos: Madrid", or nothing."""
+    names = [n["name"] for n in summary["nations"]
+             if not n["city_state"] and n["resource_tiles"] < spain_unciv.UNIQUE_MIN_TILES]
+    return Template(nation_templates(lang)["fallback"]).substitute(
+        unique_min=spain_unciv.UNIQUE_MIN_TILES, names=", ".join(names)) if names else ""
 
 
 def n_nations(summary: dict) -> int:
@@ -273,11 +300,12 @@ def template_json(template: str, lang: str) -> dict:
     return json.loads((TEMPLATES / template).read_text(encoding="utf-8"))[lang]
 
 
-def resource_texts(summary: dict, lang: str) -> dict[str, tuple[str, str]]:
-    """Resource → (its name in `lang`, where it comes from), with the summary's numbers filled in."""
+def resource_texts(summary: dict, lang: str) -> dict[str, tuple[str, str, str]]:
+    """Resource → (its name in `lang`, where it comes from, its word inside a sentence), with the summary's numbers
+    filled in."""
     texts = template_json("unciv-resources.json", lang)
     numbers = {"horse_density": f"{summary['horse_density']:g}", "horse_comarcas": summary["horse_comarcas"]}
-    return {r: (name, Template(src).substitute(numbers)) for r, (name, src) in texts.items()}
+    return {r: (name, Template(src).substitute(numbers), word) for r, (name, src, word) in texts.items()}
 
 
 def common_fields(country: Country, summary: dict, lang: str | None = None) -> dict:
@@ -316,8 +344,9 @@ def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
         "coast_m": -unciv.COAST_DEPTH_M, "mountain_pct": round(unciv.MOUNTAIN_SHARE * 100),
         "hill_pct": round(unciv.HILL_SHARE * 100), "forest_pct": unciv.FOREST_PCT, "marsh_pct": unciv.MARSH_PCT,
         "tundra_m": unciv.TUNDRA_ELEV_M, "river_edges": s["river_edges"], "resource_rows": rows,
-        "nation_rows": "".join("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>"
+        "nation_rows": "".join("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row[:PAGE_COLUMNS]) + "</tr>"
                                for row in nation_rows(s, lang)),
+        "unique_fallback": escape(unique_fallback(s, lang)),
         "bias_pct": round(spain_unciv.BIAS_SHARE * 100), "unique_min": spain_unciv.UNIQUE_MIN_TILES,
         "city_gap": spain_unciv.MIN_SEAT_GAP - 1, "city_names": spain_unciv.CITY_NAMES,
         "rivals": n_nations(s) - 1,
