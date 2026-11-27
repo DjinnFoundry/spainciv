@@ -73,7 +73,7 @@ export function initPedia(data) {
           <div class="lens-entry"><div class="le-ic">${glyph(l, 26)}</div><div>
           <h4>${esc(l.name)}</h4><p>${esc(l.description)}<br>
           <i class="le-ramp" style="background:linear-gradient(90deg, ${(l.ramp || []).map(esc).join(",")})"></i>
-          <span class="muted">${t("core.pedia.lenses.scale", { scale: esc(l.scale === "log" ? t("core.pedia.scale.log") : l.scale === "linear" ? t("core.pedia.scale.linear") : l.scale), from: bound(l, l.domain[0]), to: bound(l, l.domain[1]), unit: esc(l.unit) })}${
+          <span class="muted">${l.scale_text ? esc(l.scale_text) : t("core.pedia.lenses.scale", { scale: esc(l.scale === "log" ? t("core.pedia.scale.log") : l.scale === "linear" ? t("core.pedia.scale.linear") : l.scale), from: bound(l, l.domain[0]), to: bound(l, l.domain[1]), unit: esc(l.unit) })}${
             l.higher_is === "good" ? t("core.pedia.lenses.better") : l.higher_is === "bad" ? t("core.pedia.lenses.worse") : ""}${l.source ? " · " + esc(srcName(l.source)) : ""}</span></p></div></div>`).join("")}`;
       }).join("")}`,
     Resources: () => {

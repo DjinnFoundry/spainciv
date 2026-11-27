@@ -46,6 +46,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `natural_earth_es` | Natural Earth 1:10m | Public domain | Neighbouring countries, lakes, rivers |
 | `natural_earth_roads_es` | Natural Earth 1:10m roads and railroads | Public domain | Motorways, main roads and railroads on the map |
 | `etopo_es` | NOAA NCEI ETOPO1 via ERDDAP | Public domain | Relief, sea depth |
+| `noaa_solar` | NOAA Global Monitoring Laboratory, Solar Calculator: "Solar Calculation Details" (after Meeus, *Astronomical Algorithms*), https://gml.noaa.gov/grad/solcalc/calcdetails.html; the page and the calculator's `main.js` are cached, nothing else is processed | Public domain | The Sun and clock lens, worked out in the browser for each hex (DECISIONS E84) |
 | `corine` | Copernicus CLC 2018, read from the IGN/IDEE land-cover WMS by legend colour | CC BY 4.0 (IDEE); Copernicus free, full and open data policy | Land cover |
 | `audes` | Ministerio de Vivienda y Agenda Urbana, Atlas Digital de las Áreas Urbanas: large urban areas 2025 and their municipalities | Public-sector information, reuse citing the source (Ley 37/2007) | Cities (urban areas) and their members |
 | `oapn_parques` | OAPN (Red de Parques Nacionales), boundaries via its WFS | Public-sector information, reuse citing the source (Ley 37/2007) | National Park wonders, protected land |

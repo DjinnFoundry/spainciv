@@ -32,9 +32,23 @@ class LensesJsTest(unittest.TestCase):
         self.assertEqual(got, ["Nadie", "A"])
 
     def test_time_lenses_show_clock_times_and_durations(self):
-        # A browser-built lens holds minutes (the sunset lens): times of day on the legend's ticks, durations in hours.
+        # A browser-built lens holds minutes (the sun lens): times of day on the legend's ticks, durations in hours.
         clock, dur = "{format: 'clock', domain: [1255, 1340]}", "{format: 'duration', domain: [534, 927]}"
         got = self.run_js(f"[m.formatLensValue({clock}, 1321), m.formatLensTick({clock}, 0, 0), m.formatLensTick({clock}, 1, 4), "
                           f"m.formatLensValue({dur}, 927), m.formatLensValue({dur}, 54), m.formatLensValue({dur}, 60), "
                           f"m.isTimeLens({clock}), m.isTimeLens({dur}), m.isTimeLens({{format: 'int'}})]")
         self.assertEqual(got, ["22:01", "≤ 20:55", "≥ 22:20", "15 h 27 min", "54 min", "1 h", True, True, False])
+
+    def test_a_lens_built_in_the_browser_never_takes_the_lens_files_vintage(self):
+        # The file's lenses with a source sources.json lacks show the file's vintage; a lens added later (app.addLens
+        # splices it into the same list) shows only its source, dated or not.
+        got = self.run_js("""(() => {
+          const file = {vintage: 'INE Padrón, 1 January 2025', lenses: [{id: 'a', source: 'ine'}, {id: 'b', source: 'dated'}]};
+          const sources = [{id: 'noaa_solar', title: 'NOAA Solar Calculator', vintage: null},
+                           {id: 'dated', title: 'Dated', vintage: '2024'}];
+          const line = m.lensSourceLine(file, sources);
+          const sun = {id: 'sun', source: 'noaa_solar'}, loose = {id: 'x', source: 'free text'};
+          file.lenses.push(sun, loose);
+          return [line(file.lenses[0]), line(file.lenses[1]), line(sun), line(loose)];
+        })()""")
+        self.assertEqual(got, ["ine · INE Padrón, 1 January 2025", "Dated · 2024", "NOAA Solar Calculator", "free text"])

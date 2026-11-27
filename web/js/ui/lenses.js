@@ -98,6 +98,19 @@ const saveRecent = (ids) => {
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(ids)); } catch { /* private mode: fine */ }
 };
 
+/** The legend's source line of a lens: its source's title (or publisher) and vintage, else the lens file's vintage, but
+ *  only for the lenses the file had when this was made. A lens built in the browser (app.addLens) never takes the
+ *  file's vintage: the municipal register's date is not the date of a calendar or of the sun's equations. */
+export function lensSourceLine(lensFile, sources = []) {
+  const fromFile = new Set(lensFile?.lenses || []);
+  return (lens) => {
+    const src = sources.find((s) => s.id === lens.source);
+    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : lens.source;
+    const vintage = src?.vintage || (fromFile.has(lens) ? lensFile.vintage : "") || "";
+    return [name, vintage].filter(Boolean).map(esc).join(" · ");
+  };
+}
+
 /**
  * opts: {lenses (lenses.json), sources (sources.json list), w (prepared world), onPick(lens|null), onBand(band|null)}
  */
@@ -234,12 +247,7 @@ export function initLensDock(opts) {
     return { counts, n, max: Math.max(1, ...counts) };
   });
 
-  function sourceLine(lens) {
-    const src = sources.find((s) => s.id === lens.source);
-    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : lens.source;
-    const vintage = src?.vintage || lensFile?.vintage || "";
-    return [name, vintage].filter(Boolean).map(esc).join(" · ");
-  }
+  const sourceLine = lensSourceLine(lensFile, sources);
 
   // Categorical lenses (format "category"): values are indices into lens.categories, whose colours are the ramp
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
@@ -264,7 +272,7 @@ export function initLensDock(opts) {
   });
   const noteHtml = (l) => (l.note ? `<div class="lg-note">${esc(l.note)}</div>` : "");
   // Both legends' title row: the lens, the details toggle and the close button.
-  const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.name)}</span>
+  const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.heading || l.name)}</span>
         <button class="icon-btn lg-more" aria-expanded="${legendExpanded}" aria-label="${t("core.lens.showFull")}" title="${t("core.lens.details")}">${legendExpanded ? "−" : "+"}</button>
         <button class="icon-btn lg-close" aria-label="${t("core.lens.off")}" title="${t("core.lens.backToTerrain")}">${icon("close", "✕", { size: 11 })}</button></div>`;
 

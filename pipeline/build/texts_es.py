@@ -233,6 +233,16 @@ SOURCES = {
         "rugosidad de sus muestras de tierra.",
         "used_for": ["Relieve (colinas, montañas)", "Sombreado del relieve", "Profundidad del mar"],
     },
+    "noaa_solar": {
+        "title": "Calculadora solar de la NOAA: ecuaciones de posición del Sol (Solar Calculation Details)",
+        "publisher": "NOAA Global Monitoring Laboratory",
+        "license": "Dominio público (obra del Gobierno de EE. UU.)",
+        "description": "Las ecuaciones con que la calculadora solar de la NOAA halla la declinación del Sol y la ecuación "
+        "del tiempo, de Jean Meeus, Astronomical Algorithms; la salida y la puesta, con el centro del Sol 0,833° bajo un "
+        "horizonte a nivel del mar. La NOAA las da como exactas, en teoría, a un minuto entre ±72° de latitud; las horas "
+        "observadas varían con la atmósfera. El mapa las calcula en el navegador para el centro de cada hexágono.",
+        "used_for": ["Lente Sol y reloj (salida, puesta, mediodía solar, horas de luz)"],
+    },
     "ine_adrh": {
         "title": "Atlas de Distribución de Renta de los Hogares (ADRH): indicadores de renta media y mediana, tabla 30824",
         "license": _INE_LICENCE,
