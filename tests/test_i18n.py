@@ -319,7 +319,7 @@ class SpanishDataTest(unittest.TestCase):
              "source", "sources", "file", "files", "sha256", "url", "cbsa", "county", "state", "naics", "via", "basis",
              "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
-             "locale", "currency",
+             "locale", "currency", "measure",  # trade.json: "tons"
              "map", "natural_wonders",  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
              "bare", "start_bias", "resource", "seat"}  # the bare map like the map; a nation's Unciv terrain, resource, seat
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit

@@ -4,7 +4,7 @@
 //
 // Data: infrastructure.json, military.json, wonders.json and trade.json (loaded eagerly by main.js right after the
 // first frame; app.loadData returns the same promise). A missing file (null) leaves its layers off and takes their
-// switches out of the menu (Spain has no military or trade file). Defaults: roads, rail, ports & airports, military and
+// switches out of the menu (a country without one of these files). Defaults: roads, rail, ports & airports, military and
 // wonders on (roads, rail and hubs only from the region view in: see each layer's minRpx), trade routes off.
 import { createModel } from "./model.js";
 import { makeLayers } from "./layers.js";

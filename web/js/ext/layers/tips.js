@@ -98,14 +98,15 @@ export const tips = {
   },
   route(rt, m) {
     const r = rt.route;
-    const t = m.data.trade || {};
+    const trade = m.data.trade || {};
+    if (trade.measure === "tons") return tonsRoute(rt, trade);
     const a = rt.a?.short || rt.a?.name || r.a, b = rt.b?.short || rt.b?.name || r.b;
     const modes = Object.entries(r.modes || {}).filter(([, v]) => v >= 0.05).sort((p, q) => q[1] - p[1])
       .map(([k, v]) => `${esc(MODE_STYLE[k]?.label || k)} ${Math.round(v * 100)}%`).join(" · ");
-    const com = t.commodities?.[r.top_commodity];
+    const com = trade.commodities?.[r.top_commodity];
     const lines = [
       `<b>${esc(a)} ⇄ ${esc(b)}</b> ${muted(`trade route #${esc(r.rank)}`)}`,
-      `<b>${usd(r.value_musd * 1e6)}</b> of freight a year, ${num(r.tons_k * 1e3)} short tons (FAF ${esc(t.year ?? "")} estimate)`,
+      `<b>${usd(r.value_musd * 1e6)}</b> of freight a year, ${num(r.tons_k * 1e3)} short tons (FAF ${esc(trade.year ?? "")} estimate)`,
     ];
     if (modes) lines.push(modes);
     if (com) lines.push(`Top commodity: ${esc(com)}`);
@@ -113,3 +114,18 @@ export const tips = {
     return lines.join("<br>");
   },
 };
+
+/** A route of a trade.json in tonnes (Spain's EPTMC): both directions, each one, and the average haul. */
+function tonsRoute(rt, trade) {
+  const r = rt.route;
+  const full = (z, id) => esc(z?.name || z?.short || id), short = (z, id) => esc(z?.short || z?.name || id);
+  const tons = (kt) => `${num(kt * 1e3)} t`;
+  const lines = [
+    `<b>${full(rt.a, r.a)} ⇄ ${full(rt.b, r.b)}</b> ${muted(t("trade.tip.rank", { rank: esc(r.rank) }))}`,
+    t("trade.tip.tons", { tons: tons(r.tons_k), year: esc(trade.year ?? "") }),
+    t("trade.tip.dirs", { a: short(rt.a, r.a), b: short(rt.b, r.b), ab: tons(r.ab_k), ba: tons(r.ba_k) }),
+  ];
+  if (r.haul_km) lines.push(t("trade.tip.haul", { km: int(r.haul_km) }));
+  lines.push(muted(t("trade.tip.note")));
+  return lines.join("<br>");
+}
