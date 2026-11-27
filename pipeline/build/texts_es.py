@@ -200,6 +200,8 @@ def vintage(text: str | None) -> Text | str | None:
 _INE_LICENCE = ("CC BY 4.0 (aviso legal del INE): reutilización comercial y no comercial citando la fuente como "
                 "«Elaboración propia con datos del INE»; el INE no avala este mapa")
 _REUSE = "Información del sector público, reutilizable citando la fuente (Ley 37/2007)"
+_AEMET = ("Nota legal de AEMET: reutilización permitida citando a AEMET como autora (Ley 37/2007, modificada por la "
+          "Ley 18/2015); AEMET no avala este mapa")
 _PINNED = "Los ficheros están fijados en la versión v5.1.2 de natural-earth-vector."
 # The Almanac entry of each Spanish source (sources.json): the fields in Spanish, by source id.
 SOURCES = {
@@ -615,6 +617,14 @@ SOURCES = {
         "provincia o isla es la provincia o la isla menos sus municipios de la lista.",
         "used_for": ["Lente de criminalidad (infracciones penales conocidas por 1.000 habitantes)",
                      "Lente del delito que más destaca sobre la tasa de España"],
+    },
+    "aemet_normales_provincias": {
+        "title": "Valores normales 1991-2020 por provincia (AEMET, Estadística de Vigilancia del Clima)",
+        "license": _AEMET,
+        "description": "Las normales mensuales 1991-2020 de AEMET de temperatura media, media de las máximas, media de "
+        "las mínimas y precipitación de cada provincia, Ceuta, Melilla y la España peninsular: AEMET interpola los datos "
+        "de sus estaciones a una rejilla y la promedia en cada región.",
+        "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, Ceuta y Melilla)"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
