@@ -72,12 +72,12 @@ class BalanceCriminalidad(Source):
         license="Public-sector information, reuse citing the source (Ley 37/2007)",
         description="Criminal offences known to the police (Policía Nacional, Guardia Civil, Mossos d'Esquadra, "
         "Ertzaintza, Policía Foral de Navarra and the local police forces that report to the Sistema Estadístico de "
-        "Criminalidad), by complaint or by the police's own action, in thirteen types (homicide, assault, sexual "
-        "offences, robbery, burglary, theft, vehicle theft, drug trafficking, online fraud, other cybercrime, the rest) "
-        "and in total. Spain, every province and the offences committed abroad (one table), every island and every "
-        "municipality over 20,000 inhabitants (the other). The rest of each province or island is the province or "
-        "island minus its listed municipalities.",
-        used_for=["Crime lens (known offences per 1,000 inhabitants)", "Crime type above Spain's rate lens"],
+        "Criminalidad), by complaint or by the police's own action, in thirteen types (homicide, attempted homicide, "
+        "assault, kidnapping, sexual offences, robbery, burglary, theft, vehicle theft, drug trafficking, online "
+        "fraud, other cybercrime, the rest) and in total. Spain, every province and the offences committed abroad "
+        "(one table), every island and every municipality over 20,000 inhabitants (the other). The rest of each "
+        "province or island is the province or island minus its listed municipalities.",
+        used_for=["Crime lens (known offences per 1,000 inhabitants)", "Standout offence lens (the type furthest above Spain's rate)"],
     )
 
     def _file(self, key: str) -> str:

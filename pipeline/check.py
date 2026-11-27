@@ -534,6 +534,12 @@ def check_lenses(r: Report, doc, ctx: dict | None, source_ids: set | None) -> No
             _check_categories(r, what, lens)
         elif "categories" in lens:
             r.fail(f"{what}: categories is only for format 'category'")
+        if "labels_from" in lens:
+            other = next((l for l in doc["lenses"] if isinstance(l, dict) and l.get("id") == lens["labels_from"]), None)
+            if not (other and isinstance(other.get("labels"), list) and "labels_from" not in other):
+                r.fail(f"{what}: labels_from {lens['labels_from']!r} is not a lens with its own labels")
+            elif not (isinstance(lens.get("names"), list) and len(lens["names"]) == len(other.get("names") or [])):
+                r.fail(f"{what}: labels_from {lens['labels_from']!r} needs one name per name of that lens")
         vals = lens["values"]
         if ctx is None:
             continue

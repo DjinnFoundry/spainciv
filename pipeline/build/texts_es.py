@@ -598,9 +598,9 @@ SOURCES = {
         "license": _REUSE,
         "description": "Infracciones penales que conocen la Policía Nacional, la Guardia Civil, los Mossos d'Esquadra, la "
         "Ertzaintza, la Policía Foral de Navarra y las policías locales que informan al Sistema Estadístico de "
-        "Criminalidad, por denuncia o por actuación policial, en trece tipos (homicidios, lesiones, delitos sexuales, "
-        "robos con violencia, robos con fuerza, hurtos, sustracciones de vehículos, tráfico de drogas, estafas "
-        "informáticas, otros ciberdelitos, el resto) y en total. España, cada provincia y las cometidas en el "
+        "Criminalidad, por denuncia o por actuación policial, en trece tipos (homicidios, intentos de homicidio, "
+        "lesiones, secuestros, delitos sexuales, robos con violencia, robos con fuerza, hurtos, sustracciones de "
+        "vehículos, tráfico de drogas, estafas informáticas, otros ciberdelitos, el resto) y en total. España, cada provincia y las cometidas en el "
         "extranjero (una tabla), cada isla y cada municipio de más de 20.000 habitantes (la otra). El resto de cada "
         "provincia o isla es la provincia o la isla menos sus municipios de la lista.",
         "used_for": ["Lente de criminalidad (infracciones penales conocidas por 1.000 habitantes)",

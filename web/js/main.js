@@ -69,6 +69,8 @@ async function main() {
   };
   const states = Array.isArray(statesData) ? statesData : null;
   const lensById = new Map(lensFile.lenses.map((l) => [l.id, l]));
+  // A lens with `labels_from` lists the same places per hex as that lens, so lenses.json carries them once.
+  for (const l of lensFile.lenses) if (l.labels_from) l.labels = lensById.get(l.labels_from)?.labels ?? null;
   // The data file that names the people of the people lenses (lenses.json names_from), if this map has one.
   const peopleFile = lensFile.lenses.find((l) => l.names_from)?.names_from ?? null;
   const cityById = new Map(cities.map((c) => [c.id, c]));

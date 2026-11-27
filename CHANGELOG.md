@@ -7,10 +7,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ### Añadido
 - **Criminalidad**, en Riesgos: infracciones penales conocidas en 2025 por 1.000 habitantes, del Balance de
-  Criminalidad del Ministerio del Interior. Los 427 municipios de más de 20.000 habitantes llevan su tasa; los demás,
-  la del resto de su provincia o de su isla. El tooltip da los tres tipos con más casos. Una segunda lente, **Delito
-  que más destaca**, pinta el tipo que más supera la tasa de España (hurtos, estafas informáticas, robos con fuerza…).
-  La nota avisa de que la tasa es por residente y los sitios turísticos salen altos (E85, E86, F35).
+  Criminalidad del Ministerio del Interior. Los 427 municipios que lista el balance (los de más de 20.000 habitantes
+  según su padrón de referencia) llevan su tasa; Ceuta y Melilla, la de toda la ciudad; los demás, la del resto de su
+  provincia o de su isla. El tooltip da la tasa de cada unidad, sus tres tipos con más casos y lo que suman los demás.
+  Una segunda lente, **Delito que más destaca**, pinta el tipo que más supera la tasa de España, cuando llega a 1,25
+  veces y la unidad tiene 20.000 residentes o más, y el tooltip dice cuántas veces es la de España. La nota avisa de
+  que la tasa es por residente y los sitios turísticos salen altos (E85, E86, F35).
 - **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E80, E81).
 - Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
   Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.
