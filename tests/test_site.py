@@ -276,7 +276,8 @@ class CountryJsTest(unittest.TestCase):
         es = countries.COUNTRIES["es"]
         c = self.country({"country": {"id": "es"}}, json.dumps(site.page_config(es)), browser=["en-GB"])
         self.assertEqual((c["lang"], c["locale"]), ("en", dict(es.locales)["en"]))
-        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        # The train lens's "Powered by MITRAMS" (the NAP's licence) is the same text in both languages.
+        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", "Powered by MITRAMS"])
         self.assertEqual(c["data_credit"], es.page.in_lang("en").data_credit)
 
     def test_us_without_page_settings(self):
