@@ -43,6 +43,9 @@ lists the public data behind the map.
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
   salt, marble and iron where the IGME lists workings). How to install it:
   [spainciv.djinnfoundry.com/play.html](https://spainciv.djinnfoundry.com/play.html).
+- **Guess the hex**: a daily game on the map. Six clues from the map's data describe one 10 km hex; click where you
+  think it is, with six tries, distance and direction after each, and a spoiler-free result to share
+  ([spainciv.djinnfoundry.com/#juego](https://spainciv.djinnfoundry.com/#juego)).
 
 The map is in Spanish and English: it opens in the browser's language and a switch in the top bar changes it
 (interface in `web/js/i18n/`, data texts in an English overlay next to each data file; see docs/SPAIN.md). The US
@@ -93,4 +96,5 @@ Censo del INE, PIB provincial, renta, carreteras, ferrocarril y los 16 Parques N
 [docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). El mapa está en castellano e inglés:
 abre en el idioma del navegador y se cambia con un botón de la barra superior. El
 mismo mapa se juega en Unciv, la versión libre de Civilization V:
-[spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html).
+[spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html). Cada día hay un juego en el
+propio mapa, «Adivina el hexágono»: [spainciv.djinnfoundry.com/#juego](https://spainciv.djinnfoundry.com/#juego).

@@ -204,6 +204,36 @@ kbd {
 @media (max-width: 1720px) { .btn-ext .lbl { display: none; } .btn-ext { padding: 4px 7px; } body.tb-ext .turn { display: none; } }
 @media (max-width: 1320px) and (min-width: 701px) { body.tb-ext .brand-text { display: none; } }
 /* A docked dashboard plus the minimap leave the lens dock no room on smaller desktops: drop the minimap. */
+/* ---------- the daily game (ext/game), in the left dock ---------- */
+.game-dock { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
+.gm-head { display: flex; align-items: flex-start; gap: 8px; }
+.gm-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
+.gm-day { font-size: 13px; color: var(--ink-dim); white-space: nowrap; }
+.gm-rules { margin: 6px 0 10px; font-size: 12px; }
+.gm-clues, .gm-guesses { list-style: none; margin: 0; padding: 0; }
+.gm-clue { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin-bottom: 6px; background: var(--panel-2); }
+.gm-clue h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
+.gm-clue.locked { opacity: .45; padding: 5px 10px; }
+.gm-clue.locked h3 { margin: 0; color: var(--ink-dim); }
+.gm-n { color: var(--ink-dim); font-size: 12px; margin-right: 4px; }
+.gm-clue dl { margin: 0; display: grid; gap: 2px; }
+.gm-clue dl div { display: flex; gap: 8px; justify-content: space-between; }
+.gm-clue dt { color: var(--ink-dim); flex: none; max-width: 55%; }
+.gm-clue dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.gm-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 10px 0; }
+.gm-prompt { margin: 0; color: var(--ink-dim); }
+.game-dock .btn[disabled] { opacity: .45; cursor: default; }
+.gm-sub { margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
+.gm-guesses li { padding: 3px 0; border-bottom: 1px solid rgba(201,164,92,.18); }
+.gm-sq { margin-right: 6px; }
+.gm-end { margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 6px; background: rgba(90,74,36,.25); }
+.gm-end p { margin: 0 0 6px; }
+.gm-verdict { font-family: var(--serif); font-size: 17px; color: var(--gold-bright); }
+.gm-answer { font-size: 15px; }
+.gm-share { margin: 8px 0; padding: 8px 10px; background: rgba(0,0,0,.3); border-radius: 4px; font: 12px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gm-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+@media (max-width: 700px) { .game-dock { padding-top: 18px; } }
+
 @media (max-width: 1360px) and (min-width: 701px) {
   body.dock-open #minimap-wrap { display: none; }
   body.dock-open #lens-area { left: calc(12px + var(--dock-left, 0px)); }

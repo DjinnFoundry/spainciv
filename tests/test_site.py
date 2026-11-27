@@ -101,7 +101,8 @@ class RenderTest(unittest.TestCase):
                    "credits": site.credits_inner(es, "en")}
         self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
                                     "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
-                                    "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem)})
+                                    "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem),
+                                    "game": True})
         self.assertIn("lenses", h.config["data"])
         self.assertNotIn("lenses.en", h.config["data"])
         self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
@@ -119,6 +120,7 @@ class RenderTest(unittest.TestCase):
         self.assertIn("n&lt;", html)
         self.assertEqual(html.count("</script>"), TEMPLATE.count("</script>") + 1)
         self.assertEqual(Head(html).config["data_credit"], "</script>x")
+        self.assertNotIn("game", Head(html).config)  # the daily game is the page's choice
 
     def test_a_changed_template_fails_loudly(self):
         with self.assertRaises(ValueError):

@@ -789,8 +789,9 @@ saved by `download_prefix()` has a `partial` note in the manifest, and its `sha2
 ## Browser extension API (window.__app; main.js "extension API", app/api.js)
 
 Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/index.js` loads `cityView`, `advisors`,
-`layers` (roads, rail, forts, ports, airports, wonders and trade routes) and `lang` (the language switch of a country in
-several languages, with the `lang` hash key). The API:
+`layers` (roads, rail, forts, ports, airports, wonders and trade routes), `lang` (the language switch of a country in
+several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
+`juego`, only where the page settings say `game: true`; its rules and clues are in `ext/game/puzzle.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
