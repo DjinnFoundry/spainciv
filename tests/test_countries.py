@@ -7,8 +7,9 @@ from pathlib import Path
 import pipeline.__main__ as cli
 from pipeline import countries
 from pipeline.build import BUILDERS, builders_for, requires
+from pipeline.core.paths import ROOT
 from pipeline.sources import sources_for
-from pipeline.sources.es.provinces import PROVINCES, display_name
+from pipeline.sources.es.provinces import COMMUNITIES, PROVINCES, community_name, display_name
 from pipeline.sources.etopo import Etopo
 
 
@@ -117,6 +118,28 @@ class SpainReferenceTest(unittest.TestCase):
         self.assertEqual(display_name("Palmas, Las"), "Las Palmas")
         self.assertEqual(display_name("Rioja, La"), "La Rioja")
         self.assertEqual(display_name("Madrid"), "Madrid")
+
+    def test_community_name_reads_in_order(self):
+        got = {code: community_name(code) for code in COMMUNITIES}
+        self.assertEqual(len(got), 19)
+        self.assertEqual(got, {
+            "01": "Andalucía", "02": "Aragón", "03": "Principado de Asturias", "04": "Illes Balears", "05": "Canarias",
+            "06": "Cantabria", "07": "Castilla y León", "08": "Castilla - La Mancha", "09": "Cataluña",
+            "10": "Comunitat Valenciana", "11": "Extremadura", "12": "Galicia", "13": "Comunidad de Madrid",
+            "14": "Región de Murcia", "15": "Comunidad Foral de Navarra", "16": "País Vasco", "17": "La Rioja",
+            "18": "Ceuta", "19": "Melilla"})
+        self.assertFalse(any(", " in n for n in got.values()))
+
+    def test_published_provinces_carry_their_community(self):
+        """sites/es/data/states.json: each province's community, grouped exactly as provinces.COMMUNITIES."""
+        states = json.loads((ROOT / "sites/es/data/states.json").read_text(encoding="utf-8"))
+        groups = {}
+        for s in states:
+            c = s["community"]
+            self.assertEqual(c["name"], community_name(c["code"]), s["fips"])
+            groups.setdefault(c["code"], []).append(s["fips"])
+        self.assertEqual(len(groups), 19)
+        self.assertEqual({k: sorted(v) for k, v in groups.items()}, {k: sorted(ps) for k, (_, ps) in COMMUNITIES.items()})
 
 
 class EtopoWindowsTest(unittest.TestCase):

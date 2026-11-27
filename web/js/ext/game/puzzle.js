@@ -50,9 +50,8 @@ export function shuffled(pool) {
   return out;
 }
 
-/** The hex of puzzle `day`. */
-export function dailyCell(pool, day) {
-  const order = shuffled(pool);
+/** The hex of puzzle `day` (`order`, shuffled(pool), can be passed to look up many days). */
+export function dailyCell(pool, day, order = shuffled(pool)) {
   return order[(((day - 1) % order.length) + order.length) % order.length];
 }
 
@@ -321,9 +320,10 @@ export function gameData({ w, proj, lenses, names = [], cities = [], people = nu
   // The pool: notable hexes whose first clue leaves enough of Spain open.
   const areas = new Map(), area = (c) => `${zone(c)} ${sea(c)}`;
   land.forEach((c) => areas.set(area(c), (areas.get(area(c)) || 0) + 1));
-  const pool = land.filter((c) => areas.get(area(c)) >= MIN_FIRST && kinds(c).size >= MIN_KINDS && picks(c).some(distinctive));
+  const firstFits = (c) => areas.get(area(c)) || 0; // the land hexes that share the first clue's area and sea
+  const pool = land.filter((c) => firstFits(c) >= MIN_FIRST && kinds(c).size >= MIN_KINDS && picks(c).some(distinctive));
 
-  return { w, proj, lenses, land, pool, mask, count, has, top, picks, kinds, zone, sea, river, near };
+  return { w, proj, lenses, land, pool, mask, count, has, top, picks, kinds, zone, sea, firstFits, river, near };
 }
 
 // --- clues --------------------------------------------------------------------------------------------------------

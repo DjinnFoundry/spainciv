@@ -440,8 +440,23 @@ def check_states(r: Report, states, ctx: dict | None, yield_keys=YIELD_KEYS) -> 
             r.fail("states.json: too many errors, stopping")
             return
     _check_ranks(r, states, yield_keys)
+    _check_communities(r, states)
     if r.count("FAIL") == fails_before:
         r.ok(f"states.json: {len(states)} states, ranks are 1..N permutations ordered by yield")
+
+
+def _check_communities(r: Report, states: list) -> None:
+    """A state's `community` ({code, name}, Spain's autonomous community) is optional, but all or none have it."""
+    has = [isinstance(s, dict) and "community" in s for s in states]
+    if not any(has):
+        return
+    if not all(has):
+        r.fail(f"states.json: community on {sum(has)} of {len(states)} states; all or none must have it")
+        return
+    for s in states:
+        c = s["community"]
+        if not (isinstance(c, dict) and all(isinstance(c.get(k), str) and c[k] for k in ("code", "name"))):
+            r.fail(f"states.json {s.get('abbr')}: community must be {{code, name}} non-empty strings, got {c!r}"[:240])
 
 
 def _check_energy(r: Report, what: str, e) -> None:

@@ -7,6 +7,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ### Añadido
 - **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A29).
+- **Álbum de provincias** en «Adivina el hexágono»: una pestaña nueva del panel colorea en la silueta de España la
+  provincia de cada hexágono acertado, con una tira por comunidad autónoma que se marca en dorado al completarla. Cada
+  provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
+  Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
+  día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
