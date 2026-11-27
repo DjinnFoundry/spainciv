@@ -6,6 +6,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
+  gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
+  personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
+  un río, la lengua y el pueblo prerromano; la tercera ya nombra algo de allí, la cuarta sitúa el hexágono respecto a
+  una ciudad del mapa y la quinta la nombra. Los recuentos de patrimonio salen solo si no son cero. El día 1 pasa a ser
+  Guadix; una partida guardada con otro hexágono vuelve a empezar (E82, E83).
 - **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E80, E81).
 - Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
   Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.
