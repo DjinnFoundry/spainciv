@@ -1155,7 +1155,7 @@ legend never gives it the lenses.json `vintage`.
 A lens that opens a panel in the left dock with it (the calendar, the sun lens, the reservoirs, the climate, the
 timeline) uses `lensPanel(app, lens, {mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close
 together, and `#lens=<id>` opens both. Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the
-climate's four, the timeline's two): moving between them keeps it open, and `pick()` names the lens it opens on. On a
+climate's four, the timeline's two): moving between them keeps it open, and `pick()` names the lens it opens on (the first by default). On a
 phone the dock is a bottom sheet that covers the legend: `panelKey()` in the panel's HTML and `updatePanelKey(dock, lens,
 label)` give it the lens's ramp and three ticks, shown on phones only (the sun lens and the climate).
 
