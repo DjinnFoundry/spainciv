@@ -462,7 +462,8 @@ class EnglishDataTest(unittest.TestCase):
                    r"Indicadores Demográficos Básicos|Movimiento Natural de la Población|Censo anual de población|"
                    r"Censos de Población y Viviendas|calidad_diferenciada_zonas|vino de pago|Vinos? de la Tierra|"
                    r"Estadística sobre actividades de I\+D|Relación con la actividad|Grandes Áreas Urbanas|"
-                   r"Calidad diferenciada|Estadística de Matrimonios|Convenio de Cooperación para la Defensa|"
+                   r"Calidad diferenciada|Estadística de Matrimonios|Balance de Criminalidad|Sistema Estadístico de Criminalidad|"
+                   r"Portal Estadístico de Criminalidad|Policía (?:Nacional|Foral de Navarra)|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",

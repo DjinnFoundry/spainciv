@@ -47,7 +47,7 @@ from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
-from . import spain_daily
+from . import spain_crime, spain_daily
 from .spain_people import REQUIRES as PEOPLE_REQUIRES, people_lenses
 from .spain_fiesta import FIESTA_FILE, FIESTA_REQUIRES, fiesta_lenses
 from . import spain_beaches, spain_personajes
@@ -61,7 +61,7 @@ from .yields import YIELDS
 
 REQUIRES = ["_world", "siane", "audes", "ine_padron", "ine_pib", "ine_adrh", "ine_censo_ocupados", "ine_censo_actividad",
             "ine_imasd", "serpavi", "wikidata_es", "calidad_diferenciada", "pleiades_iberia", "lenguas_es",
-            "gastronomia_es"] + spain_beaches.REQUIRES + spain_daily.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES + spain_personajes.REQUIRES
+            "gastronomia_es"] + spain_beaches.REQUIRES + spain_daily.SOURCES + spain_crime.SOURCES + PEOPLE_REQUIRES + FIESTA_REQUIRES + spain_personajes.REQUIRES
 PRODUCES = ["cities.json", "nation.json", "states.json", "lenses.json", f"{spain_personajes.FILE}.json",
             f"{FIESTA_FILE}.json"]
 COUNTRIES = ("es",)
@@ -715,6 +715,8 @@ def build() -> None:
         *fiesta_lens_list] + [
         {**lens, **LAND_LENSES[lens["id"]], "unit": LAND_UNIT} for lens in land_lenses(world, "corine")]
     lenses += spain_daily.lenses(world, weights, proj, grid)
+    lenses += spain_crime.lenses(load_interim("balance_criminalidad"), padron, lau["municipalities"], world["counties"],
+                                 weights)
     great, people_doc = spain_personajes.great_people(world, proj, grid, lau["municipalities"])
     lenses += great
     set_domains(lenses, DOMAIN_NOTE)
