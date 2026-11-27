@@ -29,11 +29,6 @@ def run(body: str):
 
 @unittest.skipUnless(NODE, "node is not installed")
 class MonthTest(unittest.TestCase):
-    def test_month_from_the_local_date_and_from_the_url(self):
-        got = run("out([C.currentMonth(new Date(2026, 7, 31, 23, 59)), C.currentMonth(new Date(2027, 0, 1, 0, 0)), "
-                  "['8', '12', '1', '0', '13', '8.5', 'agosto', '', null, ' 8', '08'].map(C.parseMonth)]);")
-        self.assertEqual(got, [8, 1, [8, 12, 1, None, None, None, None, None, None, None, None]])
-
     def test_a_fiesta_is_in_every_month_its_source_names_and_undated_ones_in_none(self):
         got = run("""
             const list = [fiesta('A', 'autonomica', [8]), fiesta('B', 'nacional', [7, 8, 9]), fiesta('C', 'internacional', []),

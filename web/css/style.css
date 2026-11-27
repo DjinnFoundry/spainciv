@@ -265,17 +265,22 @@ kbd {
 .lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
 @media (max-width: 700px) { .lens-panel { padding-top: 18px; } }
 
-/* ---------- the fiesta calendar (ext/fiestas) ---------- */
-.fc-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
-.fc-month {
+/* ---------- the month strip and the links between month pages (ext/month.js) ---------- */
+.ms-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
+.ms-month {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; height: 58px; padding: 3px 0;
   background: none; border: 1px solid transparent; border-radius: 4px; color: var(--ink-dim); font: inherit; font-size: 11px; cursor: pointer;
 }
-.fc-month i { display: block; width: 60%; min-height: 2px; background: rgba(201,164,92,.45); border-radius: 2px 2px 0 0; }
-.fc-month span { text-transform: capitalize; }
-.fc-month:hover { color: var(--ink); border-color: var(--line); }
-.fc-month.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
-.fc-month.on i { background: var(--gold-bright); }
+.ms-month i { display: block; width: 60%; min-height: 2px; background: rgba(201,164,92,.45); border-radius: 2px 2px 0 0; }
+.ms-month span { text-transform: capitalize; }
+.ms-month:hover { color: var(--ink); border-color: var(--line); }
+.ms-month.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.ms-month.on i { background: var(--gold-bright); }
+.ms-links { margin: 14px 0 0; }
+.ms-link { padding: 0; background: none; border: none; color: var(--gold-bright); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.ms-link:hover { color: var(--ink); }
+
+/* ---------- the fiesta calendar (ext/fiestas) ---------- */
 .fc-sum { margin: 0 0 8px; }
 .fc-group h3 { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
 .fc-group h3 i { width: 11px; height: 11px; border-radius: 2px; flex: none; }

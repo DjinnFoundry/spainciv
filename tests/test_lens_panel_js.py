@@ -146,6 +146,31 @@ class LensPanelTest(unittest.TestCase):
         got = self.go("await tick(); out(snap());", link="#lens=other")
         self.assertEqual(got, {"mode": None, "lens": None, "dock": False, "calls": []})
 
+    def test_a_panel_of_several_lenses_stays_open_between_them(self):
+        got = run("""
+            const app = makeApp('#lens=b');
+            const a = { id: 'a' }, b = { id: 'b' }, c = { id: 'c' }, other = { id: 'other' };
+            const calls = [];
+            let chosen = c;
+            const panel = lensPanel(app, [a, b, c], { mode: 'multi', pick: () => chosen,
+              open: () => calls.push(['open', app.state.lens.id]), close: () => calls.push(['close']) });
+            const snap = () => ({ mode: app.mode, lens: app.state.lens?.id ?? null, calls: calls.splice(0) });
+            await tick();
+            const s = [snap()];             // the link's lens opens the panel on it
+            app.setLens(a); s.push(snap());  // another of its lenses: the panel stays open
+            app.setLens(other); s.push(snap());
+            app.setMode('multi'); s.push(snap()); // entering the mode opens on pick()
+            app.setMode(null); s.push(snap(), !!panel.dock);
+            out(s);
+        """)
+        self.assertEqual(got, [
+            {"mode": "multi", "lens": "b", "calls": [["open", "b"]]},
+            {"mode": "multi", "lens": "a", "calls": []},
+            {"mode": None, "lens": "other", "calls": [["close"]]},
+            {"mode": "multi", "lens": "c", "calls": [["open", "c"]]},
+            {"mode": None, "lens": None, "calls": [["close"]]}, False,
+        ])
+
 
 @unittest.skipUnless(NODE, "node is not installed")
 class CalendarPanelTest(unittest.TestCase):
@@ -153,7 +178,7 @@ class CalendarPanelTest(unittest.TestCase):
         return run(f"""
             const app = spainApp({json.dumps(link)});
             (await import('./web/js/ext/fiestas/index.js')).install(app);
-            await tick(); await tick();
+            await tick(); app.emit('extensions', []); await tick();
             const lens = app.lensById.get('fiestas_mes');
             out({{ mode: app.mode, lens: app.state.lens?.id ?? null, month: app.keys.get('mes').get(),
                    painted: lens.values.filter((v) => v != null).length }});
@@ -166,6 +191,11 @@ class CalendarPanelTest(unittest.TestCase):
         alone = self.open("#lens=fiestas_mes")
         self.assertEqual((alone["mode"], alone["lens"]), ("fiestas", "fiestas_mes"))
         self.assertIsNotNone(alone["month"])
+
+    def test_a_month_alone_opens_the_calendar_on_it(self):
+        got = self.open("#mes=8")
+        self.assertEqual((got["mode"], got["lens"], got["month"]), ("fiestas", "fiestas_mes", "8"))
+        self.assertGreater(got["painted"], 0)
 
     def test_no_link_no_calendar(self):
         self.assertEqual(self.open("#lens=fiestas"), {"mode": None, "lens": None, "month": None, "painted": 0})
