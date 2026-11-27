@@ -299,7 +299,7 @@ class LanguageJsTest(unittest.TestCase):
                 pickLang(langs, { loc: at(""), saved: "es", browser: ["en-US"] }),
                 pickLang(langs, { loc: at("#lang=xx"), saved: null, browser: ["fr-FR", "en-GB"] }),
                 pickLang(langs, { loc: at(""), saved: null, browser: ["fr-FR"] }),
-                pickLang(langs, { loc: at(""), saved: null, browser: undefined }),
+                pickLang(langs, { loc: at(""), saved: null, browser: [] }),
                 pickLang(undefined, { loc: at("#lang=en"), saved: "en", browser: ["en"] }),
             ]));
         """))
