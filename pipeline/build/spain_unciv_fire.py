@@ -185,11 +185,6 @@ def events_json(summary: dict) -> list[dict]:
     return [{"name": EVENT, "presentation": "Alert", "text": texts["event"], "choices": [*pay, burn]}]
 
 
-def translations(summary: dict) -> list[tuple[str, str]]:
-    """(English, Spanish) of every text of the event, for jsons/translations/Spanish.properties."""
-    return [(t["en"], t["es"]) for t in summary["texts"].values()]
-
-
 def costs_by_era() -> dict[str, int]:
     """Era → brigades gold at standard speed (each era in exactly one span, or it fails)."""
     out = {}

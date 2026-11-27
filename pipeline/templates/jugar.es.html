@@ -23,12 +23,14 @@ figure img { width: 100%; height: auto; border: 1px solid var(--line); border-ra
 figure.popup img { max-width: 600px; }
 figcaption { font-size: 13px; color: var(--ink-dim); margin-top: 6px; }
 ol li, ul li { margin: 4px 0; }
-code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; overflow-wrap: anywhere; }
+code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
 td.n, th.n { text-align: right; }
 td.n { white-space: nowrap; }
+main code { overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
 @media (max-width: 480px) { th, td { padding: 6px 4px; } }
   </style>
 </head>
@@ -39,7 +41,9 @@ td.n { white-space: nowrap; }
   <p>El mapa de España de $product se puede jugar en <a href="https://github.com/yairm210/Unciv">Unciv</a>,
   la versión libre y gratuita de Civilization V para Windows, macOS, Linux y Android. Son $width × $height
   casillas de $tile_km km: la península, Baleares, Canarias (en su recuadro, como en el mapa), Ceuta, Melilla
-  y la tierra vecina de Portugal, Francia y el norte de África. España empieza en Madrid.</p>
+  y la tierra vecina de Portugal, Francia y el norte de África. Cada comunidad autónoma es una civilización que
+  empieza en su capital (o a su lado, si otra está demasiado cerca), con su bandera y sus municipios, y Ceuta y
+  Melilla son ciudades-estado.</p>
 
   <div class="panel box downloads">
     <a href="$zip_href" download>Mod para Unciv ($zip_name)</a>
@@ -47,9 +51,9 @@ td.n { white-space: nowrap; }
   </div>
 
   <figure>
-    <img src="$shot" alt="Una partida en Unciv sobre el mapa de España" loading="lazy">
-    <figcaption>Una partida en Unciv $release sobre este mapa, en el turno 40, con el mapa descubierto: España
-    en Madrid y otras siete civilizaciones en las grandes ciudades.</figcaption>
+    <img src="$shot" alt="Una partida en Unciv sobre el mapa de España: el norte, con Vitoria-Gasteiz, Pamplona/Iruña, Santander y Logroño" loading="lazy">
+    <figcaption>Una partida en Unciv $release sobre este mapa, en el turno 45, con Galicia contra las otras
+    $rivals comunidades: el norte, con las capitales de Euskadi, Navarra, Cantabria y La Rioja.</figcaption>
   </figure>
 
   <h2>En el ordenador (Windows, macOS, Linux)</h2>
@@ -61,15 +65,20 @@ td.n { white-space: nowrap; }
       <code>$url/$zip_href</code> y pulsa <b>Descargar</b>.</li>
     <li>Vuelve al menú y pulsa <b>Nueva partida</b>. En <b>Mapa</b> elige <b>Personalizado</b> y, en <b>Escoger mapa</b>,
       <b>$map_name</b>. El juego activa por sí solo el mod <b>$mod_name</b> (lo verás marcado en <b>Mods de extensión</b>): trae
-      el cerdo ibérico y la temporada de incendios.</li>
-    <li>Pulsa <b>Seleccionar jugadores según las posiciones iniciales</b>: juegas con España. Añade rivales con el
-      <b>+</b> de la lista de jugadores; cada uno empieza en una gran ciudad: $starts.</li>
+      las comunidades autónomas, Ceuta, Melilla, el cerdo ibérico y la temporada de incendios.</li>
+    <li>Juega con tu comunidad: pulsa la bandera de tu jugador (el <b>Humano</b>) y elige la tuya. Los rivales que
+      añadas con el <b>+</b> son comunidades al azar, cada una en su capital.</li>
     <li>Pulsa <b>¡Empezar partida!</b>.</li>
   </ol>
+  <p>Las $n_nations a la vez: pulsa <b>Seleccionar jugadores según las posiciones iniciales</b>. Entran todas y te toca
+  una al azar; si quieres otra, quita con el <b>−</b> al jugador de la IA que la tiene y elígela en tu bandera.
+  España sigue en la lista de civilizaciones, sin sitio en el mapa: si la eliges, el juego le busca uno.</p>
   <p>Sin el mod: descarga <a href="$map_href" download="$map_name">solo el mapa</a> y guárdalo, con el nombre
   <code>$map_name</code> y sin extensión, en la carpeta <code>maps</code> de los datos de Unciv (si lo abres con
   <code>java -jar Unciv.jar</code>, es la carpeta del .jar). Aparece en <b>Escoger mapa</b> y en el editor de mapas.
-  Es el mismo mapa sin el cerdo ibérico ni la temporada de incendios, que solo existen con el mod.</p>
+  Es el mismo mapa sin el cerdo ibérico, las comunidades ni la temporada de incendios, que solo existen con el mod: en
+  él España empieza en Madrid y los demás jugadores en las mayores áreas urbanas del AUDES, a $gap_km km o más unos de
+  otros ($starts).</p>
 
   <h2>En Android</h2>
   <ol>
@@ -104,10 +113,38 @@ td.n { white-space: nowrap; }
       como los dibuja Unciv ($river_edges tramos).</td></tr>
     <tr><td>Peñón de Gibraltar</td><td>La única maravilla natural de Unciv que está de verdad en este mapa, en la casilla
       de Gibraltar.</td></tr>
-    <tr><td>Puntos de partida</td><td>España en Madrid y $n_starts puntos más en las mayores áreas urbanas del AUDES,
-      a $gap_km km o más unos de otros. Los rivales los ocupan al azar y las ciudades-estado se quedan con los que
-      sobran; si no hay bastantes, el juego les busca sitio.</td></tr>
+    <tr><td>Comunidades y capitales</td><td>Real: el nombre y la capital o sede del gobierno que da el Estatuto de
+      Autonomía de cada una (o la ley a la que remite), con el otro nombre oficial entre paréntesis. Canarias tiene
+      dos capitales y su Presidencia alterna entre ellas: empieza en la más poblada de las dos, Las Palmas de Gran Canaria. Unciv no
+      deja fundar una ciudad a $city_gap casillas o menos de otra, así que la comunidad menos poblada de
+      cada pareja demasiado cercana empieza en la casilla libre más próxima de su tierra (casillas de distancia a su
+      capital: $moved).</td></tr>
+    <tr><td>Ciudades</td><td>Real: sus $city_names municipios más poblados según el Padrón de $padron_year (INE), la
+      capital primero, con el nombre oficial del IGN. Dónde se funda cada ciudad lo decide la partida: la quinta
+      ciudad que fundes se llama como el quinto municipio, esté donde esté.</td></tr>
+    <tr><td>Líder</td><td>El cargo que nombra el Estatuto («Presidencia de la Junta de Andalucía»; en Euskadi,
+      «Lendakari», el otro nombre que le da su Estatuto), nunca una persona.</td></tr>
+    <tr><td>Banderas y colores</td><td>Real: el dibujo que describe el Estatuto, simplificado y sin los escudos de
+      Aragón, La Rioja, Ceuta y Melilla (de Navarra quedan las cadenas, sin corona ni esmeralda). Convención: el tono exacto de cada color (solo Asturias lo fija en
+      una ley) y cuáles dos son los de cada civilización en el juego, que Unciv pide que contrasten.</td></tr>
+    <tr><td>Ventaja</td><td>Real: el recurso del mapa del que la comunidad tiene más casillas en su tierra y su costa
+      en proporción a su tamaño (entre los que tiene en $unique_min casillas o más$unique_fallback). Convención: lo que da,
+      una más de comida, producción y oro en cada casilla de ese recurso que trabajen sus ciudades. Los caballos, el
+      hierro y los demás recursos estratégicos no se ven hasta que se descubre su tecnología, y hasta entonces sus
+      casillas no dan nada.</td></tr>
+    <tr><td>Tendencia de inicio</td><td>Real: el terreno (o la costa) que más abunda en su tierra en este mapa en
+      proporción a España, si cubre al menos el $bias_pct % de ella, con el nombre que le da el juego (Sabana,
+      Colinas, Bosque...). Solo cuenta en otros mapas: en este cada una empieza en su capital.</td></tr>
+    <tr><td>Ceuta y Melilla</td><td>Ciudades-estado. Convención: marítimas, por sus puertos. El icono de Melilla es
+      el campo azul celeste de su bandera, sin el escudo, y el blanco con que el juego lo acompaña es
+      convención.</td></tr>
   </table>
+
+  <h2>Juega con tu comunidad</h2>
+  <div class="scroll"><table id="nations">
+    <tr><th>Civilización</th><th>Empieza en</th><th>Ventaja</th></tr>
+    $nation_rows
+  </table></div>
 
   <h2>Recursos</h2>
   <p>Cada recurso sale de un dato. Los minerales van a la casilla de su yacimiento o su mina: un recurso de Civilization
@@ -161,10 +198,10 @@ td.n { white-space: nowrap; }
   <p>Cada uno de esos incendios se reparte entre las casillas que cubre su perímetro. En las casillas de tierra
   española caen $fire_on_spain de ellos, $fire_per_season por temporada. Por clase de casilla, tal como las cuenta Unciv, una
   casilla de colina o de montaña tiene unas $fire_times veces más incendios grandes que una del resto de la tierra:</p>
-  <table>
+  <div class="scroll"><table>
     <tr><th>Casilla</th><th class=n>Casillas españolas</th><th class=n>Grandes incendios por casilla y temporada</th><th class=n>Peso (de $fire_unit)</th></tr>
     $fire_rows
-  </table>
+  </table></div>
   <p>El peso es la parte de los grandes incendios de España que cae en una casilla de esa clase: las casillas de
   España suman unos $fire_unit.</p>
   <p>Lo que es del juego:</p>
@@ -183,14 +220,15 @@ td.n { white-space: nowrap; }
       con las tasas de España para su clase.</li>
   </ul>
   <p>Probabilidad en cada comprobación según las casillas que tienes:</p>
-  <table>
+  <div class="scroll"><table>
     <tr><th></th><th class=n>Casillas del resto de la tierra</th><th class=n>Colinas</th><th class=n>Montañas</th><th class=n>Probabilidad</th></tr>
     $fire_examples
-  </table>
+  </table></div>
 
   <h2>Créditos</h2>
   <p>Mapa: <a href="$url/">$product</a>, con datos del IGN, Copernicus (CORINE Land Cover 2018), NOAA (ETOPO1),
-  Natural Earth, el IGME, el INE y el Ministerio de Agricultura; los incendios, del EFFIS (Copernicus). El mod se publica con licencia CC BY 4.0.
+  Natural Earth, el IGME, el INE y el Ministerio de Agricultura; Estatutos de Autonomía en el BOE; los incendios, del
+  EFFIS (Copernicus). El mod se publica con licencia CC BY 4.0.
   Unciv es de Yair Morgenstern y sus colaboradores (MPL 2.0).</p>
 </main>
 </body>

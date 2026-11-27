@@ -33,6 +33,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   Una segunda lente, **Delito que más destaca**, pinta el tipo que más supera la tasa de España, cuando llega a 1,25
   veces y la unidad tiene 20.000 residentes o más, y el tooltip dice cuántas veces es la de España. La nota avisa de
   que la tasa es por residente y los sitios turísticos salen altos (E85, E86, F35).
+- **Juega con tu comunidad** en Unciv: el mod trae las 17 comunidades autónomas como civilizaciones y Ceuta y Melilla
+  como ciudades-estado. Cada comunidad empieza en la capital que da su Estatuto, con su bandera simplificada, sus 40
+  municipios más poblados como nombres de ciudad y una ventaja en el recurso del mapa que más tiene (Andalucía, peces;
+  La Rioja y Castilla-La Mancha, vino; Asturias, caballos…). Al elegir el mapa, tu jugador y los rivales al azar son
+  comunidades; la tuya se elige en tu bandera, y «Seleccionar jugadores según las posiciones iniciales» pone las 17.
+  El líder es el cargo («Presidencia de la Xunta de Galicia»), nunca una persona. Textos del juego en castellano e
+  inglés; la página `jugar.html` / `play.html` dice qué es dato y qué convención. El mapa suelto, sin mod, sigue con
+  España en Madrid (E87, E88, A28).
 - **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E80, E81).
 - Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
   Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.

@@ -115,29 +115,35 @@ the rivers on tile edges and the resource placement that keeps every resource on
 the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
-  `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Events.json` and `jsons/GlobalUniques.json`
-  (the fire season, E90), `jsons/translations/Spanish.properties` (the Spanish of the mod's texts, one file for every
-  feature, written by `unciv.properties`: A30), `maps/España` (the map, gzip + base64 as Unciv saves
-  it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
-  with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
-  `README.md` and `LICENSE` (CC BY 4.0);
-- `unciv/espana`: the bare map for the game without mods (the same map without the pig or the fire season), saved as `España` by the
-  page's link;
+  `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Nations.json` (the 17 autonomous communities
+  as civilizations, Ceuta and Melilla as city-states), `jsons/Events.json` and `jsons/GlobalUniques.json` (the fire
+  season, E90), `jsons/translations/Spanish.properties` (the Spanish of the nations and of the fire season, one file
+  for every feature, written by `unciv.properties`: A30; English is the mod's own text), `maps/España` (the map, gzip
+  + base64 as Unciv saves it, naming the mod in `mapParameters.mods` so choosing it turns the mod on, with each
+  community's starting location at its capital), `Images/ResourceIcons/Cerdo ibérico.png`, `Images/NationPortraits/`
+  (each nation's flag on a disc) and `Images/NationIcons/` (the city-banner icon of each community; a city-state's
+  banner uses Unciv's own icon of its type), all in one atlas (`game.atlas`, `game.png`, `Atlases.json`, which
+  Android needs), `preview.png`, a bilingual `README.md` and `LICENSE` (CC BY 4.0);
+- `unciv/espana`: the bare map for the game without mods, saved as `España` by the page's link: the same map without
+  the pig, the communities or the fire season, which only exist with the mod; Spain starts in Madrid and "Any Civ"
+  players in the largest urban areas;
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
-The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
-The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E90, A15, A17, A30, F26, F28, F29 and F36. The map was checked in Unciv 5.0.1 (the jar of the
-GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
-every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
-locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`). The fire season was checked in
-the same jar with the mod installed from its URL: the combined ruleset validates; over a 100-turn game on Quick speed
-with seven AI civilizations, five of them took the production penalty, each for 5 turns, always started on a turn
-that is a multiple of 5, never two at once and never on a city-state; Unciv's countable equals the Python weights on
-every civilization's tiles; with 40 gold (60 × 0.67) only "let it burn" is offered and with 41 both choices; the
-popup reads in Spanish and in English by the game's language (`docs/images/es-unciv-incendio.jpg`,
-`docs/images/en-unciv-incendio.jpg`: the popup panel cropped from a 1000 px wide window, so its text stays legible at
-phone width).
+The page, the README, the resource names and the nations' texts in Spanish and English are templates in
+`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E87, E88, E90, A15,
+A17, A28, A30, F26, F28, F29 and F36. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with
+`java -jar`): the mod installed through "Download mod from URL", the map in the editor with every resource kept
+(`docs/images/es-unciv-editor.jpg`), the 19 nations in the nation picker, and a 45-turn game with Galicia against the
+other 16 communities, each at its capital or beside it and Spain left without a starting location
+(`docs/images/es-unciv-partida.jpg`, the north with the capitals of Euskadi, Navarra, Cantabria and La Rioja).
+The fire season was checked in the same jar with the whole mod installed from its URL: the combined ruleset
+validates; over a 100-turn game on Quick speed with Galicia and seven AI communities, five of them took the
+production penalty 14 times, each for 5 turns, always started on a turn that is a multiple of 5, never two at once on
+one civilization and never on a city-state; Unciv's countable equals the Python weights on every civilization's
+tiles; with 40 gold (60 × 0.67) only "let it burn" is offered and with 41 both choices; the popup reads in Spanish and
+in English by the game's language (`docs/images/es-unciv-incendio.jpg`, `docs/images/en-unciv-incendio.jpg`: the
+popup panel cropped from a 1000 px wide window, so its text stays legible at phone width).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

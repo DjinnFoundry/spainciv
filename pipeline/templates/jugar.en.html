@@ -23,12 +23,14 @@ figure img { width: 100%; height: auto; border: 1px solid var(--line); border-ra
 figure.popup img { max-width: 600px; }
 figcaption { font-size: 13px; color: var(--ink-dim); margin-top: 6px; }
 ol li, ul li { margin: 4px 0; }
-code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; overflow-wrap: anywhere; }
+code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
 td.n, th.n { text-align: right; }
 td.n { white-space: nowrap; }
+main code { overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
 @media (max-width: 480px) { th, td { padding: 6px 4px; } }
   </style>
 </head>
@@ -39,7 +41,9 @@ td.n { white-space: nowrap; }
   <p>The $product map of Spain can be played in <a href="https://github.com/yairm210/Unciv">Unciv</a>, the free
   and open-source Civilization V for Windows, macOS, Linux and Android. It has $width × $height tiles of
   $tile_km km: the peninsula, the Balearic Islands, the Canary Islands (in their inset, as on the map), Ceuta,
-  Melilla and the neighbouring land of Portugal, France and North Africa. Spain starts in Madrid.</p>
+  Melilla and the neighbouring land of Portugal, France and North Africa. Each autonomous community is a
+  civilization that starts in its capital (or beside it, when another one is too close), with its flag and its
+  municipalities, and Ceuta and Melilla are city-states.</p>
 
   <div class="panel box downloads">
     <a href="$zip_href" download>Unciv mod ($zip_name)</a>
@@ -47,9 +51,9 @@ td.n { white-space: nowrap; }
   </div>
 
   <figure>
-    <img src="$shot" alt="A game of Unciv on the map of Spain" loading="lazy">
-    <figcaption>A game in Unciv $release on this map at turn 40, with the map revealed: Spain in Madrid and seven
-    other civilizations in the large cities.</figcaption>
+    <img src="$shot" alt="A game of Unciv on the map of Spain: the north, with Vitoria-Gasteiz, Pamplona/Iruña, Santander and Logroño" loading="lazy">
+    <figcaption>A game in Unciv $release on this map at turn 45, Galicia against the other $rivals communities: the
+    north, with the capitals of Euskadi, Navarra, Cantabria and La Rioja.</figcaption>
   </figure>
 
   <h2>On a computer (Windows, macOS, Linux)</h2>
@@ -61,15 +65,21 @@ td.n { white-space: nowrap; }
       <code>$url/$zip_href</code> and press <b>Download</b>.</li>
     <li>Back in the menu, press <b>Start new game</b>. Under <b>Map Type</b> choose <b>Custom</b> and, under
       <b>Map file</b>, <b>$map_name</b>. The game turns on the <b>$mod_name</b> mod by itself (you will see it ticked
-      under <b>Extension mods</b>): it brings the Iberian pig and the fire season.</li>
-    <li>Press <b>Select players from starting locations</b>: you play Spain. Add rivals with the <b>+</b> of the
-      player list; each starts in a large city: $starts.</li>
+      under <b>Extension mods</b>): it brings the autonomous communities, Ceuta, Melilla, the Iberian pig and the fire
+      season.</li>
+    <li>Play as your community: press your player's flag (the <b>Human</b> one) and pick yours. The rivals you add
+      with the <b>+</b> are communities at random, each in its capital.</li>
     <li>Press <b>Start game!</b>.</li>
   </ol>
+  <p>All $n_nations at once: press <b>Select players from starting locations</b>. They all join and you get one at
+  random; for another, remove with the <b>−</b> the AI player that has it and pick it on your flag. Spain is still in
+  the list of civilizations, with no place on the map: if you pick it, the game finds it one.</p>
   <p>Without the mod: download <a href="$map_href" download="$map_name">the map only</a> and save it, named
   <code>$map_name</code> and without an extension, in the <code>maps</code> folder of Unciv's data (if you run it
   with <code>java -jar Unciv.jar</code>, that is the folder of the .jar). It shows under <b>Map file</b> and in the
-  map editor. It is the same map without the Iberian pig or the fire season, which only exist with the mod.</p>
+  map editor. It is the same map without the Iberian pig, the communities or the fire season, which only exist with
+  the mod: on it Spain starts in Madrid and the other players in the largest AUDES urban areas, at least $gap_km km
+  apart ($starts).</p>
 
   <h2>On Android</h2>
   <ol>
@@ -104,10 +114,36 @@ td.n { white-space: nowrap; }
       draws them ($river_edges segments).</td></tr>
     <tr><td>Rock of Gibraltar</td><td>The only Unciv natural wonder that really is on this map, on the tile of
       Gibraltar.</td></tr>
-    <tr><td>Starting locations</td><td>Spain in Madrid and $n_starts more in the largest AUDES urban areas, at least
-      $gap_km km apart. Rivals take them at random and city-states get the ones left over; if there are not enough,
-      the game finds them a place.</td></tr>
+    <tr><td>Communities and capitals</td><td>Real: the name and the capital or seat of government that each one's
+      Statute of Autonomy gives (or the law it refers to), with the other official name in brackets. Canarias has two
+      capitals and its Presidency alternates between them: it starts in the more populous of the two, Las Palmas de Gran Canaria. Unciv
+      lets no city be founded $city_gap tiles or less from another, so the less populous community of each pair too
+      close together starts on the nearest free tile of its land (tiles from its capital: $moved).</td></tr>
+    <tr><td>Cities</td><td>Real: its $city_names most populous municipalities in the $padron_year Padrón (INE), the
+      capital first, with the IGN's official name. Where each city is founded is up to the game: the fifth city you
+      found takes the fifth municipality's name, wherever it is.</td></tr>
+    <tr><td>Leader</td><td>The office the Statute names ("President of the Junta of Andalucía"; for Euskadi,
+      "Lendakari", the other name its Statute gives it), never a person.</td></tr>
+    <tr><td>Flags and colours</td><td>Real: the design the Statute describes, simplified and without the arms of
+      Aragón, La Rioja, Ceuta and Melilla (Navarra keeps the chains, without the crown and the emerald). Convention: the exact shade of each colour (only Asturias fixes it
+      in a law) and which two are each civilization's in the game, which Unciv wants to contrast.</td></tr>
+    <tr><td>Advantage</td><td>Real: the map resource of which the community holds the most tiles in its land and
+      coast relative to its size (among those it holds $unique_min or more tiles of$unique_fallback). Convention: what it
+      gives, one more food, production and gold on each tile of that resource its cities work. Horses, iron and the
+      other strategic resources stay hidden until their technology is discovered, and until then their tiles give
+      nothing.</td></tr>
+    <tr><td>Start bias</td><td>Real: the terrain (or the coast) most over-represented in its land on this map
+      compared with Spain, if it covers at least $bias_pct% of it, under the game's name for it (Plains, Hill,
+      Forest...). It only counts on other maps: on this one each starts in its capital.</td></tr>
+    <tr><td>Ceuta and Melilla</td><td>City-states. Convention: maritime, for their ports. Melilla's icon is the sky
+      blue field of its flag, without the arms, and the white the game pairs with it is convention.</td></tr>
   </table>
+
+  <h2>Play as your community</h2>
+  <div class="scroll"><table id="nations">
+    <tr><th>Civilization</th><th>Starts in</th><th>Advantage</th></tr>
+    $nation_rows
+  </table></div>
 
   <h2>Resources</h2>
   <p>Each resource comes from data. Minerals go to the tile of their deposit or their mine: a Civilization resource
@@ -157,10 +193,10 @@ td.n { white-space: nowrap; }
   <p>Each of those fires is shared among the tiles its perimeter covers. Spanish land tiles get $fire_on_spain of them,
   $fire_per_season a season. By class of tile, as Unciv counts them, a hill or mountain tile has about $fire_times times
   as many great fires as any other land:</p>
-  <table>
+  <div class="scroll"><table>
     <tr><th>Tile</th><th class=n>Spanish tiles</th><th class=n>Great fires per tile per season</th><th class=n>Weight (of $fire_unit)</th></tr>
     $fire_rows
-  </table>
+  </table></div>
   <p>The weight is the share of Spain's great fires that falls on one tile of that class: Spain's tiles add up to
   about $fire_unit.</p>
   <p>What is the game's:</p>
@@ -178,14 +214,15 @@ td.n { white-space: nowrap; }
       rates for its class.</li>
   </ul>
   <p>Chance at each check by the tiles you own:</p>
-  <table>
+  <div class="scroll"><table>
     <tr><th></th><th class=n>Other land tiles</th><th class=n>Hills</th><th class=n>Mountains</th><th class=n>Chance</th></tr>
     $fire_examples
-  </table>
+  </table></div>
 
   <h2>Credits</h2>
   <p>Map: <a href="$url/">$product</a>, with data from IGN, Copernicus (CORINE Land Cover 2018), NOAA (ETOPO1),
-  Natural Earth, IGME, INE and the Spanish Ministry of Agriculture; the fires from EFFIS (Copernicus). The mod is published under the CC BY 4.0 licence.
+  Natural Earth, IGME, INE and the Spanish Ministry of Agriculture; Statutes of Autonomy from the BOE; the fires from
+  EFFIS (Copernicus). The mod is published under the CC BY 4.0 licence.
   Unciv is by Yair Morgenstern and its contributors (MPL 2.0).</p>
 </main>
 </body>

@@ -23,6 +23,19 @@ Android. Everything below was read in its source at the release the map is teste
 * A starting location names a nation, or "Spectator", which the map editor shows as "Any Civ": a player whose nation
   has no location of its own takes one of those (core/src/com/unciv/logic/GameStarter.kt, getCivStartingLocation).
   The `Human` usage marks the nation the new-game screen offers the human player ("Use nations from map").
+* A nation (core/src/com/unciv/models/ruleset/nation/Nation.kt) is a Nations.json entry: `name`, `leaderName`,
+  `outerColor` and `innerColor` (RGB), `startBias`, `uniqueName` and `uniques`, `cities` (names in the order its cities
+  take them, the first its capital: CityFounder.generateNewCityName), `startIntroPart1`, and for a city-state its
+  `cityStateType`. An extension mod's nations join the base ruleset's. A starting location naming a nation is that
+  nation's (GameStarter.getCivStartingLocation, ahead of any distance rule), and the new-game screen fills its random
+  players with the nations that have one before any other (GameStarter.chooseCivilizations: presetRandomNationsPool);
+  "Select players from starting locations" makes one player of each major nation with a "Player" or "Human" location,
+  and one of the "Human" ones, at random, the human (MapFileSelectTable.onUseNationsFromMap).
+* A nation's emblem (Portrait.kt: PortraitNation) is the image NationPortraits/<name> drawn as it is, at three
+  quarters of a disc of its outerColor ringed in its innerColor; a major civilization's city banners show
+  NationIcons/<name> tinted with its innerColor, and a city-state's show CityStateIcons/<its type> instead
+  (CityTable.addCivIcon), so a city-state's NationIcon is never seen. The texts of a mod are translated by its jsons/translations/<Language>.properties,
+  lines "English text = translation" (TranslationFileReader); English is the game's own text and has no file.
 * A mod is a folder with `jsons/ModOptions.json`, `maps/` and `preview.png` (preview.jpg or .png, shown by the mod
   manager: core/src/com/unciv/ui/screens/modmanager/ModInfoAndActionPane.kt). The in-game mod browser lists the GitHub
   repositories with the topic `unciv-mod`, and the Maps category those with `unciv-mod-maps`
@@ -104,6 +117,10 @@ MOD_RESOURCES = {
     },
 }
 RESOURCES |= {name: (r["resourceType"], set(r["terrainsCanBeFoundOn"]), 0) for name, r in MOD_RESOURCES.items()}
+# TileResources.json "revealedBy": the technology before which a strategic resource does not show on the map, and a
+# tile of it counts for no tile filter (Tile.kt: matchesSingleTerrainFilter needs canSeeResource).
+REVEALED_BY = {"Horses": "Animal Husbandry", "Iron": "Iron Working", "Coal": "Industrialization", "Oil": "Biology",
+               "Aluminum": "Electricity", "Uranium": "Atomic Theory"}
 # Terrains.json "RGB" of each terrain, for the preview image (Forest and Marsh have none: these are their map colours).
 RGB = {"Ocean": (43, 87, 151), "Coast": (70, 138, 216), "Lakes": (0, 171, 169), "Grassland": (0, 163, 0),
        "Plains": (153, 180, 51), "Tundra": (124, 62, 57), "Desert": (230, 172, 0), "Snow": (230, 238, 255),
@@ -488,12 +505,14 @@ def tile_map(grid: Grid, tiles: list[Tile], name: str, description: str, starts:
     }
 
 
-def without_mod(map_json: dict) -> dict:
-    """The same map for the base ruleset alone: no mod in its parameters and no mod resource on its tiles (for the bare
-    map file, which works without installing the mod)."""
+def without_mod(map_json: dict, bare: dict) -> dict:
+    """The same map for the base ruleset alone (the bare map file, which works without installing the mod): no mod in
+    its parameters, no mod resource on its tiles, and `bare`'s startingLocations and description, since the mod's
+    nations do not exist without it (TileMap.removeMissingTerrainModReferences would drop their locations)."""
     tiles = [{k: v for k, v in t.items() if k not in ("resource", "resourceAmount")} if t.get("resource") in MOD_RESOURCES
              else t for t in map_json["tileList"]]
-    return map_json | {"mapParameters": map_json["mapParameters"] | {"mods": []}, "tileList": tiles}
+    return map_json | {"mapParameters": map_json["mapParameters"] | {"mods": []}, "tileList": tiles,
+                       "startingLocations": bare["startingLocations"], "description": bare["description"]}
 
 
 def tiles_from_map(map_json: dict) -> list[Tile]:
@@ -524,6 +543,24 @@ def mod_options(author: str, url: str) -> dict:
     return {"isBaseRuleset": False, "author": author, "modUrl": url, "topics": ["unciv-mod-maps"], "uniques": []}
 
 
+# A nation's unique: one more of each base yield on the tiles of its resource that its cities work (UniqueType
+# StatsFromTiles, "[stats] from [tileFilter] tiles [cityFilter]"; a resource's name is a tile filter).
+NATION_UNIQUE = "[+1 Food, +1 Production, +1 Gold] from [{resource}] tiles [in all cities]"
+
+
+def nation_json(name: str, outer, inner, cities: list[str], leader: str = "", start_bias: str | None = None,
+                unique_name: str = "", resource: str | None = None, intro: str = "",
+                city_state_type: str | None = None) -> dict:
+    """A Nations.json entry (Nation.kt fields): a major civilization, or a city-state of `city_state_type`."""
+    out = {"name": name}
+    if city_state_type:
+        out["cityStateType"] = city_state_type
+    else:
+        out |= {"leaderName": leader, "startBias": [start_bias] if start_bias else [], "uniqueName": unique_name,
+                "uniques": [NATION_UNIQUE.format(resource=resource)] if resource else [], "startIntroPart1": intro}
+    return out | {"outerColor": list(outer), "innerColor": list(inner), "cities": list(cities)}
+
+
 def tile_resources_json() -> list[dict]:
     """jsons/TileResources.json of the mod: MOD_RESOURCES. Unciv merges an extension mod's resources into the base
     ruleset's (Ruleset.kt: add), and draws each with the image ResourceIcons/<name> of the mod's atlas."""
@@ -531,26 +568,25 @@ def tile_resources_json() -> list[dict]:
 
 
 PROPERTIES_SEP = " = "  # TranslationFileReader.keyValueSeparator
-PROPERTIES_BAD = ("[", "]", "{", "}", "\n")  # placeholders and nested translations in Unciv's texts; a line per entry
+PLACEHOLDERS = ("[", "]", "{", "}")  # placeholders and nested translations in Unciv's texts
 
 
-def properties(pairs: Iterable[tuple[str, str]]) -> str:
-    """A mod's translation file, jsons/translations/<Language>.properties, from (English text, translation) pairs.
+def properties(translations: dict[str, str]) -> str:
+    """A mod's translation file, jsons/translations/<Language>.properties: "English text = translation", one per line.
 
     Unciv reads one such file per language per mod (Translations.kt: tryReadTranslationForLanguage), a line per entry
     split at the first " = " (TranslationFileReader.read); a line starting with "#" or without the separator is a
-    comment. The English text is the key, exactly as the ruleset writes it. Texts with brackets or braces (Unciv's
-    placeholders), a separator, a line break, a leading "#" or a key given twice are refused: they would not read back
-    as written. Every feature of a mod that adds translations goes through here, so they share the one file."""
-    seen, lines = set(), []
-    for key, value in pairs:
-        for text in (key, value):
-            if not text.strip() or PROPERTIES_SEP in text or text.lstrip().startswith("#") or any(b in text for b in PROPERTIES_BAD):
-                raise ValueError(f"not a translation Unciv can read back: {text!r}")
-        if key in seen:
-            raise ValueError(f"translated twice: {key!r}")
-        seen.add(key)
-        lines.append(f"{key}{PROPERTIES_SEP}{value}")
+    comment, and a line break is written as a backslash and an n. The English text is the key, exactly as the ruleset
+    writes it. An empty key, one with the separator or a leading "#", and a text with brackets or braces (Unciv's
+    placeholders) are refused: they would not read back as written. Every feature of a mod that adds translations goes
+    through here, so they share the one file."""
+    lines = []
+    for key, value in translations.items():
+        if not key.strip() or PROPERTIES_SEP in key or key.lstrip().startswith("#"):
+            raise ValueError(f"not a plain translation key: {key!r}")
+        if any(b in text for text in (key, value) for b in PLACEHOLDERS):
+            raise ValueError(f"a placeholder in a translation: {key!r} = {value!r}")
+        lines.append(f"{key}{PROPERTIES_SEP}{value}".replace("\n", "\\n"))
     return "\n".join(lines) + "\n"
 
 
