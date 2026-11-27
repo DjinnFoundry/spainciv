@@ -40,8 +40,9 @@ def rings_of(geom: dict) -> list[list[tuple[float, float]]]:
 
 
 def fires(features: list[dict], year: int) -> list[dict]:
-    """Spain's burnt-area polygons of one season: year, start month (FIREDATE, "YYYY-MM-DD hh:mm:ss"), area (ha),
-    province and rings (lon, lat). Polygons with no area or no geometry are left out."""
+    """Spain's burnt-area polygons of one season: year, start month (FIREDATE starts with "YYYY-MM-DD"; from 2020 on
+    the time often has fractions of a second), area (ha), province and rings (lon, lat). Polygons with no area or no
+    geometry are left out."""
     out = []
     for f in features:
         p, geom = f.get("properties") or {}, f.get("geometry")

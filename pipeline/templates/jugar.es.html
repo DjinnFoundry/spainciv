@@ -20,14 +20,16 @@ a { color: var(--gold-bright); }
 .downloads a { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; background: var(--panel-2); }
 figure { margin: 18px 0; }
 figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; display: block; }
+figure.popup img { max-width: 600px; }
 figcaption { font-size: 13px; color: var(--ink-dim); margin-top: 6px; }
 ol li, ul li { margin: 4px 0; }
-code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; overflow-wrap: anywhere; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
 td.n, th.n { text-align: right; }
 td.n { white-space: nowrap; }
+@media (max-width: 480px) { th, td { padding: 6px 4px; } }
   </style>
 </head>
 <body>
@@ -145,9 +147,9 @@ td.n { white-space: nowrap; }
   <p>Las civilizaciones de la máquina eligen al azar: si pueden pagar, mandan las brigadas $fire_ai de cada
   $fire_ai_of veces.</p>
 
-  <figure>
-    <img src="$fire_shot" alt="El aviso de la temporada de incendios en Unciv, con sus dos opciones" loading="lazy">
-    <figcaption>El aviso en Unciv $release, en español: debajo de cada opción, lo que hace.</figcaption>
+  <figure class=popup>
+    <a href="$fire_shot"><img src="$fire_shot" alt="El aviso de la temporada de incendios en Unciv, con sus dos opciones" loading="lazy"></a>
+    <figcaption>El aviso en Unciv $release: debajo de cada opción, lo que hace.</figcaption>
   </figure>
 
   <p>Lo que es dato: el EFFIS, el sistema europeo de información sobre incendios forestales (Copernicus, licencia
@@ -158,7 +160,7 @@ td.n { white-space: nowrap; }
   los incendios del EFFIS de $fire_ha ha o más y no la estadística oficial de grandes incendios.</p>
   <p>Cada uno de esos incendios se reparte entre las casillas que cubre su perímetro. En las casillas de tierra
   española caen $fire_on_spain de ellos, $fire_per_season por temporada. Por clase de casilla, tal como las cuenta Unciv, una
-  colina o una montaña tiene unas $fire_times veces más grandes incendios que el resto de la tierra:</p>
+  casilla de colina o de montaña tiene unas $fire_times veces más incendios grandes que una del resto de la tierra:</p>
   <table>
     <tr><th>Casilla</th><th class=n>Casillas españolas</th><th class=n>Grandes incendios por casilla y temporada</th><th class=n>Peso (de $fire_unit)</th></tr>
     $fire_rows
@@ -170,7 +172,8 @@ td.n { white-space: nowrap; }
     <li>Convención: un turno es una temporada de incendios. En Unciv un turno va de un mes a 60 años, según la velocidad
       y el momento de la partida, así que no puede ser literal.</li>
     <li>Convención: cada temporada, el gran incendio de España cae en tu territorio con la parte de España que tienes,
-      la suma de los pesos de tus casillas entre $fire_unit. Con toda España, uno cada temporada.</li>
+      la suma de los pesos de tus casillas entre $fire_unit. Con toda España, uno cada temporada (en el EFFIS, unos
+      $fire_per_season).</li>
     <li>Convención: se comprueba cada $fire_check turnos, con la probabilidad de que haya al menos uno en esas
       $fire_check temporadas. Unciv solo admite porcentajes enteros, así que va en $fire_bands tramos de un 1&nbsp;%.</li>
     <li>Convención: el castigo dura $fire_penalty_turns turnos, lo mismo que va de una comprobación a la siguiente, para
@@ -179,9 +182,9 @@ td.n { white-space: nowrap; }
     <li>Supuesto: la tierra de Portugal, Francia y el norte de África no tiene datos del EFFIS en este mapa y cuenta
       con las tasas de España para su clase.</li>
   </ul>
-  <p>Probabilidad en cada comprobación según las casillas que tienes. La última fila es toda España:</p>
+  <p>Probabilidad en cada comprobación según las casillas que tienes:</p>
   <table>
-    <tr><th class=n>Casillas del resto de la tierra</th><th class=n>Colinas</th><th class=n>Montañas</th><th class=n>Probabilidad</th></tr>
+    <tr><th></th><th class=n>Casillas del resto de la tierra</th><th class=n>Colinas</th><th class=n>Montañas</th><th class=n>Probabilidad</th></tr>
     $fire_examples
   </table>
 

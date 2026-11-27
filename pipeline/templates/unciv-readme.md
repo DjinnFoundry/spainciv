@@ -27,7 +27,7 @@ que se apague solo (-$fire_penalty_es % de producción en todas sus ciudades dur
 Dato: los $fire_n_es incendios de $fire_ha_es ha o más que el EFFIS (Copernicus, CC BY 4.0) cartografió en España de
 $fire_from_es a $fire_to_es, repartidos entre las casillas que cubrió cada uno. Convención: un turno es una temporada,
 el incendio de cada temporada cae en tu territorio con la parte de España que tienes (la suma de los pesos de tus
-casillas entre $fire_unit_es), se comprueba cada $fire_check_es turnos y el precio y el castigo son del juego.
+casillas entre $fire_unit_es; toda España, uno por temporada, frente a unos $fire_per_season_es en el EFFIS), se comprueba cada $fire_check_es turnos y el precio y el castigo son del juego.
 
 | Casilla | Casillas españolas | Grandes incendios por casilla y temporada | Peso |
 |---|---|---|---|
@@ -57,13 +57,14 @@ $fire_cost_1_en, $fire_cost_2_en or $fire_cost_3_en by era, times the game speed
 (-$fire_penalty_en% Production in all its cities for $fire_penalty_turns_en turns). Data: the $fire_n_en fires of
 $fire_ha_en ha or more that EFFIS (Copernicus, CC BY 4.0) mapped in Spain from $fire_from_en to $fire_to_en, each
 shared among the tiles it covered. Convention: a turn is one season, each season's fire lands on your territory with
-the share of Spain you own (the sum of your tiles' weights over $fire_unit_en), the check runs every $fire_check_en
+the share of Spain you own (the sum of your tiles' weights over $fire_unit_en; all of Spain, one a season, against
+about $fire_per_season_en in EFFIS), the check runs every $fire_check_en
 turns, and the price and the penalty are the game's.
 
 | Tile | Spanish tiles | Great fires per tile per season | Weight |
 |---|---|---|---|
 $fire_rows_en
 
-How to install it, and what is real data and what is game convention (in Spanish): $url/$page
+How to install it, and what is real data and what is game convention: $url/$page_en
 
 Licence: CC BY 4.0 (see LICENSE).

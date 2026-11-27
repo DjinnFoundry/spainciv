@@ -1452,8 +1452,8 @@ class SpainDailyLensesTest(unittest.TestCase):
 
         poly = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
         feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "600", "FIREDATE": d}, "geometry": poly}
-                 for d in ("2022-07-17 00:00:00", "2022-12-01 09:05:00")]
-        self.assertEqual([(f["year"], f["month"]) for f in fires(feats, 2022)], [(2022, 7), (2022, 12)])
+                 for d in ("2022-07-17 00:00:00", "2022-12-01 09:05:00", "2021-04-01 11:32:03.9")]  # 2020 on: fractions
+        self.assertEqual([f["month"] for f in fires(feats, 2022)], [7, 12, 4])
 
     def test_burnt_area_is_shared_by_the_hexes_a_fire_covers(self):
         from pipeline.build.spain_daily import burnt_cells

@@ -483,9 +483,12 @@ class ModAndPageTest(unittest.TestCase):
         cls.folder = cls.doc["summary"]["mod"]["name"]
 
     def test_spain_has_the_page_and_downloads_and_the_us_none(self):
+        shots = [path for path, _ in play.FIRE_SHOT.values()]
         self.assertEqual(set(self.files), {*play.PAGES.values(), play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0],
-                                           play.FIRE_SHOT[0]})
-        self.assertTrue(self.files[play.FIRE_SHOT[0]]().startswith(b"\xff\xd8"))  # a JPEG
+                                           *shots})
+        self.assertEqual(len(set(shots)), len(play.PAGES))  # one popup per language
+        for path in shots:
+            self.assertTrue(self.files[path]().startswith(b"\xff\xd8"), path)  # a JPEG
         self.assertEqual(play.files(countries.COUNTRIES["us"]), {})
         self.assertEqual(site.page_config(ES)["play"], play.PAGES["es"])
         self.assertEqual(site.page_config(ES)["texts"]["en"]["play"], play.PAGES["en"])
@@ -542,6 +545,20 @@ class ModAndPageTest(unittest.TestCase):
         self.assertIn(f"{f['great_fires']} fires", text)
         self.assertIn("EFFIS", z.read(f"{self.folder}/LICENSE").decode("utf-8"))
 
+    def test_the_ai_odds_are_unciv_weights(self):
+        """Unciv multiplies a choice's AI weight by 1 + pct/100 (IHasUniques.getWeightForAiDecision)."""
+        for pct, odds in ((100, (2, 3)), (50, (3, 5)), (200, (3, 4))):
+            with mock.patch.object(fire, "AI_PAY_WEIGHT_PCT", pct):
+                f = play.fire_fields(self.doc["summary"], "en")
+            self.assertEqual((f["fire_ai"], f["fire_ai_of"]), odds, pct)
+
+    def test_the_readme_links_to_the_page_in_each_language(self):
+        z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
+        text = z.read(f"{self.folder}/README.md").decode("utf-8")
+        spanish, english = text.split("## English")
+        self.assertIn(f"https://{ES.site_url}/{play.PAGES['es']}", spanish)
+        self.assertIn(f"https://{ES.site_url}/{play.PAGES['en']}", english)
+
     def test_the_bare_map_is_the_map_without_the_mod(self):
         self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"]))
 
@@ -575,14 +592,14 @@ class ModAndPageTest(unittest.TestCase):
                  "en": ("Fire season", "Convention:", "Assumption:", "Send fire brigades")}
         for lang in ("es", "en"):
             html = self.files[play.PAGES[lang]]().decode("utf-8")
-            for needle in (*words[lang], play.FIRE_SHOT[0], f"{f['great_fires']} ", f"{f['threshold_ha']} ha"):
+            for needle in (*words[lang], play.FIRE_SHOT[lang][0], f"{f['great_fires']} ", f"{f['threshold_ha']} ha"):
                 self.assertIn(needle, html)
             self.assertGreaterEqual(html.count(words[lang][1]), 5)  # one line per convention
             for c in f["classes"]:
                 self.assertIn(f"<td>{escape(play.FIRE_CLASSES[lang][c['class']])}</td><td class=n>{c['tiles']}</td>", html)
                 self.assertIn(f"<td class=n>{c['weight']}</td></tr>", html)
             spain = {c["class"]: c["tiles"] for c in f["classes"]}
-            self.assertIn(f"<td class=n>{spain['Land']}</td><td class=n>{spain['Hill']}</td><td class=n>{spain['Mountain']}</td>"
+            self.assertIn(f"<td>{escape(play.FIRE_EXAMPLES[lang][-1])}</td><td class=n>{spain['Land']}</td><td class=n>{spain['Hill']}</td><td class=n>{spain['Mountain']}</td>"
                           f"<td class=n>100{' %' if lang == 'es' else '%'}</td>", html)
             for start, end, gold in fire.COSTS:
                 self.assertIn(str(gold), html)
@@ -623,6 +640,14 @@ class FireSeasonTest(unittest.TestCase):
         self.assertAlmostEqual(sum(c["weight"] * c["tiles"] for c in s["classes"]), fire.UNIT, delta=len(fire.CLASSES))
         self.assertEqual(s["summer_share"], round((600 + 800 + 400 + 700 + 900) / 4400, 3))
         self.assertIsInstance(s["texts"]["event"], Text)
+
+    def test_the_popup_counts_every_great_fire(self):
+        """'about N a season' sits next to the count of all great fires, those off Spain's land tiles too."""
+        s = self.season([self.fire(1, 600), self.fire(2, 600), self.fire(4, 600)])  # the last at sea
+        self.assertEqual((s["great_fires"], s["on_spanish_tiles"], s["fires_per_season"]), (3, 2.0, 1.0))
+        self.assertIn("unos 2 por temporada", s["texts"]["event"]["es"])
+        self.assertIn("about 2 a season", s["texts"]["event"]["en"])
+        self.assertFalse(s["texts"]["event"]["es"].startswith("Verano"))  # the event fires in any season
 
     def test_a_fire_on_a_hill_counts_for_hill_only(self):
         s = self.season([self.fire(1, 600), self.fire(0, 600), self.fire(2, 600)])
@@ -721,9 +746,10 @@ class FireSeasonTest(unittest.TestCase):
 
     def test_check(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(fire.check(tmp)[0][0], "NOTE")
+            self.assertEqual(fire.check(tmp), [])  # no Unciv map (the US): nothing to say
             doc = {"summary": {"fire_season": {"classes": [{"class": "Land", "tiles": 10, "weight": 10_200}],
-                                               "unit": fire.UNIT, "great_fires": 3, "threshold_ha": 500, "fires_per_season": 1.0}}}
+                                               "unit": fire.UNIT, "great_fires": 3, "threshold_ha": 500, "fires_per_season": 1.0,
+                                               "on_spanish_tiles": 2.9}}}
             (Path(tmp) / "unciv.json").write_text(json.dumps(doc))
             self.assertEqual(fire.check(tmp)[0][0], "FAIL")
             doc["summary"]["fire_season"]["classes"][0]["weight"] = 10_000

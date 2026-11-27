@@ -1,17 +1,17 @@
-"""The fire season of the Unciv mod: an event that can put a great fire on a major civilization's land, as often as
-EFFIS saw great fires burn in Spain, and the files that make it (Events.json, GlobalUniques.json and their Spanish).
+"""The fire season of the Unciv mod: an event that can put a great fire on a major civilization's land, where EFFIS
+saw great fires burn in Spain, and the files that make it (Events.json, GlobalUniques.json and their Spanish).
 spain_unciv.py measures it (season) into unciv.json's summary; pipeline/play.py writes the files from that summary.
 No build(): it is a helper of spain_unciv, not a builder.
 
-What is data and what is convention (DECISIONS E84):
+What is data and what is convention (DECISIONS E90):
 * Data (EFFIS 2016-2025, CC BY 4.0): each fire of GREAT_FIRE_HA or more is shared among the 25 km tiles its perimeter
   covers (spain_daily.burnt_cells on the map's fine hexes, each hex in the tile that holds its centre). Over Spain's
   land tiles that gives each class of tile, as Unciv's tile filters count them (CLASSES), its great fires per tile per
   season, λ, and its share of Spain's great fires, s = λ / Σ λ·N; the weight is s in UNIT parts.
 * Conventions: a turn is one fire season; each season Spain's great fire lands on a civilization with the share of
-  Spain it owns, P = Σ s·owned (all of Spain: one a season); the check runs every CHECK_TURNS turns with
-  1 - (1 - P)^CHECK_TURNS; brigades cost COSTS gold by era; letting it burn costs PENALTY_PCT % production for
-  PENALTY_TURNS turns. Land outside Spain has no EFFIS data and counts with Spain's rates for its class.
+  Spain it owns, P = Σ s·owned (all of Spain: one a season, against EFFIS's fires_per_season); the check runs every
+  CHECK_TURNS turns with 1 - (1 - P)^CHECK_TURNS; brigades cost COSTS gold by era; letting it burn costs PENALTY_PCT %
+  production for PENALTY_TURNS turns. Land outside Spain has no EFFIS data and counts with Spain's rates for its class.
 
 Unciv 5.0.1 (core/src/com/unciv): the event fires from Global uniques with <upon turn start> (TurnManager.startTurn);
 <with [N]% chance> takes an integer, so the chance comes in bands of the countable expression, one Global unique per
@@ -74,7 +74,7 @@ def season(effis: dict, tiles: list[unciv.Tile], fine, proj) -> dict:
                 "weight": round(UNIT * rate[k] / per_season)} for k in CLASSES]
     summer = sum(f["area_ha"] for f in fires if f["month"] in SUMMER) / sum(f["area_ha"] for f in fires)
     by_season = Counter(f["year"] for f in great)
-    numbers = {"n": len(great), "ha": GREAT_FIRE_HA, "seasons": seasons, "per": round(per_season),
+    numbers = {"n": len(great), "ha": GREAT_FIRE_HA, "seasons": seasons, "per": round(len(great) / seasons),
                "times": rough_times(classes), "k": CHECK_TURNS}
     return {
         "threshold_ha": GREAT_FIRE_HA, "years": [first, last], "great_fires": len(great),
@@ -97,10 +97,10 @@ def rough_times(classes: list[dict]) -> int:
 # numbers in them as the player's language does, so they carry plain integers and no years.
 TEXTS = {
     "name": tr("Temporada de incendios", EVENT),
-    "event": tr("Verano: arde un gran incendio en tu territorio. En España el EFFIS cartografió {n} incendios de {ha} "
+    "event": tr("Arde un gran incendio en tu territorio. En España el EFFIS cartografió {n} incendios de {ha} "
                 "ha o más en {seasons} temporadas, unos {per} por temporada, y en colinas y montañas arden {times} "
                 "veces más por casilla que en el llano.",
-                "Summer: a great fire is burning on your land. In Spain EFFIS mapped {n} fires of {ha} ha or more in "
+                "A great fire is burning on your land. In Spain EFFIS mapped {n} fires of {ha} ha or more in "
                 "{seasons} seasons, about {per} a season, and hills and mountains burn {times} times as often per tile "
                 "as flat land."),
     "pay": tr("Enviar brigadas", "Send fire brigades"),
@@ -206,17 +206,18 @@ def costs_by_era() -> dict[str, int]:
 
 
 def check(web_dir) -> list[tuple[str, str]]:
-    """unciv.json's fire season: the class weights over Spain add up to UNIT within 1 %. NOTE without an Unciv map."""
+    """unciv.json's fire season: the class weights over Spain add up to UNIT within 1 %. Nothing without an Unciv map."""
     path = Path(web_dir) / "unciv.json"
     if not path.exists():
-        return [("NOTE", "unciv.json: none, so no fire season to check")]
+        return []
     fire = json.loads(path.read_text())["summary"].get("fire_season")
     if fire is None:
         return [("FAIL", "unciv.json: no summary.fire_season")]
     total = sum(c["weight"] * c["tiles"] for c in fire["classes"])
     w = ", ".join(f"{c['class']} {c['weight']}" for c in fire["classes"])
+    off = 1 - fire["on_spanish_tiles"] / fire["great_fires"]  # islands without a land tile, coastal hexes at sea
     if abs(total - fire["unit"]) > fire["unit"] / 100:
         return [("FAIL", f"unciv.json fire season: weights over Spain add up to {total}, not {fire['unit']} ({w})")]
     return [("PASS", f"unciv.json fire season: {fire['great_fires']} fires of {fire['threshold_ha']} ha or more, "
-                     f"{fire['fires_per_season']} a season on Spanish tiles; weights {w} (Spain {total}); "
-                     f"{len(bands())} chance bands")]
+                     f"{fire['fires_per_season']} a season on Spanish tiles ({off:.1%} off them); weights {w} "
+                     f"(Spain {total}); {len(bands())} chance bands")]

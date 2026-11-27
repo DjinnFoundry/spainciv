@@ -20,14 +20,16 @@ a { color: var(--gold-bright); }
 .downloads a { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; background: var(--panel-2); }
 figure { margin: 18px 0; }
 figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; display: block; }
+figure.popup img { max-width: 600px; }
 figcaption { font-size: 13px; color: var(--ink-dim); margin-top: 6px; }
 ol li, ul li { margin: 4px 0; }
-code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; overflow-wrap: anywhere; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
 td.n, th.n { text-align: right; }
 td.n { white-space: nowrap; }
+@media (max-width: 480px) { th, td { padding: 6px 4px; } }
   </style>
 </head>
 <body>
@@ -141,9 +143,9 @@ td.n { white-space: nowrap; }
   </ul>
   <p>AI civilizations choose at random: when they can pay, they send the brigades $fire_ai times in $fire_ai_of.</p>
 
-  <figure>
-    <img src="$fire_shot" alt="The fire season popup in Unciv, with its two choices" loading="lazy">
-    <figcaption>The popup in Unciv $release, in Spanish: under each choice, what it does.</figcaption>
+  <figure class=popup>
+    <a href="$fire_shot"><img src="$fire_shot" alt="The fire season popup in Unciv, with its two choices" loading="lazy"></a>
+    <figcaption>The popup in Unciv $release: under each choice, what it does.</figcaption>
   </figure>
 
   <p>What is data: EFFIS, the European Forest Fire Information System (Copernicus, CC BY 4.0 licence), mapped
@@ -166,7 +168,7 @@ td.n { white-space: nowrap; }
     <li>Convention: one turn is one fire season. An Unciv turn lasts from a month to 60 years, depending on the speed
       and how far the game has gone, so it cannot be literal.</li>
     <li>Convention: each season, Spain's great fire lands on your territory with the share of Spain you own, the sum
-      of your tiles' weights over $fire_unit. With all of Spain, one every season.</li>
+      of your tiles' weights over $fire_unit. With all of Spain, one every season (EFFIS: about $fire_per_season).</li>
     <li>Convention: the check runs every $fire_check turns, with the chance of at least one fire in those $fire_check
       seasons. Unciv only takes whole percentages, so it comes in $fire_bands steps of 1%.</li>
     <li>Convention: the penalty lasts $fire_penalty_turns turns, the same as the gap between checks, so two penalties
@@ -175,9 +177,9 @@ td.n { white-space: nowrap; }
     <li>Assumption: the land of Portugal, France and North Africa has no EFFIS data on this map and counts with Spain's
       rates for its class.</li>
   </ul>
-  <p>Chance at each check by the tiles you own. The last row is all of Spain:</p>
+  <p>Chance at each check by the tiles you own:</p>
   <table>
-    <tr><th class=n>Other land tiles</th><th class=n>Hills</th><th class=n>Mountains</th><th class=n>Chance</th></tr>
+    <tr><th></th><th class=n>Other land tiles</th><th class=n>Hills</th><th class=n>Mountains</th><th class=n>Chance</th></tr>
     $fire_examples
   </table>
 
