@@ -197,8 +197,16 @@ export function initLensDock(opts) {
   }
 
   // ---- legend ---------------------------------------------------------------------------------------------------
-  function histogram(lens) {
-    if (histCache.has(lens.id)) return histCache.get(lens.id);
+  // Cached per lens while its values array stays the same (a lens whose values are replaced, such as the fiesta
+  // calendar's month, is counted again).
+  const cached = (key, lens, make) => {
+    const c = histCache.get(key);
+    if (c?.values === lens.values) return c.data;
+    const data = make();
+    histCache.set(key, { values: lens.values, data });
+    return data;
+  };
+  const histogram = (lens) => cached(lens.id, lens, () => {
     const counts = new Array(BINS).fill(0);
     const t = lensScale(lens);
     const owner = w.raw.owner;
@@ -211,10 +219,8 @@ export function initLensDock(opts) {
       counts[Math.max(0, Math.min(BINS - 1, Math.floor(tv * BINS)))]++;
       n++;
     }
-    const h = { counts, n, max: Math.max(1, ...counts) };
-    histCache.set(lens.id, h);
-    return h;
-  }
+    return { counts, n, max: Math.max(1, ...counts) };
+  });
 
   function sourceLine(lens) {
     const src = sources.find((s) => s.id === lens.source);
@@ -233,9 +239,7 @@ export function initLensDock(opts) {
     const h = 0.5 / (n - 1);
     return [k === 0 ? -Infinity : k / (n - 1) - h, k === n - 1 ? Infinity : k / (n - 1) + h];
   };
-  const catCounts = (l) => {
-    const key = `cat:${l.id}`;
-    if (histCache.has(key)) return histCache.get(key);
+  const catCounts = (l) => cached(`cat:${l.id}`, l, () => {
     const counts = new Array(l.categories.length).fill(0);
     const owner = w.raw.owner;
     for (let i = 0; i < l.values.length; i++) {
@@ -244,9 +248,8 @@ export function initLensDock(opts) {
       const k = Math.round(v);
       if (k >= 0 && k < counts.length) counts[k]++;
     }
-    histCache.set(key, counts);
     return counts;
-  };
+  });
   const noteHtml = (l) => (l.note ? `<div class="lg-note">${esc(l.note)}</div>` : "");
   // Both legends' title row: the lens, the details toggle and the close button.
   const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.name)}</span>
@@ -469,6 +472,11 @@ export function initLensDock(opts) {
       if (!picker.hidden) renderPicker();
       renderLegend();
       showBand();
+    },
+    // A lens main.js added to lenses.json's list after the dock started (app.addLens).
+    add(lens) {
+      byId.set(lens.id, lens);
+      if (!picker.hidden) renderPicker();
     },
     remember(id) {
       if (!byId.has(id) || recent.includes(id)) return;
