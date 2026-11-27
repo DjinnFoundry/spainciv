@@ -1,7 +1,8 @@
 // A lens built in the browser that comes with a panel in the left dock (the fiesta calendar, the sun lens, the
-// reservoirs, the climate of the month): picking the lens opens the panel, and closing either closes both. The panel is
-// an app mode, so Esc closes it too. A panel can serve several lenses (the climate's four variables): picking any of
-// them opens it, moving between them keeps it open, and any other lens closes it.
+// reservoirs, the climate of the month, the timeline): picking the lens opens the panel, and closing either closes
+// both. The panel is an app mode, so Esc closes it too. A panel can serve several lenses (the climate's four variables,
+// the timeline's two views): picking any of them opens it, moving between them keeps it open, and any other lens
+// closes it.
 //
 //   const panel = lensPanel(app, lens | [lens, ...], {mode, width, label, open(dock), close(), pick()})
 //     label         the dock's accessible name (the first lens's name by default)

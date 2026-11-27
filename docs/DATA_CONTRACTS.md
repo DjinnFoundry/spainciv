@@ -1152,12 +1152,12 @@ the user's choices; `decimals`, for `format: "float"`, writes every value with t
 <province>" when the lens's panel takes the click; `domain: null` while its values are not in yet (the legend shows its
 name and description only, and the map paints its land as no data). Its `source` is an id of sources.json, and the
 legend never gives it the lenses.json `vintage`.
-A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
-{mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
-Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the climate's four): moving between them
-keeps it open, and `pick()` names the lens it opens on. On a phone the dock is a bottom sheet that covers the legend:
-`panelKey()` in the panel's HTML and `updatePanelKey(dock, lens, label)` give it the lens's ramp and three ticks, shown on
-phones only (the sun lens and the climate).
+A lens that opens a panel in the left dock with it (the calendar, the sun lens, the reservoirs, the climate, the
+timeline) uses `lensPanel(app, lens, {mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close
+together, and `#lens=<id>` opens both. Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the
+climate's four, the timeline's two): moving between them keeps it open, and `pick()` names the lens it opens on. On a
+phone the dock is a bottom sheet that covers the legend: `panelKey()` in the panel's HTML and `updatePanelKey(dock, lens,
+label)` give it the lens's ramp and three ticks, shown on phones only (the sun lens and the climate).
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).
