@@ -250,7 +250,8 @@ lens: "Nadie", nobody born there).
 "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
 `check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
 
-**`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; for a fiesta calendar, no view reads it yet): `{"vintage",
+**`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; read by the fiesta calendar, `web/js/ext/fiestas`, when it first
+opens): `{"vintage",
 "fiestas": [{"name", "category": "internacional|nacional|autonomica", "declaration": "Festa de Interese Turístico de
 Galicia" | null, "community", "place": "O Carballiño" | null, "municipalities": [INE codes], "cells": [hex indices],
 "when": "Agosto: segundo domingo" | null, "months": [1..12]}]}`, every fiesta of the `fiestas` lens in the order of its
@@ -258,7 +259,9 @@ Galicia" | null, "community", "place": "O Carballiño" | null, "municipalities":
 `declaration`, `community` and `when` are written as the official source writes them, in its language; `when` is the
 source's text (a rule such as "el 12 de septiembre de cada año", or one year's edition such as "13 de febrero de 2026 -
 18 de febrero de 2026"), null where the source gives no date; `months` are the months that text names, empty for a
-movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates.
+movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates: an Internacional or
+Nacional fiesta has those of its community's entries for the same fiesta (`state_same`), their distinct texts joined by
+"; " and the union of their months, and none without such an entry.
 
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
@@ -801,7 +804,9 @@ saved by `download_prefix()` has a `partial` note in the manifest, and its `sha2
 Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/index.js` loads `cityView`, `advisors`,
 `layers` (roads, rail, forts, ports, airports, wonders and trade routes), `lang` (the language switch of a country in
 several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
-`juego`, only where the page settings say `game: true`; its rules and clues are in `ext/game/puzzle.js`). The API:
+`juego`, only where the page settings say `game: true`; its rules and clues are in `ext/game/puzzle.js`) and `fiestas`
+(the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
@@ -887,6 +892,11 @@ hash), e.g. an advisor's "show roads, rail and forts" button; false if no toggle
 `cities` and `counties`, and citizens.json `cities`; the City View reads citizens.json, districts.json, military.json
 `cities`, trade.json zones and infrastructure.json `cbsa`. Update `web/js/ext/advisors` and `web/js/ext/cityView`
 when renaming a field in those files.
+
+**Lenses built in the browser.** `app.setLens(lens object)` colours the map with a lens that is not in lenses.json
+(the advisors' do). `app.addLens(lens, {after: id})` also puts one in the lens picker, after that lens of lenses.json, so
+`#lens=<its id>` opens it once added (throws on a taken id). After replacing the active lens's `values` (a new array),
+`names`, `labels` or texts, `app.refreshLens()` paints it again, legend and minimap included, keeping the band.
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).

@@ -4,5 +4,6 @@ import app from "./es/app.js";
 import cityView from "./es/cityView.js";
 import advisors from "./es/advisors.js";
 import game from "./es/game.js";
+import fiestas from "./es/fiestas.js";
 
-export default { ...core, ...app, ...cityView, ...advisors, ...game };
+export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas };

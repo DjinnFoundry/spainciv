@@ -1349,6 +1349,23 @@ async function main() {
       if (lens && !modes.mode) dock.remember(lens.id);
     },
     setBand,
+    /** Add a lens built in the browser to the lens picker, after the lens `after` of lenses.json (else last). */
+    addLens(lens, { after } = {}) {
+      if (!lens?.id || lensById.has(lens.id)) throw new Error(`addLens: no id or a taken one (${lens?.id})`);
+      const k = lensFile.lenses.findIndex((l) => l.id === after);
+      lensFile.lenses.splice(k >= 0 ? k + 1 : lensFile.lenses.length, 0, lens);
+      lensById.set(lens.id, lens);
+      dock.add(lens);
+    },
+    /** Paint the active lens again after its values (a new array), names or texts changed; the band stays. */
+    refreshLens() {
+      if (!state.lens) return;
+      applyLens(w, state.lens, state.band);
+      dock.render(state.lens, state.band);
+      rebuildMinimap();
+      cache.key = null;
+      requestDraw();
+    },
     flyTo(x, y, scale = cam.scale, ms = 750) { flyToVisible(x, y, scale, ms); },
     fitBounds,
     home() { const h = homeView(); cam.flyTo(h.x, h.y, h.s, 750); userMoved = false; requestDraw(); },
