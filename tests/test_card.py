@@ -89,8 +89,9 @@ class GridTest(unittest.TestCase):
 class CardLayoutTest(unittest.TestCase):
     def test_wrap_breaks_evenly_and_fits(self):
         font = cinzel()
-        lines = card.wrap(font, ES.page.card_title, 30, 330)
-        self.assertEqual(" ".join(lines), ES.page.card_title)
+        title = ES.page.in_lang('es').card_title
+        lines = card.wrap(font, title, 30, 330)
+        self.assertEqual(" ".join(lines), title)
         self.assertTrue(all(font.width(line, 30) <= 330 for line in lines))
         self.assertEqual(card.wrap(font, "una", 30, 1), ["una"])
 

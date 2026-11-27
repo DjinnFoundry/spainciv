@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Play in Unciv — $product</title>
+  <meta name="description" content="How to play the $product map of Spain in Unciv, the open-source Civilization V, on a computer and on Android.">
+  <link rel="canonical" href="$url/$page">
+  <meta name="theme-color" content="#131e2a">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+html, body { height: auto; overflow: auto; background: #0d2a47; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; line-height: 1.55; font-size: 16px; }
+h1 { font: normal 30px var(--serif); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-bright); margin: 8px 0 4px; }
+h2 { font: normal 15px var(--serif); letter-spacing: .18em; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin: 32px 0 12px; }
+a { color: var(--gold-bright); }
+.back { font-size: 14px; }
+.panel.box { padding: 14px 18px; margin: 16px 0; }
+.downloads { display: flex; flex-wrap: wrap; gap: 10px; }
+.downloads a { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; background: var(--panel-2); }
+figure { margin: 18px 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-dim); margin-top: 6px; }
+ol li, ul li { margin: 4px 0; }
+code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
+th { color: var(--gold); font-weight: normal; }
+td.n { text-align: right; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="back"><a href="$home">Back to the map</a>$other_langs</p>
+  <h1>Play in Unciv</h1>
+  <p>The $product map of Spain can be played in <a href="https://github.com/yairm210/Unciv">Unciv</a>, the free
+  and open-source Civilization V for Windows, macOS, Linux and Android. It has $width × $height tiles of
+  $tile_km km: the peninsula, the Balearic Islands, the Canary Islands (in their inset, as on the map), Ceuta,
+  Melilla and the neighbouring land of Portugal, France and North Africa. Spain starts in Madrid.</p>
+
+  <div class="panel box downloads">
+    <a href="$zip_href" download>Unciv mod ($zip_name)</a>
+    <a href="$map_href" download="$map_name">Map only</a>
+  </div>
+
+  <figure>
+    <img src="$shot" alt="A game of Unciv on the map of Spain" loading="lazy">
+    <figcaption>A game in Unciv $release on this map at turn 40, with the map revealed: Spain in Madrid and seven
+    other civilizations in the large cities.</figcaption>
+  </figure>
+
+  <h2>On a computer (Windows, macOS, Linux)</h2>
+  <ol>
+    <li>Install Unciv as <a href="https://github.com/yairm210/Unciv#how-do-i-install">its page</a> says: on Windows,
+      the <a href="https://github.com/yairm210/Unciv/releases/latest/download/Unciv.msi">Unciv.msi</a> installer; on
+      Linux, Flathub or itch.io; on macOS, <code>brew install unciv</code>.</li>
+    <li>Open Unciv and go to <b>Mods</b>. Press <b>Download mod from URL</b>, paste
+      <code>$url/$zip_href</code> and press <b>Download</b>.</li>
+    <li>Back in the menu, press <b>Start new game</b>. Under <b>Map Type</b> choose <b>Custom</b> and, under
+      <b>Map file</b>, <b>$map_name</b>. The game turns on the <b>$mod_name</b> mod by itself (you will see it ticked
+      under <b>Extension mods</b>): it brings the Iberian pig.</li>
+    <li>Press <b>Select players from starting locations</b>: you play Spain. Add rivals with the <b>+</b> of the
+      player list; each starts in a large city: $starts.</li>
+    <li>Press <b>Start game!</b>.</li>
+  </ol>
+  <p>Without the mod: download <a href="$map_href" download="$map_name">the map only</a> and save it, named
+  <code>$map_name</code> and without an extension, in the <code>maps</code> folder of Unciv's data (if you run it
+  with <code>java -jar Unciv.jar</code>, that is the folder of the .jar). It shows under <b>Map file</b> and in the
+  map editor. It is the same map without the Iberian pig, which only exists with the mod.</p>
+
+  <h2>On Android</h2>
+  <ol>
+    <li>Install Unciv from Google Play or F-Droid.</li>
+    <li>Open Unciv, go to <b>Mods</b>, press <b>Download mod from URL</b>, paste
+      <code>$url/$zip_href</code> and press <b>Download</b>.</li>
+    <li>Carry on from step 3 above. Android does not need the separate map: the mod has it inside.</li>
+  </ol>
+
+  <h2>From Unciv's mod browser</h2>
+  <p>The mod is also on GitHub (<a href="https://github.com/$mod_repo">$mod_repo</a>), so it is listed in the game's
+  mods: go to <b>Mods</b>, look for <b>Spainciv</b> under <b>Downloadable mods</b> (or in the <b>Maps</b> category),
+  pick it and press <b>Download</b>. Updates arrive the same way.</p>
+
+  <h2>What is real and what is the game's</h2>
+  <table>
+    <tr><th>On the map</th><th>Where it comes from</th></tr>
+    <tr><td>Land, sea, lakes and islands</td><td>Real: the $product map (IGN, Natural Earth, ETOPO1). A tile is land
+      if at least half of the $fine_km km hexes it covers are; no island of the map disappears. Sea next to the coast
+      or less than $coast_m m deep is Coast; the rest, Ocean.</td></tr>
+    <tr><td>Mountains and hills</td><td>Real: the ETOPO1 relief. A mountain if $mountain_pct% of the tile is mountain
+      on the $product map or it has a hex of peaks; a hill if $hill_pct% is. In Unciv mountains cannot be
+      crossed.</td></tr>
+    <tr><td>Forest, grassland, plains, marsh</td><td>Real: CORINE Land Cover 2018. Forest where forest covers
+      $forest_pct% or more; grassland where meadows, pastures and wetlands outweigh crops and scrub; marsh where
+      wetlands pass $marsh_pct%. The rest is plains.</td></tr>
+    <tr><td>Tundra</td><td>Convention: with no climate data, height stands in for cold: land at a mean elevation of
+      $tundra_m m or more is tundra.</td></tr>
+    <tr><td>Portugal, France and North Africa</td><td>Their relief is real; their land cover is not in the data, so
+      they are plains, with no forests or resources.</td></tr>
+    <tr><td>Rivers</td><td>Real: the rivers of the $product map (Natural Earth), moved to the tile edges, as Unciv
+      draws them ($river_edges segments).</td></tr>
+    <tr><td>Rock of Gibraltar</td><td>The only Unciv natural wonder that really is on this map, on the tile of
+      Gibraltar.</td></tr>
+    <tr><td>Starting locations</td><td>Spain in Madrid and $n_starts more in the largest AUDES urban areas, at least
+      $gap_km km apart. Rivals take them at random and city-states get the ones left over; if there are not enough,
+      the game finds them a place.</td></tr>
+  </table>
+
+  <h2>Resources</h2>
+  <p>Each resource comes from data. Minerals go to the tile of their deposit or their mine: a Civilization resource
+  is a deposit, not a working mine, so the large and medium deposits of IGME's BDMIN count even if they are no longer
+  worked (the coal of León, Palencia or Asturias, the uranium of Salamanca or Jaén). Products go to the tile with the
+  largest area of their designation of origin, and horses to the comarcas with the most equines per km². Unciv only
+  allows each resource on certain terrains (coal on plains, grassland, hills or forest; uranium on forest, tundra or
+  marsh); if its tile does not qualify, it goes to a neighbouring one that does, and if none does it is left out.
+  Uranium and aluminum, which fit very few terrains, look up to two tiles further, so their tile can be up to about
+  50 km from the deposit. There is one per tile, and several deposits of the same thing close together give one. The
+  amounts of the strategic resources are those of a large Unciv deposit.</p>
+  <table>
+    <tr><th>Resource</th><th>Tiles</th><th>Where it comes from</th></tr>
+    $resource_rows
+  </table>
+  <p>Left without a tile: $not_placed. Nearly all the stone quarries fall on plains, where Unciv puts no stone, and
+  nearly all the uranium on plains of Salamanca and Sierra Morena with no forest, tundra or marsh within 50 km. These
+  designations found no free tile that takes them: $designations.</p>
+  <p>The Iberian pig is a luxury resource of this mod's own: Unciv has no pigs. It goes on grassland, plains or hills,
+  is improved with a pasture and gives food and gold. It is a luxury and not a bonus resource (like cattle or sheep)
+  because the four designations protect Iberian ham, a cured product, just as the wine designations protect wine and
+  not grapes.</p>
+
+  <h2>Credits</h2>
+  <p>Map: <a href="$url/">$product</a>, with data from IGN, Copernicus (CORINE Land Cover 2018), NOAA (ETOPO1),
+  Natural Earth, IGME, INE and the Spanish Ministry of Agriculture. The mod is published under the CC BY 4.0 licence.
+  Unciv is by Yair Morgenstern and its contributors (MPL 2.0).</p>
+</main>
+</body>
+</html>

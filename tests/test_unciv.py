@@ -8,9 +8,11 @@ import json
 import math
 import unittest
 import zipfile
+from html import escape
 from unittest import mock
 
 from pipeline import countries, play, site
+from pipeline.core.lang import pick
 from pipeline.build import spain_unciv, unciv
 from pipeline.build.world import COAST, LAKE, LAND, OCEAN
 from pipeline.core.hexgrid import HexGrid
@@ -19,7 +21,8 @@ ES = countries.COUNTRIES["es"]
 
 
 def built() -> dict:
-    return json.loads((ES.web_data_dir / "unciv.json").read_text(encoding="utf-8"))
+    """unciv.json as built, its texts in Spanish and English."""
+    return play.load(ES)
 
 
 def grid_of(summary: dict) -> unciv.Grid:
@@ -476,9 +479,10 @@ class ModAndPageTest(unittest.TestCase):
         cls.folder = cls.doc["summary"]["mod"]["name"]
 
     def test_spain_has_the_page_and_downloads_and_the_us_none(self):
-        self.assertEqual(set(self.files), {play.PAGE, play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0]})
+        self.assertEqual(set(self.files), {*play.PAGES.values(), play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0]})
         self.assertEqual(play.files(countries.COUNTRIES["us"]), {})
-        self.assertEqual(site.page_config(ES)["play"], play.PAGE)
+        self.assertEqual(site.page_config(ES)["play"], play.PAGES["es"])
+        self.assertEqual(site.page_config(ES)["texts"]["en"]["play"], play.PAGES["en"])
 
     def test_the_mod_zip_is_one_folder_unciv_can_install(self):
         z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
@@ -514,18 +518,27 @@ class ModAndPageTest(unittest.TestCase):
         self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"]))
 
     def test_the_page(self):
-        html = self.files[play.PAGE]().decode("utf-8")
+        """One page per language, each linking to the other and back to the map in its language; the Unciv menu names
+        are the game's own in that language (android/assets/jsons/translations)."""
         s = self.doc["summary"]
-        self.assertIn('<html lang="es">', html)
-        self.assertNotIn("$", html)
-        for needle in (play.MOD_ZIP, play.MAP_FILE, play.SCREENSHOT[0], f"https://{ES.site_url}/{play.MOD_ZIP}",
-                       f'download="{s["map_name"]}"', s["mod"]["repo"], "Descargar mod con Enlace", "Mods de extensión"):
-            self.assertIn(needle, html)
-        names = play.resource_texts(s, "es")
-        for resource, n in s["resources"].items():
-            self.assertIn(f"<td>{names[resource][0]}</td><td class=n>{n}</td>", html)
-        for start in s["starts"][1:]:
-            self.assertIn(start["city"], html)
+        menus = {"es": ("Descargar mod con Enlace", "Mods de extensión", "Escoger mapa"),
+                 "en": ("Download mod from URL", "Extension mods", "Map file")}
+        for lang, other in (("es", "en"), ("en", "es")):
+            html = self.files[play.PAGES[lang]]().decode("utf-8")
+            self.assertIn(f'<html lang="{lang}">', html)
+            self.assertNotIn("$", html)
+            for needle in (play.MOD_ZIP, play.MAP_FILE, play.SCREENSHOT[0], f"https://{ES.site_url}/{play.MOD_ZIP}",
+                           f'download="{s["map_name"]}"', s["mod"]["repo"], *menus[lang], f'href="./#lang={lang}"',
+                           f'href="{play.PAGES[other]}" lang="{other}"', f'<link rel="canonical" href="https://{ES.site_url}/{play.PAGES[lang]}">'):
+                self.assertIn(needle, html)
+            names = play.resource_texts(s, lang)
+            for resource, n in s["resources"].items():
+                self.assertIn(f"<td>{escape(names[resource][0])}</td><td class=n>{n}</td>", html)
+            for start in s["starts"][1:]:
+                self.assertIn(start["city"], html)
+            for name in s["not_placed_designations"]:
+                self.assertIn(escape(pick(name, lang)), html)
+        self.assertIn("(PDO)", self.files[play.PAGES["en"]]().decode("utf-8"))
 
 
 class BdminPositionTest(unittest.TestCase):
