@@ -635,6 +635,16 @@ SOURCES = {
         "y la posición de cada estación salen de su página de AEMET.",
         "used_for": ["Clima del mes (estaciones, horas de sol)"],
     },
+    "aemet_rocio": {
+        "title": "Rejilla diaria ROCIO de temperatura y precipitación (AEMET), medias 1991-2020",
+        "license": _AEMET,
+        "description": "Las rejillas diarias de AEMET de temperatura máxima y mínima (ROCIO_IBEB v1) y precipitación "
+        "(v2), cada 0,05° en la península y Baleares, y ROCIO+_CAN cada 0,025° en Canarias, promediadas por spainciv en "
+        "cada punto y mes de 1991 a 2020: media de las máximas y de las mínimas, lluvia media del mes y días de media con "
+        "la mínima a 0 °C o menos. Método: Nota técnica 24 de AEMET (Peral, Navascués y Ramos, 2017) y Amblar y otros "
+        "(2020).",
+        "used_for": ["Clima del mes (temperatura, lluvia, días de helada)"],
+    },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
         "publisher": "Ministerio de Industria y Turismo, Secretaría de Estado de Turismo",

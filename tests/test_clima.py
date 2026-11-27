@@ -2,8 +2,11 @@
 clima.json (pipeline/build/spain_clima.py) with its check."""
 
 import unittest
+from array import array
+from unittest import mock
 
 from pipeline.sources.es import aemet_normales as N
+from pipeline.sources.es import aemet_rocio as R
 from pipeline.sources.es import omm_normales as O
 
 
@@ -106,6 +109,78 @@ class ProvinceNormalsTest(unittest.TestCase):
         self.assertEqual(provinces["09"]["tmed"][0], 3.6)  # BURGOS, January
         self.assertEqual(round(sum(provinces["09"]["prec"]), 1), 658.4)
         self.assertEqual(len(peninsula["tmed"]), 12)
+
+
+def days_in(year, month):
+    from datetime import date
+    return (date(year + month // 12, month % 12 + 1, 1) - date(year, month, 1)).days
+
+
+class RocioNormalsTest(unittest.TestCase):
+    """Two points, the years 2019-2020 (2020 is a leap year)."""
+
+    def year(self, year, value, missing_at=None):
+        """A year of daily data, 2 points a day: point 0 = value(day), point 1 = 10 + value(day)."""
+        from datetime import date, timedelta
+        dates = [date(year, 1, 1) + timedelta(days=d) for d in range(366 if year % 4 == 0 else 365)]
+        data = array("f")
+        for k, d in enumerate(dates):
+            v = value(d)
+            data.extend([-9999.0 if missing_at == (d, 0) else v, v + 10])
+        return data, dates
+
+    def run_years(self, kind, value, missing_at=None, offset=0.0):
+        with mock.patch.object(R, "FIRST", 2019), mock.patch.object(R, "LAST", 2020):
+            acc = R.Accumulator(2, kind)
+            for y in (2019, 2020):
+                data, dates = self.year(y, value, missing_at)
+                R.flush(acc, data, dates, -9999.0, offset)
+            return acc.result()
+
+    def test_leap_february_means_and_rain_sums(self):
+        out = self.run_years("tmax", lambda d: float(d.day))
+        # February: days 1..28 (2019) and 1..29 (2020): mean of 57 days
+        feb = (sum(range(1, 29)) + sum(range(1, 30))) / 57
+        self.assertEqual(out["tmax"][1][0], round(feb, 1))
+        self.assertEqual(out["tmax"][1][1], round(feb + 10, 1))
+        rain = self.run_years("prec", lambda d: 1.0)
+        self.assertEqual(rain["prec"][1][0], round((28 + 29) / 2, 1))  # the mean of the two monthly totals
+        self.assertEqual(rain["prec"][0][1], 11 * 31)
+
+    def test_frost_counts_minimums_at_or_below_zero(self):
+        out = self.run_years("tmin", lambda d: 0.0 if d.day <= 3 else (-0.5 if d.day == 4 else 0.5))
+        self.assertEqual(out["frost"][0][0], 4.0)  # three days at 0 and one below
+        self.assertEqual(out["frost"][0][1], 0.0)
+        self.assertIn("tmin", out)
+
+    def test_kelvin_offset(self):
+        out = self.run_years("tmin", lambda d: 273.15, offset=-R.KELVIN)
+        self.assertEqual(out["tmin"][0][0], 0.0)
+        self.assertEqual(out["frost"][0][0], 31.0)  # 0 °C counts as frost
+
+    def test_a_missing_day_nulls_that_point_month_only(self):
+        from datetime import date
+        out = self.run_years("tmax", lambda d: 5.0, missing_at=(date(2020, 3, 10), 0))
+        self.assertIsNone(out["tmax"][2][0])
+        self.assertEqual(out["tmax"][2][1], 15.0)
+        self.assertEqual(out["tmax"][3][0], 5.0)
+
+    def test_a_year_missing_fails(self):
+        with mock.patch.object(R, "FIRST", 2019), mock.patch.object(R, "LAST", 2020):
+            acc = R.Accumulator(2, "tmax")
+            data, dates = self.year(2019, lambda d: 1.0)
+            R.flush(acc, data, dates, -9999.0, 0.0)
+            with self.assertRaisesRegex(ValueError, "2020"):
+                acc.result()
+
+    def test_month_spans_and_time_units(self):
+        from datetime import date
+        self.assertEqual(R.days_since("days since 1990-1-1 06:00:00"), date(1990, 1, 1))
+        self.assertEqual(R.days_since("days since 2020-01-01 06:00:00"), date(2020, 1, 1))
+        dates = R.step_dates([0.0, 1.0, 31.0], "days since 1991-01-01 06:00:00")
+        self.assertEqual(R.month_spans(dates), {(1991, 1): (0, 2), (1991, 2): (2, 3)})
+        with self.assertRaisesRegex(ValueError, "consecutive"):
+            R.month_spans([date(1991, 1, 1), date(1991, 2, 1), date(1991, 1, 2)])
 
 
 if __name__ == "__main__":
