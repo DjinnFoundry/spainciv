@@ -110,6 +110,7 @@ class RenderTest(unittest.TestCase):
         self.assertIn("lenses", h.config["data"])
         self.assertNotIn("lenses.en", h.config["data"])
         self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
+        self.assertTrue({"embalses", "embalses_semanas"} <= set(h.config["data"]))  # the reservoirs lens, loaded lazily
         self.assertIn("Based on <a href=", english["credits"])
         self.assertIn("Boundaries: Atlas Nacional de España (ANE)", english["credits"])
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.
