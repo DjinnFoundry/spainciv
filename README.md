@@ -38,6 +38,9 @@ lists the public data behind the map.
   and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.
+- **Reservoirs**: the water in each basin week by week since 1988, from the Boletín Hidrológico (MITECO), with a ring
+  per reservoir, the series' lowest and highest weeks and a year-by-year play
+  ([#lens=embalses](https://spainciv.djinnfoundry.com/#lens=embalses&semana=1995-11-07)).
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,

@@ -42,6 +42,10 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
+- Embalses (E85–E87): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 16
+  embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
+  no los da). Falta contrastar la cifra nacional con las notas semanales de prensa del MITECO de 1995, 2022, 2023 y la
+  última semana.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
