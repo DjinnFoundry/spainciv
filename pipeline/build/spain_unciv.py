@@ -38,11 +38,12 @@ from ..core.lang import pick, tr
 from ..countries import active
 from ..sources.es.provinces import COMMUNITY_OF
 from . import spain_flags, unciv
+from . import spain_unciv_fire as fire
 from .world import LAND
 from .spain_wonders import municipality_finder
 
 REQUIRES = ["world.json", "cities.json", "resources.json", "lenses.json", "_world", "calidad_diferenciada",
-            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario", "ine_padron"]
+            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario", "ine_padron", "effis_incendios"]
 PRODUCES = ["unciv.json"]
 COUNTRIES = ("es",)
 
@@ -489,6 +490,7 @@ def build() -> None:
         "start_gap_tiles": START_GAP,
         "starts": [{"nation": nation, "usage": usage, "city": city} for _, nation, usage, city in start_list],
         "nations": nation_list, "padron_year": padron_year(padron),
+        "fire_season": fire.season(load_interim("effis_incendios"), tiles, fine, proj),
     }
     write_web("unciv.json", {"summary": summary, "map": doc,
                              "bare": {k: bare[k] for k in ("startingLocations", "description")}})

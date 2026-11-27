@@ -105,6 +105,9 @@ RESOURCES = {
     "Stone": ("Bonus", {"Grassland", "Desert", "Tundra"}, 0),
     "Bananas": ("Bonus", {"Jungle"}, 0),
 }
+# Eras.json, in order.
+ERAS = ("Ancient era", "Classical era", "Medieval era", "Renaissance era", "Industrial era", "Modern era", "Atomic era",
+        "Information era", "Future era")
 # Resources a mod adds to the base ruleset: its TileResources.json entry (TileResource.kt fields). "Doesn't generate
 # naturally" keeps the map generator from scattering it on other maps while the mod is on.
 MOD_RESOURCES = {
@@ -558,21 +561,33 @@ def nation_json(name: str, outer, inner, cities: list[str], leader: str = "", st
     return out | {"outerColor": list(outer), "innerColor": list(inner), "cities": list(cities)}
 
 
-def properties(translations: dict[str, str]) -> str:
-    """A jsons/translations/<Language>.properties file: "English text = translation", one per line (a newline is written
-    as a backslash and an n). A text with " = " in it would split in the wrong place, and one with brackets would be read as a template."""
-    lines = []
-    for key, value in translations.items():
-        if " = " in key or "[" in key:
-            raise ValueError(f"not a plain translation key: {key!r}")
-        lines.append(f"{key} = {value}".replace("\n", "\\n"))
-    return "\n".join(lines) + "\n"
-
-
 def tile_resources_json() -> list[dict]:
     """jsons/TileResources.json of the mod: MOD_RESOURCES. Unciv merges an extension mod's resources into the base
     ruleset's (Ruleset.kt: add), and draws each with the image ResourceIcons/<name> of the mod's atlas."""
     return [{"name": name, **fields} for name, fields in MOD_RESOURCES.items()]
+
+
+PROPERTIES_SEP = " = "  # TranslationFileReader.keyValueSeparator
+PLACEHOLDERS = ("[", "]", "{", "}")  # placeholders and nested translations in Unciv's texts
+
+
+def properties(translations: dict[str, str]) -> str:
+    """A mod's translation file, jsons/translations/<Language>.properties: "English text = translation", one per line.
+
+    Unciv reads one such file per language per mod (Translations.kt: tryReadTranslationForLanguage), a line per entry
+    split at the first " = " (TranslationFileReader.read); a line starting with "#" or without the separator is a
+    comment, and a line break is written as a backslash and an n. The English text is the key, exactly as the ruleset
+    writes it. An empty key, one with the separator or a leading "#", and a text with brackets or braces (Unciv's
+    placeholders) are refused: they would not read back as written. Every feature of a mod that adds translations goes
+    through here, so they share the one file."""
+    lines = []
+    for key, value in translations.items():
+        if not key.strip() or PROPERTIES_SEP in key or key.lstrip().startswith("#"):
+            raise ValueError(f"not a plain translation key: {key!r}")
+        if any(b in text for text in (key, value) for b in PLACEHOLDERS):
+            raise ValueError(f"a placeholder in a translation: {key!r} = {value!r}")
+        lines.append(f"{key}{PROPERTIES_SEP}{value}".replace("\n", "\\n"))
+    return "\n".join(lines) + "\n"
 
 
 ICON_PX = 100  # the size of Unciv's own resource icons (android/assets/Icons.atlas: ResourceIcons/*)

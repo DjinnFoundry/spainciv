@@ -90,7 +90,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `ine_censo_lugar_trabajo` | INE tables 69968 and 69987 (Annual Population Census, employed by place of work: Spain, provinces, 151 main cities) | CC BY 4.0, citing INE | Commuting lens: employed who work in another municipality ÷ employed with a known workplace; other municipalities take the rest of their province |
 | `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
-| `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers |
+| `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS, with each fire's start month (`FIREDATE`) | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers; the Unciv fire season: the fires of 500 ha or more per tile class |
 | `balance_criminalidad` | Ministerio del Interior, Balance de Criminalidad 2025 Q4 (January to December), Portal Estadístico de Criminalidad: CSV exports of tables 1509011 (provinces, Spain, abroad) and 1509012 (islands and municipalities over 20,000) | Public-sector information, reuse citing the source (Ley 37/2007) | Crime lens: known offences per 1,000 Padrón inhabitants (2025); the 427 listed municipalities have their own rate, every other one the rest of its province or, in the Balearic and Canary Islands, of its island; standout offence lens: per listed municipality or rest, the type most times Spain's rate, painted at 1.25 times or more in units of 20,000 residents or more (E85, E86, F35) |
 | `bdn_especies` | MITECO, Banco de Datos de la Naturaleza: Habitats Directive art. 17 and Birds Directive art. 12 reports 2013-2018, species on the EEA 10 km grid (ETRS89-LAEA); only the .dbf is read, from the zip | Public-sector information, reuse citing the source (Ley 37/2007) | Wildlife lenses (lynx, brown bear, wolf, Spanish imperial eagle, bearded vulture): share of each hex inside the reported squares |
 | `miteco_censos_fauna` | MITECO: Iberian lynx census 2025 and wolf census 2021-2024, with the wolf's 2019-2024 distribution (PDF; figures transcribed in `censos_fauna.py`, pinned by SHA256) | Public-sector information, reuse citing the source (Ley 37/2007) | The census sentence of the lynx and wolf lenses |
@@ -121,26 +121,34 @@ the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
   `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Nations.json` (the 17 autonomous communities
-  as civilizations, Ceuta and Melilla as city-states), `jsons/translations/Spanish.properties` (their texts in
-  Spanish; English is the mod's own text), `maps/España` (the map, gzip + base64 as Unciv saves it, naming the mod in
-  `mapParameters.mods` so choosing it turns the mod on, with each community's starting location at its capital),
-  `Images/ResourceIcons/Cerdo ibérico.png`, `Images/NationPortraits/` (each nation's flag on a disc) and
-  `Images/NationIcons/` (the city-banner icon of each community; a city-state's banner uses Unciv's own icon of its
-  type), all in one atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
-  `README.md` and `LICENSE` (CC BY 4.0);
+  as civilizations, Ceuta and Melilla as city-states), `jsons/Events.json` and `jsons/GlobalUniques.json` (the fire
+  season, E95), `jsons/translations/Spanish.properties` (the Spanish of the nations and of the fire season, one file
+  for every feature, written by `unciv.properties`: A32; English is the mod's own text), `maps/España` (the map, gzip
+  + base64 as Unciv saves it, naming the mod in `mapParameters.mods` so choosing it turns the mod on, with each
+  community's starting location at its capital), `Images/ResourceIcons/Cerdo ibérico.png`, `Images/NationPortraits/`
+  (each nation's flag on a disc) and `Images/NationIcons/` (the city-banner icon of each community; a city-state's
+  banner uses Unciv's own icon of its type), all in one atlas (`game.atlas`, `game.png`, `Atlases.json`, which
+  Android needs), `preview.png`, a bilingual `README.md` and `LICENSE` (CC BY 4.0);
 - `unciv/espana`: the bare map for the game without mods, saved as `España` by the page's link: the same map without
-  the pig and without the communities, which only exist with the mod; Spain starts in Madrid and "Any Civ" players in
-  the largest urban areas;
+  the pig, the communities or the fire season, which only exist with the mod; Spain starts in Madrid and "Any Civ"
+  players in the largest urban areas;
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
 The page, the README, the resource names and the nations' texts in Spanish and English are templates in
-`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E87, E88, A15, A17,
-A28, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with `java -jar`): the
-mod installed through "Download mod from URL", the map in the editor with every resource kept
+`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E87, E88, E95, A15,
+A17, A28, A32, F26, F28, F29 and F40. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with
+`java -jar`): the mod installed through "Download mod from URL", the map in the editor with every resource kept
 (`docs/images/es-unciv-editor.jpg`), the 19 nations in the nation picker, and a 45-turn game with Galicia against the
 other 16 communities, each at its capital or beside it and Spain left without a starting location
 (`docs/images/es-unciv-partida.jpg`, the north with the capitals of Euskadi, Navarra, Cantabria and La Rioja).
+The fire season was checked in the same jar with the whole mod installed from its URL: the combined ruleset
+validates; over a 100-turn game on Quick speed with Galicia and seven AI communities, five of them took the
+production penalty 14 times, each for 5 turns, always started on a turn that is a multiple of 5, never two at once on
+one civilization and never on a city-state; Unciv's countable equals the Python weights on every civilization's
+tiles; with 40 gold (60 × 0.67) only "let it burn" is offered and with 41 both choices; the popup reads in Spanish and
+in English by the game's language (`docs/images/es-unciv-incendio.jpg`, `docs/images/en-unciv-incendio.jpg`: the
+popup panel cropped from a 1000 px wide window, so its text stays legible at phone width).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

@@ -6,15 +6,19 @@ import gzip
 import io
 import json
 import math
+import re
+import tempfile
 import unittest
 import zipfile
 from collections import Counter
 from html import escape
+from pathlib import Path
 from unittest import mock
 
 from pipeline import countries, play, site
-from pipeline.core.lang import pick
+from pipeline.core.lang import Text, pick
 from pipeline.build import spain_flags, spain_unciv, unciv
+from pipeline.build import spain_unciv_fire as fire
 from pipeline.core.paths import ROOT
 from pipeline.build.world import COAST, LAKE, LAND, OCEAN
 from pipeline.core.hexgrid import HexGrid
@@ -486,7 +490,12 @@ class ModAndPageTest(unittest.TestCase):
         cls.folder = cls.doc["summary"]["mod"]["name"]
 
     def test_spain_has_the_page_and_downloads_and_the_us_none(self):
-        self.assertEqual(set(self.files), {*play.PAGES.values(), play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0]})
+        shots = [path for path, _ in play.FIRE_SHOT.values()]
+        self.assertEqual(set(self.files), {*play.PAGES.values(), play.MOD_ZIP, play.MAP_FILE, play.PREVIEW, play.SCREENSHOT[0],
+                                           *shots})
+        self.assertEqual(len(set(shots)), len(play.PAGES))  # one popup per language
+        for path in shots:
+            self.assertTrue(self.files[path]().startswith(b"\xff\xd8"), path)  # a JPEG
         self.assertEqual(play.files(countries.COUNTRIES["us"]), {})
         self.assertEqual(site.page_config(ES)["play"], play.PAGES["es"])
         self.assertEqual(site.page_config(ES)["texts"]["en"]["play"], play.PAGES["en"])
@@ -499,6 +508,7 @@ class ModAndPageTest(unittest.TestCase):
         map_name = self.doc["summary"]["map_name"]
         nations = [n["name"] for n in self.doc["summary"]["nations"]]
         self.assertEqual(inner, {"jsons/ModOptions.json", "jsons/TileResources.json", "jsons/Nations.json",
+                                 "jsons/Events.json", "jsons/GlobalUniques.json",
                                  "jsons/translations/Spanish.properties", f"maps/{map_name}",
                                  "Images/ResourceIcons/Cerdo ibérico.png", "game.png", "game.atlas", "Atlases.json",
                                  "preview.png", "README.md", "LICENSE",
@@ -510,6 +520,11 @@ class ModAndPageTest(unittest.TestCase):
         options = json.loads(read("jsons/ModOptions.json"))
         self.assertEqual((options["isBaseRuleset"], options["topics"]), (False, ["unciv-mod-maps"]))
         self.assertEqual(json.loads(read("jsons/TileResources.json")), unciv.tile_resources_json())
+        fire_season = self.doc["summary"]["fire_season"]
+        self.assertEqual(json.loads(read("jsons/Events.json")), fire.events_json(fire_season))
+        self.assertEqual(json.loads(read("jsons/GlobalUniques.json")), fire.global_uniques_json(fire_season))
+        self.assertEqual(read("jsons/translations/Spanish.properties").decode("utf-8"),
+                         unciv.properties(play.translations(self.doc["summary"], "es")))
         self.assertEqual(read("Atlases.json").strip(), b"[game]")
         regions = [line for line in read("game.atlas").decode("utf-8").splitlines() if "/" in line and ":" not in line]
         self.assertEqual(sorted(regions), sorted(n.removeprefix("Images/").removesuffix(".png") for n in inner if n.startswith("Images/")))
@@ -527,6 +542,46 @@ class ModAndPageTest(unittest.TestCase):
             names = play.resource_texts(self.doc["summary"], lang)
             for resource, n in self.doc["summary"]["resources"].items():
                 self.assertIn(f"| {names[resource][0]} | {n} |", text)
+
+    def test_the_readme_has_the_fire_season_in_both_languages(self):
+        z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
+        text = z.read(f"{self.folder}/README.md").decode("utf-8")
+        f = self.doc["summary"]["fire_season"]
+        self.assertIn("### Temporada de incendios", text)
+        self.assertIn("### Fire season", text)
+        self.assertIn("Convención", text)
+        self.assertIn("Convention", text)
+        for c in f["classes"]:
+            for lang in ("es", "en"):
+                self.assertIn(f"| {play.FIRE_CLASSES[lang][c['class']]} | {c['tiles']} |", text)
+            self.assertIn(f" | {c['weight']} |", text)
+        self.assertIn(f"{f['great_fires']} incendios", text)
+        self.assertIn(f"{f['great_fires']} fires", text)
+        self.assertIn("EFFIS", z.read(f"{self.folder}/LICENSE").decode("utf-8"))
+
+    def test_the_ai_odds_are_unciv_weights(self):
+        """Unciv multiplies a choice's AI weight by 1 + pct/100 (IHasUniques.getWeightForAiDecision)."""
+        for pct, odds in ((100, (2, 3)), (50, (3, 5)), (200, (3, 4))):
+            with mock.patch.object(fire, "AI_PAY_WEIGHT_PCT", pct):
+                f = play.fire_fields(self.doc["summary"], "en")
+            self.assertEqual((f["fire_ai"], f["fire_ai_of"]), odds, pct)
+
+    def test_the_spanish_file_has_the_nations_and_the_fire_season_once(self):
+        summary = self.doc["summary"]
+        out = play.translations(summary, "es")
+        for text in summary["fire_season"]["texts"].values():
+            self.assertEqual(out[text["en"]], text["es"])
+        clash = {**summary, "fire_season": {**summary["fire_season"], "texts": {
+            **summary["fire_season"]["texts"], "x": {"en": next(iter(out)), "es": "otra cosa"}}}}
+        with self.assertRaises(ValueError):  # one English text, two translations: Unciv would keep one
+            play.translations(clash, "es")
+
+    def test_the_readme_links_to_the_page_in_each_language(self):
+        z = zipfile.ZipFile(io.BytesIO(self.files[play.MOD_ZIP]()))
+        text = z.read(f"{self.folder}/README.md").decode("utf-8")
+        spanish, english = text.split("## English")
+        self.assertIn(f"https://{ES.site_url}/{play.PAGES['es']}", spanish)
+        self.assertIn(f"https://{ES.site_url}/{play.PAGES['en']}", english)
 
     def test_the_bare_map_is_the_map_without_the_mod(self):
         self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"], self.doc["bare"]))
@@ -564,6 +619,174 @@ class ModAndPageTest(unittest.TestCase):
             for name in s["not_placed_designations"]:
                 self.assertIn(escape(pick(name, lang)), html)
         self.assertIn("(PDO)", self.files[play.PAGES["en"]]().decode("utf-8"))
+
+    def test_the_page_explains_the_fire_season(self):
+        f = self.doc["summary"]["fire_season"]
+        w = fire.weights(f)
+        words = {"es": ("Temporada de incendios", "Convención:", "Supuesto:", "Enviar brigadas"),
+                 "en": ("Fire season", "Convention:", "Assumption:", "Send fire brigades")}
+        for lang in ("es", "en"):
+            html = self.files[play.PAGES[lang]]().decode("utf-8")
+            for needle in (*words[lang], play.FIRE_SHOT[lang][0], f"{f['great_fires']} ", f"{f['threshold_ha']} ha"):
+                self.assertIn(needle, html)
+            self.assertGreaterEqual(html.count(words[lang][1]), 5)  # one line per convention
+            for c in f["classes"]:
+                self.assertIn(f"<td>{escape(play.FIRE_CLASSES[lang][c['class']])}</td><td class=n>{c['tiles']}</td>", html)
+                self.assertIn(f"<td class=n>{c['weight']}</td></tr>", html)
+            spain = {c["class"]: c["tiles"] for c in f["classes"]}
+            self.assertIn(f"<td>{escape(play.FIRE_EXAMPLES[lang][-1])}</td><td class=n>{spain['Land']}</td><td class=n>{spain['Hill']}</td><td class=n>{spain['Mountain']}</td>"
+                          f"<td class=n>100{' %' if lang == 'es' else '%'}</td>", html)
+            for start, end, gold in fire.COSTS:
+                self.assertIn(str(gold), html)
+
+
+class FireSeasonTest(unittest.TestCase):
+    """pipeline/build/spain_unciv_fire.py: the rates from EFFIS's fires, the chance bands and the mod's files."""
+
+    def setUp(self):
+        self.fine = HexGrid(radius=10.0, cols=5, rows=1)  # cell centres every 17.32 km along y = 0
+        x = lambda c: self.fine.center(c, 0)[0]
+        self.box = lambda c: [(x(c) - 2, -1.0), (x(c) + 2, -1.0), (x(c) + 2, 1.0), (x(c) - 2, 1.0), (x(c) - 2, -1.0)]
+        self.tiles = [unciv.Tile(cells=[0], national=[0], base="Mountain"),
+                      unciv.Tile(cells=[1], national=[1], base="Plains", features=["Hill", "Forest"]),
+                      unciv.Tile(cells=[2], national=[2], base="Grassland"),
+                      unciv.Tile(cells=[3], national=[], base="Plains"),  # foreign land
+                      unciv.Tile(cells=[4], national=[4], base="Ocean")]
+
+    def fire(self, cell, ha, month=8, year=2020):
+        return {"year": year, "month": month, "area_ha": ha, "rings": [self.box(cell)]}
+
+    def season(self, fires):
+        return fire.season({"years": [2020, 2021], "fires": fires}, self.tiles, self.fine, lambda lon, lat: (lon, lat))
+
+    def test_classes_follow_uncivs_filters(self):
+        self.assertEqual([fire.tile_class(t) for t in self.tiles[:3]], ["Mountain", "Hill", "Land"])
+        self.assertEqual(fire.tile_class(unciv.Tile(base="Mountain", features=["Hill"])), "Mountain")  # never Hill
+
+    def test_rates_by_class_from_the_great_fires_on_spanish_land(self):
+        s = self.season([self.fire(1, 600, 7), self.fire(3, 800), self.fire(2, 400, 6), self.fire(0, 1000, 3),
+                         self.fire(2, 700, 8, 2021), self.fire(4, 900)])
+        by = {c["class"]: c for c in s["classes"]}
+        # 500 ha and more: 5 fires; off Spanish land (foreign tile, sea tile) they count for nothing.
+        self.assertEqual((s["great_fires"], s["on_spanish_tiles"], s["seasons"]), (5, 3.0, 2))
+        self.assertEqual(s["per_season"], [4, 1])
+        self.assertEqual({k: c["per_tile_season"] for k, c in by.items()}, {"Mountain": 0.5, "Hill": 0.5, "Land": 0.5})
+        self.assertEqual({k: c["tiles"] for k, c in by.items()}, {"Mountain": 1, "Hill": 1, "Land": 1})
+        self.assertAlmostEqual(sum(c["weight"] * c["tiles"] for c in s["classes"]), fire.UNIT, delta=len(fire.CLASSES))
+        self.assertEqual(s["summer_share"], round((600 + 800 + 400 + 700 + 900) / 4400, 3))
+        self.assertIsInstance(s["texts"]["event"], Text)
+
+    def test_the_popup_counts_every_great_fire(self):
+        """'about N a season' sits next to the count of all great fires, those off Spain's land tiles too."""
+        s = self.season([self.fire(1, 600), self.fire(2, 600), self.fire(4, 600)])  # the last at sea
+        self.assertEqual((s["great_fires"], s["on_spanish_tiles"], s["fires_per_season"]), (3, 2.0, 1.0))
+        self.assertIn("unos 2 por temporada", s["texts"]["event"]["es"])
+        self.assertIn("about 2 a season", s["texts"]["event"]["en"])
+        self.assertFalse(s["texts"]["event"]["es"].startswith("Verano"))  # the event fires in any season
+
+    def test_a_fire_on_a_hill_counts_for_hill_only(self):
+        s = self.season([self.fire(1, 600), self.fire(0, 600), self.fire(2, 600)])
+        self.assertEqual([c["per_tile_season"] for c in s["classes"]], [0.5, 0.5, 0.5])
+        s = self.season([self.fire(1, 600), self.fire(1, 600), self.fire(0, 600), self.fire(2, 600)])
+        by = {c["class"]: c["per_tile_season"] for c in s["classes"]}
+        self.assertEqual(by, {"Mountain": 0.5, "Hill": 1.0, "Land": 0.5})
+
+    def test_bands_are_contiguous_and_their_chance_is_the_formula(self):
+        bands = fire.bands()
+        self.assertEqual([p for p, _, _ in bands], list(range(1, 101)))
+        self.assertEqual(fire.chance(bands[0][1] - 1), 0)  # below the first band: no line, no chance
+        self.assertEqual(fire.chance(0), 0)
+        for (p, lo, hi), nxt in zip(bands, bands[1:] + [None]):
+            formula = lambda x: round(100 * (1 - (1 - min(x, fire.UNIT) / fire.UNIT) ** fire.CHECK_TURNS))
+            self.assertEqual(formula(lo), p)
+            if nxt:
+                self.assertEqual((formula(hi), nxt[1]), (p, hi + 1))
+        self.assertIsNone(bands[-1][2])
+        self.assertEqual(fire.chance(fire.UNIT), 100)
+
+    def summary(self):
+        return {"classes": [{"class": "Mountain", "tiles": 60, "weight": 230}, {"class": "Hill", "tiles": 190, "weight": 200},
+                            {"class": "Land", "tiles": 700, "weight": 67}],
+                "texts": {k: t.format(n=311, ha=500, seasons=10, per=30, times=3, k=fire.CHECK_TURNS)
+                          for k, t in fire.TEXTS.items()}}
+
+    def test_global_uniques_evaluate_to_the_weighted_tiles(self):
+        doc = fire.global_uniques_json(self.summary())
+        w = fire.weights(self.summary())
+        self.assertEqual(len(doc["uniques"]), 100)
+        expr = re.compile(r"<when number of \[\[Owned \[Land\] Tiles\] \* (\d+) \+ \[Owned \[Hill\] Tiles\] \* (\d+)"
+                          r" \+ \[Owned \[Mountain\] Tiles\] \* (\d+)\] (?:is between \[(\d+)\] and \[(\d+)\]|is more than \[(\d+)\])>")
+        for line in doc["uniques"]:
+            for part in (f"<every [{fire.CHECK_TURNS}] turns>", "<for [Major] Civilizations>", "<hidden from users>",
+                         f"Triggers a [{fire.EVENT}] event <upon turn start>"):
+                self.assertIn(part, line)
+            land, hill, mountain, *_ = map(lambda g: int(g) if g else None, expr.search(line).groups())
+            self.assertEqual((land, hill, mountain), (w["Land"], w["Hill"] - w["Land"], w["Mountain"] - w["Land"]))
+        # Unciv counts Land over every land tile, hills and mountains too: the expression is Σ weight × tiles.
+        land, hill, mountain = map(int, expr.search(doc["uniques"][0]).groups()[:3])
+        for tiles in ({"Land": 7, "Hill": 0, "Mountain": 0}, {"Land": 24, "Hill": 6, "Mountain": 2}):
+            unciv_value = land * sum(tiles.values()) + hill * tiles["Hill"] + mountain * tiles["Mountain"]
+            self.assertEqual(unciv_value, fire.owned(tiles, w))
+        p = int(re.search(r"<with \[(\d+)\]% chance>", doc["uniques"][-1]).group(1))
+        self.assertEqual((p, "is more than" in doc["uniques"][-1]), (100, True))
+        self.assertEqual(doc["civilopediaText"], [{"text": self.summary()["texts"]["pedia"]["en"]}])
+
+    def test_one_brigades_choice_in_every_era_and_penalties_never_overlap(self):
+        (event,) = fire.events_json(self.summary())
+        pays = [c for c in event["choices"] if c["text"] == fire.TEXTS["pay"]["en"]]
+        self.assertEqual(len(pays), len(fire.COSTS))
+        for era_number, era in enumerate(unciv.ERAS):
+            def available(choice):
+                only = next(u for u in choice["uniques"] if u.startswith("Only available"))
+                start = re.search(r"<starting from the \[(.+?)\]>", only)
+                end = re.search(r"<before the \[(.+?)\]>", only)
+                return ((not start or unciv.ERAS.index(start.group(1)) <= era_number)
+                        and (not end or era_number < unciv.ERAS.index(end.group(1))))
+            self.assertEqual(sum(map(available, pays)), 1, era)
+        for choice, (_, _, gold) in zip(pays, fire.COSTS):
+            self.assertIn(f"Gain [-{gold}] [Gold] <(modified by game speed)>", choice["uniques"])
+            only = next(u for u in choice["uniques"] if u.startswith("Only available"))
+            # The bound is the cost, both scaled by speed: a civilization that pays never goes below zero gold.
+            self.assertIn(f"<when above [{gold}] [Gold]>", only)
+            self.assertIn("<(modified by game speed)>", only)
+        burn = event["choices"][-1]
+        self.assertEqual(fire.PENALTY_TURNS, fire.CHECK_TURNS)
+        self.assertEqual(burn["uniques"], [f"[{fire.PENALTY_PCT}]% [Production] [in all cities] <for [{fire.CHECK_TURNS}] turns>"])
+        self.assertEqual(fire.costs_by_era()["Ancient era"], fire.COSTS[0][2])
+
+    def test_every_game_text_has_its_spanish_and_unciv_reads_it_back(self):
+        summary = self.summary()
+        (event,) = fire.events_json(summary)
+        english = {event["text"], *(c["text"] for c in event["choices"]),
+                   *(t["text"] for t in fire.global_uniques_json(summary)["civilopediaText"])}
+        pairs = {t["en"]: t["es"] for t in summary["texts"].values()}
+        self.assertLessEqual(english, set(pairs))
+        for text in [*pairs, *pairs.values()]:
+            self.assertIsNone(re.search(r"\d{4}", text), text)  # Unciv would write a year as 2.016
+        self.assertEqual(unciv.properties(pairs).count("\n"), len(pairs))  # one line each: Unciv reads them all back
+
+    def test_the_built_map_has_its_fire_season(self):
+        f = built()["summary"]["fire_season"]
+        self.assertEqual(f["threshold_ha"], fire.GREAT_FIRE_HA)
+        self.assertEqual(sum(f["per_season"]), f["great_fires"])
+        self.assertTrue(all(f["per_season"]))  # a great fire every season
+        self.assertEqual(sum(c["tiles"] for c in f["classes"]), built()["summary"]["national_land_tiles"])
+        self.assertAlmostEqual(sum(c["weight"] * c["tiles"] for c in f["classes"]), fire.UNIT, delta=fire.UNIT / 100)
+        w = fire.weights(f)
+        self.assertGreater(w["Hill"], w["Land"])
+        self.assertGreater(w["Mountain"], w["Land"])
+
+    def test_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(fire.check(tmp), [])  # no Unciv map (the US): nothing to say
+            doc = {"summary": {"fire_season": {"classes": [{"class": "Land", "tiles": 10, "weight": 10_200}],
+                                               "unit": fire.UNIT, "great_fires": 3, "threshold_ha": 500, "fires_per_season": 1.0,
+                                               "on_spanish_tiles": 2.9}}}
+            (Path(tmp) / "unciv.json").write_text(json.dumps(doc))
+            self.assertEqual(fire.check(tmp)[0][0], "FAIL")
+            doc["summary"]["fire_season"]["classes"][0]["weight"] = 10_000
+            (Path(tmp) / "unciv.json").write_text(json.dumps(doc))
+            self.assertEqual(fire.check(tmp)[0][0], "PASS")
 
 
 class NationRulesTest(unittest.TestCase):
@@ -778,9 +1001,9 @@ class FormatHelpersTest(unittest.TestCase):
     def test_properties(self):
         self.assertEqual(unciv.properties({"Land of Iron": "Tierra de hierro", "a\nb": "c\nd"}),
                          "Land of Iron = Tierra de hierro\na\\nb = c\\nd\n")
-        for bad in ("[x] of y", "a = b"):
+        for bad in ({"[x] of y": "z"}, {"a = b": "z"}, {"a {b}": "c"}, {"# a": "b"}, {" ": "b"}, {"a": "b [c]"}):
             with self.assertRaises(ValueError):
-                unciv.properties({bad: "z"})
+                unciv.properties(bad)
 
     def test_contrast(self):
         self.assertAlmostEqual(spain_flags.contrast((0, 0, 0), (255, 255, 255)), 21)

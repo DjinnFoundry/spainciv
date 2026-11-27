@@ -40,8 +40,9 @@ def rings_of(geom: dict) -> list[list[tuple[float, float]]]:
 
 
 def fires(features: list[dict], year: int) -> list[dict]:
-    """Spain's burnt-area polygons of one season: year, area (ha), province and rings (lon, lat). Polygons with no
-    area or no geometry are left out."""
+    """Spain's burnt-area polygons of one season: year, start month (FIREDATE starts with "YYYY-MM-DD"; from 2020 on
+    the time often has fractions of a second), area (ha), province and rings (lon, lat). Polygons with no area or no
+    geometry are left out."""
     out = []
     for f in features:
         p, geom = f.get("properties") or {}, f.get("geometry")
@@ -50,7 +51,8 @@ def fires(features: list[dict], year: int) -> list[dict]:
             continue
         rings = rings_of(geom)
         if rings:
-            out.append({"year": year, "area_ha": area, "province": p.get("PROVINCE"), "rings": rings})
+            out.append({"year": year, "month": int(p["FIREDATE"][5:7]), "area_ha": area, "province": p.get("PROVINCE"),
+                        "rings": rings})
     return out
 
 
@@ -65,7 +67,7 @@ class EffisBurntAreas(Source):
         description="The perimeters of the fires EFFIS mapped in Spain each season from satellite imagery (MODIS and "
         "Sentinel-2), roughly 30 ha and larger, with their area. The map adds up the burnt area of the last ten "
         "complete seasons on each hex.",
-        used_for=["Wildfires lens"],
+        used_for=["Wildfires lens", "Fire season in Unciv"],
     )
 
     def fetch(self, force=False):

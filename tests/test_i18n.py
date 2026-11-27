@@ -322,10 +322,13 @@ class SpanishDataTest(unittest.TestCase):
              "locale", "currency", "measure",  # trade.json: "tons"
              "map", "natural_wonders",  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
              "bare", "start_bias", "resource", "seat"}  # the bare map like the map; a nation's Unciv terrain, resource, seat
+    # (file, key) whose values are codes in that file only: unciv.json's fire-season tile classes, Unciv's filters.
+    FILE_CODES = {("unciv.json", "class")}
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
     # Toledo") and some surnames are English words ("Eva Forest").
     PEOPLE = {("personajes.json", "name")}
+    SKIP = FILE_CODES | PEOPLE  # (file, key) left out of the check
     ENGLISH = set("""the of and with from for by is are was not this that its which who people residents workers jobs
         county counties state states share median average farm wind plant plants power station airport airports
         students visitors island islands short tons pounds lb million billion year years unknown phase landmark
@@ -360,7 +363,7 @@ class SpanishDataTest(unittest.TestCase):
         def walk(x, path):
             if isinstance(x, dict):
                 for k, v in x.items():
-                    if k not in self.CODES and (name, k) not in self.PEOPLE:
+                    if k not in self.CODES and (name, k) not in self.SKIP:
                         walk(v, f"{path}.{k}")
             elif isinstance(x, list):
                 for i, v in enumerate(x):
@@ -517,7 +520,7 @@ class EnglishDataTest(unittest.TestCase):
             if isinstance(x, dict):
                 lens = x.get("id", lens) if path.endswith("lenses[]") else lens
                 for k, v in x.items():
-                    if k not in self.CODES and (name, k) not in SpanishDataTest.PEOPLE:
+                    if k not in self.CODES and (name, k) not in SpanishDataTest.SKIP:
                         walk(v, f"{path}.{k}", lens)
             elif isinstance(x, list):
                 for v in x:

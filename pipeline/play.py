@@ -2,14 +2,15 @@
 pipeline/build/spain_unciv.py), as pipeline/site.py serves and packages them:
 
 * unciv/<Mod>.zip: the mod, one folder with jsons/ModOptions.json, jsons/TileResources.json (its own resources),
-  jsons/Nations.json (the autonomous communities and cities) and jsons/translations/Spanish.properties (their texts in
-  Spanish), maps/<map name>, Images/ (the resource's icon, each nation's flag in NationPortraits/ and each major
-  nation's city-banner icon in NationIcons/)
-  and the atlas of those images (game.atlas, game.png, Atlases.json), preview.png, README.md and LICENSE; Unciv's
-  "Download mod from URL" takes it as is, and its contents are what the mod's GitHub repository holds;
+  jsons/Nations.json (the autonomous communities and cities), jsons/Events.json and jsons/GlobalUniques.json (the fire
+  season, pipeline/build/spain_unciv_fire.py), jsons/translations/Spanish.properties (the Spanish of both),
+  maps/<map name>, Images/ (the resource's icon, each nation's flag in NationPortraits/ and each major nation's
+  city-banner icon in NationIcons/) and the atlas of those images (game.atlas, game.png, Atlases.json), preview.png,
+  README.md and LICENSE; Unciv's "Download mod from URL" takes it as is, and its contents are what the mod's GitHub
+  repository holds;
 * unciv/<map file>: the bare map for the base ruleset alone (without the mod's resources), for the `maps` folder of a
   desktop Unciv;
-* unciv/preview.png and the game screenshot (docs/images), for the page;
+* unciv/preview.png and the game screenshots (docs/images), for the page;
 * jugar.html (Spanish) and play.html (English): how to play it, on desktop and Android, and what on the map is real
   data and what is game convention; each links to the other.
 
@@ -23,15 +24,17 @@ from __future__ import annotations
 
 import json
 import math
+from fractions import Fraction
 from html import escape
 from string import Template
 from typing import Callable
 
 from .build import spain_unciv, unciv
+from .build import spain_unciv_fire as fire
 from .core.archive import zip_bytes
 from .core.paths import ROOT
 from .core.store import read_web
-from .core.lang import num, pick
+from .core.lang import num, pct, pick
 from .core.png import encode
 from .core.raster import Canvas, circle
 from .countries import Country
@@ -42,6 +45,8 @@ MOD_ZIP = "unciv/Spainciv-Unciv.zip"
 MAP_FILE = "unciv/espana"  # saved as the map's own name (the link's `download`), which Unciv shows in its map list
 PREVIEW = "unciv/preview.png"
 SCREENSHOT = ("unciv/partida.jpg", ROOT / "docs" / "images" / "es-unciv-partida.jpg")
+FIRE_SHOT = {lang: (f"unciv/incendio.{lang}.jpg", ROOT / "docs" / "images" / f"{lang}-unciv-incendio.jpg")
+             for lang in PAGES}  # the fire season's popup in Unciv in each language
 AUTHOR = "DjinnFoundry"
 ICON = "ResourceIcons/{name}"  # a resource's region in the atlas, and its image in Images/ (.png)
 PORTRAIT, NATION_ICON = "NationPortraits/{name}", "NationIcons/{name}"  # a nation's emblem and its city-banner icon
@@ -54,7 +59,9 @@ LICENSE = """The map in maps/, the nations in jsons/ and the images in Images/ a
 Attribution 4.0 International licence (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/). Credit: spainciv
 (https://spainciv.djinnfoundry.com), with data from IGN (CC BY 4.0), Copernicus CORINE Land Cover 2018 (EEA),
 NOAA ETOPO1, Natural Earth, IGME-CSIC (Estadística Minera de España 2019, BDMIN), INE (Padrón, Censo Agrario 2020,
-CC BY 4.0), the Ministerio de Agricultura, Pesca y Alimentación (CC BY 4.0) and the Statutes of Autonomy (BOE).
+CC BY 4.0), the Ministerio de Agricultura, Pesca y Alimentación (CC BY 4.0) and the Statutes of Autonomy (BOE). The
+fire season's rates come from the burnt areas of EFFIS, the European Forest Fire Information System (European
+Commission JRC, Copernicus Emergency Management Service, CC BY 4.0), counted per map tile by spainciv.
 """
 
 
@@ -68,14 +75,13 @@ def files(country: Country) -> dict[str, Callable[[], bytes]]:
     doc = load(country)
     if doc is None:
         return {}
-    shot_path, shot_file = SCREENSHOT
     pages = {PAGES[lang]: (lambda lang=lang: page_html(country, doc["summary"], lang).encode("utf-8")) for lang in country.langs}
     return {
         **pages,
         MOD_ZIP: lambda: mod_zip(country, doc),
         MAP_FILE: lambda: unciv.encode(unciv.without_mod(doc["map"], doc["bare"])),
         PREVIEW: lambda: preview(doc),
-        shot_path: shot_file.read_bytes,
+        **{path: source.read_bytes for path, source in (SCREENSHOT, *(FIRE_SHOT[lang] for lang in country.langs))},
     }
 
 
@@ -102,6 +108,8 @@ def mod_entries(country: Country, doc: dict) -> dict[str, bytes]:
         "jsons/ModOptions.json": json_bytes(options),
         "jsons/TileResources.json": json_bytes(unciv.tile_resources_json()),
         "jsons/Nations.json": json_bytes([nation_json(summary, n) for n in summary["nations"]]),
+        "jsons/Events.json": json_bytes(fire.events_json(summary["fire_season"])),
+        "jsons/GlobalUniques.json": json_bytes(fire.global_uniques_json(summary["fire_season"])),
         **{f"jsons/translations/{name}.properties": unciv.properties(translations(summary, lang)).encode("utf-8")
            for lang, name in UNCIV_LANGUAGES.items() if lang in country.langs},
         f"maps/{doc['map']['mapParameters']['name']}": unciv.encode(doc["map"]),
@@ -245,6 +253,11 @@ def translations(summary: dict, lang: str) -> dict[str, str]:
         if not n["city_state"]:
             source, target = nation_texts(summary, n, TEXT_LANG), nation_texts(summary, n, lang)
             out |= {source[k]: target[k] for k in ("leader", "unique_name", "intro") if source[k] != target[k]}
+    for text in summary["fire_season"]["texts"].values():  # the event's texts, keyed by Events.json's English
+        source, target = text[TEXT_LANG], text[lang]
+        if out.get(source, target) != target:
+            raise ValueError(f"two translations of {source!r}")
+        out[source] = target
     return out
 
 
@@ -323,6 +336,51 @@ def common_fields(country: Country, summary: dict, lang: str | None = None) -> d
             "n_nations": n_nations(s), "moved": moved_starts(s)}
 
 
+FIRE_CLASSES = {  # the fire season's tile classes in each language (Unciv's Spanish: Montaña, Colina)
+    "es": {"Mountain": "Montaña", "Hill": "Colina, también con bosque", "Land": "El resto de la tierra"},
+    "en": {"Mountain": "Mountain", "Hill": "Hill, wooded or not", "Land": "Any other land"},
+}
+FIRE_EXAMPLES = {  # the rows of the chance table: fire.EXAMPLES, then all of Spain
+    "es": ("Una ciudad nueva en llano", "Imperio pequeño", "Imperio mediano", "Toda España"),
+    "en": ("A new city on flat land", "Small empire", "Mid-sized empire", "All of Spain"),
+}
+
+
+def fire_fields(summary: dict, lang: str) -> dict:
+    """The fire season's numbers for the page and the README as `lang` writes them, and its two tables as rows of
+    cells: `fire_rows` per class of tile, `fire_examples` the chance per check of some empires and of all of Spain."""
+    f = summary["fire_season"]
+    w = fire.weights(f)
+    rows = [[FIRE_CLASSES[lang][c["class"]], str(c["tiles"]), num(c["per_tile_season"], 3, lang), str(c["weight"])]
+            for c in f["classes"]]
+    spain = {c["class"]: c["tiles"] for c in f["classes"]}
+    examples = [[name, *(str(e[k]) for k in ("Land", "Hill", "Mountain")), pct(fire.chance(fire.owned(e, w)) / 100, 0, lang)]
+                for name, e in zip(FIRE_EXAMPLES[lang], (*fire.EXAMPLES, spain), strict=True)]
+    ai = Fraction(100 + fire.AI_PAY_WEIGHT_PCT, 200 + fire.AI_PAY_WEIGHT_PCT)  # Unciv: weight × (1 + pct / 100)
+    (_, _, cost_1), (_, _, cost_2), (_, _, cost_3) = fire.COSTS
+    return {
+        "fire_n": f["great_fires"], "fire_ha": f["threshold_ha"], "fire_from": f["years"][0], "fire_to": f["years"][1],
+        "fire_seasons": f["seasons"], "fire_min": min(f["per_season"]), "fire_max": max(f["per_season"]),
+        "fire_per_season": num(f["fires_per_season"], 1, lang), "fire_on_spain": num(round(f["on_spanish_tiles"]), None, lang),
+        "fire_summer": pct(f["summer_share"], 1, lang), "fire_unit": num(f["unit"], None, lang),
+        "fire_check": fire.CHECK_TURNS, "fire_penalty": -fire.PENALTY_PCT, "fire_penalty_turns": fire.PENALTY_TURNS,
+        "fire_cost_1": cost_1, "fire_cost_2": cost_2, "fire_cost_3": cost_3,
+        "fire_ai": ai.numerator, "fire_ai_of": ai.denominator,
+        "fire_bands": len(fire.bands()), "fire_times": fire.rough_times(f["classes"]),
+        "fire_rows": rows, "fire_examples": examples,
+    }
+
+
+def markdown_rows(rows: list[list[str]]) -> str:
+    return "\n".join("| " + " | ".join(row) + " |" for row in rows)
+
+
+def html_rows(rows: list[list[str]]) -> str:
+    """Table rows: the first cell as text, the rest as numbers."""
+    return "".join("<tr>" + "".join(f"<td{' class=n' if k else ''}>{escape(c)}</td>" for k, c in enumerate(row))
+                   + "</tr>" for row in rows)
+
+
 def readme(country: Country, summary: dict) -> str:
     def rows(lang: str) -> str:
         texts = resource_texts(summary, lang)
@@ -331,8 +389,15 @@ def readme(country: Country, summary: dict) -> str:
     def nations(lang: str) -> str:
         return "\n".join(f"| {' | '.join(row)} |" for row in nation_rows(summary, lang))
 
+    def fires(lang: str) -> dict:
+        f = fire_fields(summary, lang)
+        del f["fire_examples"]  # the page's table only
+        f["fire_rows"] = markdown_rows(f["fire_rows"])
+        return {f"{k}_{lang}": v for k, v in f.items()}
+
     return fill("unciv-readme.md", rows_es=rows("es"), rows_en=rows("en"), nations_es=nations("es"),
-                nations_en=nations("en"), **common_fields(country, summary))
+                nations_en=nations("en"), **fires("es"), **fires("en"), page_en=PAGES["en"],
+                **common_fields(country, summary))
 
 
 def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
@@ -343,6 +408,7 @@ def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
                    for r, n in s["resources"].items())
     fields = {k: escape(str(v)) for k, v in common_fields(country, s, lang).items()} | {
         "zip_href": MOD_ZIP, "zip_name": MOD_ZIP.rsplit("/", 1)[1], "map_href": MAP_FILE, "shot": SCREENSHOT[0],
+        "fire_shot": FIRE_SHOT[lang][0],
         "mod_name": escape(s["mod"]["name"]), "mod_repo": escape(s["mod"]["repo"]),
         "starts": escape(", ".join(x["city"] for x in s["starts"][1:])),
         "gap_km": f"{s['start_gap_tiles'] * s['tile_km']:g}", "fine_km": f"{country.hex_radius_km * math.sqrt(3):g}",
@@ -361,4 +427,8 @@ def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
         "other_langs": "".join(f' · <a href="{PAGES[o]}" lang="{o}" hreflang="{o}">{LANG_LINK[o]}</a>'
                                for o in country.langs if o != lang),
     }
+    fires = fire_fields(s, lang)
+    rows, examples = fires.pop("fire_rows"), fires.pop("fire_examples")
+    fields |= {k: escape(str(v)) for k, v in fires.items()} | {
+        "fire_rows": html_rows(rows), "fire_examples": html_rows(examples)}
     return fill(f"jugar.{lang}.html", **fields)
