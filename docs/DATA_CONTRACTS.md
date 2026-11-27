@@ -250,6 +250,16 @@ lens: "Nadie", nobody born there).
 "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
 `check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
 
+**`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; for a fiesta calendar, no view reads it yet): `{"vintage",
+"fiestas": [{"name", "category": "internacional|nacional|autonomica", "declaration": "Festa de Interese Turístico de
+Galicia" | null, "community", "place": "O Carballiño" | null, "municipalities": [INE codes], "cells": [hex indices],
+"when": "Agosto: segundo domingo" | null, "months": [1..12]}]}`, every fiesta of the `fiestas` lens in the order of its
+`names` (so a `labels` index is a fiesta here); one with no municipality in its source (declared for a whole community, held in a different village each year) has none and no cells. `name`, `place`,
+`declaration`, `community` and `when` are written as the official source writes them, in its language; `when` is the
+source's text (a rule such as "el 12 de septiembre de cada año", or one year's edition such as "13 de febrero de 2026 -
+18 de febrero de 2026"), null where the source gives no date; `months` are the months that text names, empty for a
+movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates.
+
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
 | id | group | format | values | note (legend caveat) |

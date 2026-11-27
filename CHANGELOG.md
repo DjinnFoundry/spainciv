@@ -16,6 +16,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   la provincia, quién nació allí y qué se come); seis intentos con la distancia y una flecha; el resultado se copia o
   se comparte sin desvelar el lugar. Guarda la partida del día y la racha en el navegador. En castellano e inglés; el
   mapa de EE. UU. no lo tiene (A25, E76).
+- **Fiestas autonómicas** en la lente de fiestas: 1.042 fiestas que declaran de interés turístico 15 comunidades
+  autónomas, cada una con su nombre (Fiesta de Interés Turístico de Andalucía, Festa de Interese Turístico de Galicia,
+  Fiesta de Interés Turístico Regional de Castilla-La Mancha…), de la lista oficial de cada comunidad. Pasan a
+  sumar 0,5 puntos en el índice de fiesta. `fiestas.json` guarda todas las fiestas con sus fechas, donde la fuente las
+  da (798 de 1.296), para un calendario futuro. Euskadi, Illes Balears, Ceuta y Melilla no declaran ninguna
+  (E77–E79, F34).
 - **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
   castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
   enlace que se comparte la lleva (`#lang=en`).
@@ -71,6 +77,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Los nombres que una fuente da en mayúsculas (fiestas autonómicas de Galicia, Asturias, Castilla-La Mancha y Valencia) salen como se escriben en castellano, con la «i» catalana en minúscula («Moros i Cristians») y los artículos gallegos en mayúscula («de O Carballiño»).
 - Las descargas reintentan también el HTTP 429 (demasiadas peticiones), esperando lo que pida la cabecera `Retry-After` del servidor, hasta 5 minutos. La de grandes personajes se cortaba en Wikidata.
 - Denominaciones: el mapa del Ministerio archiva Mongeta del Ganxet con el código del Cordero de Extremadura y Siurana con el de Les Garrigues, y el cordero extremeño salía en Barcelona y Girona. Cada zona va ahora con su nombre, y Mongeta del Ganxet y Siurana toman el polígono del Ministerio en vez de su lista de municipios.
 - Nombres de las áreas urbanas con guion o barra como se escriben («Tarragona-Reus», «Alcoy/Alcoi», «Vitoria/Gasteiz») y

@@ -17,6 +17,7 @@ import unittest
 from pipeline.core.lang import Text
 from pipeline.core.paths import ROOT
 from pipeline.core.store import read_web
+from pipeline.sources.es.fiestas_autonomicas import COMMUNITIES
 
 NODE = shutil.which("node")
 WEB_JS = ROOT / "web" / "js"
@@ -414,6 +415,8 @@ class EnglishDataTest(unittest.TestCase):
         ("resources.json", ".items[].name"),
         ("wonders.json", ".wonders[].name"), ("wonders.json", ".wonders[].short"), ("wonders.json", ".wonders[].metrics.municipality"),
         ("lenses.json", ".lenses[].names[]"),  # museums, castles, dishes, fiestas, beaches, denominations: see NAMED_SUFFIX
+        # the fiesta calendar, each text as its official source writes it (a date included: "15 de agosto")
+        *(("fiestas.json", f".fiestas[].{k}") for k in ("name", "community", "place", "declaration", "when")),
         ("unciv.json", ".summary.starts[].city"), ("unciv.json", ".summary.map_name"),
         ("unciv.json", ".summary.not_placed_designations[]"),  # denomination names; their kind is checked as a suffix
         ("sources.json", "[].publisher"),  # bodies by their own names (Instituto Nacional de Estadística, ADEAC…)
@@ -446,6 +449,10 @@ class EnglishDataTest(unittest.TestCase):
         mina minas dop igp""".split())  # DOP and IGP are PDO and PGI in English
     # Bodies and terms that keep their Spanish name in English text, as their publishers write them.
     KEEP = [
+        # each community's name for its declaration (Fiesta de Interés Turístico de Andalucía…), before the State's
+        # shorter "Fiesta de Interés Turístico" below takes their first words
+        re.compile("|".join(re.escape(x) for x in sorted({c["declaration"] for c in COMMUNITIES.values()}, key=len,
+                                                           reverse=True))),
         re.compile(r"\b(Atlas Digital de las Áreas Urbanas|Atlas Nacional de España|Instituto Geográfico Nacional|"
                    r"Instituto Nacional de Estadística|Puertos del Estado|Red de Parques Nacionales|Contabilidad Regional"
                    r"(?: de España)?|Censo Agrario|Estadística Minera de España|Panorama Minero|Ministerio [\w ,]+?(?=[),;.]|$)|"

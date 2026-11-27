@@ -603,6 +603,20 @@ SOURCES = {
         "las dos listas cuenta una vez, como Internacional.",
         "used_for": ["Lente de fiestas de interés turístico", "Índice de fiesta"],
     },
+    "fiestas_autonomicas": {
+        "title": "Fiestas de interés turístico que declaran las comunidades autónomas",
+        "publisher": "Las consejerías de turismo de las comunidades autónomas, en sus boletines, registros, portales de "
+        "turismo y datos abiertos",
+        "license": _REUSE,
+        "description": "Las fiestas que cada comunidad autónoma declara de interés turístico en su propio ámbito (Fiesta "
+        "de Interés Turístico de Andalucía, Festa de Interese Turístico de Galicia, Fiesta de Interés Turístico "
+        "Regional…), de su lista oficial, su registro o las órdenes de su boletín, con las fechas que da la fuente. Una "
+        "tabla del repositorio (pipeline/sources/es/data/fiestas_autonomicas.csv) las transcribe, cita la fuente de "
+        "cada fila y sitúa cada fiesta en su municipio. Una fiesta que el Estado ha declarado después Nacional o "
+        "Internacional cuenta una vez, en la categoría del Estado. Euskadi, Illes Balears, Ceuta y Melilla no han "
+        "declarado ninguna.",
+        "used_for": ["Lente de fiestas de interés turístico", "Índice de fiesta", "Calendario de fiestas (fiestas.json)"],
+    },
     "ine_viviendas_turisticas": {
         "title": "Viviendas turísticas, plazas y plazas por vivienda turística por municipio (INE, estadística "
         "experimental, tabla 39363)",
