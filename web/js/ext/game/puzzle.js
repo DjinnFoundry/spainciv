@@ -9,7 +9,7 @@
 // hex repeats until the pool runs out. Rebuilding the data may change the pool, and so the hexes of the days to come;
 // a saved game remembers its hex and starts afresh when today's is another.
 import { t } from "../../i18n.js";
-import { int, dollars } from "../../format.js";
+import { int, dollars, fixed } from "../../format.js";
 import { formatLensValue } from "../../ui/lenses.js";
 
 export const EPOCH = Date.UTC(2026, 10, 27); // day 1
@@ -22,6 +22,7 @@ export const DISTINCT = 10; // a named thing is distinctive when its name, as sh
 export const MIN_KINDS = 2; // a hex enters the pool with distinctive things of this many kinds
 export const MIN_FIRST = 20; // the first clue (area and sea) fits at least this many land hexes: it never gives the answer
 export const RIVER_KM = 400; // the rivers a clue names: at least this long across Spain's land on the map
+export const STANDOUT = 1.5; // clue 2 says "many centenarians" from this many times Spain's rate (the lens's `national`)
 const SEED = 431; // day 1, the launch day, is Guadix (Granada); re-picked when the pool changed with the readable clues
 
 /** The puzzle number of a date's local calendar day: 1 on 27 November 2026. */
@@ -347,6 +348,15 @@ function lensFact(lens, cell, mask = (s) => s) {
   return fact(lens.name, value, (c) => Math.abs((lens.values[c] ?? NaN) - v) <= 0.1 * Math.abs(v), true);
 }
 
+// "Muchos centenarios": the centenarians lens where the hex has STANDOUT times Spain's rate or more, with how many
+// times; a number, so it does not narrow the map (`num`).
+function centenariansFact(lens, cell) {
+  const v = lens?.values?.[cell], spain = lens?.national;
+  if (v == null || !spain || v < STANDOUT * spain) return null;
+  return fact(t("game.f.centenarians"), t("game.v.centenarians", { rate: fixed(v, 1), times: fixed(v / spain, 1) }),
+    (c) => Math.abs((lens.values[c] ?? NaN) - v) <= 0.1 * v, true);
+}
+
 // A named thing of the hex as a clue: its label by source ("Una fiesta"), its name with the place names hidden.
 const thingFact = (g, x, own) => x && fact(t(`game.k.${x.src}`), own(x.show), (c) => g.has(x.src, c, x.key));
 
@@ -394,8 +404,8 @@ export const CLUES = [
       fact(t("game.f.elev"), `${int(elev[cell])} m`, (c) => Math.abs(elev[c] - elev[cell]) <= Math.max(50, 0.1 * Math.abs(elev[cell])), true),
     ];
   }],
-  // The land and who lives there: relief, a great river, the language, the people of antiquity, how many and how
-  // well off.
+  // The land and who lives there: relief, a great river, the language, the people of antiquity, how many, how
+  // well off and, where they stand out, how many centenarians.
   ["people", (g, cell, own) => {
     const { w } = g, r = g.river(cell);
     const river = (c) => { const x = g.river(c); return x && `${x.name}|${x.by}`; };
@@ -406,6 +416,7 @@ export const CLUES = [
       lensFact(g.lenses.get("peoples"), cell, own),
       lensFact(g.lenses.get("density"), cell),
       lensFact(g.lenses.get("income"), cell),
+      centenariansFact(g.lenses.get("centenarians"), cell),
     ];
   }],
   // Its most distinctive named thing and what the heritage lenses count there (only what there is).
