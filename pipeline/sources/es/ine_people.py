@@ -38,7 +38,7 @@ class IneAdrhIndicadores(Source):
         license=LICENSE,
         description="For every municipality: the mean age of its residents (table 30832, which ADRH takes from the Annual "
         "Population Census, published for all municipalities) and the share of residents whose income per consumption "
-        "unit (modified OECD scale) is below 60 % of the national median (table 30829, both sexes; the median is "
+        "unit (modified OECD scale) is below 60% of the national median (table 30829, both sexes; the median is "
         "Spain's, all tax territories included, since ADRH 2023). Small municipalities can lack the income indicator "
         "(statistical confidentiality); they stay without data.",
         used_for=["Mean age lens", "Relative poverty lens"],

@@ -80,7 +80,9 @@ class RegistryTest(unittest.TestCase):
     def test_web_block(self):
         es = countries.COUNTRIES["es"]
         block = es.web_block(es.map_projection(-700.0, 520.0, es.margin_km))
-        self.assertEqual(block["levels"]["region"], {"one": "Provincia", "many": "Provincias"})
+        self.assertEqual(block["levels"]["region"], {"one": {"es": "Provincia", "en": "Province"},
+                                                     "many": {"es": "Provincias", "en": "Provinces"}})
+        self.assertEqual(block["name"], {"es": "España", "en": "Spain"})  # split into world.json and world.en.json
         self.assertEqual(block["projection"]["kind"], "laea")
         self.assertEqual(block["projection"]["insets"][0]["name"], "Canarias")
         self.assertEqual(block["projection"]["margin"], es.margin_km)
@@ -257,7 +259,8 @@ class IncomeLensTest(unittest.TestCase):
         lens = income_lens(adrh, geoids, weights)
         self.assertEqual(lens["values"], [17500, None, None])
         self.assertEqual((lens["id"], lens["format"], lens["source"]), ("income", "eur", "ine_adrh"))
-        self.assertIn("2024", lens["description"])
+        self.assertIn("2024", lens["description"]["es"])
+        self.assertIn("2024", lens["description"]["en"])
 
     def test_adrh_keeps_municipal_rows_only(self):
         import tempfile
@@ -424,9 +427,10 @@ class SpainScienceTest(unittest.TestCase):
         ys = {y["key"]: y for y in spain.yields_es(2024, {"vintage": "INE Estadística sobre actividades de I+D, 2025",
                                                            "data": {"year": 2025}})}
         self.assertEqual(ys["science"]["industries"], [], "no census breakdown under an R&D total")
-        self.assertEqual(ys["science"]["vintage"], "INE Estadística sobre actividades de I+D, 2025")
-        self.assertIn("I+D del INE, 2025", ys["science"]["description"])
-        self.assertIn("Censo anual de población (2024)", ys["science"]["description"])
+        self.assertEqual(ys["science"]["vintage"]["es"], "INE Estadística sobre actividades de I+D, 2025")
+        self.assertIn("I+D del INE, 2025", ys["science"]["description"]["es"])
+        self.assertIn("Censo anual de población (2024)", ys["science"]["description"]["es"])
+        self.assertIn("INE R&D statistic, 2025", ys["science"]["description"]["en"])
         self.assertNotIn("vintage", ys["food"])
         self.assertEqual(ys["production"]["industries"], ["manufacturing", "construction", "mining"])
 
@@ -621,8 +625,9 @@ class SpainPeopleTest(unittest.TestCase):
         self.assertEqual(lenses["foreign_born"]["values"], [0.25, 0.1, None, None])
         self.assertEqual(lenses["poverty"]["values"], [0.2, None, None, None])  # Soria has no figure: not a zero
         self.assertEqual(lenses["homeownership"]["values"], [0.7, None, None, None])
-        self.assertIn("2021", lenses["homeownership"]["description"])
-        self.assertIn("15 años", lenses["bachelors"]["unit"])
+        self.assertIn("2021", lenses["homeownership"]["description"]["es"])
+        self.assertIn("15 años", lenses["bachelors"]["unit"]["es"])
+        self.assertIn("aged 15+", lenses["bachelors"]["unit"]["en"])
 
 
 class SpainDistrictsTest(unittest.TestCase):
@@ -638,7 +643,7 @@ class SpainDistrictsTest(unittest.TestCase):
 
     def test_ceramics_city(self):
         from pipeline.build import spain_districts as SD
-        from pipeline.build.districts import badge_district, badge_for, evaluate
+        from pipeline.build.districts import badge_district, evaluate
 
         nation = {"total": 1_000_000, "23": 5_000, "10": 50_000, "47": 100_000}
         city = {"total": 100_000, "23": 4_000, "10": 5_000, "47": 10_000}  # ceramics at 8× the national share
@@ -647,8 +652,11 @@ class SpainDistrictsTest(unittest.TestCase):
         self.assertEqual([d["id"] for d in dists], ["industrial_zone"])
         self.assertEqual(dists[0]["sub"], "23")
         self.assertIsNone(dists[0]["avg_pay"], "the census has no wages")
-        badge = badge_for(badge_district(dists), False, False, SD.BY_ID, "census")
-        self.assertEqual((badge["label"], badge["basis"]), ("Ciudad de la cerámica", "census"))
+        badge = SD.badge(badge_district(dists), False)
+        self.assertEqual((badge["label"], badge["basis"]), ({"es": "Ciudad de la cerámica", "en": "Ceramics town"}, "census"))
+        self.assertEqual(badge["text"], {"es": "Cerámica, vidrio y cemento: 8,0 veces la cuota nacional de empleo",
+                                         "en": "Ceramics, glass and cement: 8.0× the national share of jobs"})
+        self.assertEqual(SD.badge(badge_district(dists), False, SD.BADGE_LABELS["26089"])["label"]["en"], "Red wine town")
         self.assertIsNone(m.industry(["23"], SD.ALL, ["99999"])["emp"], "a city without census divisions has no data")
 
 
@@ -715,7 +723,7 @@ class UrbanAreasTest(unittest.TestCase):
         self.assertIn("alacant", name_keys("Alicante/Alacant"))
         (a,) = urban_areas([self.area(["Barcelona", "Granada, La", "Bigues i Riells"], 1_711_300)], self.muni, self.centre)
         self.assertEqual(a["members"], ["08019", "08094", "08023"])  # La Granada next to Barcelona, not Granada city
-        self.assertEqual((a["id"], a["full"]), ("08019", "Área urbana de Barcelona"))
+        self.assertEqual((a["id"], a["full"]), ("08019", {"es": "Área urbana de Barcelona", "en": "Barcelona urban area"}))
         (b,) = urban_areas([self.area(["Las Palmas de Gran Canaria"], 380_000)], self.muni, self.centre)
         self.assertEqual(b["members"], ["35016"])
 
@@ -859,14 +867,16 @@ class SpainPowerTest(unittest.TestCase):
 
         p = lambda name, mw: ({"name": name, "mw": mw, "year": 1983, "offshore": False, "source": "ppm"}, 0.0, 0.0)
         s = site("nuclear", [p("Almaraz 1", 1049), p("Almaraz 2", 1044)], 7)
-        self.assertEqual((s["name"], s["value"], s["cell"]), ("Almaraz", 2093, 7))
-        # Spanish names, and capacities without float noise (123.1 + 123.2 = 246.29999999999998)
+        self.assertEqual((s["name"]["es"], s["value"], s["cell"]), ("Almaraz", 2093, 7))
+        # Names and details in each language, and capacities without float noise (123.1 + 123.2 = 246.29999999999998)
         s = site("solar", [p("Renopool Solar Farm", 123.1), p("Renopool Solar Farm", 123.2)], 7)
-        self.assertEqual(s["name"], "Planta solar Renopool")
-        self.assertEqual(s["detail"], "2 centrales, entre ellas Planta solar Renopool (123,2 MW), en servicio desde 1983")
+        self.assertEqual(s["name"], {"es": "Planta solar Renopool", "en": "Renopool Solar Farm"})
+        self.assertEqual(s["detail"], {"es": "2 centrales, entre ellas Planta solar Renopool (123,2 MW), en servicio desde 1983",
+                                       "en": "2 plants, including Renopool Solar Farm (123.2 MW), in service since 1983"})
 
-    def test_plant_names_in_spanish(self):
-        from pipeline.build.spain_resources import plant_name_es
+    def test_plant_names_in_each_language(self):
+        """Spanish rewrites the source's English kind words; English keeps the source's name, without its noise."""
+        from pipeline.build.spain_resources import plant_name
 
         for en, es in [("Las Majas Wind Farm (+1)", "Parque eólico Las Majas (+1)"), ("Monlora Wind", "Parque eólico Monlora"),
                        ("La Cabana Wind Farm Spain", "Parque eólico La Cabana"),
@@ -876,7 +886,11 @@ class SpainPowerTest(unittest.TestCase):
                        ("Guzman Thermosolar Farm", "Central termosolar Guzman"), ("Aste Csp Solar Farm", "Central termosolar Aste"),
                        ("Castile La Mancha Solar Xxxiii", "Castilla-La Mancha Solar Xxxiii"), ("Alcudia Phase", "Alcudia"),
                        ("Bajo Aragon Solar", "Bajo Aragón Solar"), ("Almaraz", "Almaraz")]:
-            self.assertEqual(plant_name_es(en), es)
+            self.assertEqual(plant_name(en)["es"], es)
+        for source, en in [("La Cabana Wind Farm Spain", "La Cabana Wind Farm"), ("Alcudia Phase", "Alcudia"),
+                           ("Castile La Mancha Solar Xxxiii", "Castile La Mancha Solar Xxxiii"),
+                           ("Alcala De Guadaira Solar Park (+4)", "Alcala de Guadaira Solar Park (+4)")]:
+            self.assertEqual(plant_name(source)["en"], en)
 
 
 class SpainFoodTest(unittest.TestCase):
@@ -1009,12 +1023,14 @@ class SpainFoodLensTest(unittest.TestCase):
                           {"name": "C (IGP · municipios)", "area": "unidades", "units": ["municipio:07005", "municipio:07006*"]},
                           {"name": "D (Vino de pago · finca)", "area": "finca", "units": ["municipio:07006"]},
                           {"name": "E (IGP · sin zona)", "area": "ninguna", "units": [], "note": "sin pliego"}])
-        self.assertEqual(lens["names"], ["A (DOP)", "B (IGP)", "C (IGP · municipios)", "D (Vino de pago · finca)"])
-        named = lambda c: [lens["names"][k] for k in lens["labels"][c]]
+        self.assertEqual([n["es"] for n in lens["names"]], ["A (DOP)", "B (IGP)", "C (IGP · municipios)", "D (Vino de pago · finca)"])
+        self.assertEqual([n["en"] for n in lens["names"]], ["A (PDO)", "B (PGI)", "C (PGI · municipalities)", "D (Vino de Pago · estate)"])
+        named = lambda c: [lens["names"][k]["es"] for k in lens["labels"][c]]
         self.assertEqual(named(5), ["B (IGP)", "C (IGP · municipios)", "A (DOP)"])  # smallest area first
         self.assertEqual(named(6), ["D (Vino de pago · finca)", "C (IGP · municipios)", "A (DOP)"])
         self.assertEqual(sum(lens["values"]), self.grid.size + 4)
-        self.assertIn("Sin zona: E (IGP · sin zona), sin pliego.", lens["description"])
+        self.assertIn("Sin zona: E (IGP · sin zona), sin pliego.", lens["description"]["es"])
+        self.assertIn("No area: E (PGI · no area), sin pliego.", lens["description"]["en"])
 
     def test_whole_province_and_island(self):
         from pipeline.build.spain_food import island, unit_municipalities
@@ -1142,7 +1158,8 @@ class SpainMinesTest(unittest.TestCase):
 
 
 class SpainVintageTest(unittest.TestCase):
-    def test_source_vintages_in_spanish(self):
+    def test_source_vintages_in_both_languages(self):
+        """The source's own vintage is the English; the Spanish translates its dates and words."""
         from pipeline.build.texts_es import vintage
 
         for en, es in [("INE Padrón, 1 January 2025", "INE Padrón, 1 de enero de 2025"),
@@ -1150,7 +1167,12 @@ class SpainVintageTest(unittest.TestCase):
                        ("OAPN, Red de Parques Nacionales; visitors 2025", "OAPN, Red de Parques Nacionales; visitantes 2025"),
                        ("MAPA, Calidad diferenciada (2017 areas); eAmbrosia", "MAPA, Calidad diferenciada (zonas de 2017); eAmbrosia"),
                        ("powerplantmatching 2889ad9d1; OpenStreetMap (Canary Islands)", "powerplantmatching 2889ad9d1; OpenStreetMap (Canarias)")]:
-            self.assertEqual(vintage(en), es)
+            self.assertEqual(vintage(en), {"es": es, "en": en})
+        for es, en in [("Cobertura de banda ancha (Ministerio para la Transformación Digital), junio de 2025",
+                        "Broadband coverage (Ministerio para la Transformación Digital), June 2025"),
+                       ("Ministerio de Vivienda, valor tasado, 2.º trimestre de 2026", "Ministerio de Vivienda, appraised value, Q2 2026")]:
+            self.assertEqual(vintage(es), {"es": es, "en": en})  # a vintage the source writes in Spanish
+        self.assertIsNone(vintage(None))
 
 
 class SpainBeachesTest(unittest.TestCase):
@@ -1331,7 +1353,8 @@ class SpainDailyLensesTest(unittest.TestCase):
         bb = spain_daily.broadband_lens({"year": 2025, "nation": 0.98, "municipalities": {"28079": 1.0, "28065": 0.6}},
                                         geoids, weights)
         self.assertEqual((bb["id"], bb["group"], bb["values"]), ("broadband", "knowledge", [0.9, None, None]))
-        self.assertIn("98,0 %", bb["description"])
+        self.assertIn("98,0 %", bb["description"]["es"])
+        self.assertIn("Spain: 98.0%", bb["description"]["en"])
 class SpainFiestasTest(unittest.TestCase):
     PAGE = ('<dl class="accordion"><dt id="dt1" class="close">Andalucía</dt><dd style="display: none;"><ul>'
             "<li>Semana Santa de Baena, Córdoba (2026)</li><li>Romería del Rocío de Almonte (1980)</li></ul></dd>"
@@ -1423,7 +1446,7 @@ class SpainFiestaLensesTest(unittest.TestCase):
         self.assertEqual(cells, [[4, 5]])
         lens = fiestas_lens([{"name": "El Cerezo en Flor", "category": "nacional"}], cells, [0] * 6)
         self.assertEqual(lens["values"][4:], [1, 1])
-        self.assertEqual(lens["names"], ["El Cerezo en Flor (Nacional)"])
+        self.assertEqual(lens["names"], [{"es": "El Cerezo en Flor (Nacional)", "en": "El Cerezo en Flor (National)"}])
 
     def test_bars_go_to_their_municipality_or_the_nearest_capital(self):
         from pipeline.build.spain_fiesta import locate
@@ -1545,6 +1568,12 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
         self.assertEqual(years({"year": 1881, "precision": 11}, {"year": 1973, "precision": 11}), "1881–1973")
         self.assertEqual(years({"year": 1986, "precision": 11}, None), "n. 1986")
         self.assertEqual(years(None, {"year": 1550, "precision": 9}), "m. 1550")
+        self.assertEqual(date_text({"year": -3, "precision": 9}, "en"), "4 BC")
+        self.assertEqual(date_text({"year": 1550, "precision": 8}, "en"), "c. 1550")
+        self.assertEqual([date_text({"year": y, "precision": 7}, "en") for y in (1501, 1001, 1101, 201, 301)],
+                         ["16th century", "11th century", "12th century", "3rd century", "4th century"])
+        self.assertEqual(years({"year": 1986, "precision": 11}, None, "en"), "b. 1986")
+        self.assertEqual(years(None, {"year": 1550, "precision": 9}, "en"), "d. 1550")
 
     def test_noun_is_the_descriptions_word_a_nobels_trade_or_the_roles_noun_in_the_persons_gender(self):
         from pipeline.build.spain_personajes import noun, note
@@ -1553,7 +1582,9 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
         self.assertEqual(noun(person(primary="nobel", role="Q7191", trade="médico")), "médico, premio Nobel")
         self.assertEqual(noun(person(primary="artists", role="Q1028181", female=True)), "pintora")
         self.assertEqual(note(person(born={"year": 1547, "precision": 11}, died={"year": 1616, "precision": 11})),
-                         "escritor, 1547–1616")
+                         {"es": "escritor, 1547–1616", "en": "writer, 1547–1616"})
+        self.assertEqual(noun(person(primary="nobel", role="Q7191", trade="médico"), "en"), "physician, Nobel laureate")
+        self.assertEqual(noun(person(primary="artists", role="Q1028181", female=True), "en"), "painter")
 
     def test_birthplace_without_coordinates_takes_the_place_it_is_in_and_regions_do_not_count(self):
         from pipeline.sources.es.personajes import birthplace
@@ -1623,13 +1654,15 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
         self.assertEqual(count["values"], [None, 3, 1, 0, None, None])
         artists, writers = KIND_IDS.index("artists"), KIND_IDS.index("writers")
         self.assertEqual(kind["values"], [None, artists, writers, None, None, None])  # two painters, one writer
-        self.assertEqual(kind["categories"][artists]["name"], "Pintores y escultores")
+        self.assertEqual(kind["categories"][artists]["name"], {"es": "Pintores y escultores", "en": "Painters and sculptors"})
         self.assertEqual({count["names_from"], kind["names_from"]}, {sp.FILE})
         self.assertNotIn("names", count)  # the names stay in the people file
-        self.assertEqual([(p["name"], p["note"], p["place"], p["cell"]) for p in doc["people"]],
+        self.assertEqual([(p["name"], p["note"]["es"], p["place"], p["cell"]) for p in doc["people"]],
                          [("Pintor A", "pintor", "Lugar 1", 1), ("Escritor", "escritor, n. 1547", "Lugar 1", 1),
                           ("Pintor B", "pintor", "Lugar 1", 1), ("Escritora", "escritora", "Lugar 2", 2)])
-        self.assertIn("Fuera quedan 2: 1 nacieron fuera de la España actual", count["description"])
+        self.assertIn("Fuera quedan 2: 1 nacieron fuera de la España actual", count["description"]["es"])
+        self.assertIn("Left out: 2, of whom 1 were born outside today's Spain", count["description"]["en"])
+        self.assertEqual(doc["people"][1]["note"]["en"], "writer, b. 1547")
 
     def test_check_matches_the_lenses_against_the_people_file(self):
         import tempfile

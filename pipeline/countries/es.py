@@ -9,6 +9,7 @@ the Atlantic south-west of the peninsula, as on most maps of Spain; their hexes 
 import math
 
 from ..core.geo import Inset, InsetProjection, LambertAzimuthal
+from ..core.lang import tr
 from .base import Country, Level, Page, country_dirs
 
 CENTRE = (40.0, -3.7)  # lat, lon
@@ -28,37 +29,46 @@ _interim, _web = country_dirs("es")
 
 COUNTRY = Country(
     id="es",
-    name="España",
+    name=tr("España", "Spain"),
     product="spainciv",
     site_url="spainciv.djinnfoundry.com",
     base_projection=projection,
     hex_radius_km=10 / math.sqrt(3),  # 10 km across the flats (pointy-top hexes: width = √3·radius)
     margin_km=80.0,
-    region=Level("Provincia", "Provincias"),
-    unit=Level("Municipio", "Municipios"),
-    metro=Level("Área urbana", "Áreas urbanas"),
+    region=Level(tr("Provincia", "Province"), tr("Provincias", "Provinces")),
+    unit=Level(tr("Municipio", "Municipality"), tr("Municipios", "Municipalities")),
+    metro=Level(tr("Área urbana", "Urban area"), tr("Áreas urbanas", "Urban areas")),
     currency="EUR",
     locale="es-ES",
     lang="es",
+    # Published in Spanish and English (docs/SPAIN.md, Language): the data files are in Spanish, with an English
+    # overlay next to each (core/lang.py); English numbers in en-IE, the English of a euro country ("€1.6T", "12.5%").
+    locales={"es": "es-ES", "en": "en-IE"},
     capital_city="28079",  # Madrid (city ids are INE municipality codes)
     claim_tiny_regions=True,  # Ceuta and Melilla are smaller than a hex
     # Roughness inside a 87 km² hex is far lower than inside the US's 1,600 km² ones. These thresholds give Spain the
     # same land shares of flat / hills / mountains (26 / 56 / 18%) that the original 85 m / 260 m rule gives it on 25 km
     # hexes (calibrated on ETOPO1, see docs/SPAIN.md).
     relief_std_m=(32.0, 138.0),
-    # The page, its social cards, its credits and the interface (lang; web/js/i18n/es.js) are in Spanish.
+    # The page, its social cards, its credits and the interface are in Spanish, and in English when the visitor picks it
+    # (web/js/i18n/es, web/js/i18n/en-ES). Link previews only ever see the Spanish head and card.
     page=Page(
-        title="spainciv — España como mapa de un juego de estrategia",
-        card_title="España como mapa de un juego de estrategia",
-        description=(
+        title=tr("spainciv — España como mapa de un juego de estrategia", "spainciv — Spain as a strategy game map"),
+        card_title=tr("España como mapa de un juego de estrategia", "Spain as a strategy game map"),
+        description=tr(
             "La España real dibujada como un mapa de estrategia 4X: terreno en hexágonos, ciudades, provincias y lentes"
-            " de población y renta, con datos públicos del INE, el IGN, Copernicus, la NOAA y Natural Earth."
+            " de población y renta, con datos públicos del INE, el IGN, Copernicus, la NOAA y Natural Earth.",
+            "The real Spain drawn as a 4X strategy map: hex terrain, cities, provinces and lenses of population and"
+            " income, from public data by INE, IGN, Copernicus, NOAA and Natural Earth.",
         ),
-        image_alt="Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
-        data_credit="Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap",
+        image_alt=tr("Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
+                     "Hex map of Spain with its cities labelled, in the style of a strategy game"),
+        data_credit=tr("Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap",
+                       "Data: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap"),
         # SIANE boundaries are CC BY 4.0: the attribution the IGN asks for stays visible on the map (docs/SPAIN.md).
-        notices=("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",),
-        based_on="Basado en {usaciv}, de Andrej Karpathy (MIT)",
+        notices=(tr("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",
+                    "Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"),),
+        based_on=tr("Basado en {usaciv}, de Andrej Karpathy (MIT)", "Based on {usaciv} by Andrej Karpathy (MIT)"),
     ),
     interim_dir=_interim,
     web_data_dir=_web,

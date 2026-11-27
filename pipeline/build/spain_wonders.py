@@ -27,7 +27,7 @@ from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..countries import active
 from ..sources.es.oapn import short_name
 from .cities import nearest_land
-from .texts_es import vintage
+from .texts_es import tr, vintage
 
 REQUIRES = ["_world", "oapn_parques", "wikidata_es", "siiu_universidades", "siane", "cities.json", "world.json"]
 PRODUCES = ["wonders.json"]
@@ -35,18 +35,29 @@ COUNTRIES = ("es",)
 
 RULES = [
     {"id": "world_heritage", "kind": "landmark", "kinds": ["landmark", "natural"], "year": None,
-     "text": "Todos los sitios del Patrimonio Mundial de la UNESCO con algún elemento en España (50, según Wikidata), por "
-             "su número UNESCO, que sigue más o menos el orden de inscripción. Los sitios naturales son maravillas naturales."},
+     "text": tr("Todos los sitios del Patrimonio Mundial de la UNESCO con algún elemento en España (50, según Wikidata), "
+                "por su número UNESCO, que sigue más o menos el orden de inscripción. Los sitios naturales son maravillas "
+                "naturales.",
+                "Every UNESCO World Heritage site with a component in Spain (50, according to Wikidata), by UNESCO number, "
+                "which roughly follows the order of inscription. Natural sites are natural wonders.")},
     {"id": "national_park", "kind": "natural", "kinds": ["natural", "coastal"], "year": None,
-     "text": "Los 16 Parques Nacionales de España (Red de Parques Nacionales, OAPN), ordenados por sus visitantes de 2025 "
-             "(informe anual del OAPN): el Teide, primero, con más de 5 millones."},
+     "text": tr("Los 16 Parques Nacionales de España (Red de Parques Nacionales, OAPN), ordenados por sus visitantes de "
+                "2025 (informe anual del OAPN): el Teide, primero, con más de 5 millones.",
+                "Spain's 16 National Parks (Red de Parques Nacionales, OAPN), ranked by their 2025 visitors (OAPN annual "
+                "report): Teide first, with more than 5 million.")},
     {"id": "great_university", "kind": "university", "kinds": ["university"], "year": None,
-     "text": "Las 20 universidades presenciales con más estudiantes de grado, máster y doctorado en el curso 2024-25 "
-             "(SIIU, Ministerio de Ciencia, Innovación y Universidades), en el municipio donde estudian más de ellos."},
+     "text": tr("Las 20 universidades presenciales con más estudiantes de grado, máster y doctorado en el curso 2024-25 "
+                "(SIIU, Ministerio de Ciencia, Innovación y Universidades), en el municipio donde estudian más de ellos.",
+                "The 20 campus-based universities with the most bachelor's, master's and doctoral students in the 2024-25 "
+                "academic year (SIIU, Ministerio de Ciencia, Innovación y Universidades), in the municipality where most "
+                "of them study.")},
     {"id": "cathedral", "kind": "landmark", "kinds": ["landmark"], "year": None,
-     "text": "Todas las catedrales y concatedrales de España que recoge Wikidata, por orden alfabético, salvo las que forman "
-             "parte de un sitio del Patrimonio Mundial (que ya es una maravilla)."},
+     "text": tr("Todas las catedrales y concatedrales de España que recoge Wikidata, por orden alfabético, salvo las que "
+                "forman parte de un sitio del Patrimonio Mundial (que ya es una maravilla).",
+                "Every cathedral and co-cathedral in Spain that Wikidata lists, in alphabetical order, except those that "
+                "are part of a World Heritage site (which is already a wonder).")},
 ]
+OWNERSHIP = {"Pública": tr("Pública", "Public"), "Privada": tr("Privada", "Private")}  # SIIU's university types
 # What stands on the plinth (web/js/render/art/sites.js WONDER_MOTIFS), by words in the wonder's name.
 MOTIFS = [
     (r"catedral|seo|basílica", "spire"), (r"monasterio|abad|cartuja|colegiata", "mission"),
@@ -173,7 +184,7 @@ def build() -> None:
             "kind": "coastal" if "Marítimo-Terrestre" in name else "natural", "rule": "national_park",
             "rank": len(parks) + 1,
             "metrics": {"visits": park["visitors"], "year": year, "area_km2": round(park["area_ha"] / 100, 1) if park["area_ha"] else None,
-                        "unit_type": "Parque Nacional", "declared": park["declared"]},
+                        "unit_type": tr("Parque Nacional", "National Park"), "declared": park["declared"]},
             **placer.place(*ring_centroid(main)), "cells": placer.covered(park["rings"]), "curated": False,
             "motif": motif(name, True),
         })
@@ -203,7 +214,7 @@ def build() -> None:
             "id": f"univ-{u['code']}", "name": university_name(u["name"]), "short": u["name"], "kind": "university", "rule": "great_university",
             "rank": len(universities) + 1,
             "metrics": {"students": u["students"], "students_year": uni_p["data"]["year"], "rd_usd": None,
-                        "type": u["type"], "municipality": muni["name"]},
+                        "type": OWNERSHIP.get(u["type"], u["type"]), "municipality": muni["name"]},
             **placer.place(*muni["centre"]), "cells": None, "curated": False,
         })
 
