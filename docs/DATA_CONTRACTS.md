@@ -246,9 +246,17 @@ focused. `null_label` (optional) is what the tooltip says for a null value inste
 lens: "Nadie", nobody born there).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
-`great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",
-"note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
-`check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
+`great_people_kind`, and the timeline's people): `{"vintage", "categories": [{id, name, color}] (the categorical lens's),
+"timeline": {"until": 2026, "max_life": 122, "approximate": 113, "left_out": {"no_birth", "no_death", "inconsistent"}},
+"people": [{"name", "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid",
+"life": [1881, 1973]}]}`, most famous first. `life` = the years in which the person may have been alive, both
+included, as integer astronomical years (0 = 1 BC, -669 = 670 BC); absent for someone who cannot be placed in time
+(counted in `timeline.left_out` by reason). A birth or death given only as a decade or a century counts in full
+(`approximate` people have one); with no death date, someone born in `until - max_life` or later is alive up to
+`until`, the year of the Wikidata download (DECISIONS E87). `personajes.en.json` carries only the English notes and
+places: the numbers stay in the Spanish file. Its `check(web_dir)` fails a person off Spanish land, a lens whose counts
+or main categories differ from the file, a missing `timeline`, a `life` that is not two integers in order up to
+`until`, and `timeline` counts that do not add up to the people; a NOTE counts those shown alive today past 100.
 
 **`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; read by the fiesta calendar, `web/js/ext/fiestas`, when it first
 opens): `{"vintage",
@@ -807,7 +815,12 @@ several languages, with the `lang` hash key) and `game` (the daily game "Adivina
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
 also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `timeline` (great people through time,
+only where the data has `personajes.json` and both great people lenses: lenses `great_people_year` and
+`great_people_year_kind`, mode `timeline`, hash key `anio` with an astronomical year, e.g.
+`#lens=great_people_year&anio=1000`; no `anio` opens at `timeline.until`; the year rules are in
+`ext/timeline/lifespan.js`). `ext/flyToCells.js` is the dock helper both calendars use: highlight some hexes and fit
+them in the view. The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
