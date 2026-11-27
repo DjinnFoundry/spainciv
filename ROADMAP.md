@@ -45,7 +45,7 @@ decisiones que salgan van a `DECISIONS.md`.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
-- Rendimiento: el primer dibujado tras cambiar de zoom bajó a la mitad (A25), pero con la CPU frenada ×4 sigue
+- Rendimiento: el primer dibujado tras cambiar de zoom bajó a la mitad (A26), pero con la CPU frenada ×4 sigue
   bloqueando de 0,5 a 0,9 s cuando el zoom cae en un cubo de sprites frío (pintar los sprites y planes de la escala
   nueva), y el margen que se pinta en tiempo libre puede retrasar una rueda que llegue justo entonces. Quedan el
   worker con OffscreenCanvas (sprites, mundo y capas registradas en otro hilo) o un relieve desde 8 px, que cambia la
