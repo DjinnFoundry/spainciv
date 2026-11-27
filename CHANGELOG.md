@@ -12,6 +12,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
   Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
   día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
+- **Rutas comerciales de España**: el interruptor «Rutas comerciales» del menú Mapa dibuja las 30 mayores corrientes
+  de mercancías por carretera entre las 15 comunidades peninsulares en 2025 (Encuesta Permanente de Transporte de
+  Mercancías por Carretera, Ministerio de Transportes), en línea recta entre comunidades y con el grosor según las
+  toneladas. La primera es Castilla-La Mancha ⇄ Madrid, 40,6 millones de toneladas. El tooltip da cada sentido y el
+  recorrido medio. El Maestre del Comercio gana las toneladas entre comunidades, la lista de rutas, el detalle de
+  cada una y una tabla de comunidades con sus socios, las mercancías que más envían y reciben, el saldo y el tráfico
+  con el extranjero. Baleares, Canarias, Ceuta y Melilla salen con sus totales y sin rutas: la encuesta no publica
+  sus flujos. El pipeline lee el .xls del Ministerio con un lector BIFF8 propio (A27, F35).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

@@ -21,7 +21,9 @@ decisiones que salgan van a `DECISIONS.md`.
 - Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
-- Los ciudadanos de la City View, el comercio y los desastres siguen siendo solo de EE UU.
+- Los ciudadanos de la City View y los desastres siguen siendo solo de EE UU. Las rutas comerciales de España son de
+  mercancías por carretera entre comunidades (A27); el comercio exterior por provincia en euros (ficheros territoriales
+  de la AEAT) está por decidir.
 - Ejército (E67-E71): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
   `publicaciones.defensa.gob.es` no respondía el 27-11-2026) y el gasto de Defensa por provincia. Los límites son los
   de OpenStreetMap, y 165 de las 478 instalaciones no tienen rama (oficinas, residencias, institutos del Órgano
