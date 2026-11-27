@@ -11,7 +11,7 @@ import { country } from "../../app/country.js";
 import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
-import { flyToCells } from "../flyToCells.js";
+import { flyToCells } from "../../app/flyToCells.js";
 import * as C from "./calendar.js";
 import { currentMonth, monthLinks, monthName as nameOf, monthState, monthStrip } from "../month.js";
 

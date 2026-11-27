@@ -961,6 +961,44 @@ const RAW = {
       F('M12 11.2c-3.6 0-7 4.4-7 7.2 0 2 1.6 3 3.4 3 1.4 0 2.4-.8 3.6-.8s2.2.8 3.6.8c1.8 0 3.4-1 3.4-3 0-2.8-3.4-7.2-7-7.2Z'),
     ],
   },
+  'g-longevity': {
+    bg: '#4e5a2e',
+    paths: [
+      // an olive sprig (also the longevity zones lens, ALIASES)
+      S('M5 21.4C8 15 12.4 9.4 19.6 3', 2.2),
+      F(ellipse(9.2, 11.6, 3.4, 1.5, -50) + ellipse(13.6, 7.6, 3.4, 1.5, -50)),
+      T(ellipse(12.4, 14.8, 3.4, 1.5, 20) + ellipse(16.8, 10.2, 3.4, 1.5, 20)),
+      F(circle(19.8, 3.2, 1.3)),
+    ],
+  },
+  'l-oldest-old': {
+    bg: '#4a3a6b',
+    paths: [
+      // a stooped walker with a cane
+      F(circle(11.6, 4, 2.4)),
+      F('M9.2 8.2c1.6-.8 3.6-.6 4.6.8l1.4 4.2-1.8.6-1-2.8-.6 4 2.6 6.8h-2.4l-2.2-5.6-1.6 5.6H6l2.2-7.6.4-3.4-1.6 2.2-1.8-.8Z'),
+      S('M16.4 12.2l1.4 9.8', 1.6), S('M15.4 12.2c.4-1 1.6-1.2 2.2-.4', 1.6),
+    ],
+  },
+  'l-centenarians': {
+    bg: '#245a5a',
+    paths: [
+      // a cake with three candles
+      T(rrect(2.6, 17.4, 18.8, 4.4, 1)),
+      F(rrect(4.4, 12, 15.2, 6.4, 1.2)),
+      F('M6.4 7.4h1.6v4H6.4Z' + 'M11.2 7.4h1.6v4h-1.6Z' + 'M16 7.4h1.6v4H16Z'),
+      F(ellipse(7.2, 5.4, 0.9, 1.5) + ellipse(12, 5.4, 0.9, 1.5) + ellipse(16.8, 5.4, 0.9, 1.5)),
+      D('M4.6 15c2 1.2 3.4-1 5 0s3.2 1 5 0 3 1 4.8 0', 1.1),
+    ],
+  },
+  'l-life-65': {
+    bg: '#6b3a4a',
+    paths: [
+      // a heart with a clock hand: the years left
+      F('M12 21.4C5 16.6 1.6 12.6 1.6 8.4a5.3 5.3 0 0 1 10.4-1.6 5.3 5.3 0 0 1 10.4 1.6c0 4.2-3.4 8.2-10.4 13Z'),
+      D(circle(12, 11.4, 4.2), 1.2), D('M12 8.6v2.8l2 1.4', 1.4),
+    ],
+  },
   'g-hazards': {
     bg: '#5a4a6a',
     paths: [
@@ -977,6 +1015,7 @@ const RAW = {
 
 // Aliases: id variants used by data files or other modules.
 export const ALIASES = {
+  'l-longevity': 'g-longevity',
   'l-people': 'pop',
   'l-density': 'pop',
   'l-degree': 'l-degrees',

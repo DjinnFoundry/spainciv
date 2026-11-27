@@ -20,6 +20,7 @@ import { installExtensions } from "./ext/index.js";
 import { initShare } from "./app/share.js";
 import { setCountry, applyCountryChrome, country } from "./app/country.js";
 import { loadData } from "./app/data.js";
+import { flyToCells } from "./app/flyToCells.js";
 import { initHelp } from "./app/help.js";
 import { t, translatePage } from "./i18n.js";
 
@@ -50,6 +51,7 @@ const ZOOM_LEAD = 0.6; // a zoom-out that runs off the cache re-renders it at th
 const DOUBLE_MS = 260;
 const SELECT_ANIM_MS = 33; // ~30 fps while a state's border highlight animates
 const isMobile = () => matchMedia("(max-width: 700px)").matches;
+const FLY_SCALE = 2.4; // css px per km at most when a lens legend's fly_to entry brings its hexes into view
 
 async function main() {
   translatePage(); // the page's settings already name the language (app/country.js)
@@ -597,6 +599,7 @@ async function main() {
     lenses: lensFile, sources: sources || [], w,
     onPick: (lens) => setLens(lens),
     onBand: (band) => setBand(band),
+    onFly: (cells) => flyToCells(app, cells, FLY_SCALE),
   });
 
   let minimapQueued = false;
@@ -1050,6 +1053,7 @@ async function main() {
   let pinch = null; // {dist, cx, cy}
   let lastTap = null; // {t, x, y}
   let pendingTap = 0;
+  let touchTip = -1; // the hex whose tooltip a tap showed (a lens with touch_details)
 
   function hover(mx, my) {
     const city = hitCity(mx, my);
@@ -1110,6 +1114,7 @@ async function main() {
     if (drag) {
       drag.moved += Math.abs(dx) + Math.abs(dy);
       if (drag.moved > 4) {
+        touchTip = -1; // a pan hides the tapped tooltip: the next tap on that hex shows it again
         canvas.classList.add("dragging");
         cam.panBy(dx, dy);
         moved();
@@ -1168,6 +1173,16 @@ async function main() {
       if (!modes.mode && layerClick()) return;
       if (events.emit("mapclick", ev)) return;
       if (modes.mode && layerClick()) return;
+      // A lens with touch_details: on a touch screen the first tap on a hex shows its tooltip, what a mouse gets by
+      // hovering (a zone's name, a hex's municipalities); a second tap on the same hex does what a tap does.
+      if (e.pointerType !== "mouse" && state.lens?.touch_details && !banner && owner >= 0 && touchTip !== cell) {
+        touchTip = cell;
+        state.hoverCell = cell;
+        showCellTooltip(mx, my, w, cell, state.lens, state.showResources, true);
+        requestDraw();
+        return;
+      }
+      touchTip = -1;
       if (city) selectCity(city);
       else if (owner >= 0) {
         // On phones the bottom sheet would hide the state, so bring it into the visible part of the map.

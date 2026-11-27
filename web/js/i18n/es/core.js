@@ -42,6 +42,7 @@ export default {
   "core.tip.more": "y {n} más",
   "core.tip.openCity": "Haz clic para abrir la ciudad",
   "core.tip.openState": "Haz clic para abrir {name}",
+  "core.tip.tapAgain": "Toca otra vez para abrirlo",
 
   // city and province panels
   "core.panel.city": "Ciudad",
@@ -105,6 +106,7 @@ export default {
   "core.lens.backToTerrain": "Volver al terreno",
   "core.lens.categories": "Categorías de {name}: haz clic en una para ver solo esa",
   "core.lens.catHint": "Haz clic en una categoría para ver solo esa",
+  "core.lens.flyTo": "Ir a:",
   "core.lens.showingOnly": "Solo {what}",
   "core.lens.allValues": "todos los valores",
   "core.lens.scaleLabel": "Resalta un tramo de valores de {name}. Pasa el ratón o arrastra; las flechas mueven el resalte y Escape lo quita.",
