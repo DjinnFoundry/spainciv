@@ -7,12 +7,17 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ### Añadido
 - **Personajes en el tiempo** («¿Quién vivía en 1520?»): dos lentes nuevas junto a las de grandes personajes,
-  «Personajes vivos en {año}» y «Oficios en {año}», con un panel para elegir el año, avanzar por décadas o siglos y
-  reproducir la historia desde Argantonio (670 a. C.) hasta hoy. En el año 1000 viven 24 de los personajes del mapa,
-  15 en Córdoba; en 1520, 347, con 117 conquistadores; en 2000, 3.096. Cuenta a quien vivía ese año, no a quien había
-  nacido; una fecha que Wikidata da por siglo cuenta entera, y 80 de los 6.119 se quedan fuera por fechas que faltan o
-  no casan. El enlace guarda el año (`#lens=great_people_year&anio=1000`). Solo en el mapa de España, en sus dos
-  idiomas (E87, E88, A28).
+  «Personajes vivos en {año}» y «Oficios en {año}», con un panel para elegir el año (de Argantonio, 670 a. C., a
+  hoy), avanzar por décadas o siglos y reproducir desde el año 50. Cada hexágono con alguien vivo lleva un punto que
+  crece con la gente; sin nadie, queda gris. En el año 1000 viven 24 de los personajes del mapa, 15 en Córdoba; en
+  1520, 347, con 117 conquistadores (32 de ellos con alguna fecha que Wikidata da solo por década o siglo, que cuenta
+  entera); en 2000, 3.093. Cuenta a quien vivía ese año, no a quien había nacido. 83 de los 6.119 se quedan fuera por
+  fechas que faltan o no casan, entre ellos quienes Wikidata da por muertos sin fecha utilizable. El enlace guarda el
+  año (`#lens=great_people_year&anio=1000`; `anio=-201` es 201 a. C.). Solo en el mapa de España, en sus dos idiomas
+  (E87, E88, A28).
+- **Grandes personajes**: los pilotos de automovilismo y de motociclismo salen como deportistas cuando su descripción
+  de Wikidata lo dice (Fernando Alonso salía como «actor» porque Wikidata también le da ese oficio), y quien Wikidata
+  da por muerto sin fecha lleva «1915–?» en vez de «n. 1915».
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

@@ -243,20 +243,24 @@ lenses.json says `"names_from": "<file>"` instead: the map loads `data/<file>.js
 builds `names`/`labels` from its `people: [{name, note?, cell}]`, in file order (names read "name (note)"); every lens
 naming from the same file shares them, and the search box adds its people (by name and by `place`) once it is first
 focused. `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
-lens: "Nadie", nobody born there).
+lens: "Nadie", nobody born there). `hide_empty` (optional, categorical lenses) leaves out of the legend the categories no
+hex has (the timeline's trades of a year).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
 `great_people_kind`, and the timeline's people): `{"vintage", "categories": [{id, name, color}] (the categorical lens's),
-"timeline": {"until": 2026, "max_life": 122, "approximate": 113, "left_out": {"no_birth", "no_death", "inconsistent"}},
-"people": [{"name", "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid",
-"life": [1881, 1973]}]}`, most famous first. `life` = the years in which the person may have been alive, both
+"timeline": {"until": 2026, "max_life": 122, "approximate": 113, "longer": 31, "left_out": {"no_birth", "no_death",
+"inconsistent"}}, "people": [{"name", "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into
+categories, "qid", "life": [1881, 1973], "approx": true}]}`, most famous first. `life` = the years in which the person may have been alive, both
 included, as integer astronomical years (0 = 1 BC, -669 = 670 BC); absent for someone who cannot be placed in time
 (counted in `timeline.left_out` by reason). A birth or death given only as a decade or a century counts in full
-(`approximate` people have one); with no death date, someone born in `until - max_life` or later is alive up to
-`until`, the year of the Wikidata download (DECISIONS E87). `personajes.en.json` carries only the English notes and
+(`approx: true` on the person; `approximate` counts them, `longer` counts the lives that then span more than
+`max_life` years); someone Wikidata does not record as dead (no date-of-death statement of any kind), born in
+`until - max_life` or later, is alive up to `until`, the year of the Wikidata download (DECISIONS E87). A death
+recorded without a usable date leaves the person out (`no_death`) and prints as "1915–?" in the note. `personajes.en.json` carries only the English notes and
 places: the numbers stay in the Spanish file. Its `check(web_dir)` fails a person off Spanish land, a lens whose counts
-or main categories differ from the file, a missing `timeline`, a `life` that is not two integers in order up to
-`until`, and `timeline` counts that do not add up to the people; a NOTE counts those shown alive today past 100.
+or main categories differ from the file, a `timeline` of the wrong shape (`until`, `max_life`, `approximate`, `longer` whole numbers, `left_out` one whole
+number per reason), a `life` that is not two integers in order up to `until`, and `timeline` counts that do not
+match the people; NOTEs count those shown alive today past 100 and the lives longer than `max_life`.
 
 **`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; read by the fiesta calendar, `web/js/ext/fiestas`, when it first
 opens): `{"vintage",
@@ -817,8 +821,9 @@ also reads `personajes`, `wonders`, `resources` and `infrastructure` through `ap
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `timeline` (great people through time,
 only where the data has `personajes.json` and both great people lenses: lenses `great_people_year` and
-`great_people_year_kind`, mode `timeline`, hash key `anio` with an astronomical year, e.g.
-`#lens=great_people_year&anio=1000`; no `anio` opens at `timeline.until`; the year rules are in
+`great_people_year_kind`, overlay `timeline-dots`, mode `timeline`, hash key `anio` with the year as people write it,
+a minus for BC and no year 0, e.g. `#lens=great_people_year&anio=1000` or `anio=-201` (201 BC); no `anio`, or one
+that is not a year, opens at `timeline.until`; the year rules are in
 `ext/timeline/lifespan.js`). `ext/flyToCells.js` is the dock helper both calendars use: highlight some hexes and fit
 them in the view. The API:
 
