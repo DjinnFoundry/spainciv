@@ -145,6 +145,33 @@ class CheckTest(unittest.TestCase):
             with self.subTest(what):
                 self.assertIn("FAIL", self.run_check(doc))
 
+    def test_messages(self):
+        """The check's lines, word for word (they were kept through the move of the shared checks to helpers)."""
+        def lines(change):
+            doc = good_doc()
+            change(doc)
+            with tempfile.TemporaryDirectory() as tmp:
+                web = Path(tmp)
+                (web / "world.json").write_text(json.dumps({"grid": GRID.to_dict(), "owner": [0] * GRID.size}))
+                (web / "trade.json").write_text(json.dumps(doc))
+                return trade.check(web)
+
+        zones_ok = ("PASS", "trade.json zones: 2 zones, 2 anchored")
+        self.assertEqual(lines(lambda d: None), [zones_ok, ("PASS", "trade.json routes: 1 routes, $0B in all; #1 011 – 049 $0.0B")])
+        self.assertEqual(lines(lambda d: d["routes"][0].update(b="999")), [
+            zones_ok, ("FAIL", "trade.json routes: 2 problems, e.g. ['route 1: unknown zone', 'duplicate zone pairs']")])
+        self.assertEqual(lines(lambda d: d["zones"][0]["anchor"].update(cell=-3)), [
+            ("FAIL", "trade.json zones: 1 problems, e.g. ['zone 011 anchor cell -3 is not US land']"),
+            ("FAIL", "trade.json routes: 1 problems, e.g. ['route 1: path does not join the anchors']")])
+        self.assertEqual(lines(lambda d: d["routes"].append(dict(d["routes"][0], a="049", b="011", rank=2, value_musd=99))), [
+            zones_ok, ("FAIL", "trade.json routes: 3 problems, e.g. ['route 2: path does not join the anchors', "
+                               "'routes are not sorted by value', 'duplicate zone pairs']")])
+        self.assertEqual(lines(lambda d: d.update(version=2))[0], ("FAIL", "trade.json version 2 (expected 1)"))
+        self.assertEqual(lines(lambda d: d.pop("rule")), [("FAIL", "trade.json lacks 'rule'")])
+        self.assertEqual(lines(lambda d: d.update(routes=[]))[-1], ("WARN", "trade.json has no routes"))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(trade.check(Path(tmp)), [("NOTE", "trade.json not built (optional; run: build trade --deps)")])
+
 
 if __name__ == "__main__":
     unittest.main()
