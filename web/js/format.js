@@ -49,6 +49,11 @@ export const withCurrency = (s) => (original() || symbolFirst() ? currency() + s
 export const isMoney = (unit) => unit === "usd" || unit === "eur";
 export const money = (n) => (n == null ? "–" : withCurrency(compact(n)));
 export const dollars = (n) => (n == null ? "–" : withCurrency(Math.round(n).toLocaleString(locale())));
+/** "22:01" for minutes after midnight (rounded to the minute; the 24-hour clock in every language of the site). */
+export function clock(minutes) {
+  const m = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
 export const int = (n) => (n == null ? "–" : Math.round(n).toLocaleString(locale()));
 export const pct = (x, d = 1) => (x == null ? "–" : original() ? (x * 100).toFixed(d) + "%" : nf({ style: "percent", minimumFractionDigits: d, maximumFractionDigits: d }).format(x));
 

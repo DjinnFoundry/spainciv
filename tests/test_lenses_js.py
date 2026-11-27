@@ -30,3 +30,11 @@ class LensesJsTest(unittest.TestCase):
         got = self.run_js("[m.formatLensValue({format: 'category', null_label: 'Nadie'}, null), "
                           "m.formatLensValue({format: 'category', categories: [{name: 'A'}]}, 0)]")
         self.assertEqual(got, ["Nadie", "A"])
+
+    def test_time_lenses_show_clock_times_and_durations(self):
+        # A browser-built lens holds minutes (the sunset lens): times of day on the legend's ticks, durations in hours.
+        clock, dur = "{format: 'clock', domain: [1255, 1340]}", "{format: 'duration', domain: [534, 927]}"
+        got = self.run_js(f"[m.formatLensValue({clock}, 1321), m.formatLensTick({clock}, 0, 0), m.formatLensTick({clock}, 1, 4), "
+                          f"m.formatLensValue({dur}, 927), m.formatLensValue({dur}, 54), m.formatLensValue({dur}, 60), "
+                          f"m.isTimeLens({clock}), m.isTimeLens({dur}), m.isTimeLens({{format: 'int'}})]")
+        self.assertEqual(got, ["22:01", "≤ 20:55", "≥ 22:20", "15 h 27 min", "54 min", "1 h", True, True, False])
