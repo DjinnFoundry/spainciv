@@ -21,12 +21,23 @@ export function formatLensValue(lens, v) {
     case "pct": return pct(v, v < 0.1 ? 1 : 0);
     case "int": return intish(v) + (perKm2(lens) ? t("core.lens.perKm2") : lens.unit ? " " + lens.unit : "");
     case "minutes": return t("core.lens.minutes", { n: fixed(v, 0) });
+    case "duration": return duration(v);
     case "years": return t("core.lens.years", { n: fixed(v, 1) });
     case "float": return (v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
   }
   if (lens.unit?.includes("$") || lens.unit?.includes("€")) return money(v);
   return (v < 10 ? fixed(v, 1) : compact(v)) + (perKm2(lens) ? t("core.lens.perKm2") : "");
 }
+
+// A duration in minutes as hours and minutes ("2 h 36 min"; "45 min" under an hour, "3 h" on the hour).
+export function duration(v) {
+  const m = Math.round(v);
+  if (m < 60) return t("core.lens.minutes", { n: fixed(m, 0) });
+  return m % 60 ? t("core.lens.duration", { h: Math.floor(m / 60), m: m % 60 }) : t("core.lens.hours", { n: m / 60 });
+}
+
+// A legend tick of a duration lens: whole and half hours ("2 h", "2,5 h"), minutes under an hour.
+const durationTick = (v) => (v < 60 ? duration(v) : t("core.lens.hours", { n: plain(Math.round(v / 30) / 2) }));
 
 // A lens with `names_from` names its hexes from that data file, loaded the first time the lens opens (main.js):
 // {people: [{name, note?, cell}]}, most famous first. names[k] = "name (note)"; labels[cell] = the people born there.
@@ -52,7 +63,7 @@ export function formatLensTick(lens, t, k = -1) {
   const v = lens.format === "int" && Number.isFinite(raw) ? Math.round(raw) : raw; // a count never reads "4.5"
   const short = (lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
     && !(lens.format === "int" && perKm2(lens)) ? { ...lens, unit: null } : lens;
-  let s = formatLensValue(short, v);
+  let s = lens.format === "duration" && Number.isFinite(v) ? durationTick(v) : formatLensValue(short, v);
   const zero = Number.isFinite(v) && Math.abs(v) < 1e-9;
   if (zero) s = s.replace(/^(\$?)0[.,]0+(?!\d)/, (_, d) => d + "0");
   if (k === 0 && !zero) s = "≤ " + s;

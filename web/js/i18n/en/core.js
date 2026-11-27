@@ -96,6 +96,8 @@ export default {
   "core.lens.noData": "no data",
   "core.lens.perKm2": " /km²",
   "core.lens.minutes": "{n} min",
+  "core.lens.duration": "{h} h {m} min",
+  "core.lens.hours": "{n} h",
   "core.lens.years": "{n} yrs",
   "core.lens.showFull": "Show the full legend",
   "core.lens.details": "Details",
