@@ -1,8 +1,8 @@
 """Lenses with a panel in the left dock (web/js/app/lensPanel.js) on a stub app: the real modes and events of
 web/js/app/api.js, a lens state like main.js setLens, docks and elements that only record what is done to them, and a
 URL hash whose keys are applied the way createHashState applies them to a key registered after the page loaded (once,
-in a microtask). Then the two lenses that use it, the fiesta calendar and the sun lens, installed on Spain's data and
-opened from links. Run with node; skipped without it."""
+in a microtask). Then the lenses that use it, the fiesta calendar, the sun lens and the climate of the month, installed on Spain's
+data and opened from links. Run with node; skipped without it."""
 
 import json
 import shutil
@@ -18,18 +18,20 @@ import { readFileSync } from 'node:fs';
 import { setCountry } from './web/js/app/country.js';
 const { createEmitter, createModes } = await import('./web/js/app/api.js');
 const { lensPanel } = await import('./web/js/app/lensPanel.js');
+const M = await import('./web/js/ext/month.js');
 const out = (x) => console.log(JSON.stringify(x));
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-// An element that takes anything: what the panels write into the dock is not under test here.
+// An element that takes anything; querySelector gives the same child for the same selector, so a test can read what a
+// panel wrote there.
 const fakeEl = () => {
-  const classes = new Set(), listeners = [];
+  const classes = new Set(), listeners = [], kids = new Map();
   return {
     classes, listeners, innerHTML: '', value: '', textContent: '', style: { setProperty() {} },
     classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), toggle() {}, contains: (c) => classes.has(c) },
     setAttribute() {}, removeAttribute() {}, focus() {},
     addEventListener: (type, fn) => listeners.push(fn), removeEventListener: (type, fn) => listeners.splice(listeners.indexOf(fn), 1),
-    querySelector: () => fakeEl(), querySelectorAll: () => [],
+    querySelector: (sel) => (kids.has(sel) ? kids.get(sel) : kids.set(sel, fakeEl()).get(sel)), querySelectorAll: () => [],
   };
 };
 globalThis.document = { body: fakeEl() };
@@ -65,7 +67,7 @@ function makeApp(link = '', extra = {}) {
 SPAIN = """
 const file = (n) => JSON.parse(readFileSync(`sites/es/data/${n}.json`, 'utf8'));
 const world = file('world');
-setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', data: ['fiestas'], sunset: true } }, null);
+setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', data: ['fiestas', 'clima'], sunset: true } }, null);
 const { prepareWorld } = await import('./web/js/world.js');
 const w = prepareWorld(world, file('cities'), {});
 const lensFile = file('lenses');
@@ -199,6 +201,81 @@ class CalendarPanelTest(unittest.TestCase):
 
     def test_no_link_no_calendar(self):
         self.assertEqual(self.open("#lens=fiestas"), {"mode": None, "lens": None, "month": None, "painted": 0})
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class ClimatePanelTest(unittest.TestCase):
+    def open(self, link: str, then: str = "", extra: str = ""):
+        return run(f"""
+            const app = spainApp({json.dumps(link)});
+            for (const x of ['fiestas', 'clima']) (await import(`./web/js/ext/${{x}}/index.js`)).install(app);
+            await tick(); app.extensions = []; app.emit('extensions', []); await tick(); await tick();
+            const clima = JSON.parse(readFileSync('sites/es/data/clima.json', 'utf8'));
+            const burgos = clima.stations.find((s) => s.wmo === '08075');
+            const lens = () => app.state.lens;
+            {then}
+            out({{ mode: app.mode, lens: lens()?.id ?? null, mes: app.keys.get('mes').get(),
+                   painted: lens()?.values.filter((v) => v != null).length ?? 0, land: w.raw.owner.filter((o) => o >= 0).length,
+                   heading: lens()?.heading ?? null, burgos: lens()?.tip?.(burgos.cell) ?? null, {extra} }});
+        """, PRELUDE + SPAIN)
+
+    def test_a_link_with_a_climate_lens_and_a_month_opens_that_month(self):
+        got = self.open("#lens=clima_temp&mes=1")
+        self.assertEqual((got["mode"], got["lens"], got["mes"], got["heading"]),
+                         ("clima", "clima_temp", "1", "Temperatura media en enero"))
+        self.assertEqual(got["painted"], got["land"])
+        self.assertEqual(got["burgos"][0][:5], "máx. ")
+        self.assertIn("rejilla diaria ROCIO de AEMET, media 1991-2020 calculada por spainciv", got["burgos"][0])
+        self.assertIn("Estación Burgos Aeropuerto (891 m), normal OMM 1991-2020: 3,6 °C", got["burgos"])
+
+    def test_the_lens_alone_opens_this_month_and_the_month_alone_still_opens_the_fiestas(self):
+        alone = self.open("#lens=clima_lluvia")
+        self.assertEqual((alone["mode"], alone["lens"]), ("clima", "clima_lluvia"))
+        self.assertIsNotNone(alone["mes"])
+        fiestas = self.open("#mes=8")
+        self.assertEqual((fiestas["mode"], fiestas["lens"], fiestas["mes"]), ("fiestas", "fiestas_mes", "8"))
+
+    def test_moving_between_variables_keeps_the_panel_and_sunshine_is_only_at_stations(self):
+        got = self.open("#lens=clima_temp&mes=7", then="app.setLens(app.lensById.get('clima_sol'));",
+                        extra="stations: clima.stations.filter((s) => s.sun).length, "
+                              "nosun: lens().tip(lens().values.findIndex((v, i) => v == null && w.raw.owner[i] >= 0)), "
+                              "label: lens().null_label")
+        self.assertEqual((got["mode"], got["lens"], got["mes"]), ("clima", "clima_sol", "7"))
+        self.assertLessEqual(got["painted"], got["stations"])
+        self.assertGreater(got["painted"], 60)
+        self.assertEqual(got["label"], "Sin estación con horas de sol")
+        self.assertRegex(got["nosun"][-1], r"^Estación más cercana: .+ \(\d+ h al año\)$")
+
+    def test_the_link_to_the_fiestas_keeps_the_month_and_back(self):
+        got = self.open("#lens=clima_heladas&mes=2", then="""
+            M.monthState(app).follow({ target: { closest: () => ({ dataset: { monthPage: 'fiestas' } }) } });
+            const there = [app.mode, app.keys.get('mes').get()];
+            M.monthState(app).follow({ target: { closest: () => ({ dataset: { monthPage: 'clima' } }) } });
+        """, extra="there")
+        self.assertEqual(got["there"], ["fiestas", "2"])
+        self.assertEqual((got["mode"], got["lens"], got["mes"]), ("clima", "clima_heladas", "2"))
+
+    def test_the_diagram_follows_the_pointer_and_a_click_pins_it(self):
+        got = self.open("#lens=clima_temp&mes=1", then="""
+            const chart = app.dockEl.querySelector('.cl-chart');
+            const cordoba = w.raw.owner.findIndex((o) => o >= 0 && w.raw.states[o].fips === '14');
+            app.emit('hover', { cell: burgos.cell });
+            const first = chart.innerHTML;
+            const taken = app.emit('mapclick', { cell: burgos.cell, city: null, state: w.raw.owner[burgos.cell] });
+            app.emit('hover', { cell: cordoba });
+            const pinned = chart.innerHTML;
+        """, extra="first: first.includes('>Burgos<'), taken, pinned: pinned.includes('>Burgos<') && pinned.includes('data-unpin')")
+        self.assertEqual((got["first"], got["taken"], got["pinned"]), (True, True, True))
+
+    def test_without_clima_in_the_data_nothing_is_added(self):
+        got = run("""
+            setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', data: ['fiestas'] } }, null);
+            const app = spainApp('#lens=clima_temp&mes=1');
+            (await import('./web/js/ext/clima/index.js')).install(app);
+            await tick();
+            out([...app.lensById.keys()].filter((k) => k.startsWith('clima')));
+        """, PRELUDE + SPAIN)
+        self.assertEqual(got, [])
 
 
 @unittest.skipUnless(NODE, "node is not installed")

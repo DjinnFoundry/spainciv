@@ -7,5 +7,6 @@ import game from "./en/game.js";
 import fiestas from "./en/fiestas.js";
 import sun from "./en/sun.js";
 import explore from "./en/explore.js";
+import clima from "./en/clima.js";
 
-export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore };
+export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore, ...clima };

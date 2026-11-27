@@ -97,6 +97,7 @@ export function monthStrip(host, { month, locale, label = (m) => monthName(m, lo
   const scope = host.parentElement;
   host.classList.add("ms-strip");
   host.setAttribute("role", "radiogroup");
+  host.classList.toggle("ms-bare", Array.from({ length: 12 }, (_, k) => bar(k + 1)).every((h) => h == null)); // no bars: short buttons
   host.innerHTML = Array.from({ length: 12 }, (_, k) => {
     const m = k + 1, on = m === month, h = bar(m), name = esc(label(m));
     return `<button type="button" class="ms-month${on ? " on" : ""}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}"
