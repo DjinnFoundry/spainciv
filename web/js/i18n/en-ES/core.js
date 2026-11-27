@@ -52,6 +52,11 @@ export default {
       in a hex, weighted by population.</p>
       <p>The legend shows how many hexes fall at each value. Hover or drag on it to show only that range on the map.</p>`,
   "core.pedia.yields.amenities": `<h4>Amenities &amp; housing</h4>
-      <p>Unemployment, median household income, rent and home value have no municipal source in Spain yet, so cities and
-      provinces show them as –.</p>`,
+      <p>Unemployment = unemployed ÷ (employed + unemployed), from INE's Annual Population Census, counted where people live.
+      Income = mean net income per household from INE's Household Income Distribution Atlas (ADRH): a mean, because INE
+      publishes no median per household for municipalities. Rent = median monthly rent of the whole dwelling from SERPAVI
+      (Ministry of Housing); flats and houses, and the municipalities of an urban area, are combined as the mean of their
+      medians weighted by rented dwellings. Rent ÷ income = rent × 12 ÷ household income: a rough signal of what renting
+      costs, not each household's burden. The value of a dwelling has no source by municipality and shows as –; the
+      home value lens gives each province's appraised value in €/m².</p>`,
 };
