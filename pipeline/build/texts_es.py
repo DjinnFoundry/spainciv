@@ -233,6 +233,16 @@ SOURCES = {
         "rugosidad de sus muestras de tierra.",
         "used_for": ["Relieve (colinas, montañas)", "Sombreado del relieve", "Profundidad del mar"],
     },
+    "noaa_solar": {
+        "title": "Calculadora solar de la NOAA: ecuaciones de posición del Sol (Solar Calculation Details)",
+        "publisher": "NOAA Global Monitoring Laboratory",
+        "license": "Dominio público (obra del Gobierno de EE. UU.)",
+        "description": "Las ecuaciones con que la calculadora solar de la NOAA halla la declinación del Sol y la ecuación "
+        "del tiempo, de Jean Meeus, Astronomical Algorithms; la salida y la puesta, con el centro del Sol 0,833° bajo un "
+        "horizonte a nivel del mar. La NOAA las da como exactas, en teoría, a un minuto entre ±72° de latitud; las horas "
+        "observadas varían con la atmósfera. El mapa las calcula en el navegador para el centro de cada hexágono.",
+        "used_for": ["Lente Sol y reloj (salida, puesta, mediodía solar, horas de luz)"],
+    },
     "ine_adrh": {
         "title": "Atlas de Distribución de Renta de los Hogares (ADRH): indicadores de renta media y mediana, tabla 30824",
         "license": _INE_LICENCE,
@@ -591,6 +601,20 @@ SOURCES = {
         "que cubre su perímetro. La estadística oficial española (EGIF, del Ministerio para la Transición Ecológica) "
         "cuenta todos los incendios, también los pequeños, pero no tiene descarga por municipio.",
         "used_for": ["Lente de incendios", "Temporada de incendios en Unciv"],
+    },
+    "balance_criminalidad": {
+        "title": "Balance de Criminalidad, cuarto trimestre (enero a diciembre): infracciones penales conocidas por "
+        "tipo, de provincias, islas y municipios de más de 20.000 habitantes",
+        "license": _REUSE,
+        "description": "Infracciones penales que conocen la Policía Nacional, la Guardia Civil, los Mossos d'Esquadra, la "
+        "Ertzaintza, la Policía Foral de Navarra y las policías locales que informan al Sistema Estadístico de "
+        "Criminalidad, por denuncia o por actuación policial, en trece tipos (homicidios, intentos de homicidio, "
+        "lesiones, secuestros, delitos sexuales, robos con violencia, robos con fuerza, hurtos, sustracciones de "
+        "vehículos, tráfico de drogas, estafas informáticas, otros ciberdelitos, el resto) y en total. España, cada provincia y las cometidas en el "
+        "extranjero (una tabla), cada isla y cada municipio de más de 20.000 habitantes (la otra). El resto de cada "
+        "provincia o isla es la provincia o la isla menos sus municipios de la lista.",
+        "used_for": ["Lente de criminalidad (infracciones penales conocidas por 1.000 habitantes)",
+                     "Lente del delito que más destaca sobre la tasa de España"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",

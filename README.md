@@ -45,8 +45,12 @@ lists the public data behind the map.
   a civilization's land, as often as EFFIS saw them burn in Spain's hills, mountains and plains. How to install it:
   [spainciv.djinnfoundry.com/play.html](https://spainciv.djinnfoundry.com/play.html).
 - **Guess the hex**: a daily game on the map. Six clues from the map's data describe one 10 km hex; click where you
-  think it is, with six tries, distance and direction after each, and a spoiler-free result to share
+  think it is, with six tries, distance and direction after each, and a spoiler-free result to share; each win colours
+  its province in an album of Spain's 50 provinces, community by community
   ([spainciv.djinnfoundry.com/#juego](https://spainciv.djinnfoundry.com/#juego)).
+- **Spain to discover**: a fog of war (Map menu, "To discover") over the land you have not looked at yet. Hovering,
+  clicking, searching and the daily game clear it while the switch is on, more land at a time the farther out the map is
+  zoomed; a panel counts the share of Spain explored, by region too.
 
 The map is in Spanish and English: it opens in the browser's language and a switch in the top bar changes it
 (interface in `web/js/i18n/`, data texts in an English overlay next to each data file; see docs/SPAIN.md). The US
@@ -98,4 +102,6 @@ Censo del INE, PIB provincial, renta, carreteras, ferrocarril y los 16 Parques N
 abre en el idioma del navegador y se cambia con un botón de la barra superior. El
 mismo mapa se juega en Unciv, la versión libre de Civilization V:
 [spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html). Cada día hay un juego en el
-propio mapa, «Adivina el hexágono»: [spainciv.djinnfoundry.com/#juego](https://spainciv.djinnfoundry.com/#juego).
+propio mapa, «Adivina el hexágono», con un álbum de provincias que se llena con cada acierto:
+[spainciv.djinnfoundry.com/#juego](https://spainciv.djinnfoundry.com/#juego).
+En el menú Mapa, «Por descubrir» cubre de niebla la España que aún no has explorado.

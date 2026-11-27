@@ -192,6 +192,11 @@ Also, per state:
   and counts in the state of its larger part. `sites` = number of mapped sites per type.
   `energy` is `null` if resources.json was not built.
 
+Spain's provinces also carry their autonomous community, `"community": {"code": "12", "name": "Galicia"}`: `code` is
+the INE community code (01–19, `pipeline/sources/es/provinces.py` `COMMUNITIES`, from INE table 69962) and `name` its
+INE name in reading order («Comunidad de Madrid», «Illes Balears», «Castilla - La Mancha»), the same in both languages.
+`check` accepts it on every state or on none; the US file has none.
+
 ## nation.json
 
 ```jsonc
@@ -242,7 +247,9 @@ the tooltip list what a hex holds, up to 8 (Spain's museums, castles, fiestas). 
 lenses.json says `"names_from": "<file>"` instead: the map loads `data/<file>.json` the first time such a lens opens and
 builds `names`/`labels` from its `people: [{name, note?, cell}]`, in file order (names read "name (note)"); every lens
 naming from the same file shares them, and the search box adds its people (by name and by `place`) once it is first
-focused. `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
+focused. A lens that lists the same places per hex as another lens says `"labels_from": "<lens id>"` and carries
+only its own `names`, in that lens's order; the map copies the other lens's `labels` when it loads (Spain's
+`crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
 lens: "Nadie", nobody born there).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
@@ -781,7 +788,7 @@ Not loaded by the map: `pipeline/play.py` makes the Unciv downloads and pages fr
 `{summary, map}`: `map` is the Unciv `TileMap` JSON, `summary` what is on it (`grid`, `terrain`, `resources`,
 `starts`…). Written with `write_web`, so its texts go in Spanish and `unciv.en.json` holds the English.
 
-`summary.fire_season` (`pipeline/build/spain_unciv_fire.py`, DECISIONS E84):
+`summary.fire_season` (`pipeline/build/spain_unciv_fire.py`, DECISIONS E90):
 
 ```
 {"threshold_ha": 500, "years": [2016, 2025], "great_fires": 311,   // EFFIS fires of threshold_ha or more
@@ -828,9 +835,21 @@ Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/
 `layers` (roads, rail, forts, ports, airports, wonders and trade routes), `lang` (the language switch of a country in
 several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
-also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
+also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them;
+its second tab is the province album, `ext/game/album.js` and `albumPanel.js`, shown when `states.json` lists the same provinces as `world.json` in the same order (same `fips` at each
+index) and every one has `community`.
+The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
+streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
+sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
+E89)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
+only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, hash keys `dia` and `sol`, e.g.
+`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`) and `explore` (the fog of war "España por
+descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
+the groups its progress panel counts by; the explored set, its storage and the reveal radius are in
+`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`). The API:
+
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
@@ -875,12 +894,19 @@ off();   // or app.unregisterStaticLayer("roads" | layer)
   `layer:<id>`); precompute geometry once (not per draw); cull to `vp`.
 * `app.staticLayers()` lists the registered layers; `app.hitLayer(mx, my)` (screen css px) → `{layer: id, item} | null`.
 
+**Overlays** (`app.registerOverlay({id, z, space: "world"|"screen", draw(ctx, cam, app), snapshot?}) → remove()`) draw
+every frame over the cached map, by z: below 0 they cover the map itself and the selection, the hover outline and
+`setHighlight` marks go over them (the fog of war, z −10); from 0 to 99 they go over those marks and under the city
+banners (the game's guesses, z 40); from 100 they go over the banners (the advisors' beacon, z 120).
+
 **Hover and click.** The hover tooltip asks the layers (highest z first, only those drawn at the current zoom) after the
 city banners: the first non-null `hit()` wins and its `tooltip(item)` is shown (the cell tooltip otherwise). The
 `"hover"` event payload is `{cell, city, resource, x, y, layer, item}` (`layer` = id or null). A click builds
 `ev = {cell, city, resource, state, x, y, pointerType, layer, item}`; outside a mode the layer's `click(item, ev)` goes
 first (true consumes it), then the `"mapclick"` handlers, then the default (select city/state). While a mode is active
-(City View, advisors) the `"mapclick"` handlers go first and the layer's `click` only after them.
+(City View, advisors) the `"mapclick"` handlers go first and the layer's `click` only after them. Before any of that,
+the `"tap"` event gets the same `ev` for every click: it is for watching (the fog of war explores the hex), so its
+handlers must not return true.
 
 **Map toggles.** `app.ui.addMapToggle({id, label, icon, get() → bool, set(on), title?, default?}) → remove()`: a switch
 in the "Map" menu next to the Resources toggle in the lens dock (one button + a small menu, so it fits phones). `set` is
@@ -921,6 +947,14 @@ when renaming a field in those files.
 (the advisors' do). `app.addLens(lens, {after: id})` also puts one in the lens picker, after that lens of lenses.json, so
 `#lens=<its id>` opens it once added (throws on a taken id). After replacing the active lens's `values` (a new array),
 `names`, `labels` or texts, `app.refreshLens()` paints it again, legend and minimap included, keeping the band.
+Such a lens can hold minutes: `format: "clock"` shows them as a time of day ("22:01") and `format: "duration"` as hours
+and minutes ("15 h 24 min"), in the tooltip, the legend's ticks and the Almanac; `note` is a line under the legend's
+title. Optional for such a lens: `heading`, the name of what it shows now, for the legend's title and the tooltip
+(`name` stays in the picker); `tip(cell)`, a line of plain text the tooltip asks for the hex under the pointer, instead
+of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
+the user's choices. Its `source` is an id of sources.json, and the legend never gives it the lenses.json `vintage`.
+A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
+{mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).

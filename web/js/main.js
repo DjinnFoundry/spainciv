@@ -69,6 +69,8 @@ async function main() {
   };
   const states = Array.isArray(statesData) ? statesData : null;
   const lensById = new Map(lensFile.lenses.map((l) => [l.id, l]));
+  // A lens with `labels_from` lists the same places per hex as that lens, so lenses.json carries them once.
+  for (const l of lensFile.lenses) if (l.labels_from) l.labels = lensById.get(l.labels_from)?.labels ?? null;
   // The data file that names the people of the people lenses (lenses.json names_from), if this map has one.
   const peopleFile = lensFile.lenses.find((l) => l.names_from)?.names_from ?? null;
   const cityById = new Map(cities.map((c) => [c.id, c]));
@@ -335,9 +337,11 @@ async function main() {
 
     const s = cam.scale;
     ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * (cam.w / 2 - cam.x * s), dpr * (cam.h / 2 - cam.y * s));
+    // Overlays below z 0 cover the map itself (the fog of war); the selection, the hover and highlights go over them.
+    if (overlays.length) drawOverlays(ctx, cam, overlays, app, { dpr, zMax: 0 });
     drawOverlay(ctx, cam, w, state);
     if (state.highlight) drawHighlight(ctx, cam, w, state, { resourceHits: cache.hits.resources, items: resources?.items, cityById });
-    if (overlays.length) drawOverlays(ctx, cam, overlays, app, { dpr, zMax: 100 });
+    if (overlays.length) drawOverlays(ctx, cam, overlays, app, { dpr, zMin: 0, zMax: 100 });
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Plates of cities beside an open dock stay clear of it (desktop docks only; phones use a bottom sheet).
     const d = isMobile() ? null : dockState();
@@ -1148,6 +1152,8 @@ async function main() {
         cell, city: city || null, resource, state: owner >= 0 ? owner : null, x: mx, y: my, pointerType: e.pointerType,
         layer: lh?.layer.id ?? null, item: lh?.item ?? null,
       };
+      // "tap": every click, before a layer, a mode or the default takes it; listeners only watch (e.g. ext/explore).
+      events.emit("tap", ev);
       // A static layer's click(item, ev) returning true consumes the click (e.g. opening its own card). It goes
       // before the "mapclick" handlers, except while a mode (City View, advisors) is active: the mode owns clicks.
       const layerClick = () => {

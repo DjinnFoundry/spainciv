@@ -31,7 +31,9 @@ export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
   if (o >= 0) {
     const county = raw.county[i] >= 0 ? raw.counties[raw.county[i]].name + ", " : "";
     lines.push(`${esc(county)}${esc(raw.states[o].name)}`);
-    if (lens) lines.push(`${glyph(lens, 13)} ${esc(lens.name)}: <b>${formatLensValue(lens, lens.values[i])}</b>`);
+    if (lens) lines.push(`${glyph(lens, 13)} ${esc(lens.heading || lens.name)}: <b>${formatLensValue(lens, lens.values[i])}</b>`);
+    const more = lens?.tip?.(i);
+    if (more) lines.push(`<span class="muted">${esc(more)}</span>`);
     const named = lens?.labels?.[i];
     if (named?.length) {
       const shown = named.slice(0, LABELS_SHOWN).map((k) => esc(lens.names[k])).join(" · ");

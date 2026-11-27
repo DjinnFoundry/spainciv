@@ -33,6 +33,10 @@ class Page:
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
     based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
     game: bool = False  # the daily game "Adivina el hexágono" (web/js/ext/game) in the top bar
+    sunset: bool = False  # the sun lens "Sol y reloj" (web/js/ext/sun): the country's clocks are in web/js/ext/sun/solar.js
+    # The fog of war "España por descubrir" (web/js/ext/explore) in the map layers menu, and the groups of regions its
+    # progress panel counts by: ((name, (region code, ...)), ...). None: no fog; (): fog without groups.
+    explore: tuple[tuple[str, tuple[str, ...]], ...] | None = None
 
     def in_lang(self, lang: str) -> "Page":
         """The page with every text in `lang`."""

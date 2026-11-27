@@ -7,17 +7,32 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ### Añadido
 - **Temporada de incendios en Unciv**. El mod trae un suceso: cada 5 turnos, cada civilización mayor puede sufrir un
-  gran incendio en su territorio, con una probabilidad que sale de los 311 incendios de 500 ha o más que el EFFIS
-  cartografió en España de 2016 a 2025, repartidos por casilla (una colina o una montaña arde unas 3 veces más que el
-  llano). Se elige entre pagar brigadas (60, 150 o 400 de oro según la era) o perder un 25 % de producción 5 turnos.
+  gran incendio en su territorio, más probable en colinas y montañas (unas 3 veces más por casilla que en el resto de
+  la tierra), según el reparto por casilla de los 311 incendios de 500 ha o más que el EFFIS cartografió en España de
+  2016 a 2025. Cuántos hay (uno por temporada para toda España, frente a unos 30 en el EFFIS) es convención del juego.
+  Se elige entre pagar brigadas (60, 150 o 400 de oro según la era) o perder un 25 % de producción 5 turnos.
   Las páginas `jugar.html` y `play.html` y el README del mod separan el dato de cada convención del juego. El aviso
-  sale en castellano o inglés según el idioma de Unciv (E84, F35, A27).
+  sale en castellano o inglés según el idioma de Unciv (E90, F36, A30).
+- **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A29).
+- **Álbum de provincias** en «Adivina el hexágono»: una pestaña nueva del panel colorea en la silueta de España la
+  provincia de cada hexágono acertado, con una tira por comunidad autónoma que se marca en dorado al completarla. Cada
+  provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
+  Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
+  día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
   un río, la lengua y el pueblo prerromano; la tercera ya nombra algo de allí, la cuarta sitúa el hexágono respecto a
   una ciudad del mapa y la quinta la nombra. Los recuentos de patrimonio salen solo si no son cero. El día 1 pasa a ser
   Guadix; una partida guardada con otro hexágono vuelve a empezar (E82, E83).
+- Lente **Sol y reloj** (grupo Territorio): la hora del reloj a la que se pone el sol en cada hexágono el día elegido, o la salida, el mediodía solar o las horas de luz. España usa la hora de Europa central aunque casi toda queda al oeste de Greenwich; el 21 de junio el sol se pone a las 22:20 en Muxía y a las 20:56 en Antigua (Fuerteventura, una hora menos en el reloj). Panel con el día (hoy en España, 21 de junio, 21 de diciembre; de 1996 a 2099) y las cuatro horas; el tooltip da el resto del día («Salida 06:53 · Mediodía solar 14:35 · 15 h 25 min de luz · CEST») y la leyenda, la diferencia entre el primer hexágono y el último, y con la hora de Europa central sola si uno está en Canarias. Ecuaciones de la NOAA, en teoría a ±1 min; nueva fuente `noaa_solar` en el Almanaque. El enlace guarda día y hora (`#lens=atardecer&dia=2026-06-21&sol=puesta`). En castellano e inglés; el mapa de EE. UU. no la tiene (A27, E84).
+- **Criminalidad**, en Riesgos: infracciones penales conocidas en 2025 por 1.000 habitantes, del Balance de
+  Criminalidad del Ministerio del Interior. Los 427 municipios que lista el balance (los de más de 20.000 habitantes
+  según su padrón de referencia) llevan su tasa; Ceuta y Melilla, la de toda la ciudad; los demás, la del resto de su
+  provincia o de su isla. El tooltip da la tasa de cada unidad, sus tres tipos con más casos y lo que suman los demás.
+  Una segunda lente, **Delito que más destaca**, pinta el tipo que más supera la tasa de España, cuando llega a 1,25
+  veces y la unidad tiene 20.000 residentes o más, y el tooltip dice cuántas veces es la de España. La nota avisa de
+  que la tasa es por residente y los sitios turísticos salen altos (E85, E86, F35).
 - **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E80, E81).
 - Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
   Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.
@@ -90,6 +105,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Adivina el hexágono: las pistas ya no muestran «…» donde iba un topónimo. El nombre se lee sin él («El Cascamorras»), y los que eran casi todo topónimo («Miel de …», «Montes de …») ya no salen. El día 1 sigue siendo Guadix.
 - Tras cada despliegue, quien ya había visitado el mapa seguía hasta 4 horas con los scripts viejos y los datos nuevos (Cloudflare Pages guarda JS y CSS 4 horas). El paquete de España lleva ahora un `_headers` que los hace revalidar en cada visita, como la página y los datos.
 - Grandes personajes, descargados de nuevo: Tenesor Semidán entra como guanarteme de Gran Canaria (con el cargo que se le añadió en Wikidata) y Francesco Redi sale del mapa (nació en Arezzo; Wikidata lo situaba en Lugo). El título propio de los reyes guanches gana a la palabra de la descripción.
 - Los nombres que una fuente da en mayúsculas (fiestas autonómicas de Galicia, Asturias, Castilla-La Mancha y Valencia) salen como se escriben en castellano, con la «i» catalana en minúscula («Moros i Cristians») y los artículos gallegos en mayúscula («de O Carballiño»).

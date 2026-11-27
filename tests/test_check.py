@@ -172,6 +172,12 @@ class CheckTest(unittest.TestCase):
             "pct lens as percent": lambda w: w["lenses.json"]["lenses"].append(
                 {**w["lenses.json"]["lenses"][0], "id": "share", "format": "pct", "scale": "linear",
                  "values": [50.0, 20.0, None, 10.0, 5.0, None]}),
+            "labels_from an unknown lens": lambda w: w["lenses.json"]["lenses"].append(
+                {**w["lenses.json"]["lenses"][0], "id": "named", "names": ["A"], "labels_from": "nowhere"}),
+            "labels_from with fewer names": lambda w: (
+                w["lenses.json"]["lenses"][0].update(names=["A", "B"], labels=[[0], [1], None, None, None, None]),
+                w["lenses.json"]["lenses"].append(
+                    {**w["lenses.json"]["lenses"][0], "id": "named", "names": ["A"], "labels_from": "density"})),
             "city in unknown state": lambda w: w["cities.json"][0].__setitem__("states", ["ZZ"]),
             "metro not a bool": lambda w: w["cities.json"][0].__setitem__("metro", "yes"),
             "capital not a bool": lambda w: w["cities.json"][1].__setitem__("capital", 0),
@@ -208,6 +214,10 @@ class CheckTest(unittest.TestCase):
             "energy total wrong": lambda w: w["states.json"][0]["energy"].__setitem__("total", 999),
             "energy without note": lambda w: w["states.json"][0]["energy"].pop("note"),
             "energy sites disagree": lambda w: w["states.json"][0]["energy"]["sites"].__setitem__("nuclear", 0),
+            # states community (Spain's): all or none, {code, name} non-empty strings
+            "community on some states": lambda w: w["states.json"][0].__setitem__("community", {"code": "01", "name": "A"}),
+            "community name empty": lambda w: [s.__setitem__("community", {"code": "01", "name": ""}) for s in w["states.json"]],
+            "community code missing": lambda w: [s.__setitem__("community", {"name": "A"}) for s in w["states.json"]],
             # resources state / cbsa / summary
             "resource unknown state": lambda w: w["resources.json"]["items"][0].__setitem__("state", "ZZ"),
             "resource unknown cbsa": lambda w: w["resources.json"]["items"][0].__setitem__("cbsa", "99999"),
@@ -230,6 +240,12 @@ class CheckTest(unittest.TestCase):
             mutate(web)
             with self.subTest(label):
                 self.assertTrue(self.run_check(web, interim).failed, label)
+
+    def test_communities_on_every_state_pass(self):
+        web, interim = dataset()
+        for s in web["states.json"]:
+            s["community"] = {"code": "01", "name": "Andalucía"}
+        self.assertEqual(self.levels(self.run_check(web, interim), "FAIL"), [])
 
     def test_published_zero_is_a_note(self):
         web, interim = dataset()

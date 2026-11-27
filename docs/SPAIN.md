@@ -46,6 +46,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `natural_earth_es` | Natural Earth 1:10m | Public domain | Neighbouring countries, lakes, rivers |
 | `natural_earth_roads_es` | Natural Earth 1:10m roads and railroads | Public domain | Motorways, main roads and railroads on the map |
 | `etopo_es` | NOAA NCEI ETOPO1 via ERDDAP | Public domain | Relief, sea depth |
+| `noaa_solar` | NOAA Global Monitoring Laboratory, Solar Calculator: "Solar Calculation Details" (after Meeus, *Astronomical Algorithms*), https://gml.noaa.gov/grad/solcalc/calcdetails.html; the page and the calculator's `main.js` are cached, nothing else is processed | Public domain | The Sun and clock lens, worked out in the browser for each hex (DECISIONS E84) |
 | `corine` | Copernicus CLC 2018, read from the IGN/IDEE land-cover WMS by legend colour | CC BY 4.0 (IDEE); Copernicus free, full and open data policy | Land cover |
 | `audes` | Ministerio de Vivienda y Agenda Urbana, Atlas Digital de las Áreas Urbanas: large urban areas 2025 and their municipalities | Public-sector information, reuse citing the source (Ley 37/2007) | Cities (urban areas) and their members |
 | `oapn_parques` | OAPN (Red de Parques Nacionales), boundaries via its WFS | Public-sector information, reuse citing the source (Ley 37/2007) | National Park wonders, protected land |
@@ -87,6 +88,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
 | `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS, with each fire's start month (`FIREDATE`) | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers; the Unciv fire season: the fires of 500 ha or more per tile class |
+| `balance_criminalidad` | Ministerio del Interior, Balance de Criminalidad 2025 Q4 (January to December), Portal Estadístico de Criminalidad: CSV exports of tables 1509011 (provinces, Spain, abroad) and 1509012 (islands and municipalities over 20,000) | Public-sector information, reuse citing the source (Ley 37/2007) | Crime lens: known offences per 1,000 Padrón inhabitants (2025); the 427 listed municipalities have their own rate, every other one the rest of its province or, in the Balearic and Canary Islands, of its island; standout offence lens: per listed municipality or rest, the type most times Spain's rate, painted at 1.25 times or more in units of 20,000 residents or more (E85, E86, F35) |
 | `ine_censo_agrario` | INE Censo Agrario 2020, tables 51175 (equine heads by agricultural comarca) and 75479 (each municipality's comarca) | CC BY 4.0, citing INE | Horses of the Unciv map: the comarcas with at least 4 times Spain's equines per km² |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).
@@ -114,8 +116,8 @@ the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
   `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Events.json` and `jsons/GlobalUniques.json`
-  (the fire season, E84), `jsons/translations/Spanish.properties` (the Spanish of the mod's texts, one file for every
-  feature, written by `unciv.properties`: A27), `maps/España` (the map, gzip + base64 as Unciv saves
+  (the fire season, E90), `jsons/translations/Spanish.properties` (the Spanish of the mod's texts, one file for every
+  feature, written by `unciv.properties`: A30), `maps/España` (the map, gzip + base64 as Unciv saves
   it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
   with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
   `README.md` and `LICENSE` (CC BY 4.0);
@@ -125,7 +127,7 @@ the site is served or packaged, `pipeline/play.py` makes from it:
   convention, linked from the help dialog in its language.
 
 The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
-The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E84, A15, A17, A27, F26, F28, F29 and F35. The map was checked in Unciv 5.0.1 (the jar of the
+The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E90, A15, A17, A30, F26, F28, F29 and F36. The map was checked in Unciv 5.0.1 (the jar of the
 GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
 every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
 locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`). The fire season was checked in
@@ -133,7 +135,9 @@ the same jar with the mod installed from its URL: the combined ruleset validates
 with seven AI civilizations, five of them took the production penalty, each for 5 turns, always started on a turn
 that is a multiple of 5, never two at once and never on a city-state; Unciv's countable equals the Python weights on
 every civilization's tiles; with 40 gold (60 × 0.67) only "let it burn" is offered and with 41 both choices; the
-popup reads in Spanish and in English by the game's language (`docs/images/es-unciv-incendio.jpg`).
+popup reads in Spanish and in English by the game's language (`docs/images/es-unciv-incendio.jpg`,
+`docs/images/en-unciv-incendio.jpg`: the popup panel cropped from a 1000 px wide window, so its text stays legible at
+phone width).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

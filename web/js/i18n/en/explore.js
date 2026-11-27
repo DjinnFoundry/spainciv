@@ -1,0 +1,20 @@
+// English strings of the fog of war, "Spain to discover" (web/js/ext/explore; see web/js/i18n.js).
+export default {
+  "explore.toggle": "To discover",
+  "explore.toggle.title": "Cover the land you have not explored yet with fog",
+  "explore.title": "{name} to discover",
+  "explore.line": "You have explored {pct} of {name}",
+  "explore.hint": "Rest the pointer on a hex, click it, search for a city or play the daily game to clear the fog. The farther out the map is zoomed, the more land each one clears.",
+  "explore.hint.touch": "Tap the map, search for a city or play the daily game to clear the fog. Zoomed farther out, each tap clears more land.",
+  "explore.collapse": "Fold the panel",
+  "explore.expand": "Unfold the panel",
+  "explore.groups": "By region",
+  "explore.copy": "Copy",
+  "explore.copied": "Copied: paste it anywhere",
+  "explore.copyFailed": "Could not copy",
+  "explore.reset": "Start again",
+  "explore.reset.confirm": "Sure? Click again",
+  "explore.share": "I have explored {pct} of {name} on {product} 🧭",
+  "explore.groupDone": "{name}: no fog left",
+  "explore.allDone": "{name}: no fog left anywhere on the map",
+};

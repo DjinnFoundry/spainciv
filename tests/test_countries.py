@@ -7,8 +7,9 @@ from pathlib import Path
 import pipeline.__main__ as cli
 from pipeline import countries
 from pipeline.build import BUILDERS, builders_for, requires
+from pipeline.core.paths import ROOT
 from pipeline.sources import sources_for
-from pipeline.sources.es.provinces import PROVINCES, display_name
+from pipeline.sources.es.provinces import COMMUNITIES, PROVINCES, community_name, display_name
 from pipeline.sources.etopo import Etopo
 
 
@@ -117,6 +118,28 @@ class SpainReferenceTest(unittest.TestCase):
         self.assertEqual(display_name("Palmas, Las"), "Las Palmas")
         self.assertEqual(display_name("Rioja, La"), "La Rioja")
         self.assertEqual(display_name("Madrid"), "Madrid")
+
+    def test_community_name_reads_in_order(self):
+        got = {code: community_name(code) for code in COMMUNITIES}
+        self.assertEqual(len(got), 19)
+        self.assertEqual(got, {
+            "01": "Andalucía", "02": "Aragón", "03": "Principado de Asturias", "04": "Illes Balears", "05": "Canarias",
+            "06": "Cantabria", "07": "Castilla y León", "08": "Castilla - La Mancha", "09": "Cataluña",
+            "10": "Comunitat Valenciana", "11": "Extremadura", "12": "Galicia", "13": "Comunidad de Madrid",
+            "14": "Región de Murcia", "15": "Comunidad Foral de Navarra", "16": "País Vasco", "17": "La Rioja",
+            "18": "Ceuta", "19": "Melilla"})
+        self.assertFalse(any(", " in n for n in got.values()))
+
+    def test_published_provinces_carry_their_community(self):
+        """sites/es/data/states.json: each province's community, grouped exactly as provinces.COMMUNITIES."""
+        states = json.loads((ROOT / "sites/es/data/states.json").read_text(encoding="utf-8"))
+        groups = {}
+        for s in states:
+            c = s["community"]
+            self.assertEqual(c["name"], community_name(c["code"]), s["fips"])
+            groups.setdefault(c["code"], []).append(s["fips"])
+        self.assertEqual(len(groups), 19)
+        self.assertEqual({k: sorted(v) for k, v in groups.items()}, {k: sorted(ps) for k, (_, ps) in COMMUNITIES.items()})
 
 
 class EtopoWindowsTest(unittest.TestCase):
@@ -1470,6 +1493,177 @@ class SpainDailyLensesTest(unittest.TestCase):
         self.assertEqual((bb["id"], bb["group"], bb["values"]), ("broadband", "knowledge", [0.9, None, None]))
         self.assertIn("98,0 %", bb["description"]["es"])
         self.assertIn("Spain: 98.0%", bb["description"]["en"])
+
+
+class SpainCrimeTest(unittest.TestCase):
+    """The Balance de Criminalidad (sources/es/criminalidad.py) and the crime lenses (build/spain_crime.py)."""
+
+    TYPES = ["1. Homicidios dolosos y asesinatos consumados", "3. Delitos graves y menos graves de lesiones y riña "
+             "tumultuaria", "8. Hurtos", "12.-Estafas informáticas"]
+
+    @classmethod
+    def rows(cls, place: str, theft: int, fraud: int, year: int = 2025, extra: int = 1) -> str:
+        """A place's rows as the balance writes them: subtotals, sub-types, the numbered types (theft, online fraud and
+        `extra` homicides and assaults) and the total, for `year` and its change from the year before."""
+        counts = {cls.TYPES[0]: extra, cls.TYPES[1]: extra, cls.TYPES[2]: theft, cls.TYPES[3]: fraud,
+                  "I. CRIMINALIDAD CONVENCIONAL": 2 * extra + theft, "5.1.-Agresión sexual con penetración": 0,
+                  "7.1.-Robos con fuerza en domicilios": 0, "III. TOTAL INFRACCIONES PENALES": 2 * extra + theft + fraud}
+        out = [f"{place};{t};enero-diciembre {year};{n:,}".replace(",", ".") for t, n in counts.items()]
+        return "\n".join(out + [f"{place};{t};Variación % {year}/{year - 1};-0,2" for t in counts]) + "\n"
+
+    def test_offence_types_and_place_names(self):
+        from pipeline.sources.es import criminalidad as c
+
+        self.assertEqual([c.offence_key(t) for t in [*self.TYPES, "5.1.-Agresión sexual con penetración",
+                                                      "II. CIBERCRIMINALIDAD (infracciones penales…)",
+                                                      "III. TOTAL INFRACCIONES PENALES", "11. Resto de criminalidad"]],
+                         ["homicide", "assault", "theft", "online_fraud", None, None, "total", "other"])
+        self.assertEqual((c.island_name("Isla  de Eivissa"), c.island_name("Isla de Gomera (La)"),
+                          c.island_name("Isla de Hierro (El)"), c.island_name("04013 Almería")),
+                         ("Eivissa", "La Gomera", "El Hierro", None))
+        with self.assertRaises(RuntimeError):
+            c.island_name("Isla de Alborán")
+        self.assertEqual((c.PROVINCE_CODE["Coruña (A)"], c.PROVINCE_CODE["Balears (Illes)"],
+                          c.PROVINCE_CODE["Alicante/Alacant"]), ("15", "07", "03"))
+
+    def test_the_balance_keeps_provinces_islands_and_municipalities_of_its_latest_year(self):
+        from pipeline.sources.es.criminalidad import BalanceCriminalidad, ISLANDS, province_name
+
+        island_prov = {seed[:2] for seed in ISLANDS.values()}
+        per_island = {p: sum(1 for s in ISLANDS.values() if s[:2] == p) for p in island_prov}
+        head = "﻿Provincias;Tipología penal;Periodos:;Total\n"
+        prov = head + self.rows("Total Nacional", 1000, 500) + self.rows("En el extranjero", 1, 2) + "".join(
+            self.rows(province_name(name), 10 * per_island.get(code, 1), 4 * per_island.get(code, 1),
+                      extra=0 if code in per_island else 1) for code, (_, name) in PROVINCES.items()) + self.rows("Madrid", 99, 99, 2024)
+        muni = ("﻿Geografía;Tipología penal;Periodos:;Total\n" + self.rows("MADRID (COMUNIDAD DE)", 10, 4)
+                + self.rows("28079 Madrid", 6, 1) + "".join(self.rows(f"Isla de {n}" if " " not in n else
+                                                                      f"Isla de {n.split()[1]} ({n.split()[0]})", 10, 4, extra=0)
+                                                             for n in ISLANDS)
+                + self.rows("07040 Palma", 7, 2) + self.rows("NACIONAL", 1000, 500))
+        out = SpainDailyLensesTest.process(BalanceCriminalidad(), {"1509011.csv": prov, "1509012.csv": muni})
+        self.assertEqual(out["year"], 2025)
+        self.assertEqual(out["nation"], {"homicide": 1, "assault": 1, "theft": 1000, "online_fraud": 500, "total": 1502})
+        self.assertEqual(out["abroad"]["total"], 5)
+        self.assertEqual(out["provinces"]["28"]["total"], 16)
+        self.assertEqual(set(out["provinces"]), set(PROVINCES))
+        self.assertEqual(set(out["islands"]), set(ISLANDS))
+        self.assertEqual(out["municipalities"], {
+            "07040": {"homicide": 1, "assault": 1, "theft": 7, "online_fraud": 2, "total": 11},
+            "28079": {"homicide": 1, "assault": 1, "theft": 6, "online_fraud": 1, "total": 9}})
+        bad = muni.replace("Isla de Menorca;8. Hurtos;enero-diciembre 2025;10", "Isla de Menorca;8. Hurtos;enero-diciembre 2025;11")
+        with self.assertRaises(RuntimeError):  # the types no longer add up to Menorca's total
+            SpainDailyLensesTest.process(BalanceCriminalidad(), {"1509011.csv": prov, "1509012.csv": bad})
+
+    def test_rest_of_a_province_or_island_takes_its_offences_and_residents_minus_the_listed(self):
+        from pipeline.build import spain_crime as sc
+
+        crime = {"provinces": {"28": {"theft": 100, "total": 150}, "07": {"theft": 60, "total": 60}},
+                 "islands": {"Mallorca": {"theft": 50, "total": 50}, "Menorca": {"theft": 10, "total": 10}},
+                 "municipalities": {"28079": {"theft": 80, "total": 120}, "07040": {"theft": 40, "total": 40}}}
+        pops = {"28079": 3000, "28065": 1000, "28006": 1000, "07040": 400, "07011": 100, "07032": 500}
+        islands = {"07040": "Mallorca", "07011": "Mallorca", "07032": "Menorca"}
+        units = sc.crime_units(crime, pops, islands)
+        self.assertEqual(units["rest_of_province"], {"28": {"theft": 20, "total": 30, "pop": 2000},
+                                                     "Mallorca": {"theft": 10, "total": 10, "pop": 100},
+                                                     "Menorca": {"theft": 10, "total": 10, "pop": 500}})
+        self.assertEqual((units["unit_of"]("07011"), units["unit_of"]("28065")), ("Mallorca", "28"))
+        rate = sc.listed_or_rest(units, sc.rate("total"), units["unit_of"])
+        self.assertEqual([rate(c) for c in ("28079", "28065", "07040", "07011", "07032", "08019")],
+                         [40.0, 15.0, 100.0, 100.0, 20.0, None])
+        with self.assertRaises(RuntimeError):  # a listed municipality with more offences than its province
+            sc.crime_units({**crime, "municipalities": {"28079": {"theft": 101, "total": 120}}}, pops, islands)
+
+    def test_hexes_list_their_listed_municipalities_and_rests_most_populous_first(self):
+        from pipeline.build import spain_crime as sc
+
+        units = {"municipalities": {"28079": {"pop": 1000}}, "rest_of_province": {"28": {"pop": 100}, "51": {"pop": 9}},
+                 "unit_of": lambda code: code[:2]}
+        out = sc.hex_units(units, ["28079", "28065", "51001", "08019"],
+                           [[(1, 50.0), (0, 10.0)], [(2, 5.0)], [], [(3, 1.0)]])
+        self.assertEqual(out, {"keys": ["28079", "28", "51"], "labels": [[1, 0], [2], None, None]})
+
+    def test_breakdown_gives_the_rate_the_three_highest_types_and_the_rest(self):
+        from pipeline.build import spain_crime as sc
+
+        counts = {"theft": 30, "online_fraud": 10, "burglary": 5, "assault": 1, "other": 4, "total": 50, "pop": 1000}
+        self.assertEqual(sc.breakdown("Madrid", counts)["es"],
+                         "Madrid: 50,0 por 1.000 hab.; hurtos 30,0, estafas informáticas 10,0, robos con fuerza 5,0, "
+                         "el resto 5,0")
+        self.assertEqual(sc.breakdown(sc.tr("Resto", "Rest"), counts)["en"],
+                         "Rest: 50.0 per 1,000; theft 30.0, online fraud 10.0, burglary 5.0, the rest 5.0")
+
+    def test_the_standout_type_is_the_one_most_times_spains_rate_from_a_quarter_above(self):
+        from pipeline.build import spain_crime as sc
+
+        keys = list(sc.COMPARED)
+        spain = {k: 1.0 for k in keys} | {"theft": 20.0, "homicide": 0.01}
+        town = {"pop": 20000, "theft": 600, "burglary": 24, "homicide": 5}  # 1.5 and 1.2 times Spain's; homicide not compared
+        self.assertEqual(sc.standout(town, spain), ("theft", 1.5))
+        self.assertEqual(sc.standout_index(town, spain), keys.index("theft"))
+        self.assertEqual(sc.standout_index({**town, "theft": 500}, spain), keys.index("theft"))  # exactly 1.25 times
+        self.assertEqual(sc.standout_index({**town, "theft": 400}, spain), None)  # exactly Spain's rate
+        self.assertIsNone(sc.standout_index({**town, "pop": 19999}, spain))  # too few residents
+        self.assertIsNone(sc.standout({"theft": 1}, spain))  # no residents
+
+    def test_the_lenses_of_two_provinces_one_of_them_islands(self):
+        from pipeline.build import spain_crime as sc
+
+        crime = {"year": 2025, "abroad": {"total": 7697},
+                 "provinces": {"28": {"theft": 900, "online_fraud": 600, "burglary": 150, "drug_trafficking": 30,
+                                      "total": 2100},
+                               "07": {"theft": 400, "online_fraud": 200, "burglary": 40, "total": 880}},
+                 "islands": {"Mallorca": {"theft": 380, "online_fraud": 180, "burglary": 30, "total": 800},
+                             "Menorca": {"theft": 20, "online_fraud": 20, "burglary": 10, "total": 80}},
+                 "municipalities": {"28079": {"theft": 600, "online_fraud": 300, "burglary": 30, "total": 1200},
+                                    "07040": {"theft": 300, "online_fraud": 100, "burglary": 10, "total": 500}}}
+        pops = {"28079": 30000, "28065": 30000, "07040": 25000, "07011": 21000, "07032": 5000}
+        shown = {"28079": "Madrid", "07040": "Palma"}
+        padron = {"municipalities": {c: {"pop": {"2025": n}, "display": shown.get(c, c)} for c, n in pops.items()}}
+        # Palma (the seed of Mallorca) and 07011 share a boundary point; Menorca's seed stands alone
+        lau = [{"geoid": "07040", "state_fips": "07", "rings": [[[0, 0], [1, 0]]]},
+               {"geoid": "07011", "state_fips": "07", "rings": [[[1, 0], [2, 0]]]},
+               {"geoid": "07032", "state_fips": "07", "rings": [[[9, 9]]]}]
+        geoids = ["28079", "28065", "07040", "07011", "07032", "08019"]
+        weights = [[(0, 1.0)], [(1, 0.7), (0, 0.3)], [(2, 1.0)], [(3, 1.0)], [(4, 1.0)], [(5, 1.0)]]
+        crime_lens, standout = sc.lenses(crime, padron, lau, geoids, weights)
+
+        self.assertEqual(crime_lens["values"], [40.0, 33.0, 20.0, 14.3, 16.0, None])
+        self.assertEqual(crime_lens["labels"], [[1], [2, 1], [0], [3], [4], None])
+        self.assertEqual([n["es"].split(":")[0] for n in crime_lens["names"]],
+                         ["Palma", "Madrid", "Resto de la provincia de Madrid", "Resto de Mallorca", "Menorca"])
+        self.assertEqual(crime_lens["names"][1]["es"], "Madrid: 40,0 por 1.000 hab.; hurtos 20,0, estafas "
+                         "informáticas 10,0, robos con fuerza 1,0, el resto 9,0")
+        # Spain's rate leaves the offences abroad out: 2,980 in 111,000 residents
+        self.assertIn("en España, 26,8 (7697 más se cometieron en el extranjero", crime_lens["description"]["es"])
+        self.assertIn("Spain: 26.8 (7,697 more were committed abroad", crime_lens["description"]["en"])
+        self.assertIn("Los 2 municipios que lista el balance", crime_lens["description"]["es"])
+
+        keys = list(sc.COMPARED)
+        self.assertEqual(standout["values"], [keys.index("theft"), keys.index("drug_trafficking"), None, None, None,
+                                              None])
+        self.assertEqual((standout["labels_from"], "labels" in standout), ("crime", False))
+        self.assertEqual([c["id"] for c in standout["categories"]], keys)
+        self.assertEqual(standout["ramp"], [c["color"] for c in standout["categories"]])
+        self.assertEqual(standout["categories"][keys.index("vehicle_theft")]["name"]["es"],
+                         "Sustracciones de vehículos")
+        self.assertEqual(standout["null_label"]["es"], "Ninguno destaca")
+        self.assertEqual([n["es"] for n in standout["names"]], [
+            "Palma: ninguno llega a 1,25 veces España; el que más, hurtos 12,0 por 1.000, 1,02 veces España",
+            "Madrid: hurtos 20,0 por 1.000, 1,71 veces España",
+            "Resto de la provincia de Madrid: tráfico de drogas 1,0 por 1.000, 3,70 veces España",
+            "Resto de Mallorca: ninguno llega a 1,25 veces España; el que más, robos con fuerza 1,0 por 1.000, "
+            "0,56 veces España",
+            "Menorca: 5000 habitantes, pocos casos para comparar"])
+        self.assertEqual(standout["names"][2]["en"],
+                         "Rest of the province of Madrid: drug trafficking 1.0 per 1,000, 3.70 times Spain's")
+        # every coloured hex names, first in its tooltip, the type it is painted with
+        for i, v in enumerate(standout["values"]):
+            if v is not None:
+                self.assertIn(sc.TYPE_NAMES[keys[v]]["es"], standout["names"][crime_lens["labels"][i][0]]["es"])
+        self.assertIn("Por eso quedan sin color: Menorca.", standout["description"]["es"])
+        self.assertIn("Left uncoloured for that reason: Menorca.", standout["description"]["en"])
+        self.assertIn("1,25 veces la tasa de España y la unidad tiene 20.000 habitantes", standout["description"]["es"])
+
 class SpainFiestasTest(unittest.TestCase):
     PAGE = ('<dl class="accordion"><dt id="dt1" class="close">Andalucía</dt><dd style="display: none;"><ul>'
             "<li>Semana Santa de Baena, Córdoba (2026)</li><li>Romería del Rocío de Almonte (1980)</li></ul></dd>"

@@ -96,6 +96,8 @@ export default {
   "core.lens.noData": "sin datos",
   "core.lens.perKm2": " /km²",
   "core.lens.minutes": "{n} min",
+  "core.lens.hoursMinutes": "{h} h {m} min",
+  "core.lens.hours": "{n} h",
   "core.lens.years": "{n} años",
   "core.lens.showFull": "Ver la leyenda completa",
   "core.lens.details": "Detalles",
@@ -194,10 +196,11 @@ export default {
   "core.pedia.terrain.beyond": "Más allá de las fronteras",
   "core.pedia.terrain.beyondBody": `Las tierras extranjeras (Portugal, Francia, Andorra y Marruecos) se dibujan bajo una niebla ligera: están
       como contexto y no se cartografían en detalle.`,
-  "core.pedia.lenses.intro": `<p>Las lentes colorean el mapa según una medida, construida con datos municipales ({vintage}). Cada hexágono
+  "core.pedia.lenses.intro": `<p>Las lentes colorean el mapa según una medida. Casi todas se construyen con datos municipales ({vintage}): cada hexágono
       se muestrea en 7 puntos, y un municipio que cubre algunos de ellos cubre esa parte del hexágono. Un municipio tan
       pequeño que no lo toca ninguna muestra se suma al hexágono que contiene su centro. La renta se promedia entre los
-      municipios de cada hexágono, ponderada por población.</p>
+      municipios de cada hexágono, ponderada por población. Unas pocas se calculan en el navegador, como el calendario de
+      fiestas o Sol y reloj, y su descripción dice de dónde sale cada valor.</p>
       <p>La leyenda muestra cuántos hexágonos caen en cada valor. Pasa el ratón o arrastra sobre ella para ver solo ese
       tramo en el mapa.</p>`,
   "core.pedia.lenses.scale": "Escala: {scale}, {from}–{to} {unit}",
