@@ -29,10 +29,15 @@ def run(body: str, lang: str = "es"):
 
 SEVILLA = {"name": "Sevilla-Santa Justa", "x": 0, "y": 0, "cell": 0, "stops": ["51003"], "trains": [83, 0, 142],
            "best": {"min": 156, "dep": "07:00", "arr": "09:36", "to": "Madrid-Puerta de Atocha", "changes": 0,
-                    "legs": [["AVE", "02060", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha"]]}}
+                    "legs": [["AVE 02060", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha"]]}}
 GANDIA = {"name": "Gandia", "x": 0, "y": 0, "cell": 0, "stops": ["69110"], "trains": [0, 0, 1],
           "best": {"min": 208, "dep": "06:10", "arr": "09:38", "to": "Madrid-Chamartín", "changes": 1,
-                   "legs": [["C1", "", "Gandia", "València Nord"], ["AVE", "05071", "València-Joaquín Sorolla", "Madrid-Chamartín"]]}}
+                   "legs": [["C1", "Gandia", "València Nord"], [None, "València Nord", "València-Joaquín Sorolla"],
+                            ["AVE 05071", "València-Joaquín Sorolla", "Madrid-Chamartín"]]}}
+NORD = {"name": "València-Estació del Nord", "x": 0, "y": 0, "cell": 0, "stops": ["65000"], "trains": [14, 32, 133],
+        "best": {"min": 129, "dep": "07:28", "arr": "09:38", "to": "Madrid-Chamartín", "changes": 0,
+                 "legs": [[None, "València-Estació del Nord", "València-Joaquín Sorolla"],
+                          ["Iryo 06083", "València-Joaquín Sorolla", "Madrid-Chamartín"]]}}
 
 
 @unittest.skipUnless(NODE, "node is not installed")
@@ -89,21 +94,32 @@ class ModelTest(unittest.TestCase):
                  M.stationTip({{ name: 'Lejos <b>', trains: [0, 1, 0], best: null }}, 'x')]);
         """)
         self.assertEqual(got[0], "<b>Sevilla-Santa Justa</b>: 225 trenes el 9 de diciembre (83 de alta velocidad y larga "
-                                 "distancia, 0 de media distancia, 142 de Cercanías).<br>A Madrid en 2 h 36 min: sale "
+                                 "distancia y 142 de Cercanías).<br>A Madrid en 2 h 36 min: sale "
                                  "07:00, llega 09:36 a Madrid-Puerta de Atocha, sin transbordos (AVE 02060)")
-        self.assertIn("1 tren el 9 de diciembre", got[1])
-        self.assertIn("1 transbordo (C1 Gandia → València Nord; AVE 05071 València-Joaquín Sorolla → Madrid-Chamartín)", got[1])
+        self.assertIn("1 tren el 9 de diciembre (1 de Cercanías).", got[1])
+        self.assertIn("1 transbordo (C1 Gandia → València Nord; a pie a València-Joaquín Sorolla; AVE 05071 "
+                      "València-Joaquín Sorolla → Madrid-Chamartín)", got[1])
         self.assertTrue(got[2].endswith("<br>En Madrid."))
         self.assertIn("&lt;b&gt;", got[3])
         self.assertTrue(got[3].endswith("Ese día ningún tren lleva de aquí a Madrid."))
+        self.assertIn("1 tren el x (1 de media distancia).", got[3])
+
+    def test_a_journey_that_starts_on_foot(self):
+        got = run(f"out([M.stationTip({json.dumps(NORD)}, 'x'), M.stationTip({{ name: 'Madrid-Recoletos', trains: [0, 0, 0], best: null, madrid: true }}, 'x')]);")
+        self.assertIn("14 de alta velocidad y larga distancia, 32 de media distancia y 133 de Cercanías", got[0])
+        self.assertTrue(got[0].endswith("sin transbordos (a pie a València-Joaquín Sorolla; Iryo 06083 "
+                                        "València-Joaquín Sorolla → Madrid-Chamartín)"), got[0])
+        self.assertEqual(got[1], "<b>Madrid-Recoletos</b>: 0 trenes el x.<br>En Madrid.")  # no empty split
+        en = run(f"out(M.stationTip({json.dumps(NORD)}, 'x'));", "en")
+        self.assertIn("(walk to València-Joaquín Sorolla; Iryo 06083 València-Joaquín Sorolla → Madrid-Chamartín)", en)
 
     def test_english_tooltips(self):
         got = run(f"""
             out([M.stationTip({json.dumps(SEVILLA)}, M.dayLabel('2026-12-09')), M.linkTip({{ kind: 'ghost' }}, M.dayLabel('2026-12-09')),
                  M.linkTip({{ kind: 'served', n: 1 }}, '9 December')]);
         """, "en")
-        self.assertEqual(got[0], "<b>Sevilla-Santa Justa</b>: 225 trains on 9 December (83 high-speed and long-distance, "
-                                 "0 medium-distance, 142 Cercanías).<br>To Madrid in 2 h 36 min: leaves 07:00, arrives "
+        self.assertEqual(got[0], "<b>Sevilla-Santa Justa</b>: 225 trains on 9 December (83 high-speed and long-distance "
+                                 "and 142 Cercanías).<br>To Madrid in 2 h 36 min: leaves 07:00, arrives "
                                  "09:36 at Madrid-Puerta de Atocha, direct (AVE 02060)")
         self.assertEqual(got[1], "Adif track with no passenger trains on 9 December (may carry freight)")
         self.assertEqual(got[2], "1 passenger train on 9 December")
@@ -130,6 +146,42 @@ class ModelTest(unittest.TestCase):
                  M.hitStation([big, small], 30, 0, 10, 5)]);
         """)
         self.assertEqual(got, [{"kind": "served", "a": 0, "b": 1, "n": 12}, "ghost", None, True, None])
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class LayersTest(unittest.TestCase):
+    INSTALL = """
+        setCountry({ country: { id: 'es', lang: 'es', locale: 'es-ES', data: ['transit'] } }, null);
+        const I = await import('./web/js/ext/transit/index.js');
+        const layers = [];
+        const after = { id: 'commuters', group: 'g' };
+        const app = { lensById: new Map([['commuters', after]]), w: { grid: { size: 4, R: 5 } }, addLens() {},
+                      on() {}, hash: { value: () => null }, state: { lens: null }, registerStaticLayer: (l) => layers.push(l) };
+        I.install(app);
+        const byId = Object.fromEntries(layers.map((l) => [l.id, l]));
+    """
+
+    def test_stations_win_the_hit_over_landmarks(self):
+        got = run(self.INSTALL + """
+            const { makeLayers } = await import('./web/js/ext/layers/layers.js');
+            const model = { net: {}, parks: [], ranges: [], ports: [], airports: [], installations: [], wonders: [], routes: [], w: {}, version: 1 };
+            const z = Object.fromEntries(makeLayers(model, {}).map((l) => [l.id, l.z]));
+            out({ stations: byId['transit-stations'].z, lines: byId['transit-lines'].z, z });
+        """)
+        for over in ("hubs", "forts", "wonders", "plates"):
+            self.assertGreater(got["stations"], got["z"][over], over)
+        self.assertEqual(got["lines"], got["z"]["rail"])  # the lens's track replaces the rail layer it hides
+
+    def test_a_tap_shows_the_tooltip(self):
+        got = run(self.INSTALL + """
+            const shown = [];
+            const click = I.tapShows((it) => `tip ${it}`, (x, y, html) => shown.push([x, y, html]));
+            const touch = click('a', { pointerType: 'touch', x: 10, y: 20 }), pen = click('b', { pointerType: 'pen', x: 1, y: 2 });
+            const mouse = click('c', { pointerType: 'mouse', x: 0, y: 0 });
+            out({ touch, pen, mouse, shown, layers: ['transit-stations', 'transit-lines'].map((id) => typeof byId[id].click) });
+        """)
+        self.assertEqual(got, {"touch": True, "pen": True, "mouse": False, "shown": [[10, 20, "tip a"], [1, 2, "tip b"]],
+                               "layers": ["function", "function"]})
 
 
 if __name__ == "__main__":

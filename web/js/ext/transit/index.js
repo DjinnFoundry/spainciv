@@ -5,10 +5,13 @@
 //   while the lens is open: the day's passenger track (thicker for more trains), Adif track with no passenger train
 //     (dashed grey), and the stations as dots sized by their trains; the rail layer of the map hides (hides_layers)
 //   URL hash: #lens=rail_madrid
+//   a tap (touch or pen) on a station or a stretch of track shows its tooltip, which a mouse gets on hover; the
+//     stations sit above the landmark, fort, hub and plate layers so that their dots win the hit
 // transit.json loads the first time the lens opens; the rules that need no canvas are in model.js.
 import { country } from "../../app/country.js";
 import { t } from "../../i18n.js";
 import { buildPieces, visibleTiles, strokeAll } from "../../render/art/improvements.js";
+import { showHtmlTooltip } from "../../ui/tooltip.js";
 import * as M from "./model.js";
 
 const LENS = "rail_madrid";
@@ -17,6 +20,15 @@ const BANDS = [0, 1, 2];
 // Below this hex radius (css px) the lines lose their casings and the dots their outlines: the whole of Spain stays
 // under 3 ms a layer (DECISIONS A18) and the casing would be thinner than a pixel anyway.
 const DETAIL_RPX = 14;
+// Above hubs (65), forts (66), wonders (67) and plates (68) of ext/layers: a station dot under a landmark icon is hit.
+export const STATIONS_Z = 69;
+
+/** A layer's click: on a touch or pen tap, the tooltip a mouse would get on hover, and the click is taken. */
+export const tapShows = (tip, show = showHtmlTooltip) => (item, ev) => {
+  if (ev.pointerType === "mouse") return false;
+  show(ev.x, ev.y, tip(item));
+  return true;
+};
 
 export function install(app) {
   const after = app.lensById.get(AFTER);
@@ -108,10 +120,11 @@ export function install(app) {
       return it ? { kind: it.kind, n: it.n } : null;
     },
     tooltip: (it) => M.linkTip(it, date),
+    click: tapShows((it) => M.linkTip(it, date)),
   });
 
   app.registerStaticLayer({
-    id: "transit-stations", z: 65, visible: on, sig,
+    id: "transit-stations", z: STATIONS_Z, visible: on, sig,
     draw(ctx, vp, w, o) {
       // One path per colour, filled and outlined once (1,400 separate arcs cost more than the 3 ms a layer may take),
       // built once per zoom: a drag repaints strips at the same zoom (A18). Far out, dark dots without outlines.
@@ -135,5 +148,6 @@ export function install(app) {
     },
     hit: (x, y, Rpx) => M.hitStation(net.stations, x, y, Rpx, app.w.grid.R),
     tooltip: (st) => M.stationTip(st, date),
+    click: tapShows((st) => M.stationTip(st, date)),
   });
 }

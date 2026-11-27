@@ -40,15 +40,23 @@ export function lensLayer(doc) {
   return { values: doc.lens.values, names, labels };
 }
 
+/** The legs of a journey: [train label, from, to], a walk's label null ("a pie a València-Joaquín Sorolla"). */
 function legs(list) {
-  if (list.length === 1) return esc(`${list[0][0]} ${list[0][1]}`.trim());
-  return list.map(([route, number, from, to]) => esc(`${`${route} ${number}`.trim()} ${from} → ${to}`)).join("; ");
+  const leg = ([label, from, to]) => (label == null ? t("transit.station.walk", { to: esc(to) }) : esc(`${label} ${from} → ${to}`));
+  if (list.length === 1 && list[0][0] != null) return esc(list[0][0]);
+  return list.map(leg).join("; ");
+}
+
+/** "(14 de alta velocidad y larga distancia y 133 de Cercanías)": the kinds of train a station has, zeros left out. */
+function split(trains, locale = country().locale) {
+  const parts = ["ld", "md", "cer"].map((k, i) => (trains[i] ? t(`transit.station.kind.${k}`, { n: int(trains[i]) }) : null)).filter(Boolean);
+  return parts.length ? t("transit.station.split", { kinds: new Intl.ListFormat(locale, { type: "conjunction" }).format(parts) }) : "";
 }
 
 /** The tooltip of a station (HTML; data escaped). */
 export function stationTip(st, date) {
-  const [ld, md, cer] = st.trains;
-  const lines = [`<b>${esc(st.name)}</b>: ${t("transit.station.trains", { n: totalTrains(st), count: int(totalTrains(st)), date })} ${t("transit.station.split", { ld: int(ld), md: int(md), cer: int(cer) })}`];
+  const n = totalTrains(st);
+  const lines = [`<b>${esc(st.name)}</b>: ${t("transit.station.trains", { n, count: int(n), date })}${n ? ` ${split(st.trains)}` : "."}`];
   const b = st.best;
   if (st.madrid) lines.push(t("transit.station.madrid"));
   else if (!b) lines.push(t("transit.station.none"));
