@@ -7,7 +7,7 @@
 // up once per pool-length cycle of days (puzzle.js), so a province with k hexes in the pool comes up exactly k times
 // every pool.length days.
 import { t } from "../../i18n.js";
-import { MIN_FIRST } from "./puzzle.js";
+import { MIN_FIRST, dailyCell, shuffled } from "./puzzle.js";
 
 /** A province that comes up less than once in this many days gets the clock (a UI convention, DECISIONS E84). */
 export const LONG_WAIT_DAYS = 100;
@@ -44,7 +44,8 @@ export function poolByProvince(pool, raw) {
 
 /**
  * What the album tab shows. album: normalize()d; states: states.json (world.json's order, with `community`); raw:
- * world.json as prepared; pool and firstFits: gameData()'s; stats: the game's saved stats.
+ * world.json as prepared; pool and firstFits: gameData()'s; stats: the game's saved stats. `idx` is the province's
+ * index in both files, whose order is the same (index.js checks it by INE code).
  * Returns {communities: [{code, name, got, total, complete, provinces: [{fips, name, idx, days, hexes, everyDays,
  * slow}]}], got, total, complete, communitiesTotal, outside: [{fips, name, reason, fits, cell}], poolSize, unassigned}.
  * `outside` holds the provinces with no pool hex: reason "first" when even their best hex shares the first clue with
@@ -91,6 +92,29 @@ export function albumView({ album, states, raw, pool, firstFits, stats }) {
 
 /** The provinces of a view, community by community. */
 export const provincesOf = (view) => view.communities.flatMap((c) => c.provinces);
+
+/** After a win for province `fips` on puzzle `day`: {fresh, province, community, got, total}, where `fresh` says the
+ *  province was not in the album before that day; null when the province is not in the view. */
+export function albumNews(view, fips, day) {
+  for (const c of view.communities) {
+    const p = c.provinces.find((x) => x.fips === fips);
+    if (p) return { fresh: !p.days.some((d) => d < day), province: p.name, community: c.name, got: c.got, total: c.total };
+  }
+  return null;
+}
+
+/** The puzzle day on which the album would be complete if every game from day `from` on were won, from the fixed
+ *  daily order (every province in the view comes up within one pool cycle); null when it is complete already. */
+export function completionDay(view, pool, raw, from) {
+  const missing = new Set(provincesOf(view).filter((p) => !p.days.length).map((p) => p.idx));
+  if (!missing.size) return null;
+  const order = shuffled(pool);
+  for (let d = from; d < from + pool.length; d++) {
+    missing.delete(raw.owner[dailyCell(pool, d, order)]);
+    if (!missing.size) return d;
+  }
+  return null;
+}
 
 /** Most missing provinces the share text names. */
 export const MISSING_NAMED = 5;

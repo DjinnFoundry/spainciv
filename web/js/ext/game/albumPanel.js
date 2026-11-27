@@ -3,15 +3,19 @@
 // The model is album.js. The silhouette is a small canvas painted when the tab opens, never part of the map's render.
 import { country } from "../../app/country.js";
 import { SANS, SERIF, fit, siteLabel } from "../../app/share.js";
-import { css, luminance } from "../../color.js";
+import { contrast, css, parseHex } from "../../color.js";
 import { esc, int } from "../../format.js";
 import { lang, t } from "../../i18n.js";
-import { LONG_WAIT_DAYS, provincesOf } from "./album.js";
+import { LONG_WAIT_DAYS, completionDay, provincesOf } from "./album.js";
 import { MIN_FIRST } from "./puzzle.js";
 
 const SEA = "#0d2a47";
 const NEUTRAL = "rgb(78,74,62)"; // a province not collected yet
 const GOLD = "#ecd08e";
+const INK = ["#14100a", "#fbf4e2"]; // a collected chip's text, dark or light
+
+/** The chip text with the higher contrast on a province colour. */
+export const chipInk = (rgb) => INK.reduce((a, b) => (contrast(rgb, parseHex(b)) > contrast(rgb, parseHex(a)) ? b : a));
 const CLOCK = `<svg class="al-clock" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 6.5V12l3.6 2.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 
 // The land's extent in map km (the Canary inset included), worked out once per world.
@@ -118,16 +122,18 @@ export function provinceLine(p, view) {
   ].join(" · ");
 }
 
-// The notes under the banners, all worked out from the view.
-function notes(view, { g, stats, storageOk }) {
+/** The notes under the banners, all worked out from the view. ctx: {g (gameData), storageOk, from (the first puzzle
+ *  day not played yet)}. */
+export function notes(view, { g, storageOk, from }) {
   const provs = provincesOf(view), out = [];
   if (!storageOk) out.push(t("game.album.noStorage"));
   if (!view.got) out.push(t("game.album.empty"));
+  const done = completionDay(view, g.pool, g.w.raw, from);
+  if (done) out.push(t("game.album.until", { day: int(done), n: done - from + 1 }));
   if (provs.length) {
     const most = Math.max(...provs.map((p) => p.hexes)), least = Math.min(...provs.map((p) => p.hexes));
     const named = (n) => list(provs.filter((p) => p.hexes === n).map((p) => p.name));
-    out.push(t("game.album.note", { pool: int(view.poolSize), most, mostName: named(most), least, leastName: named(least),
-      days: LONG_WAIT_DAYS }));
+    out.push(t("game.album.note", { pool: int(view.poolSize), most, mostName: named(most), least, leastName: named(least) }));
   }
   // Provinces out of the game, one line per reason (and per first-clue area).
   const groups = new Map();
@@ -150,7 +156,7 @@ function notes(view, { g, stats, storageOk }) {
 }
 
 /**
- * Fill `el` with the album. ctx: {w, g (gameData), stats, storageOk, canShare, onCopy, onShare, onImage}. The
+ * Fill `el` with the album. ctx: {w, g (gameData), storageOk, from, canShare, onCopy, onShare, onImage}. The
  * silhouette is painted once here; the chips show their line on a tap (a phone has no tooltips).
  */
 export function renderAlbum(el, view, ctx) {
@@ -158,7 +164,7 @@ export function renderAlbum(el, view, ctx) {
   const chip = (p) => {
     const line = provinceLine(p, view), times = p.days.length > 1 ? `<span class="al-times">×${p.days.length}</span>` : "";
     const rgb = ctx.w.stateColor[p.idx] || [190, 190, 190];
-    const style = p.days.length ? ` style="--al-c:${css(rgb)};--al-t:${luminance(rgb) > 0.28 ? "#14100a" : "#fbf4e2"}"` : "";
+    const style = p.days.length ? ` style="--al-c:${css(rgb)};--al-t:${chipInk(rgb)}"` : "";
     const slow = p.slow ? CLOCK : "";
     return `<button type="button" class="al-chip${p.days.length ? " got" : ""}"${style} title="${esc(line)}" data-line="${esc(line)}"
       aria-label="${esc(line)}">${slow}<span>${esc(p.name)}</span>${times}</button>`;
@@ -174,6 +180,7 @@ export function renderAlbum(el, view, ctx) {
       <h3 class="al-title">${esc(t("game.album.title"))}</h3>
       <p class="al-counts">${esc(c.count)} · ${esc(c.communities)}</p>
       <canvas class="al-map" role="img" aria-label="${esc(t("game.album.mapLabel", c))}"></canvas>
+      ${provincesOf(view).some((p) => p.slow) ? `<p class="al-legend muted">${CLOCK}<span>${esc(t("game.album.clock", { days: LONG_WAIT_DAYS }))}</span></p>` : ""}
       <ul class="al-comms">${banners}</ul>
       ${notes(view, ctx).map((n) => `<p class="al-note muted">${esc(n)}</p>`).join("")}
       <div class="gm-buttons al-buttons"><button type="button" class="btn al-copy">${esc(t("game.album.copy"))}</button>

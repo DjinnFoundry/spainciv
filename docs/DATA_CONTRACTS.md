@@ -811,7 +811,8 @@ Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/
 several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
 also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them;
-its second tab is the province album, `ext/game/album.js` and `albumPanel.js`, shown when every state has `community`.
+its second tab is the province album, `ext/game/album.js` and `albumPanel.js`, shown when `states.json` lists the same provinces as `world.json` in the same order (same `fips` at each
+index) and every one has `community`.
 The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
 streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
 sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS

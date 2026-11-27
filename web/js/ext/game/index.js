@@ -19,6 +19,7 @@ import * as A from "./album.js";
 import { albumCard, renderAlbum } from "./albumPanel.js";
 
 const MODE = "game";
+const TABS = ["today", "album"];
 const HASH_KEY = "juego";
 const ANSWER_SCALE = 2.4; // css px per km when the answer flies into view (a hex about 14 px across)
 const FONT = '-apple-system, "Segoe UI", system-ui, sans-serif';
@@ -64,9 +65,11 @@ export function install(app) {
     return unit && region ? `${unit} (${region})` : region || unit || "";
   };
 
-  // The album needs each province's community (states.json, Spain's).
+  // The album needs each province's community (states.json, Spain's), in world.json's order: a province is states[i]
+  // for the hexes whose owner is i.
   const states = app.data.states;
-  const albumOn = !!states?.length && states.length === w.raw.states.length && states.every((s) => s.community?.code);
+  const albumOn = !!states?.length && states.length === w.raw.states.length
+    && states.every((s, i) => s.fips && s.fips === w.raw.states[i].fips && s.community?.code);
   const fipsSet = new Set(albumOn ? states.map((s) => s.fips) : []);
   const fipsOf = (cell) => states[w.raw.owner[cell]]?.fips;
 
@@ -74,7 +77,7 @@ export function install(app) {
   let game = null; // {day, cell, guesses: [cell], clues: n, list: buildClues()}
   let gameData = null; // a promise of P.gameData(), made the first time the game opens
   let data = null; // what it resolved to
-  let tab = "today"; // the dock's tab: "today" (the game) or "album"
+  let tab = "today"; // the dock's tab: "today" (the game) or "album"; every opening starts on "today"
   let dock = null, mark = null, offOverlay = null, token = 0;
   const now = () => P.standing({ grid: w.grid, proj, cell: game.cell, guesses: game.guesses, clues: game.clues });
 
@@ -123,6 +126,7 @@ export function install(app) {
   // --- the mode -------------------------------------------------------------------------------------------------
   app.registerMode(MODE, {
     enter() {
+      tab = "today";
       app.clearSelection();
       dock = app.ui.dock("left", { width: 360, label: t("game.title") });
       dock.classList.add("game-dock");
@@ -196,7 +200,8 @@ export function install(app) {
 
   // Today's win in the album: the province of the day's hex (the winning guess may be in a neighbouring one).
   function recordWin() {
-    if (albumOn) store((x) => ({ album: A.addWin(A.normalize(x.album, fipsSet), fipsOf(game.cell), game.day) }));
+    const fips = albumOn && fipsOf(game.cell);
+    if (fips) store((x) => ({ album: A.addWin(A.normalize(x.album, fipsSet), fips, game.day) }));
   }
 
   function guess(cell) {
@@ -248,14 +253,17 @@ export function install(app) {
 
   const view = () => A.albumView({ album: album(), states, raw: w.raw, pool: data.pool, firstFits: data.firstFits, stats: saved.stats });
 
+  // The header, with the tabs when there is an album: one panel, labelled by the selected tab (roving tabindex).
   function head() {
+    const tabBtn = (id, label) => `<button type="button" role="tab" class="gm-tab" id="gm-tab-${id}" data-tab="${id}"
+      aria-controls="gm-panel" aria-selected="${tab === id}" tabindex="${tab === id ? 0 : -1}">${esc(label)}</button>`;
     const v = albumOn && view();
-    const tabBtn = (id, label) => `<button type="button" role="tab" class="gm-tab" data-tab="${id}" aria-selected="${tab === id}">${esc(label)}</button>`;
     return `
       <header class="gm-head"><h2>${esc(t("game.title"))} <span class="gm-day">${esc(t("game.day", { n: game.day }))}</span></h2>
         <button type="button" class="icon-btn gm-close" data-close aria-label="${esc(t("game.close"))}">✕</button></header>
       ${v ? `<div class="gm-tabs" role="tablist" aria-label="${esc(t("game.tabs"))}">${tabBtn("today", t("game.tab.today"))}${tabBtn("album", t("game.tab.album", { got: v.got, total: v.total }))}</div>` : ""}`;
   }
+  const panel = (html) => (albumOn ? `<div class="gm-panel" id="gm-panel" role="tabpanel" aria-labelledby="gm-tab-${tab}">${html}</div>` : html);
 
   function showTab(id) {
     tab = id;
@@ -281,14 +289,14 @@ export function install(app) {
       return `<li><span class="gm-sq" aria-hidden="true">${P.square(km)}</span>${esc(t("game.guess", {
         place: placeOf(g), km: t("game.km", { n: int(km) }), arrow: P.arrow(w.grid, g, game.cell) }))}${trend}</li>`;
     }).join("");
-    dock.innerHTML = `${head()}
+    dock.innerHTML = head() + panel(`
       ${game.guesses.length ? "" : `<p class="gm-rules muted">${esc(t("game.rules", { max: P.MAX_GUESSES }))}</p>`}
       ${s.over ? end(s) : ""}
       ${guesses ? `<h3 class="gm-sub">${esc(t("game.guesses"))} <span class="muted">${game.guesses.length}/${P.MAX_GUESSES}</span></h3><ol class="gm-guesses">${guesses}</ol>` : ""}
       ${s.over ? "" : `<div class="gm-actions">
         <button type="button" class="btn gm-more"${game.clues >= P.CLUES.length ? " disabled" : ""}>${esc(t("game.moreClue", { cost: P.CLUE_COST }))}</button>
         <p class="gm-prompt">${esc(t("game.prompt"))}</p></div>`}
-      <ol class="gm-clues">${clues}</ol>`;
+      <ol class="gm-clues">${clues}</ol>`);
     wireHead();
     const more = dock.querySelector(".gm-more");
     if (more) more.onclick = moreClue;
@@ -303,14 +311,21 @@ export function install(app) {
   function wireHead() {
     dock.querySelector("[data-close]").onclick = () => app.setMode(null);
     dock.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+    const tabs = dock.querySelector(".gm-tabs");
+    if (tabs) tabs.onkeydown = (e) => {
+      const k = TABS.indexOf(tab), to = { ArrowRight: k + 1, ArrowLeft: k - 1, Home: 0, End: TABS.length - 1 }[e.key];
+      if (to == null) return;
+      e.preventDefault();
+      showTab(TABS[(to + TABS.length) % TABS.length]);
+    };
   }
 
   function renderAlbumTab() {
     const v = view(), albumText = () => A.shareText(v, shareUrl());
-    dock.innerHTML = `${head()}<div class="gm-album-tab" role="tabpanel"></div>`;
+    dock.innerHTML = head() + panel("");
     wireHead();
-    renderAlbum(dock.querySelector(".gm-album-tab"), v, {
-      w, g: data, storageOk: canStore(), canShare: typeof navigator.share === "function",
+    renderAlbum(dock.querySelector("#gm-panel"), v, {
+      w, g: data, storageOk: canStore(), from: game.day + (now().over ? 1 : 0), canShare: typeof navigator.share === "function",
       onCopy: async () => app.ui.toast(t((await copyText(albumText())) ? "game.album.copied" : "game.copyFailed")),
       onShare: () => navigator.share({ text: albumText() }).catch(() => {}),
       onImage: async () => {
@@ -327,13 +342,9 @@ export function install(app) {
 
   // After a win: the day's province, new in the album or already there.
   function albumLine() {
-    if (!albumOn) return "";
-    const fips = fipsOf(game.cell), v = view();
-    const cm = v.communities.find((c) => c.provinces.some((p) => p.fips === fips));
-    const p = cm?.provinces.find((x) => x.fips === fips);
-    if (!p) return "";
-    const line = p.days.some((d) => d < game.day) ? t("game.album.again", { province: p.name })
-      : t("game.album.new", { province: p.name, community: cm.name, got: cm.got, total: cm.total });
+    const news = albumOn && A.albumNews(view(), fipsOf(game.cell), game.day);
+    if (!news) return "";
+    const line = news.fresh ? t("game.album.new", news) : t("game.album.again", news);
     return `<p class="gm-album-line">${esc(line)} <button type="button" class="btn gm-album">${esc(t("game.album.open"))}</button></p>`;
   }
 

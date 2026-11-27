@@ -50,9 +50,8 @@ export function shuffled(pool) {
   return out;
 }
 
-/** The hex of puzzle `day`. */
-export function dailyCell(pool, day) {
-  const order = shuffled(pool);
+/** The hex of puzzle `day` (`order`, shuffled(pool), can be passed to look up many days). */
+export function dailyCell(pool, day, order = shuffled(pool)) {
   return order[(((day - 1) % order.length) + order.length) % order.length];
 }
 

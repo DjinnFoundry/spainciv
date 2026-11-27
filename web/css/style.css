@@ -252,6 +252,7 @@ kbd {
 .al-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 7px; border: 1px solid rgba(201,164,92,.5); border-radius: 10px; background: none; color: var(--ink-dim); font: 12px var(--sans); cursor: pointer; overflow-wrap: anywhere; text-align: left; }
 .al-chip.got { background: var(--al-c); border-color: var(--al-c); color: var(--al-t); }
 .al-clock { flex: none; }
+.al-legend { display: flex; align-items: center; gap: 5px; margin: 0 0 8px; font-size: 12px; }
 .al-times { font-weight: bold; }
 .al-line { margin: 5px 0 0; font-size: 12px; }
 .al-note { margin: 6px 0 0; font-size: 12px; }
