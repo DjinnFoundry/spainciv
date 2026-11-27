@@ -110,15 +110,30 @@ def join_texts(parts: list, sep: str = ", ") -> Any:
     return Text(**{lang: sep.join(pick(p, lang) for p in parts) for lang in langs})
 
 
-def and_list(names: list[str]) -> "Text":
-    """Names joined as a list in each language: "A, B y C" / "A, B and C" (Spanish "e" before an i- sound)."""
-    if not names:
-        raise ValueError("and_list of no names")
-    if len(names) == 1:
-        return tr(names[0], names[0])
-    head, last = ", ".join(names[:-1]), names[-1]
-    y = "e" if re.match(r"(?i)h?i(?![aeiouáéíóú])", last) else "y"
-    return tr(f"{head} {y} {last}", f"{head} and {last}")
+def and_list(items: list) -> Text:
+    """Items (Texts, or strings that are the same in both languages) joined as a list in each language from its own
+    strings: "A, B y C" / "A, B and C", with the Spanish "e" before an i- sound ("Andalucía e Illes Balears")."""
+    return _series(items, "y", "and")
+
+
+def nor_list(items: list) -> Text:
+    """The list after a negative: "no llega a A, B ni C" / "does not reach A, B or C"."""
+    return _series(items, "ni", "or")
+
+
+def _series(items: list, es: str, en: str) -> Text:
+    if not items:
+        raise ValueError("a list of no items")
+    words = {"es": es, "en": en}
+
+    def one(lang: str) -> str:
+        names = [pick(x, lang) for x in items]
+        if len(names) == 1:
+            return names[0]
+        word = "e" if lang == "es" and es == "y" and re.match(r"(?i)h?i(?![aeiouáéíóú])", names[-1]) else words[lang]
+        return f"{', '.join(names[:-1])} {word} {names[-1]}"
+
+    return tr(one("es"), one("en"))
 
 
 def split(data: Any, langs: tuple[str, ...]) -> tuple[Any, dict[str, Any]]:
