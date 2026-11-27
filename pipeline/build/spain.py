@@ -43,7 +43,7 @@ from ..core.lang import Text, tr
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from ..sources.es.names import title_es
-from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
+from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF, community_name
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
 from .lenses import COUNTY_LENSES, GROUPS, land_lenses, set_domains, spread_population
@@ -649,6 +649,7 @@ def build() -> None:
         series = pp.get("pop", {})
         states.append({
             "fips": fips, "abbr": p["abbr"], "name": p["name"],
+            "community": {"code": COMMUNITY_OF[fips], "name": community_name(COMMUNITY_OF[fips])},
             **econ(series.get(str(year)), pib["provinces"].get(fips), gdp_year, ss["provinces"].get(fips),
                    rd_science({fips: ss["provinces"].get(fips)}, rates),
                    living([activity["provinces"].get(fips)], income_rows(c for c in muni if c[:2] == fips),

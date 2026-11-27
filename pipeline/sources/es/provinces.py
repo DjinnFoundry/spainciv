@@ -44,3 +44,14 @@ def display_name(name: str) -> str:
         if len(article.split()) == 1 and article[:1].isupper() and len(article) <= 5:
             return f"{article} {rest}"
     return name
+
+
+def community_name(code: str) -> str:
+    """A community's INE name in reading order: 'Madrid, Comunidad de' → 'Comunidad de Madrid', 'Rioja, La' → 'La
+    Rioja'; the rest as INE writes it ('Castilla - La Mancha')."""
+    name = COMMUNITIES[code][0]
+    if ", " in name:
+        rest, article = name.rsplit(", ", 1)
+        if article.endswith(" de"):
+            return f"{article} {rest}"
+    return display_name(name)
