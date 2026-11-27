@@ -75,8 +75,6 @@ decisiones que salgan van a `DECISIONS.md`.
   nueva), y el margen que se pinta en tiempo libre puede retrasar una rueda que llegue justo entonces. Quedan el
   worker con OffscreenCanvas (sprites, mundo y capas registradas en otro hilo) o un relieve desde 8 px, que cambia la
   imagen; repintar por bandas se probó y se descartó (A18).
-- La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
-  sigue con los de Karpathy (D6).
 
 ## Más adelante
 

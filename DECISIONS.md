@@ -25,7 +25,7 @@ Quién: **David** = decidida por David; **Claude** = tomada en autónomo, pendie
 | 2026-11-26 | D14 | La entrada de djinnfoundry.com se integra y se despliega con la apertura del repo | «Ese sitio es nuestro» | David |
 | 2026-11-26 | D15 | El historial público es corto: el commit de Karpathy, «Publicación inicial de spainciv» (todo el trabajo previo en uno) y lo que venga después. El historial de desarrollo completo se conserva en el repo privado `DjinnFoundry/spainciv-dev-history` | Los commits antiguos contenían datos derivados de GISCO (solo uso no comercial) y datos personales; así no se publican | David (con otro agente) |
 | 2026-11-26 | D16 | Todos los despliegues (mapa y djinnfoundry.com) se hacen a mano con wrangler | GitHub Actions sin créditos y el runner propio caído | David |
-| 2026-11-26 | D6 | Los `web/data` de EE UU del repo siguen siendo los publicados por Karpathy | Regenerarlos cambia las añadas de datos, y nadie lo ha pedido | Claude |
+| 2026-11-26 | D6 | Los `web/data` de EE UU del repo siguen siendo los publicados por Karpathy | Regenerarlos cambia las añadas de datos (el 27/11, cinco ficheros: la fecha de FEMA, el bloque `country` de `world.json` y redondeos de `trade.json`). David lo confirmó el 27/11: el mapa de EE UU es el de Karpathy y no lo publicamos | David |
 
 ## Arquitectura
 
