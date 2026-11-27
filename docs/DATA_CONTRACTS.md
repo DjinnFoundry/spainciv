@@ -192,6 +192,11 @@ Also, per state:
   and counts in the state of its larger part. `sites` = number of mapped sites per type.
   `energy` is `null` if resources.json was not built.
 
+Spain's provinces also carry their autonomous community, `"community": {"code": "12", "name": "Galicia"}`: `code` is
+the INE community code (01–19, `pipeline/sources/es/provinces.py` `COMMUNITIES`, from INE table 69962) and `name` its
+INE name in reading order («Comunidad de Madrid», «Illes Balears», «Castilla - La Mancha»), the same in both languages.
+`check` accepts it on every state or on none; the US file has none.
+
 ## nation.json
 
 ```jsonc
@@ -805,7 +810,12 @@ Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/
 `layers` (roads, rail, forts, ports, airports, wonders and trade routes), `lang` (the language switch of a country in
 several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
-also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
+also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them;
+its second tab is the province album, `ext/game/album.js` and `albumPanel.js`, shown when every state has `community`.
+The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
+streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
+sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
+E84)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
 

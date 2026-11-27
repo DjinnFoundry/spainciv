@@ -53,6 +53,19 @@ decisiones que salgan van a `DECISIONS.md`.
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
 
+## Más adelante
+
+- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E84). Los datos están:
+  `wonders.json` tiene los 16 parques con sus límites del OAPN y sus hexágonos, y un mod puede añadir terrenos
+  `"type": "NaturalWonder"` en `jsons/Terrains.json` (`TileNormalizer` conserva el `naturalWonder` de una casilla si
+  el ruleset lo tiene). Lo que cuesta, visto en el código de Unciv 5.0.1: el tileset por defecto es HexaRealm, con
+  FantasyHex de reserva, y `TileLayerTerrain` se salta las imágenes que no existen, así que una maravilla sin imagen
+  propia sale como un hexágono vacío; hacen falta 16 imágenes, o una registrada con 16 nombres, y el atlas de
+  `pipeline/play.py` hoy guarda un icono por página. Rendimientos, `occursOn` y `turnsInto` de cada parque serían
+  convenciones del juego nuevas, a explicar en las páginas de jugar; `unciv.without_mod` tendría que quitarlas del
+  mapa sin mod y el arnés comprobar que cada maravilla sobrevive al editor. Toca los mismos ficheros que
+  `feat/unciv-comunidades` (`spain_unciv.py`, `play.py`, traducciones del mod): mejor después de que esa rama entre.
+
 ## Publicación
 
 - Despliegue del mapa a mano (`pipeline package --country es` y `wrangler pages deploy`, D16); automatizarlo cuando
@@ -61,4 +74,6 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Por decidir (David)
 
+- Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
+  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E84).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.
