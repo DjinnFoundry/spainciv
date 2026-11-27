@@ -6,7 +6,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
-- **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Se despeja al dejar el ratón sobre un hexágono, al pincharlo, al buscar una ciudad o al jugar al juego del día. Un panel cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con el porcentaje y permite empezar de nuevo. Lo explorado se guarda en el navegador. En castellano e inglés; el mapa de EE. UU. no lo tiene (A27).
+- **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A27).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

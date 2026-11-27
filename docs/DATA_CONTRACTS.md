@@ -809,8 +809,9 @@ also reads `personajes`, `wonders`, `resources` and `infrastructure` through `ap
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `explore` (the fog of war "España por
 descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
-the groups its progress panel counts by; the explored set and its storage are in `ext/explore/model.js`, the clouds in
-`ext/explore/fog.js`). The API:
+the groups its progress panel counts by; the explored set, its storage and the reveal radius are in
+`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`). The
+API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
@@ -854,6 +855,11 @@ off();   // or app.unregisterStaticLayer("roads" | layer)
   render at typical zooms (time it with `drawStatic(..., {layers: app.staticLayers(), timings: T})`: it reports
   `layer:<id>`); precompute geometry once (not per draw); cull to `vp`.
 * `app.staticLayers()` lists the registered layers; `app.hitLayer(mx, my)` (screen css px) → `{layer: id, item} | null`.
+
+**Overlays** (`app.registerOverlay({id, z, space: "world"|"screen", draw(ctx, cam, app), snapshot?}) → remove()`) draw
+every frame over the cached map, by z: below 0 they cover the map itself and the selection, the hover outline and
+`setHighlight` marks go over them (the fog of war, z −10); from 0 to 99 they go over those marks and under the city
+banners (the game's guesses, z 40); from 100 they go over the banners (the advisors' beacon, z 120).
 
 **Hover and click.** The hover tooltip asks the layers (highest z first, only those drawn at the current zoom) after the
 city banners: the first non-null `hit()` wins and its `tooltip(item)` is shown (the cell tooltip otherwise). The
