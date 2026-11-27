@@ -690,7 +690,7 @@ SOURCES = {
         "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
         "description": "Todas las vías de OpenStreetMap en España con railway=rail o railway=narrow_gauge que no son "
         "apartaderos, playas de vías ni ramales (sin etiqueta service), con su trazado simplificado a unos 50 m y sus "
-        "etiquetas de ancho, uso y operador, de una sola consulta guardada. Lo mapean voluntarios: el operador es el "
+        "etiquetas de ancho, uso, operador, alta velocidad y número de línea, de una sola consulta guardada. Lo mapean voluntarios: el operador es el "
         "que ponen ellos.",
         "used_for": ["Lente de horas a Madrid en tren: vías con tren y vías sin trenes de viajeros"],
     },

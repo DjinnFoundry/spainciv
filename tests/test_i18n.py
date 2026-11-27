@@ -427,6 +427,7 @@ class EnglishDataTest(unittest.TestCase):
         # stations and train lines as the timetables write them; the stop pairs check() lists by those names
         ("transit.json", ".stations[].name"), ("transit.json", ".stations[].best.to"),
         ("transit.json", ".stations[].best.legs[][]"), ("transit.json", ".matching.unmatched_pairs[][]"),
+        *(("transit.json", f".cuts[].{k}") for k in ("route", "from", "to")),  # a line cut that day, by its ends
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.

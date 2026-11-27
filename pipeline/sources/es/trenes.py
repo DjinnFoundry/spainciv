@@ -14,10 +14,10 @@ day. Buses in the feeds (route_type 3, or a route called "BUS") are not trains a
 
 The NAP (nap.transportes.gob.es) wants an `ApiKey` header, read from the NAP_API_KEY environment variable at fetch time
 only (it is never written to the repo or the manifest). Without it Ouigo comes from the Mobility Database copy of the
-same NAP file, and Renfe Feve is left out.
+same NAP file, and Renfe Feve's own file is left out (the Feve trains that Renfe's AV/LD file carries are still in).
 
 `osm_ferrocarril` is one cached Overpass query: every OpenStreetMap railway=rail or narrow_gauge way in Spain that is
-not a siding, yard or spur (no `service` tag), with its geometry simplified to about 50 m and four tags.
+not a siding, yard or spur (no `service` tag), with its geometry simplified to about 50 m and six tags.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ FEEDS = (
     Feed("ouigo", "Ouigo", "ouigo.zip", NAP + "1766", "Ouigo España, via the NAP of the Ministerio de Transportes", NAP_LICENCE,
          kind="ld", stop=uic_to_adif, nap_file=1766, mirror="https://files.mobilitydatabase.org/mdb-2785/latest.zip"),
     Feed("iryo", "Iryo", "iryo.zip", "https://deryclem.github.io/iryo-gtfs/gtfs-iryo.zip",
-         "Clément Desouche (deryclem/iryo-gtfs), from the timetables on iryo.eu", "CC BY 4.0 (the compilation)",
+         "Clément Desouche (clementdesouche.fr/gtfs), from the timetables on iryo.eu", "CC BY 4.0 (the compilation)",
          kind="ld", unofficial=True),
     Feed("renfe_feve", "Renfe Feve", "renfe_feve.zip", NAP + "1131", "Renfe Operadora (Feve), via the NAP of the Ministerio de Transportes",
          NAP_LICENCE, kind="cer", group=lambda route: route[:2], nap_file=1131, optional=True),
@@ -246,7 +246,7 @@ def _long(d: date) -> str:
 RAIL_QUERY = ('[out:json][timeout:900];area["ISO3166-1"="ES"][admin_level=2]->.es;'
               'way["railway"~"^(rail|narrow_gauge)$"][!"service"](area.es);out geom;')
 RAIL_FILE = "railways.json"
-RAIL_TAGS = ("railway", "gauge", "usage", "operator")
+RAIL_TAGS = ("railway", "gauge", "usage", "operator", "highspeed", "ref")
 SIMPLIFY_DEG = 0.0005  # ~50 m, far finer than a 10 km hex
 
 
@@ -258,7 +258,7 @@ class OsmFerrocarril(Source):
         homepage="https://wiki.openstreetmap.org/wiki/Key:railway",
         license="ODbL 1.0 (© OpenStreetMap contributors)",
         description="Every OpenStreetMap way in Spain tagged railway=rail or railway=narrow_gauge that is not a siding, "
-        "yard or spur (no service tag), with its line simplified to about 50 m and its gauge, usage and operator tags. "
+        "yard or spur (no service tag), with its line simplified to about 50 m and its gauge, usage, operator, highspeed and ref tags. "
         "Volunteer-mapped: operator tags are the mappers'.",
         used_for=["Hours to Madrid by train lens: passenger and unused track"],
     )
