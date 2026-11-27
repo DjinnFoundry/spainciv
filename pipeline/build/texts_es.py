@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 
 from ..core.lang import Text, num, pct, tr  # noqa: F401  (num and pct re-exported for the builders: Spanish by default)
+from ..sources.es.censos_fauna import WOLF_PAGE
+from ..sources.es.especies import ART12_PAGE
 
 # Spain's site is in Spanish and English (core/lang.py): every text here is a Text, the English written for Spain.
 YIELD_LABELS = {"food": tr("Comida", "Food"), "production": tr("Producción", "Production"), "gold": tr("Oro", "Gold"),
@@ -621,11 +623,12 @@ SOURCES = {
         "Directiva de Hábitats y del artículo 12 de la Directiva de Aves, cuadrícula de 10 km)",
         "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO): Banco de Datos de la "
         "Naturaleza, Inventario Español del Patrimonio Natural y de la Biodiversidad",
-        "license": "CC BY 4.0, nombrando la fuente: Ministerio para la Transición Ecológica y el Reto Demográfico",
+        "license": _REUSE,
         "description": "Las cuadrículas de 10 km de la red de referencia europea (ETRS89-LAEA) donde España notificó cada "
         "especie de la Directiva de Hábitats y cada ave reproductora de la Directiva de Aves en sus informes sexenales a "
         "la UE. El mapa lee las del lince ibérico, el oso pardo, el lobo, el águila imperial ibérica y el "
-        "quebrantahuesos: cada hexágono muestra qué parte de su superficie cae en ellas.",
+        "quebrantahuesos: cada hexágono muestra qué parte de su superficie cae en ellas. El zip del artículo 17 se "
+        f"enlaza desde la página de arriba; el del artículo 12, desde {ART12_PAGE}.",
         "used_for": ["Lentes de fauna"],
     },
     "miteco_censos_fauna": {
@@ -633,8 +636,10 @@ SOURCES = {
         "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), con las comunidades "
         "autónomas",
         "license": _REUSE,
-        "description": "El censo de lince ibérico de 2025 (España y Portugal) y el censo de lobo de 2021-2024 (manadas y "
-        "cuadrículas de 10 km con presencia), en PDF. El mapa cita sus totales y las comunidades que nombran junto a las "
+        "description": "El censo de lince ibérico de 2025 (España y Portugal) y el censo de lobo de 2021-2024 (manadas, y "
+        "cuadrículas de 10 km con presencia en 2019-2024), en PDF, enlazados desde la página de mamíferos del "
+        f"Inventario Español de Especies Terrestres; los resultados del lobo tienen además su propia página ({WOLF_PAGE}). "
+        "El mapa cita sus totales y las comunidades que nombran junto a las "
         "cuadrículas de 2013-2018 de las lentes de fauna, que son anteriores.",
         "used_for": ["Lentes de fauna (lince y lobo)"],
     },

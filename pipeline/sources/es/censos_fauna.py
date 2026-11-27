@@ -6,7 +6,7 @@ The figures are transcribed from the PDFs into CENSUSES, with their page: the st
 reliably (the precedent is the hand-transcribed fiestas_autonomicas.csv). `fetch` caches both PDFs so the Almanac
 cites them with their checksums, and `process` fails if either file is no longer the one transcribed (SHA256), so a
 replaced PDF is re-read before the map repeats its old figures. The censuses' maps are pictures and are not used as
-geometry (DECISIONS.md F36).
+geometry (DECISIONS.md F38).
 """
 
 from __future__ import annotations
@@ -17,6 +17,12 @@ from ...core.source import Source, SourceInfo
 
 DAM = "https://www.miteco.gob.es/content/dam/miteco/es/biodiversidad/temas/inventarios-nacionales/"
 LYNX_URL = DAM + "lince/censolinceiberico2025.pdf"
+# The Inventario Español de Especies Terrestres page for mammals links every lynx census and both wolf censuses;
+# WOLF_PAGE has the 2021-2024 wolf results.
+HOMEPAGE = ("https://www.miteco.gob.es/es/biodiversidad/temas/inventarios-nacionales/inventario-especies-terrestres/"
+            "ieet_mamiferos.html")
+WOLF_PAGE = ("https://www.miteco.gob.es/es/biodiversidad/temas/inventarios-nacionales/inventario-especies-terrestres/"
+             "ieet-mamiferos-censo-lobo-2024.html")
 WOLF_URL = DAM + "ieet/mamiferos/lobo/Censo_nacional_Lobo_2021_2024.pdf"
 
 # Scientific name (as especies.SPECIES) → the census, transcribed. `communities` are INE community codes
@@ -37,9 +43,9 @@ CENSUSES = {
         # 193, Cantabria 23, Asturias 45, Euskadi 2, La Rioja 5, Madrid 5, Castilla-La Mancha 4, Extremadura 1.
         "figure": 333, "unit": "packs", "page": "4-6",
         "communities": ["12", "07", "06", "03", "16", "17", "13", "08", "11"],
-        # p. 4: distribution 2019-2024, 10 km squares (ETRS89-LAEA) of stable and of sporadic presence (Aragón,
-        # Cataluña). The census map (Figura 1, p. 5) is published only as a picture.
-        "stable_cells": 1357, "sporadic_cells": 37,
+        # p. 4: distribution 2019-2024 (a longer period than the packs'), 10 km squares (ETRS89-LAEA) of stable and of
+        # sporadic presence (Aragón, Cataluña). The census map (Figura 1, p. 5) is published only as a picture.
+        "cells_period": "2019-2024", "stable_cells": 1357, "sporadic_cells": 37,
     },
 }
 
@@ -54,12 +60,13 @@ class CensosFauna(Source):
         title="National censuses of the Iberian lynx (2025) and the wolf (2021-2024)",
         publisher="Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), with the autonomous "
         "communities",
-        homepage="https://www.miteco.gob.es/es/biodiversidad/temas/inventarios-nacionales/inventario-especies-terrestres/"
-        "ieet-mamiferos-censo-lobo-2024.html",
+        homepage=HOMEPAGE,
         license="Public-sector information, reusable citing the source (Ley 37/2007)",
-        description="The Iberian lynx census of 2025 (Spain and Portugal) and the wolf census of 2021-2024 (packs and "
-        "10 km squares of presence), as PDF reports. The map quotes their totals and the autonomous communities they "
-        "name beside the older distribution squares of the wildlife lenses.",
+        description="The Iberian lynx census of 2025 (Spain and Portugal) and the wolf census of 2021-2024 (packs, and "
+        "10 km squares of presence for 2019-2024), as PDF reports linked from the mammals page of the Inventario "
+        f"Español de Especies Terrestres; the wolf results also have their own page ({WOLF_PAGE}). The map quotes "
+        "their totals and the autonomous communities they name beside the older distribution squares of the wildlife "
+        "lenses.",
         used_for=["Wildlife lenses (lynx and wolf)"],
     )
 

@@ -1,4 +1,4 @@
-"""Where five of Spain's best-known wild animals live: the 10 km squares where Spain reported them to the European Union
+"""Where five of Spain's best-known wild animals were reported: the 10 km squares where Spain reported them to the European Union
 for 2013-2018 (Ministerio para la Transición Ecológica y el Reto Demográfico, Banco de Datos de la Naturaleza).
 
 Every six years each member state reports the distribution of the species of the Habitats Directive (art. 17: lynx,
@@ -7,7 +7,7 @@ on the EEA 10 km reference grid in ETRS89-LAEA (EPSG:3035). MITECO publishes eac
 records carry the code of their square (`CellCode10`, e.g. "10kmE316N182"), so only the table (.dbf) is read,
 streamed from the zip: no polygon is needed to know which square a record is. Process keeps SPECIES and fails if any
 of their records is marked sensitive, is not a distribution record or names a square in another form. Rules:
-DECISIONS.md E84 and F35.
+DECISIONS.md E90 and F37.
 """
 
 from __future__ import annotations
@@ -25,8 +25,11 @@ REPORTS = {
     "art17": (DAM + "espacios-protegidos/es_art17_speciesdistrib_laea_tcm30-508255.zip", "Especie"),
     "art12": (DAM + "conservacion-de-especies/es_art12_birdsdistrib_laea_tcm30-508242.zip", "Nombre"),
 }
+# The pages that link each zip: the art. 17 report (HOMEPAGE, cited as the source's page) and the art. 12 report.
 HOMEPAGE = ("https://www.miteco.gob.es/es/biodiversidad/temas/espacios-protegidos/red-natura-2000/"
             "rn_cons_seguimiento_art17_inf_2013_2018.html")
+ART12_PAGE = ("https://www.miteco.gob.es/es/biodiversidad/temas/conservacion-de-especies/especies-proteccion-especial/"
+              "2-3-ce-informes-sexenales-19.html")
 PERIOD = [2013, 2018]
 # The species the map shows, by scientific name as the reports write it, and the report each one is in.
 SPECIES = {"Lynx pardinus": "art17", "Ursus arctos": "art17", "Canis lupus": "art17", "Aquila adalberti": "art12",
@@ -82,10 +85,13 @@ class Especies(Source):
         publisher="Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO): Banco de Datos de la "
         "Naturaleza, Inventario Español del Patrimonio Natural y de la Biodiversidad",
         homepage=HOMEPAGE,
-        license="CC BY 4.0, naming the source: Ministerio para la Transición Ecológica y el Reto Demográfico",
+        # Neither page states a licence; MITECO's legal notice puts its content under Ley 37/2007.
+        license="Public-sector information, reusable citing the source (Ley 37/2007)",
         description="The 10 km squares of the EEA reference grid (ETRS89-LAEA) where Spain reported each species of the "
         "Habitats Directive and each breeding bird of the Birds Directive in its six-year reports to the EU. The map "
-        "reads the squares of the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture.",
+        "reads the squares of the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture. The art. "
+        "17 zip is linked from the page above, the art. 12 zip from MITECO's page for the 2013-2018 Birds Directive "
+        "report.",
         used_for=["Wildlife lenses"],
     )
 
@@ -101,7 +107,7 @@ class Especies(Source):
                 for name, sp in species_cells(zf, name_field, wanted).items():
                     species[name] = {"directive": article, **sp}
         return {
-            "vintage": f"MITECO (BDN), art. 17 / art. 12, {PERIOD[0]}-{PERIOD[1]}",
+            "vintage": f"MITECO (BDN), {PERIOD[0]}-{PERIOD[1]}",  # each lens's note names its article
             "_files": [file(a) for a in REPORTS],
             "period": PERIOD,
             "grid": "EEA 10 km, ETRS89-LAEA (EPSG:3035)",

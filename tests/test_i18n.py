@@ -466,6 +466,7 @@ class EnglishDataTest(unittest.TestCase):
                    r"Portal Estadístico de Criminalidad|Policía (?:Nacional|Foral de Navarra)|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
                    r"Banco de Datos de la Naturaleza|Inventario Español del Patrimonio Natural y de la Biodiversidad|"
+                   r"Inventario Español de Especies Terrestres|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",
                    re.I),
