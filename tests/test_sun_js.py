@@ -1,4 +1,4 @@
-"""The sunset lens (web/js/ext/sun/solar.js): the sun's times against NOAA's calculator, Spain's clocks and summer
+"""The sun lens (web/js/ext/sun/solar.js): the sun's times against NOAA's calculator, Spain's clocks and summer
 time, and the lens on Spain's hexes (web/js/geo.js gives each hex's longitude and latitude). Run with node; skipped
 without it."""
 
@@ -56,7 +56,7 @@ NOAA = {
     ("Las Palmas", "2026-09-23"): ("07:51", "13:54", "19:57"),
     ("Las Palmas", "2026-12-21"): ("07:49", "13:00", "18:11"),
 }
-TOLERANCE = 2  # minutes
+TOLERANCE = 1  # minute: NOAA's own claim for its equations, which the lens description repeats
 
 
 def run(body: str):
@@ -113,12 +113,31 @@ class ClockTest(unittest.TestCase):
 
     def test_days_from_the_url_and_the_clock_format(self):
         got = run("""
-            out([['2026-06-21', '2024-02-29', '2026-02-29', '2026-13-01', '2026-6-21', 'hoy', '', null, '1900-01-01']
+            out([['2026-06-21', '2024-02-29', '2026-02-29', '2026-13-01', '2026-6-21', 'hoy', '', null, '1900-01-01',
+                  '1995-10-15', '1996-01-01', '2099-12-31', '2100-01-01']
                    .map((v) => S.parseDay(v) && S.isoDay(S.parseDay(v))),
-                 [0, 59.5, 1321, 1439.6, -1].map(clock), S.localDay(new Date(2026, 5, 21, 23, 59))]);
+                 [0, 59.5, 1321, 1439.6, -1].map(clock)]);
         """)
-        self.assertEqual(got, [["2026-06-21", "2024-02-29", None, None, None, None, None, None, None],
-                               ["00:00", "01:00", "22:01", "00:00", "23:59"], {"y": 2026, "m": 6, "d": 21}])
+        self.assertEqual(got, [["2026-06-21", "2024-02-29", None, None, None, None, None, None, None,
+                                None, "1996-01-01", "2099-12-31", None],
+                               ["00:00", "01:00", "22:01", "00:00", "23:59"]])
+
+    def test_the_clock_holds_from_1996(self):
+        # Summer time ended on the last Sunday of September until 1995; from 1996 on the last Sunday of October
+        # (27 October 1996), so 26 October 1996 is still summer time and 1995 is refused.
+        got = run("out([S.FIRST_YEAR, S.parseDay('1995-10-15'), S.clockOf('CE', day('1996-10-26')).abbr, "
+                  "S.clockOf('CE', day('1996-10-27')).abbr, S.clockOf('WE', day('1996-10-26')).abbr]);")
+        self.assertEqual(got, [1996, None, "CEST", "CET", "WEST"])
+
+    def test_today_is_spains_date_whatever_the_browsers_zone(self):
+        # 23:30 UTC on 27 November is already the 28th in Madrid; 22:59 UTC on 30 June is 00:59 on 1 July (CEST).
+        got = run("out(['2026-11-27T23:30:00Z', '2026-11-27T22:59:00Z', '2026-06-30T22:59:00Z', '2026-12-31T23:00:00Z']"
+                  ".map((x) => S.isoDay(S.spainToday(new Date(x)))));")
+        self.assertEqual(got, ["2026-11-28", "2026-11-27", "2026-07-01", "2027-01-01"])
+
+    def test_modes_from_the_url(self):
+        got = run("out([...Object.values(S.MODE_SLUG), 'sunset', 'toString', '', null].map(S.parseMode));")
+        self.assertEqual(got, ["sunset", "sunrise", "day", "noon", None, None, None, None])
 
 
 @unittest.skipUnless(NODE, "node is not installed")
@@ -166,6 +185,22 @@ class SpainLensTest(unittest.TestCase):
         # In December the latest sunrise is in the far west too; the longest summer day in the far north.
         self.assertLess(got["2026-12-21 sunrise"]["highLon"], -9)
         self.assertGreater(got["2026-06-21 day"]["diff"], 60)
+
+    def test_extremes_by_zone(self):
+        # 21 December: the earliest sunset is on the Costa Brava (CET) and the latest in El Hierro (WET); on Central
+        # European Time alone the latest is in the south-west, an hour less of spread than with the Canaries' clock.
+        got = run("""
+            const { points, place } = spain();
+            const l = S.sunLayer(points, 1 + points.at(-1).cell, day('2026-12-21'), 'sunset');
+            const f = (x) => [place(x.cell), x.abbr, x.value];
+            out({ low: f(l.low), high: f(l.high), ceLow: f(l.zones.CE.low), ceHigh: f(l.zones.CE.high), weLow: f(l.zones.WE.low) });
+        """)
+        self.assertEqual(got["low"][:2], ["El Port de la Selva", "CET"])
+        self.assertEqual(got["high"][:2], ["El Pinar de El Hierro", "WET"])
+        self.assertEqual(got["ceLow"], got["low"])
+        self.assertEqual(got["ceHigh"][1], "CET")
+        self.assertLess(got["ceHigh"][2], got["high"][2])
+        self.assertEqual(got["weLow"][1], "WET")
 
 
 if __name__ == "__main__":

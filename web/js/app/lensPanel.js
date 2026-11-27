@@ -1,4 +1,4 @@
-// A lens built in the browser that comes with a panel in the left dock (the fiesta calendar, the sunset lens): picking
+// A lens built in the browser that comes with a panel in the left dock (the fiesta calendar, the sun lens): picking
 // the lens opens the panel, and closing either closes both. The panel is an app mode, so Esc closes it too.
 //
 //   const panel = lensPanel(app, lens, {mode, width, open(dock), close()})

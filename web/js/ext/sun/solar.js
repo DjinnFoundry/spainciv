@@ -1,4 +1,4 @@
-// Sunrise, sunset, solar noon and day length on Spain's official clocks, for the lens "Atardecer" (index.js).
+// Sunrise, sunset, solar noon and day length on Spain's official clocks, for the lens "Sol y reloj" (index.js).
 // No DOM, so tests/test_sun_js.py runs it in node.
 //
 // The sun: the NOAA solar position equations (NOAA Global Monitoring Laboratory, "Solar Calculation Details",
@@ -10,7 +10,9 @@
 // The clock: Central European Time (UTC+1) in the peninsula, the Balearic Islands, Ceuta and Melilla; Western European
 // Time (UTC+0) in the Canary Islands; summer time (+1 h) by the EU rule (Directive 2000/84/EC), from 01:00 UTC on the
 // last Sunday of March to 01:00 UTC on the last Sunday of October. Sunrise and sunset in Spain are always well after
-// 01:00 UTC, so the date alone says which offset they read.
+// 01:00 UTC, so the date alone says which offset they read. The rule holds from 1996 (that year and the next the EU's
+// directive said the fourth Sunday of October, which both years was the last); from 1981 to 1995 summer time ended
+// in September, so days before 1996 are refused rather than shown an hour off.
 
 const RAD = Math.PI / 180;
 const DAY_MIN = 1440;
@@ -20,11 +22,19 @@ const SUN_ZENITH = 90.833; // degrees: the sun's upper edge on the horizon, refr
 export const MODES = ["sunset", "sunrise", "day", "noon"];
 /** Their names in the URL (#sol=puesta). */
 export const MODE_SLUG = { sunset: "puesta", sunrise: "salida", day: "dia", noon: "mediodia" };
+const SLUG_MODE = Object.fromEntries(Object.entries(MODE_SLUG).map(([m, s]) => [s, m]));
+/** The mode a URL names ("puesta" → "sunset"), or null. */
+export const parseMode = (v) => (Object.hasOwn(SLUG_MODE, String(v)) ? SLUG_MODE[v] : null);
 
 // --- dates ---------------------------------------------------------------------------------------------------------
 
-/** {y, m, d} of a local Date. */
-export const localDay = (date = new Date()) => ({ y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+/** The years the clock model holds (see above). */
+export const FIRST_YEAR = 1996;
+export const LAST_YEAR = 2099;
+
+/** Today in Spain: the date on the peninsula's clocks (Europe/Madrid), whatever the browser's time zone. */
+export const spainToday = (date = new Date()) =>
+  parseDay(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(date));
 
 const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 
@@ -33,7 +43,7 @@ export function parseDay(v) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v ?? ""));
   if (!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
-  return y >= 1901 && y <= 2099 && mo >= 1 && mo <= 12 && d >= 1 && d <= daysIn(y, mo) ? { y, m: mo, d } : null;
+  return y >= FIRST_YEAR && y <= LAST_YEAR && mo >= 1 && mo <= 12 && d >= 1 && d <= daysIn(y, mo) ? { y, m: mo, d } : null;
 }
 
 /** "2026-06-21". */
@@ -131,19 +141,24 @@ export function sunDay(day, lat, lon) {
 // --- the lens ------------------------------------------------------------------------------------------------------
 
 /** For each hex in `points` ([{cell, lat, lon}]) on a grid of `n` hexes: its day (sunDay) on `day`, `values` = the
- *  `mode`'s minutes (null off the points), and the hexes with the lowest and highest value (`low`, `high`: {cell,
- *  value}). A tie on the minute goes to the exact time, so the extremes are the real first and last hexes. */
+ *  `mode`'s minutes (null off the points), the hexes with the lowest and highest value (`low`, `high`: {cell, value,
+ *  zone, abbr}) and the same within each zone (`zones.CE`, `zones.WE`: {low, high}). A tie on the minute goes to the exact
+ *  time, so the extremes are the real first and last hexes. */
 export function sunLayer(points, n, day, mode) {
   const days = new Array(n).fill(null);
   const values = new Array(n).fill(null);
-  let low = null, high = null;
+  const zones = {};
   for (const p of points) {
     const s = sunDay(day, p.lat, p.lon);
     days[p.cell] = s;
     values[p.cell] = s[mode];
-    const x = s.exact[mode];
-    if (!low || x < low.exact) low = { cell: p.cell, value: s[mode], exact: x };
-    if (!high || x > high.exact) high = { cell: p.cell, value: s[mode], exact: x };
+    const x = s.exact[mode], zone = zoneOf(p.lon), z = (zones[zone] ??= { low: null, high: null });
+    const here = { cell: p.cell, value: s[mode], zone, abbr: s.abbr, exact: x };
+    if (!z.low || x < z.low.exact) z.low = here;
+    if (!z.high || x > z.high.exact) z.high = here;
   }
-  return { days, values, low, high };
+  const all = Object.values(zones);
+  const low = all.reduce((a, z) => (!a || z.low.exact < a.exact ? z.low : a), null);
+  const high = all.reduce((a, z) => (!a || z.high.exact > a.exact ? z.high : a), null);
+  return { days, values, low, high, zones };
 }

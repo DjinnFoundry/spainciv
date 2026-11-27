@@ -880,6 +880,16 @@ const RAW = {
       F(circle(12, 15.4, 6.8) + star(12, 15.6, 4, 0.42)),
     ],
   },
+  'l-sunset': {
+    // half a sun on the horizon, its rays, and the ground below
+    bg: '#7a3a4a',
+    paths: [
+      TS('M12 3v3.4M4.6 6.6l2.4 2.4M19.4 6.6L17 9M1.8 13.4h3.4M18.8 13.4h3.4', 2),
+      F('M5.4 16a6.6 6.6 0 0 1 13.2 0Z'),
+      S('M1.8 16.2h20.4', 2.2),
+      TS('M5.4 20h13.2', 1.6),
+    ],
+  },
   // lens groups (ui/lenses.js and ui/pedia.js look up `g-<group id>`)
   'g-faith': {
     bg: '#5a3a7a',
