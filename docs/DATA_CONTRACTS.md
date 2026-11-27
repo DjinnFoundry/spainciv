@@ -267,7 +267,7 @@ Nacional fiesta has those of its community's entries for the same fiesta (`state
 (`["rail"]` for the train lens, which draws its own network). No US lens sets it.
 
 **`transit.json`** (Spain, `pipeline/build/spain_transit.py`; loaded by `web/js/ext/transit` the first time the lens
-`rail_madrid` opens; 736 kB, 86 kB gzipped, on the timetable of 9 December 2026):
+`rail_madrid` opens; 744 kB, 86 kB gzipped, on the timetable of 9 December 2026):
 
 ```jsonc
 {"version": 1, "vintage": "Horarios de Renfe, Ouigo e Iryo del miércoles 9 de diciembre de 2026",
@@ -286,17 +286,26 @@ Nacional fiesta has those of its community's entries for the same fiesta (`state
                "trains": [35, 50, 130],        // distinct trains one can board there that day, by kind (ld, md, cer)
                "madrid": true,                  // only on a station inside the municipality of Madrid (best is null)
                "best": null | {"min": 156, "dep": "15:33", "arr": "18:09", "to": "Madrid-Puerta de Atocha-Almudena Grandes",
-                               "changes": 0, "legs": [["AVE", "02151", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha-Almudena Grandes"]]}}],
- "links": [[a, b, trains]],   // hex links (a < b, neighbours) with passenger trains that day
- "ghost": [[a, b]],            // Adif track with none
- "matching": {"pairs": 1985, "abroad": 22, "unmatched": 15, "unmatched_pairs": [["Antequera AV", "Málaga María Zambrano"]]}}
+                               "changes": 0,   // changes of train (a walk is not one)
+                               "legs": [["AVE 02151", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha-Almudena Grandes"]]}}],
+                               // a leg: [train label | null, from, to]; null is a walk ("a pie a …"), also a first one
+ "links": [[a, b, trains]],   // hex links (a < b, neighbours) with passenger trains that day, each train once
+ "ghost": [[a, b]],            // Adif track with none (E86)
+ "matching": {"pairs": 1985, "abroad": 16, "unmatched": 16, "unmatched_pairs": [["Antequera AV", "Málaga María Zambrano"]],
+              "ghost_runs": 8, "near_unmatched": 13, "short_runs": 38, "hs_ghost": 0},
+ "cuts": [{"route": "R3", "from": "La Garriga", "to": "La Tor de Querol-Enveig"}]}  // lines with no journey to Madrid that day
 ```
 
-Stations are sorted by trains, most first, and their names, `to` and `legs` are written as the feeds write them (E72).
+Stations are sorted by trains, most first, and their names, `to` and `legs` are written as the feeds write them (E72);
+a leg's label is the route and number, or the operator for Ouigo and Iryo ("Ouigo 6540", "Iryo 06083"). A station is in
+Spain when its stop lies inside a SIANE municipality or within 500 m of one; one where no train can be boarded is left
+out, except in Madrid.
 The lens texts, rules, kinds and feed names are `Text` (overlay `transit.en.json`). `check` fails a link that is not
 between neighbours or has a foreign end, a link both served and ghost, a station off land, a negative minute, a `values`
 or `station` array of another length than the grid, a cell whose station and value disagree, and a journey faster than
-the straight line at 350 km/h; it notes the coverage, the unmatched stop pairs and the file size.
+the straight line at 350 km/h, a station with no train to board outside Madrid, and any `hs_ghost` (a high-speed ghost
+link beside served high-speed track of the same line); it notes the coverage, the unmatched stop pairs, a feed whose
+file ends less than 7 days after the day, and the file size.
 
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
@@ -844,7 +853,8 @@ also reads `personajes`, `wonders`, `resources` and `infrastructure` through `ap
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `transit` (hours to Madrid by train,
 only where the data has `transit.json`: lens `rail_madrid` with `hides_layers: ["rail"]`, static layers `transit-lines` (z 56)
-and `transit-stations` (z 65), e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`). The API:
+and `transit-stations` (z 69, above the landmark layers so its dots win the hit), both with a `click` that shows the
+tooltip on a touch or pen tap, e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded

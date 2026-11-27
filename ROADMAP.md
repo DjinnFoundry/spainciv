@@ -43,9 +43,13 @@ decisiones que salgan van a `DECISIONS.md`.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
 - Tren a Madrid (E84–E87): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
-  cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026,
-  y Renfe Feve no entra, así que la vía métrica sin tren no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y
-  tranvías. 15 pares de paradas no casan con las vías de OpenStreetMap.
+  cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026
+  (`check` lo avisa), y el fichero propio de Renfe Feve no entra: cuentan los trenes de Feve del fichero AV/LD de
+  Renfe, pero la vía métrica sin tren en ese fichero no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y tranvías.
+  16 pares de paradas no casan con las vías de OpenStreetMap y su vía no se dibuja (Granada–Guadix, Murcia–Alhama–
+  Totana–Lorca, Antequera AV–Málaga, entre otros); hay que compararlos con la declaración sobre la red de Adif antes
+  de publicar. Ese día la R3 solo tiene trenes de La Garriga al norte y desde 56 estaciones con tren no se llega a
+  Madrid; la nota lo dice, sin la causa, que el horario no da.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.

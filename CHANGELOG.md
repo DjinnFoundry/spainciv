@@ -11,9 +11,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   línea recta. Cuenta los trenes de Renfe (alta velocidad, larga y media distancia, Cercanías y Rodalies), Ouigo e Iryo,
   con 10 minutos para cambiar de tren y paseos de hasta 1,5 km entre estaciones. Sevilla queda a 2 h 36, Barcelona-Sants
   a 3 h 02, Gandia a 3 h 28 y Almería a 6 h 44; el 70 % de los hexágonos de tierra tiene dato. Con la lente abierta se
-  ven las 1.439 estaciones (el tooltip da sus trenes del día y el mejor viaje), las vías con tren, más gruesas cuantas
-  más trenes llevan, y 143 tramos de vía de Adif sin trenes de viajeros ese día, a trazos. El enlace es
-  `#lens=rail_madrid`. El mapa de EE. UU. no cambia (E84–E87, F35, F36, A27).
+  ven las 1.437 estaciones (el tooltip da sus trenes del día y el mejor viaje, también si empieza andando a otra
+  estación; en el móvil sale al tocarla), las vías con tren, más gruesas cuantas más trenes llevan, y 63 enlaces de
+  hexágono de vía de Adif sin trenes de viajeros ese día (8 tramos), a trazos. El enlace es `#lens=rail_madrid`. El
+  mapa de EE. UU. no cambia (E84–E87, F35, F36, A27).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

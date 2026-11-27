@@ -68,8 +68,9 @@ uv run --locked python -m unittest discover -s tests   # Python tests and browse
 ```
 
 The Ouigo and Renfe Feve timetables come from the Ministry of Transport's NAP, which wants a free account's key:
-set `NAP_API_KEY` before `fetch horarios_tren --country es`. Without it Ouigo comes from a public copy and Feve is
-left out. The key is read at fetch time only and never written to the repo.
+set `NAP_API_KEY` before `fetch horarios_tren --country es`. Without it Ouigo comes from a public copy and Renfe
+Feve's own file is left out: the Feve trains in Renfe's AV/LD file still count, but metre-gauge track with no train in
+that file is not drawn. The key is read at fetch time only and never written to the repo.
 
 `pipeline/countries/` holds what makes a map one country or the other (projection, hex size, administrative levels,
 currency); Spain's sources are in `pipeline/sources/es/` and its builders in `pipeline/build/spain*.py`. How the
