@@ -18,7 +18,7 @@ from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from .infrastructure import RAIL_MAIN_SCALERANK, RAIL_MAX_SCALERANK, RAIL_TIERS, SAMPLE_KM, build_rail, build_roads
 from .spain_wonders import Placer
-from .texts_es import HUBS, num, vintage
+from .texts_es import HUBS, tr, vintage
 from .texts_es import RAIL_TIERS as RAIL_TIER_NAMES
 
 REQUIRES = ["_world", "natural_earth_roads_es", "natural_earth_es", "aena_airports", "puertos_estado", "cities.json",
@@ -27,21 +27,35 @@ PRODUCES = ["infrastructure.json"]
 COUNTRIES = ("es",)
 
 MAIN_MAX_SCALERANK = 7
-ROAD_CLASSES = [{"id": "interstate", "name": "Autovía o autopista"}, {"id": "major", "name": "Carretera principal"}]
+ROAD_CLASSES = [{"id": "interstate", "name": tr("Autovía o autopista", "Motorway")},
+                {"id": "major", "name": tr("Carretera principal", "Main road")}]
 RULES = {
-    "roads": f"Carreteras de Natural Earth 1:10m en España, muestreadas cada {num(SAMPLE_KM)} km y ajustadas a enlaces entre "
-             "centros de hexágono. Clase 0: todas las autovías y autopistas (las carreteras principales de Natural Earth "
-             f"marcadas como vías rápidas). Clase 1: las demás carreteras de rango de escala {MAIN_MAX_SCALERANK} o menos de "
-             "Natural Earth, donde ninguna autovía une ya los mismos dos hexágonos. Los tramos sobre países vecinos se "
-             "descartan.",
-    "rail": f"Ferrocarriles de Natural Earth 1:10m de rango de escala {RAIL_MAX_SCALERANK} o menos, muestreados cada "
-            f"{num(SAMPLE_KM)} km y ajustados a enlaces entre centros de hexágono; el nivel 0 (línea principal) es el rango "
-            f"de escala {RAIL_MAIN_SCALERANK} o menos. Natural Earth solo recoge las líneas principales y no trae datos de "
-            "tráfico.",
-    "ports": "Las 28 Autoridades Portuarias de Puertos del Estado por tráfico total de mercancías, cada una en la zona de "
-             "servicio terrestre de su puerto más grande.",
-    "airports": "Todos los aeropuertos y helipuertos de la red de AENA, clasificados como los hubs de la FAA según su "
-                "cuota de los pasajeros de España (grande, 1 % o más; mediano, 0,25 %; pequeño, 0,05 %; el resto, no hub).",
+    "roads": tr(
+        "Carreteras de Natural Earth 1:10m en España, muestreadas cada {km} km y ajustadas a enlaces entre centros de "
+        "hexágono. Clase 0: todas las autovías y autopistas (las carreteras principales de Natural Earth marcadas como "
+        "vías rápidas). Clase 1: las demás carreteras de rango de escala {main} o menos de Natural Earth, donde ninguna "
+        "autovía une ya los mismos dos hexágonos. Los tramos sobre países vecinos se descartan.",
+        "Natural Earth 1:10m roads in Spain, sampled every {km} km and snapped to links between hex centres. Class 0: "
+        "every motorway (Natural Earth major highways marked as expressways). Class 1: the other Natural Earth roads of "
+        "scale rank {main} or less, where no motorway already links the same two hexes. Stretches over neighbouring "
+        "countries are dropped.").format(km=SAMPLE_KM, main=MAIN_MAX_SCALERANK),
+    "rail": tr(
+        "Ferrocarriles de Natural Earth 1:10m de rango de escala {max} o menos, muestreados cada {km} km y ajustados a "
+        "enlaces entre centros de hexágono; el nivel 0 (línea principal) es el rango de escala {main} o menos. Natural "
+        "Earth solo recoge las líneas principales y no trae datos de tráfico.",
+        "Natural Earth 1:10m railways of scale rank {max} or less, sampled every {km} km and snapped to links between hex "
+        "centres; tier 0 (main line) is scale rank {main} or less. Natural Earth only has the main lines and no traffic "
+        "data.").format(max=RAIL_MAX_SCALERANK, km=SAMPLE_KM, main=RAIL_MAIN_SCALERANK),
+    "ports": tr(
+        "Las 28 Autoridades Portuarias de Puertos del Estado por tráfico total de mercancías, cada una en la zona de "
+        "servicio terrestre de su puerto más grande.",
+        "The 28 Port Authorities of Puertos del Estado by total cargo traffic, each in the land service area of its "
+        "largest port."),
+    "airports": tr(
+        "Todos los aeropuertos y helipuertos de la red de AENA, clasificados como los hubs de la FAA según su cuota de los "
+        "pasajeros de España (grande, 1 % o más; mediano, 0,25 %; pequeño, 0,05 %; el resto, no hub).",
+        "Every airport and heliport in the AENA network, classed like the FAA hubs by their share of Spain's passengers "
+        "(large, 1% or more; medium, 0.25%; small, 0.05%; the rest, no hub class)."),
 }
 
 

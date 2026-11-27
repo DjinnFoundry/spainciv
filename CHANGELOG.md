@@ -6,6 +6,17 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
+  castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
+  enlace que se comparte la lleva (`#lang=en`).
+  - Interfaz, lentes, Almanaque, consejeros, fuentes, maravillas, recursos, distritos, personajes y la página de
+    Unciv (`play.html`) están en los dos idiomas.
+  - Los nombres propios se quedan como los escribe su fuente.
+  - Los números siguen al idioma: «1,6 B €» en castellano y «€1.6T» en inglés.
+  - Las capas inglesas pesan unos 80 kB comprimidas, 38 kB sin la de personajes, que solo se carga al abrir sus
+    lentes. No repiten ningún valor (A20–A24, E72).
+- Los ficheros de datos que España no tiene (los del Ejército y del comercio de EE. UU.) ya no se piden, así que
+  desaparecen los dos 404 de la consola.
 - Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
   1 de aluminio). Los yacimientos del BDMIN con coordenadas en metros UTM (27 de 280) quedan en su sitio: el carbón de
   Villablino, el oro de Salave y la bauxita de La Vansa ya están en el mapa (E63).
@@ -50,6 +61,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Nombres de las áreas urbanas con guion o barra como se escriben («Tarragona-Reus», «Alcoy/Alcoi», «Vitoria/Gasteiz») y
+  «Santa Cruz de Tenerife - La Laguna», que el AUDES escribe «Salta Cruz» (E73).
+- El Almanaque ya no dice que el paro, la renta y el alquiler no tienen fuente municipal en España: explica de dónde sale
+  cada uno (E27–E29) y que el valor de una vivienda sigue sin fuente por municipio.
 - Arrastrar el mapa se engancha menos: al entrar terreno nuevo se pinta solo la franja que aparece, no el
   mapa entero (con la CPU frenada ×4, de 104 a 22 ms por repintado a ×2,5; A18).
 - Los reyes guanches de Tenerife salen como «mencey» en vez de «monarca», con el cargo que les da Wikidata; un guanarteme de Gran Canaria saldría igual con el suyo.

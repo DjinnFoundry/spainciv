@@ -8,7 +8,9 @@ import { fin } from "./util.js";
 
 export { compact, count3, dollars, fixed, int, money, pct, signedPct, shownTons, shownWeight };
 
-const original = () => (country().locale || "en-US") === "en-US";
+/** True for a locale with a decimal point (en-US, en-IE): its input is read the English way ("1,500", "1.5B"). */
+const pointDecimal = () =>
+  new Intl.NumberFormat(country().locale || "en-US").formatToParts(1.5).find((p) => p.type === "decimal")?.value === ".";
 /** "×1.23" with d decimals. */
 export const times = (v, d) => `×${fixed(v, d)}`;
 
@@ -66,12 +68,13 @@ export function fmtShort(format, v) {
   }
 }
 
-/** Parse "1.5M", "250k", "12%", "$80K", "-3%" into a number in the field's units (pct → fraction). Outside en-US
- * the locale's forms are read too: "1,5 M", "12 %", "35.000 €", "250 mil", "1,5 B" (es-ES: billón = 10¹²). */
+/** Parse "1.5M", "250k", "12%", "$80K", "€80K", "-3%" into a number in the field's units (pct → fraction). In a
+ * locale with a decimal comma the locale's forms are read too: "1,5 M", "12 %", "35.000 €", "250 mil", "1,5 B" (es-ES:
+ * billón = 10¹²). */
 export function parseNum(text, format) {
   if (text == null) return null;
-  if (!original()) return parseLocal(text, format);
-  let s = String(text).trim().replace(/[,$\s]/g, "").replace(/^−/, "-");
+  if (!pointDecimal()) return parseLocal(text, format);
+  let s = String(text).trim().replace(/[,$€\s\u00a0]/g, "").replace(/^−/, "-");
   if (!s) return null;
   let isPct = false;
   if (s.endsWith("%")) { isPct = true; s = s.slice(0, -1); }

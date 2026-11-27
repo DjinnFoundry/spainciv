@@ -25,19 +25,29 @@ from collections.abc import Callable
 
 from ..core.geo import ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
+from ..core.lang import Text, pct, tr
 from ..core.store import load_interim
 from .lenses import AMENITIES_RAMP, COUNTY_LENSES, DISASTERS_RAMP, FAITH_RAMP, _spread
-from .texts_es import num, pct
 
 SOURCES = [
     "cobertura_banda_ancha", "ine_censo_lugar_trabajo", "ine_esperanza_vida", "ine_matrimonios", "effis_incendios",
 ]
-SPREAD = "Un hexágono muestra la media de sus municipios ponderada por población."
+SPREAD = tr("Un hexágono muestra la media de sus municipios ponderada por población.",
+            "A hex shows the population-weighted mean of its municipalities.")
 
 
-def listed(n: int) -> str:
-    return (f"Los {n} municipios que el INE publica (capitales de provincia y ciudades principales) tienen su propio "
-            "dato; los demás, el del resto de su provincia (la provincia menos esos municipios).")
+def share_text(x: float | None, decimals: int = 1) -> Text:
+    """A share as a percentage in each language ("12,5 %", "12.5%"), or "no figure"."""
+    if x is None:
+        return tr("sin dato", "no figure")
+    return tr(pct(x, decimals, "es"), pct(x, decimals, "en"))
+
+
+def listed(n: int) -> Text:
+    return tr("Los {n} municipios que el INE publica (capitales de provincia y ciudades principales) tienen su propio "
+              "dato; los demás, el del resto de su provincia (la provincia menos esos municipios).",
+              "The {n} municipalities INE publishes (provincial capitals and main cities) have their own figure; the "
+              "others take the rest of their province's (the province minus those municipalities).").format(n=n)
 
 
 def by_municipality(geoids: list[str], value) -> list:
@@ -57,12 +67,19 @@ def broadband_lens(data: dict, geoids: list[str], weights: list) -> dict:
     meta = COUNTY_LENSES["broadband"][1]
     return {
         "id": "broadband", **{k: meta[k] for k in ("group", "icon", "emoji", "format", "scale", "higher_is", "ramp")},
-        "name": "Banda ancha", "unit": "hogares con cobertura de 100 Mbps o más", "source": "cobertura_banda_ancha",
-        "description": "Proporción de los hogares de cada municipio a los que llega una red fija o inalámbrica fija de "
-        "100 Mbps o más en condiciones de máxima demanda (informe de cobertura del Ministerio para la Transformación "
-        f"Digital, junio de {data['year']}, con los datos de los operadores por parcela catastral; en España, "
-        f"{pct(data['nation'], 1) if data.get('nation') is not None else 'sin dato'}). Es cobertura, no contratos: el "
-        f"mapa de EE. UU. cuenta hogares abonados. {SPREAD}",
+        "name": tr("Banda ancha", "Broadband"),
+        "unit": tr("hogares con cobertura de 100 Mbps o más", "households covered at 100 Mbps or more"),
+        "source": "cobertura_banda_ancha",
+        "description": tr(
+            "Proporción de los hogares de cada municipio a los que llega una red fija o inalámbrica fija de 100 Mbps o "
+            "más en condiciones de máxima demanda (informe de cobertura del Ministerio para la Transformación Digital, "
+            "junio de {year}, con los datos de los operadores por parcela catastral; en España, {spain}). Es cobertura, "
+            "no contratos: el mapa de EE. UU. cuenta hogares abonados. {spread}",
+            "Share of each municipality's households that a fixed or fixed-wireless network of 100 Mbps or more reaches "
+            "under peak demand (coverage report of the Ministerio para la Transformación Digital, June {year}, from the "
+            "operators' data by cadastral parcel; Spain: {spain}). It is coverage, not subscriptions: the US map counts "
+            "subscribing households. {spread}",
+        ).format(year=str(data["year"]), spain=share_text(data.get("nation")), spread=SPREAD),
         "values": _spread(weights, by_municipality(geoids, data["municipalities"].get), 4),
     }
 
@@ -78,13 +95,21 @@ def commuters_lens(data: dict, geoids: list[str], weights: list) -> dict:
     meta = COUNTY_LENSES["commute"][1]
     return {
         "id": "commuters", **{k: meta[k] for k in ("group", "icon", "emoji", "ramp")},
-        "name": "Trabajan fuera", "unit": "ocupados que trabajan en otro municipio", "format": "pct", "scale": "linear",
-        "higher_is": "neutral", "source": "ine_censo_lugar_trabajo",
-        "description": "Proporción de los residentes ocupados que trabajan en un municipio distinto del suyo (de su "
-        "provincia, de otra provincia de su comunidad o de otra comunidad), entre los que tienen lugar de trabajo "
-        f"conocido (Censo anual de población del INE, 1 de enero de {data['year']}; en España, "
-        f"{pct(works_elsewhere(data['nation']), 1)}). {listed(len(data['municipalities']))} El INE no publica el tiempo "
-        f"de desplazamiento por municipio: es dónde se trabaja, no los minutos al trabajo del mapa de EE. UU. {SPREAD}",
+        "name": tr("Trabajan fuera", "Work elsewhere"),
+        "unit": tr("ocupados que trabajan en otro municipio", "employed who work in another municipality"),
+        "format": "pct", "scale": "linear", "higher_is": "neutral", "source": "ine_censo_lugar_trabajo",
+        "description": tr(
+            "Proporción de los residentes ocupados que trabajan en un municipio distinto del suyo (de su provincia, de "
+            "otra provincia de su comunidad o de otra comunidad), entre los que tienen lugar de trabajo conocido (Censo "
+            "anual de población del INE, 1 de enero de {year}; en España, {spain}). {listed} El INE no publica el tiempo "
+            "de desplazamiento por municipio: es dónde se trabaja, no los minutos al trabajo del mapa de EE. UU. "
+            "{spread}",
+            "Share of employed residents who work in a municipality other than their own (in their province, in "
+            "another province of their autonomous community or in another community), among those whose place of work "
+            "is known (INE Annual Population Census, 1 January {year}; Spain: {spain}). {listed} INE does not publish "
+            "commuting time by municipality: this is where people work, not the US map's minutes to work. {spread}",
+        ).format(year=str(data["year"]), spain=share_text(works_elsewhere(data["nation"])),
+                 listed=listed(len(data["municipalities"])), spread=SPREAD),
         "values": _spread(weights, by_municipality(geoids, listed_or_rest(data, works_elsewhere)), 4),
     }
 
@@ -92,13 +117,19 @@ def commuters_lens(data: dict, geoids: list[str], weights: list) -> dict:
 def life_expectancy_lens(data: dict, geoids: list[str], weights: list) -> dict:
     own, prov = data["municipalities"], data["provinces"]
     return {
-        "id": "life_expectancy", "group": "life", "name": "Esperanza de vida", "icon": "l-amenities", "emoji": "❤️",
-        "unit": "años al nacer", "format": "years", "scale": "linear", "higher_is": "good",
-        "ramp": AMENITIES_RAMP, "source": "ine_esperanza_vida",
-        "description": f"Esperanza de vida al nacer, ambos sexos, en {data['year']} (Indicadores Demográficos Básicos del "
-        f"INE). Los {len(own)} municipios para los que el INE la calcula tienen la suya; los demás, la de su provincia, "
-        "que incluye a esos municipios (una esperanza de vida no se puede restar). Ocupa el lugar del índice de "
-        f"bienestar del mapa de EE. UU. (estimaciones de salud de los CDC). {SPREAD}",
+        "id": "life_expectancy", "group": "life", "name": tr("Esperanza de vida", "Life expectancy"),
+        "icon": "l-amenities", "emoji": "❤️", "unit": tr("años al nacer", "years at birth"), "format": "years",
+        "scale": "linear", "higher_is": "good", "ramp": AMENITIES_RAMP, "source": "ine_esperanza_vida",
+        "description": tr(
+            "Esperanza de vida al nacer, ambos sexos, en {year} (Indicadores Demográficos Básicos del INE). Los {n} "
+            "municipios para los que el INE la calcula tienen la suya; los demás, la de su provincia, que incluye a esos "
+            "municipios (una esperanza de vida no se puede restar). Ocupa el lugar del índice de bienestar del mapa de "
+            "EE. UU. (estimaciones de salud de los CDC). {spread}",
+            "Life expectancy at birth, both sexes, in {year} (INE Basic Demographic Indicators). The {n} municipalities "
+            "INE calculates it for have their own; the others take their province's, which includes those "
+            "municipalities (a life expectancy cannot be subtracted). It takes the place of the US map's wellbeing index "
+            "(CDC health estimates). {spread}",
+        ).format(year=str(data["year"]), n=len(own), spread=SPREAD),
         "values": _spread(weights, by_municipality(geoids, lambda g: own.get(g, prov.get(g[:2]))), 2),
     }
 
@@ -109,14 +140,21 @@ def religious_share(counts: dict) -> float | None:
 
 def weddings_lens(data: dict, geoids: list[str], weights: list) -> dict:
     return {
-        "id": "religious_weddings", "group": "faith", "name": "Bodas religiosas", "icon": "l-faith", "emoji": "💒",
-        "unit": "matrimonios religiosos, proporción del total", "format": "pct", "scale": "linear", "higher_is": "neutral",
-        "ramp": FAITH_RAMP, "source": "ine_matrimonios",
-        "note": "España no tiene censo de religión: esto mide cómo se casan, no lo que creen sus vecinos.",
-        "description": f"Proporción de los matrimonios de {data['year']} celebrados por una confesión religiosa (el INE "
-        "no separa la católica de las demás en estas tablas), por lugar de residencia de la pareja (Estadística de "
-        f"Matrimonios del INE; en España, {pct(religious_share(data['nation']), 1)}). "
-        f"{listed(len(data['municipalities']))} {SPREAD}",
+        "id": "religious_weddings", "group": "faith", "name": tr("Bodas religiosas", "Religious weddings"),
+        "icon": "l-faith", "emoji": "💒",
+        "unit": tr("matrimonios religiosos, proporción del total", "religious marriages, share of all"), "format": "pct",
+        "scale": "linear", "higher_is": "neutral", "ramp": FAITH_RAMP, "source": "ine_matrimonios",
+        "note": tr("España no tiene censo de religión: esto mide cómo se casan, no lo que creen sus vecinos.",
+                   "Spain has no census of religion: this measures how people marry, not what they believe."),
+        "description": tr(
+            "Proporción de los matrimonios de {year} celebrados por una confesión religiosa (el INE no separa la "
+            "católica de las demás en estas tablas), por lugar de residencia de la pareja (Estadística de Matrimonios "
+            "del INE; en España, {spain}). {listed} {spread}",
+            "Share of the marriages of {year} celebrated by a religious denomination (INE does not separate Catholic "
+            "from other weddings in these tables), by the couple's place of residence (INE Marriage Statistics; Spain: "
+            "{spain}). {listed} {spread}",
+        ).format(year=str(data["year"]), spain=share_text(religious_share(data["nation"])),
+                 listed=listed(len(data["municipalities"])), spread=SPREAD),
         "values": _spread(weights, by_municipality(geoids, listed_or_rest(data, religious_share)), 4),
     }
 
@@ -161,15 +199,23 @@ def wildfires_lens(data: dict, proj, grid: HexGrid, owner: list[int]) -> dict:
     total = sum(f["area_ha"] for f in data["fires"])
     return {
         "id": "wildfires", "group": "hazards", "icon": "l-disasters", "emoji": "🔥", "ramp": DISASTERS_RAMP,
-        "name": "Incendios", "unit": "hectáreas quemadas", "format": "int", "scale": "log", "higher_is": "bad",
-        "source": "effis_incendios",
-        "note": "Superficie que ardió, no daños: un monte que arde dos veces cuenta dos.",
-        "description": f"Hectáreas quemadas en cada hexágono en los incendios de {first} a {last} que cartografió el "
-        "Sistema Europeo de Información sobre Incendios Forestales (EFFIS, Copernicus) con imágenes de satélite: su "
-        "perímetro, sea monte o cultivo, sumado año a año (en España, "
-        f"{num(round(total))} ha en {len(data['fires'])} incendios). Recoge los de unas 30 ha o más (desde 2021, con "
-        "Sentinel-2, también muchos menores); los más pequeños, que la estadística del ministerio (EGIF) sí cuenta, "
-        "no salen. Ocupa el lugar de las declaraciones de catástrofe de la FEMA del mapa de EE. UU.",
+        "name": tr("Incendios", "Wildfires"), "unit": tr("hectáreas quemadas", "hectares burnt"), "format": "int",
+        "scale": "log", "higher_is": "bad", "source": "effis_incendios",
+        "note": tr("Superficie que ardió, no daños: un monte que arde dos veces cuenta dos.",
+                   "Area burnt, not damage: land that burns twice counts twice."),
+        "description": tr(
+            "Hectáreas quemadas en cada hexágono en los incendios de {first} a {last} que cartografió el Sistema Europeo "
+            "de Información sobre Incendios Forestales (EFFIS, Copernicus) con imágenes de satélite: su perímetro, sea "
+            "monte o cultivo, sumado año a año (en España, {ha} ha en {fires} incendios). Recoge los de unas 30 ha o más "
+            "(desde 2021, con Sentinel-2, también muchos menores); los más pequeños, que la estadística del ministerio "
+            "(EGIF) sí cuenta, no salen. Ocupa el lugar de las declaraciones de catástrofe de la FEMA del mapa de "
+            "EE. UU.",
+            "Hectares burnt in each hex in the fires of {first} to {last} that the European Forest Fire Information "
+            "System (EFFIS, Copernicus) mapped from satellite images: their perimeter, woodland or farmland, added up "
+            "year by year (Spain: {ha} ha in {fires} fires). It records fires of about 30 ha or more (since 2021, with "
+            "Sentinel-2, many smaller ones too); the smallest, which the ministry's statistic (EGIF) does count, are "
+            "missing. It takes the place of the US map's FEMA disaster declarations.",
+        ).format(first=str(first), last=str(last), ha=round(total), fires=len(data["fires"])),
         "values": [round(burnt.get(c, 0.0)) if o >= 0 else None for c, o in enumerate(owner)],
     }
 

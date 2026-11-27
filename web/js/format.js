@@ -1,8 +1,9 @@
 import { country } from "./app/country.js";
 
-// Numbers follow the country's locale (world.json country.locale). The original en-US formats stay exactly as usaciv
-// wrote them ("1.2K", "$3.4B", "12.5%"); any other locale goes through Intl, which for es-ES gives "1,2 mil", "35 M",
-// "16 mil M €", "1,5 B €" (billón = 10¹²), "12,5 %" and "35.000 €" (four-digit numbers ungrouped, as the RAE asks).
+// Numbers follow the country's locale (world.json country.locale, or the chosen language's, app/country.js). The
+// original en-US formats stay exactly as usaciv wrote them ("1.2K", "$3.4B", "12.5%"); any other locale goes through
+// Intl, which for es-ES gives "1,2 mil", "35 M", "16 mil M €", "1,5 B €" (billón = 10¹²), "12,5 %" and "35.000 €"
+// (four-digit numbers ungrouped, as the RAE asks), and for en-IE (Spain in English) "1.2K", "€1.5T", "12.5%".
 const ORIGINAL = "en-US";
 const locale = () => country().locale || ORIGINAL;
 const original = () => locale() === ORIGINAL;
@@ -37,8 +38,13 @@ export function compact(n) {
 const SYMBOL = { USD: "$", EUR: "€" };
 /** The country's currency symbol (world.json country.currency). */
 export const currency = () => SYMBOL[country().currency] ?? country().currency + " ";
-/** A formatted amount with the currency symbol where the locale puts it: "$12K" (en-US), "12 mil €" (es-ES). */
-export const withCurrency = (s) => (original() ? currency() + s : `${s} ${currency().trim()}`);
+/** True when the locale writes the currency symbol before the amount ("€12K", en-IE), not after it ("12 mil €"). */
+const symbolFirst = () => {
+  const parts = nf({ style: "currency", currency: country().currency || "USD" }).formatToParts(1).map((p) => p.type);
+  return parts.indexOf("currency") < parts.indexOf("integer");
+};
+/** A formatted amount with the currency symbol where the locale puts it: "$12K" (en-US), "€12K" (en-IE), "12 mil €" (es-ES). */
+export const withCurrency = (s) => (original() || symbolFirst() ? currency() + s : `${s}\u00a0${currency().trim()}`);
 /** True for a money unit or format: "usd" (the original data) or "eur". */
 export const isMoney = (unit) => unit === "usd" || unit === "eur";
 export const money = (n) => (n == null ? "–" : withCurrency(compact(n)));
@@ -50,8 +56,10 @@ export const pct = (x, d = 1) => (x == null ? "–" : original() ? (x * 100).toF
 export const trimmed = (x, d) => (original() ? String(+x.toFixed(d)) : nf({ maximumFractionDigits: d }).format(x));
 /** x to three significant figures: "0.123" (en-US), "0,123" (es-ES). */
 export const sig3 = (x) => (original() ? String(+x.toPrecision(3)) : nf({ maximumSignificantDigits: 3 }).format(x));
-/** A formatted number with the percent sign where the locale puts it: "12%" (en-US), "12 %" (es-ES). */
-export const withPct = (s) => (original() ? `${s}%` : `${s}\u00a0%`);
+/** True when the locale puts a space before the percent sign ("12 %", es-ES), not ("12%", en-US, en-IE). */
+const spacedPct = () => nf({ style: "percent" }).formatToParts(0.5).some((p) => p.type === "literal");
+/** A formatted number with the percent sign where the locale puts it: "12%" (en-US, en-IE), "12 %" (es-ES). */
+export const withPct = (s) => (original() || !spacedPct() ? `${s}%` : `${s}\u00a0%`);
 /** A growth rate with its sign: "+2.1%", "−0.4%" (en-US); "+2,1 %" (es-ES). */
 export const signedPct = (g, d = 1) => (Number.isFinite(g) ? `${g >= 0 ? "+" : "−"}${pct(Math.abs(g), d)}` : "–");
 

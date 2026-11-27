@@ -9,13 +9,34 @@ Decisions (and why) are in `DECISIONS.md`, what is missing in `ROADMAP.md`, what
 
 ## Language
 
-The interface follows the country's `lang` (`es`): its strings are in `web/js/i18n/<lang>/*.js` (`t(key)` in
-`web/js/i18n.js`, English as the fallback) and its numbers in `country.locale` (`web/js/format.js`: "1,6 M", "35.000 €",
-"12,3 %"). Spain's builders write their texts in Spanish: the Spain-only catalogs where they are defined, and the tables
-shared with the US builders (yield names, lens groups, land lenses, world.json tables, badge texts, the Almanac's source
-entries and vintages) from `pipeline/build/texts_es.py`, so the US output stays in English and unchanged. A new string
-in the interface goes into every language's table (`tests/test_i18n.py` checks it); a new Spanish source gets its
-Almanac entry in `texts_es.SOURCES`.
+The Spanish site is in Spanish and English (DECISIONS A20–A24, E72). The language shown is the one in the URL
+(`#lang=en`), else the one the visitor last picked (`localStorage`), else the first of the browser's languages the
+site has, else Spanish; a small button at the end of the top bar switches (the page reloads in the other language) and
+the shareable URL carries `lang=`, so a link opens in the sender's language (`web/js/app/country.js`,
+`web/js/ext/lang/`). The US map has one language and no switch.
+
+- **Interface**: `t(key)` in `web/js/i18n.js`. The Spanish table (`web/js/i18n/es/`) is written for Spain; the English
+  one (`web/js/i18n/en/`) is usaciv's, about the United States; Spain in English reads `web/js/i18n/en-ES/` first,
+  the keys whose English differs for Spain (provinces, municipalities, the Padrón, €), and falls back on `en`.
+- **Numbers**: the language's locale (`Country.locales`): es-ES ("1,6 M", "35.000 €", "12,3 %", "1,5 B €" with B =
+  billón) and en-IE for English ("1.6M", "€35,000", "12.3%", "€1.5T"). Numbers inside data texts are written by the
+  pipeline in each language (`pipeline/core/lang.py`, `num`).
+- **Data texts**: Spain's builders write every generated text as a `Text` in both languages (`tr(es, en)`). Each data
+  file is written in Spanish, and `<name>.en.json` beside it holds only the English texts that differ, at the same
+  path; the browser lays it over the file when the page is in English (`web/js/app/data.js`). Values are never
+  repeated, so the overlays are small. A builder that rewrites another's file reads it with `load_web(...,
+  texts=True)`. The tables shared with the US builders are translated in `pipeline/build/texts_es.py`; the Almanac's
+  source entries take their English from the sources themselves (`pipeline/sources/es`).
+- **Names**: a name taken from a source stays as the source writes it, in both languages (places, people, dishes,
+  fiestas, denominations, museums, plants, mines); the map translates only the words it adds around it (E72).
+- **Page**: the head, the social card and the credits are written in Spanish, the language of the data, because link
+  previews never run the page; in English the page swaps its credits and description when it loads. The Unciv page is
+  `jugar.html` in Spanish and `play.html` in English.
+
+`tests/test_i18n.py` checks that every key and every data text exists in both languages, that no common English word
+is left in the Spanish data and no Spanish one in the English view, and that the English for Spain does not speak of
+the United States. A new interface string goes into `es`, `en` and, if its English is about the US, `en-ES`; a new
+Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text is a `tr()`.
 
 ## Sources
 
@@ -95,7 +116,8 @@ the site is served or packaged, `pipeline/play.py` makes from it:
   `README.md` and `LICENSE` (CC BY 4.0);
 - `unciv/espana`: the bare map for the game without mods (the same map without the pig), saved as `España` by the
   page's link;
-- `jugar.html`: how to play it and what is real data and what is game convention, linked from the help dialog.
+- `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
+  convention, linked from the help dialog in its language.
 
 The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
 The rules and the reasons are DECISIONS.md E51–E57, E60–E62, A15, A17, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the

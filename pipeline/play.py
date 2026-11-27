@@ -8,11 +8,12 @@ pipeline/build/spain_unciv.py), as pipeline/site.py serves and packages them:
 * unciv/<map file>: the bare map for the base ruleset alone (without the mod's resources), for the `maps` folder of a
   desktop Unciv;
 * unciv/preview.png and the game screenshot (docs/images), for the page;
-* jugar.html: how to play it, on desktop and Android, and what on the map is real data and what is game convention.
+* jugar.html (Spanish) and play.html (English): how to play it, on desktop and Android, and what on the map is real
+  data and what is game convention; each links to the other.
 
 The texts live in pipeline/templates/: the page (jugar.<lang>.html), the mod's bilingual README (unciv-readme.md) and
 the resources' names and sources in each language (unciv-resources.json), as string.Template files whose $fields come
-from unciv.json's summary. Only Spain has an Unciv map, and its page is in Spanish for now.
+from unciv.json's summary (its texts in each language, core/lang.py). Only Spain has an Unciv map.
 """
 
 from __future__ import annotations
@@ -26,12 +27,14 @@ from typing import Callable
 from .build import unciv
 from .core.archive import zip_bytes
 from .core.paths import ROOT
+from .core.store import read_web
+from .core.lang import pick
 from .core.png import encode
 from .core.raster import Canvas, circle
 from .countries import Country
 
 TEMPLATES = ROOT / "pipeline" / "templates"
-PAGE = "jugar.html"
+PAGES = {"es": "jugar.html", "en": "play.html"}  # the page in each language
 MOD_ZIP = "unciv/Spainciv-Unciv.zip"
 MAP_FILE = "unciv/espana"  # saved as the map's own name (the link's `download`), which Unciv shows in its map list
 PREVIEW = "unciv/preview.png"
@@ -49,8 +52,8 @@ and the Ministerio de Agricultura, Pesca y Alimentación (CC BY 4.0).
 
 
 def load(country: Country) -> dict | None:
-    path = country.web_data_dir / "unciv.json"
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    """unciv.json with its texts in every language of the country (core.lang.Text), or None without an Unciv map."""
+    return read_web(country.web_data_dir, "unciv.json", country.langs, optional=True)
 
 
 def files(country: Country) -> dict[str, Callable[[], bytes]]:
@@ -59,8 +62,9 @@ def files(country: Country) -> dict[str, Callable[[], bytes]]:
     if doc is None:
         return {}
     shot_path, shot_file = SCREENSHOT
+    pages = {PAGES[lang]: (lambda lang=lang: page_html(country, doc["summary"], lang).encode("utf-8")) for lang in country.langs}
     return {
-        PAGE: lambda: page_html(country, doc["summary"]).encode("utf-8"),
+        **pages,
         MOD_ZIP: lambda: mod_zip(country, doc),
         MAP_FILE: lambda: unciv.encode(unciv.without_mod(doc["map"])),
         PREVIEW: lambda: preview(doc),
@@ -157,6 +161,9 @@ def icon_atlas(icons: dict[str, bytes]) -> dict[str, bytes]:
 # --- texts ------------------------------------------------------------------------------------------------------------------
 
 
+LANG_LINK = {"es": "En español", "en": "In English"}  # the link to the page in each language, in that language
+
+
 def fill(template: str, **fields) -> str:
     """A file of pipeline/templates with its $fields filled in (a missing field fails)."""
     return Template((TEMPLATES / template).read_text(encoding="utf-8")).substitute(fields)
@@ -169,9 +176,10 @@ def resource_texts(summary: dict, lang: str) -> dict[str, tuple[str, str]]:
     return {r: (name, Template(src).substitute(numbers)) for r, (name, src) in texts.items()}
 
 
-def common_fields(country: Country, summary: dict) -> dict:
+def common_fields(country: Country, summary: dict, lang: str | None = None) -> dict:
     s = summary
-    return {"product": country.product, "url": f"https://{country.site_url}", "page": PAGE, "width": s["grid"]["width"],
+    return {"product": country.product, "url": f"https://{country.site_url}", "page": PAGES[lang or country.lang],
+            "width": s["grid"]["width"],
             "height": s["grid"]["height"], "tile_km": f"{s['tile_km']:g}", "land_tiles": s["land_tiles"],
             "national_land_tiles": s["national_land_tiles"], "release": s["unciv_release"],
             "n_starts": len(s["starts"]) - 1, "map_name": s["map_name"]}
@@ -185,12 +193,13 @@ def readme(country: Country, summary: dict) -> str:
     return fill("unciv-readme.md", rows_es=rows("es"), rows_en=rows("en"), **common_fields(country, summary))
 
 
-def page_html(country: Country, summary: dict) -> str:
-    s = summary
-    texts = resource_texts(s, country.lang)
+def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
+    """The page in `lang` (the country's first by default), linking to its versions in the other languages."""
+    s, lang = summary, lang or country.lang
+    texts = resource_texts(s, lang)
     rows = "".join(f"<tr><td>{escape(texts[r][0])}</td><td class=n>{n}</td><td>{escape(texts[r][1])}</td></tr>"
                    for r, n in s["resources"].items())
-    fields = {k: escape(str(v)) for k, v in common_fields(country, s).items()} | {
+    fields = {k: escape(str(v)) for k, v in common_fields(country, s, lang).items()} | {
         "zip_href": MOD_ZIP, "zip_name": MOD_ZIP.rsplit("/", 1)[1], "map_href": MAP_FILE, "shot": SCREENSHOT[0],
         "mod_name": escape(s["mod"]["name"]), "mod_repo": escape(s["mod"]["repo"]),
         "starts": escape(", ".join(x["city"] for x in s["starts"][1:])),
@@ -199,6 +208,9 @@ def page_html(country: Country, summary: dict) -> str:
         "hill_pct": round(unciv.HILL_SHARE * 100), "forest_pct": unciv.FOREST_PCT, "marsh_pct": unciv.MARSH_PCT,
         "tundra_m": unciv.TUNDRA_ELEV_M, "river_edges": s["river_edges"], "resource_rows": rows,
         "not_placed": escape(", ".join(f"{texts[r][0].lower()} {n}" for r, n in s["not_placed"].items())),
-        "designations": escape(", ".join(s["not_placed_designations"])),
+        "designations": escape(", ".join(pick(d, lang) for d in s["not_placed_designations"])),
+        "home": f"./#lang={lang}" if len(country.langs) > 1 else "./",
+        "other_langs": "".join(f' · <a href="{PAGES[o]}" lang="{o}" hreflang="{o}">{LANG_LINK[o]}</a>'
+                               for o in country.langs if o != lang),
     }
-    return fill(f"jugar.{country.lang}.html", **fields)
+    return fill(f"jugar.{lang}.html", **fields)

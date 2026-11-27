@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Callable
 
 from ..core.geo import MapProjection
+from ..core.lang import pick_all
 from ..core.paths import DATA, INTERIM, WEB, WEB_DATA
 
 
@@ -21,7 +22,8 @@ class Level:
 @dataclass(frozen=True)
 class Page:
     """How the published page presents a country: web/index.html is written for the United States, so every other
-    country gets its own title, social cards and map credits when the page is served or packaged (pipeline/site.py)."""
+    country gets its own title, social cards and map credits when the page is served or packaged (pipeline/site.py).
+    A country in several languages gives each text as a core.lang.Text; `in_lang` picks one."""
 
     title: str  # <title>
     card_title: str  # og:title, twitter:title
@@ -30,6 +32,10 @@ class Page:
     data_credit: str  # the data sources, on the map and on share images
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
     based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
+
+    def in_lang(self, lang: str) -> "Page":
+        """The page with every text in `lang`."""
+        return replace(self, **{f.name: pick_all(getattr(self, f.name), lang) for f in fields(self)})
 
 
 @dataclass(frozen=True)
@@ -47,6 +53,9 @@ class Country:
     currency: str  # ISO 4217
     locale: str  # BCP 47, for number formatting
     lang: str
+    # The languages the site is published in, the first being `lang`, with the number locale of each (core/lang.py).
+    # Empty: `lang` only, with `locale`.
+    locales: dict[str, str] = field(default_factory=dict)
     off_map: frozenset[str] = frozenset()  # region codes not drawn (e.g. Alaska, Hawaii)
     capital_city: str | None = None  # city id of the national capital
     relief_std_m: tuple[float, float] = (85.0, 260.0)  # elevation std. dev. for hills, mountains (see world.py)
@@ -55,6 +64,11 @@ class Country:
     interim_dir: Path = INTERIM
     web_data_dir: Path = WEB_DATA
     extra: dict = field(default_factory=dict)
+
+    @property
+    def langs(self) -> tuple[str, ...]:
+        """The site's languages, the data files' own first."""
+        return tuple(self.locales) or (self.lang,)
 
     def map_projection(self, min_x: float, max_y: float, margin: float) -> MapProjection:
         return MapProjection(min_x, max_y, margin, self.base_projection())

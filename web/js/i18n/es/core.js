@@ -164,8 +164,13 @@ export default {
       <i>residentes</i> ocupados en un sector (donde vive quien trabaja, no donde trabaja). <b>El oro es el PIB</b>: lo
       que se produce en un año, contado donde se hace el trabajo.</p>`,
   "core.pedia.yields.amenities": `<h4>Servicios y vivienda</h4>
-      <p>El paro, la renta mediana de los hogares, el alquiler y el valor de la vivienda aún no tienen una fuente municipal
-      en España, así que ciudades y provincias los muestran como –.</p>`,
+      <p>Paro = parados ÷ (ocupados + parados), del Censo anual de población del INE, contados donde viven. Renta = renta
+      neta media por hogar del Atlas de Distribución de Renta de los Hogares del INE: una media, porque el INE no publica
+      la mediana por hogar de los municipios. Alquiler = alquiler mensual mediano de la vivienda entera del SERPAVI
+      (Ministerio de Vivienda); pisos y casas, y los municipios de un área urbana, se juntan en la media de sus medianas
+      ponderada por viviendas alquiladas. Alquiler ÷ renta = alquiler × 12 ÷ renta por hogar: una señal aproximada de lo
+      que cuesta alquilar, no la carga de cada hogar. El valor de una vivienda no tiene fuente por municipio y sale como
+      –; la lente de valor de la vivienda da el valor tasado en €/m² de cada provincia.</p>`,
   "core.pedia.states.body": `<p>Haz clic en cualquier hexágono de tierra sin ciudad para abrir su provincia. Las cifras de una provincia son
       los totales provinciales de las mismas fuentes que las ciudades ({vintage}{gdp}), no la suma de sus ciudades, así
       que el mundo rural también cuenta.</p>

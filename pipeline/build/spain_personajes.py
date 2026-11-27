@@ -18,11 +18,11 @@ from pathlib import Path
 
 from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
+from ..core.lang import Text, tr
 from ..core.store import load_interim_payload
 from ..sources.es.personajes import KIND_IDS, KINDS
 from .cities import nearest_land, ring_search
 from .spain_named import shore_cell
-from .texts_es import num
 from .world import FOREIGN
 
 REQUIRES = ["wikidata_personajes"]
@@ -31,16 +31,23 @@ FILE = "personajes"  # web/data file with the people (names_from)
 # Category → (name in the legend, colour). The largest categories (sport, writers, saints, film, painters) get the
 # hues furthest apart; all are light enough to read on the dark map.
 STYLE = {
-    "nobel": ("Premios Nobel", "#ffd700"), "monarchs": ("Reyes y reinas", "#7b1fa2"),
-    "conquistadors": ("Conquistadores", "#d84315"), "explorers": ("Navegantes y exploradores", "#80deea"),
-    "military": ("Militares", "#556b2f"), "rebels": ("Rebeldes y guerrilleros", "#ff8a80"),
-    "religious": ("Santos y religiosos", "#f2e6c9"), "philosophers": ("Filósofos", "#ce93d8"),
-    "scientists": ("Científicos", "#00b8d4"), "physicians": ("Médicos", "#26a69a"),
-    "engineers": ("Inventores e ingenieros", "#90a4ae"), "architects": ("Arquitectos", "#8d6e63"),
-    "artists": ("Pintores y escultores", "#ff4fa3"), "writers": ("Escritores", "#3f6fd8"),
-    "film": ("Cine", "#e53935"), "singers": ("Cantantes", "#ffb300"),
-    "musicians": ("Músicos y compositores", "#9575cd"),
-    "merchants": ("Empresarios y comerciantes", "#c0ca33"), "athletes": ("Deportistas", "#7cb342"),
+    "nobel": (tr("Premios Nobel", "Nobel laureates"), "#ffd700"),
+    "monarchs": (tr("Reyes y reinas", "Kings and queens"), "#7b1fa2"),
+    "conquistadors": (tr("Conquistadores", "Conquistadors"), "#d84315"),
+    "explorers": (tr("Navegantes y exploradores", "Navigators and explorers"), "#80deea"),
+    "military": (tr("Militares", "Soldiers"), "#556b2f"),
+    "rebels": (tr("Rebeldes y guerrilleros", "Rebels and guerrillas"), "#ff8a80"),
+    "religious": (tr("Santos y religiosos", "Saints and clergy"), "#f2e6c9"),
+    "philosophers": (tr("Filósofos", "Philosophers"), "#ce93d8"),
+    "scientists": (tr("Científicos", "Scientists"), "#00b8d4"), "physicians": (tr("Médicos", "Physicians"), "#26a69a"),
+    "engineers": (tr("Inventores e ingenieros", "Inventors and engineers"), "#90a4ae"),
+    "architects": (tr("Arquitectos", "Architects"), "#8d6e63"),
+    "artists": (tr("Pintores y escultores", "Painters and sculptors"), "#ff4fa3"),
+    "writers": (tr("Escritores", "Writers"), "#3f6fd8"), "film": (tr("Cine", "Film"), "#e53935"),
+    "singers": (tr("Cantantes", "Singers"), "#ffb300"),
+    "musicians": (tr("Músicos y compositores", "Musicians and composers"), "#9575cd"),
+    "merchants": (tr("Empresarios y comerciantes", "Business people and merchants"), "#c0ca33"),
+    "athletes": (tr("Deportistas", "Athletes"), "#7cb342"),
 }
 # The class that names a person's role (the first rule of its primary category it meets) → (masculine, feminine).
 NOUNS = {
@@ -79,10 +86,70 @@ NOUNS = {
     "Q6606110": ("industrial", "industrial"), "Q500251": ("armador", "armadora"),
     "Q2066131": ("deportista", "deportista"),
 }
+# The English of every Spanish noun a note can hold: the nouns above and the trade words of Wikidata's descriptions
+# (sources/es/personajes.py WORDS), masculine and feminine alike.
+NOUN_EN = {
+    "premio Nobel": "Nobel laureate", "mencey": "mencey", "guanarteme": "guanarteme", "monarca": "monarch",
+    "reina consorte": "queen consort", "conquistador": "conquistador", "conquistadora": "conquistador",
+    "explorador": "explorer", "exploradora": "explorer", "marino": "sailor", "marina": "sailor",
+    "corsario": "privateer", "corsaria": "privateer", "pirata": "pirate", "capitán de barco": "ship's captain",
+    "capitana de barco": "ship's captain", "navegante": "navigator", "navegador": "navigator", "navegadora": "navigator",
+    "piloto mayor": "pilot major", "almirante": "admiral", "militar": "soldier", "caudillo": "warlord",
+    "guerrero": "warrior", "guerrera": "warrior", "soldado": "soldier", "rebelde": "rebel",
+    "revolucionario": "revolutionary", "revolucionaria": "revolutionary", "amotinado": "mutineer", "amotinada": "mutineer",
+    "guerrillero": "guerrilla", "guerrillera": "guerrilla", "maqui": "maquis guerrilla", "resistente": "resistance fighter",
+    "bandolero": "bandit", "bandolera": "bandit", "proscrito": "outlaw", "proscrita": "outlaw",
+    "salteador de caminos": "highwayman", "salteadora de caminos": "highwaywoman", "santo": "saint", "santa": "saint",
+    "beato": "blessed", "beata": "blessed", "papa": "pope", "papisa": "pope", "cardenal": "cardinal",
+    "teólogo": "theologian", "teóloga": "theologian", "misionero": "missionary", "misionera": "missionary",
+    "místico": "mystic", "mística": "mystic", "religioso": "member of a religious order",
+    "religiosa": "member of a religious order", "monja": "nun", "fraile": "friar", "sacerdote": "priest",
+    "presbítero": "priest", "obispo": "bishop", "arzobispo": "archbishop", "rabino": "rabbi", "rabina": "rabbi",
+    "jesuita": "Jesuit", "franciscano": "Franciscan", "franciscana": "Franciscan", "dominico": "Dominican",
+    "inquisidor": "inquisitor", "inquisidora": "inquisitor", "abad": "abbot", "abadesa": "abbess", "monje": "monk",
+    "eclesiástico": "churchman", "predicador": "preacher", "filósofo": "philosopher", "filósofa": "philosopher",
+    "pensador": "thinker", "pensadora": "thinker", "científico": "scientist", "científica": "scientist",
+    "matemático": "mathematician", "matemática": "mathematician", "físico": "physicist", "física": "physicist",
+    "químico": "chemist", "química": "chemist", "astrónomo": "astronomer", "astrónoma": "astronomer",
+    "biólogo": "biologist", "bióloga": "biologist", "botánico": "botanist", "botánica": "botanist",
+    "zoólogo": "zoologist", "zoóloga": "zoologist", "geólogo": "geologist", "geóloga": "geologist",
+    "naturalista": "naturalist", "geógrafo": "geographer", "geógrafa": "geographer", "cartógrafo": "cartographer",
+    "cartógrafa": "cartographer", "bioquímico": "biochemist", "bioquímica": "biochemist", "investigador": "researcher",
+    "investigadora": "researcher", "médico": "physician", "médica": "physician", "cirujano": "surgeon",
+    "cirujana": "surgeon", "psiquiatra": "psychiatrist", "neurólogo": "neurologist", "neuróloga": "neurologist",
+    "ingeniero": "engineer", "ingeniera": "engineer", "inventor": "inventor", "inventora": "inventor",
+    "arquitecto": "architect", "arquitecta": "architect", "pintor": "painter", "pintora": "painter",
+    "escultor": "sculptor", "escultora": "sculptor", "escritor": "writer", "escritora": "writer", "poeta": "poet",
+    "poetisa": "poet", "novelista": "novelist", "dramaturgo": "playwright", "dramaturga": "playwright",
+    "ensayista": "essayist", "cuentista": "short-story writer", "actor": "actor", "actriz": "actress",
+    "cineasta": "filmmaker", "director de cine": "film director", "directora de cine": "film director",
+    "cantante": "singer", "cantaor": "flamenco singer", "cantaora": "flamenco singer", "cantautor": "singer-songwriter",
+    "cantautora": "singer-songwriter", "soprano": "soprano", "tenor": "tenor", "barítono": "baritone",
+    "mezzosoprano": "mezzo-soprano", "tonadillera": "tonadilla singer", "cupletista": "cuplé singer", "rapero": "rapper",
+    "rapera": "rapper", "compositor": "composer", "compositora": "composer", "instrumentista": "instrumentalist",
+    "director de orquesta": "conductor", "directora de orquesta": "conductor", "músico": "musician",
+    "música": "musician", "pianista": "pianist", "guitarrista": "guitarist", "violinista": "violinist",
+    "violonchelista": "cellist", "organista": "organist", "arpista": "harpist", "empresario": "businessman",
+    "empresaria": "businesswoman", "emprendedor": "entrepreneur", "emprendedora": "entrepreneur",
+    "comerciante": "merchant", "banquero": "banker", "banquera": "banker", "mercader": "merchant",
+    "industrial": "industrialist", "armador": "shipowner", "armadora": "shipowner", "financiero": "financier",
+    "deportista": "athlete", "futbolista": "footballer", "ciclista": "cyclist", "tenista": "tennis player",
+    "baloncestista": "basketball player", "atleta": "athlete", "nadador": "swimmer", "nadadora": "swimmer",
+    "jugador": "player", "jugadora": "player", "torero": "bullfighter", "boxeador": "boxer", "golfista": "golfer",
+    "balonmanista": "handball player", "alpinista": "mountaineer", "esquiador": "skier", "esquiadora": "skier",
+    "regatista": "sailor", "waterpolista": "water polo player", "piragüista": "canoeist", "entrenador": "coach",
+    "rey": "king", "reina": "queen", "emperador": "emperor", "emperatriz": "empress", "califa": "caliph",
+    "emir": "emir", "sultán": "sultan",
+}
 ROMAN = [(1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"), (10, "X"),
          (9, "IX"), (5, "V"), (4, "IV"), (1, "I")]
-REASONS = {"abroad": "nacieron fuera de la España actual", "area": "solo tienen un país o una región como lugar de "
-           "nacimiento", "no_coordinates": "tienen un lugar de nacimiento sin coordenadas"}
+REASONS = {"abroad": tr("nacieron fuera de la España actual", "were born outside today's Spain"),
+           "area": tr("solo tienen un país o una región como lugar de nacimiento",
+                      "have only a country or a region as their birthplace"),
+           "no_coordinates": tr("tienen un lugar de nacimiento sin coordenadas", "have a birthplace without coordinates")}
+# Date words of a note: Spanish, English.
+DATE_WORDS = {"century": ("s. {}", "{} century"), "circa": ("h. {}", "c. {}"), "bc": (" a. C.", " BC"),
+              "born": ("n. {}", "b. {}"), "died": ("m. {}", "d. {}")}
 
 
 def roman(n: int) -> str:
@@ -93,47 +160,59 @@ def roman(n: int) -> str:
     return out
 
 
-def date_text(d: dict | None) -> str | None:
+def ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th… 11th, 12th, 13th, 21st."""
+    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+
+
+def date_text(d: dict | None, lang: str = "es") -> str | None:
     """A Wikidata date as the map prints it: the year (BC years in the SPARQL answer count a year 0: -3 is 4 a. C.),
-    'h. 1550' for a decade, 's. XVI' for a century; None for anything vaguer or missing."""
+    'h. 1550' for a decade, 's. XVI' for a century ('c. 1550', '16th century' in English); None for anything vaguer or
+    missing."""
     if not d or (d["precision"] or 0) < 7:
         return None
+    k = lang == "en"
     y = d["year"]
     bc = y <= 0
     n = 1 - y if bc else y
     if d["precision"] == 7:
-        text = f"s. {roman((n - 1) // 100 + 1)}"
+        c = (n - 1) // 100 + 1
+        text = DATE_WORDS["century"][k].format(ordinal(c) if k else roman(c))
     else:
-        text = f"h. {n}" if d["precision"] == 8 else str(n)
-    return text + (" a. C." if bc else "")
+        text = DATE_WORDS["circa"][k].format(n) if d["precision"] == 8 else str(n)
+    return text + (DATE_WORDS["bc"][k] if bc else "")
 
 
-def years(born: dict | None, died: dict | None) -> str | None:
-    """'1881–1973', 'n. 1986' (no death date), 'm. 1550' (no birth date), or None."""
-    b, d = date_text(born), date_text(died)
+def years(born: dict | None, died: dict | None, lang: str = "es") -> str | None:
+    """'1881–1973', 'n. 1986' (no death date), 'm. 1550' (no birth date), or None; 'b. 1986', 'd. 1550' in English."""
+    k = lang == "en"
+    b, d = date_text(born, lang), date_text(died, lang)
     if b and d:
         return f"{b}–{d}"
     if b:
-        return f"n. {b}"
-    return f"m. {d}" if d else None
+        return DATE_WORDS["born"][k].format(b)
+    return DATE_WORDS["died"][k].format(d) if d else None
 
 
-def noun(person: dict) -> str:
+def noun(person: dict, lang: str = "es") -> str:
     """What a person was: the word of Wikidata's description for its primary category ('poeta', 'tenista'), a Nobel
     with the trade the description names first ('médico, premio Nobel'), or else the noun of its role, in the
-    person's gender."""
+    person's gender; in English, the English of that word (NOUN_EN)."""
+    en = (lambda w: NOUN_EN[w]) if lang == "en" else (lambda w: w)
     if person["word"]:
-        return person["word"]
+        return en(person["word"])
     if person["primary"] == "nobel" and person["trade"]:
-        return f"{person['trade']}, premio Nobel"
-    return NOUNS[person["role"]][1 if person["female"] else 0]
+        return f"{en(person['trade'])}, {en('premio Nobel')}"
+    return en(NOUNS[person["role"]][1 if person["female"] else 0])
 
 
-def note(person: dict) -> str:
-    """What the tooltip prints after the name: 'pintor, 1881–1973'."""
-    noun_ = noun(person)
-    span = years(person["born"], person["died"])
-    return f"{noun_}, {span}" if span else noun_
+def note(person: dict) -> Text:
+    """What the tooltip prints after the name: 'pintor, 1881–1973' ('painter, 1881–1973')."""
+    def one(lang: str) -> str:
+        noun_, span = noun(person, lang), years(person["born"], person["died"], lang)
+        return f"{noun_}, {span}" if span else noun_
+
+    return tr(one("es"), one("en"))
 
 
 class Placer:
@@ -214,31 +293,46 @@ def great_people(world: dict, proj, grid: HexGrid, municipalities: list[dict]) -
     print("    " + ", ".join(f"{k} {n}" for k, n in per_kind.items()))
 
     out_total = sum(left_out.values())
-    rule = ("Fama = número de enlaces a Wikipedias y otros proyectos de Wikimedia (sitelinks); cada categoría guarda a "
-            "quien llega a su umbral: " + ", ".join(f"{STYLE[k.id][0].lower()} {k.min_sitelinks}" for k in KINDS
-                                                   if k.min_sitelinks) + "; los conquistadores, todos.")
-    common = (f"{num(len(people))} personas famosas nacidas en la España actual según Wikidata, en el hexágono de su "
-              "lugar de nacimiento: premios Nobel, reyes y reinas, conquistadores, navegantes, militares, rebeldes, "
-              "santos, filósofos, científicos, médicos, ingenieros, arquitectos, pintores, escritores, cine, "
-              "cantantes, músicos, empresarios y deportistas. " + rule + " Quien está en varias categorías va en la "
-              f"primera de esta lista. Fuera quedan {num(out_total)}: {num(left_out['abroad'])} "
-              f"{REASONS['abroad']}, {num(left_out['area'])} {REASONS['area']} y {num(left_out['no_coordinates'])} "
-              f"{REASONS['no_coordinates']}. Pasa el ratón por un hexágono para ver quién nació allí, de más a menos "
-              "famoso. Lo editan voluntarios: refleja lo que cuenta Wikipedia, no un censo.")
+    thresholds = {lang: ", ".join(f"{STYLE[k.id][0][lang].lower()} {k.min_sitelinks}" for k in KINDS if k.min_sitelinks)
+                  for lang in ("es", "en")}
+    common = tr(
+        "{people} personas famosas nacidas en la España actual según Wikidata, en el hexágono de su lugar de nacimiento: "
+        "premios Nobel, reyes y reinas, conquistadores, navegantes, militares, rebeldes, santos, filósofos, científicos, "
+        "médicos, ingenieros, arquitectos, pintores, escritores, cine, cantantes, músicos, empresarios y deportistas. "
+        "Fama = número de enlaces a Wikipedias y otros proyectos de Wikimedia (sitelinks); cada categoría guarda a "
+        "quien llega a su umbral: {thresholds}; los conquistadores, todos. Quien está en varias categorías va en la "
+        "primera de esta lista. Fuera quedan {out}: {abroad} {r_abroad}, {area} {r_area} y {nocoord} {r_nocoord}. Pasa "
+        "el ratón por un hexágono para ver quién nació allí, de más a menos famoso. Lo editan voluntarios: refleja lo "
+        "que cuenta Wikipedia, no un censo.",
+        "{people} famous people born in today's Spain according to Wikidata, on the hex of their birthplace: Nobel "
+        "laureates, kings and queens, conquistadors, navigators, soldiers, rebels, saints, philosophers, scientists, "
+        "physicians, engineers, architects, painters, writers, film, singers, musicians, business people and athletes. "
+        "Fame = the number of links to Wikipedias and other Wikimedia projects (sitelinks); each category keeps those "
+        "who reach its threshold: {thresholds}; conquistadors, all of them. Someone in several categories goes in the "
+        "first of this list. Left out: {out}, of whom {abroad} {r_abroad}, {area} {r_area} and {nocoord} {r_nocoord}. "
+        "Hover a hex to see who was born there, most famous first. Volunteer-edited: it reflects what Wikipedia covers, "
+        "not a census.",
+    ).format(people=len(people), thresholds=Text(**thresholds), out=out_total, abroad=left_out["abroad"],
+             r_abroad=REASONS["abroad"], area=left_out["area"], r_area=REASONS["area"],
+             nocoord=left_out["no_coordinates"], r_nocoord=REASONS["no_coordinates"])
     categories = [{"id": k.id, "name": STYLE[k.id][0], "color": STYLE[k.id][1]} for k in KINDS]
     meta = {"group": "great_people", "higher_is": "neutral", "source": "wikidata_personajes", "names_from": FILE}
     lenses = [
-        {"id": "great_people", "name": "Grandes personajes", "icon": "l-great-people", "emoji": "⭐",
-         "unit": "personajes", "format": "int", "scale": "log",
+        {"id": "great_people", "name": tr("Grandes personajes", "Great people"), "icon": "l-great-people", "emoji": "⭐",
+         "unit": tr("personajes", "people"), "format": "int", "scale": "log",
          "ramp": ["#1c1530", "#3b2763", "#6a3d8f", "#a85a9e", "#e08a8a", "#ffd58a"], **meta,
-         "description": "Cuántos grandes personajes nacieron en cada hexágono. " + common,
+         "description": tr("Cuántos grandes personajes nacieron en cada hexágono. ",
+                           "How many great people were born in each hex. ") + common,
          "values": values["great_people"]},
-        {"id": "great_people_kind", "name": "Personajes por oficio", "icon": "l-great-people-kind", "emoji": "🎭",
-         "unit": "categoría con más personajes", "format": "category", "scale": "linear",
-         "domain": [0, len(categories) - 1], "categories": categories, "ramp": [c["color"] for c in categories],
-         "null_label": "Nadie", **meta,
-         "description": "La categoría con más personajes nacidos en cada hexágono (un empate, para la primera de la "
-         "lista); pulsa una para ver solo esa. " + common,
+        {"id": "great_people_kind", "name": tr("Personajes por oficio", "Great people by trade"),
+         "icon": "l-great-people-kind", "emoji": "🎭",
+         "unit": tr("categoría con más personajes", "category with the most people"), "format": "category",
+         "scale": "linear", "domain": [0, len(categories) - 1], "categories": categories,
+         "ramp": [c["color"] for c in categories], "null_label": tr("Nadie", "Nobody"), **meta,
+         "description": tr("La categoría con más personajes nacidos en cada hexágono (un empate, para la primera de la "
+                           "lista); pulsa una para ver solo esa. ",
+                           "The category with the most people born in each hex (a tie goes to the first in the list); "
+                           "click one to show only that one. ") + common,
          "values": values["great_people_kind"]},
     ]
     doc = {

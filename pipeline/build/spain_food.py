@@ -8,14 +8,34 @@ municipality's centre.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 from ..core.geo import Shape, ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
+from ..core.lang import Text, join_texts, tr
 from ..sources.es.food import ISLANDS
 from ..sources.es.provinces import COMMUNITIES
 from .cities import nearest_land
 from .spain_named import named_counts
+
+
+# The words the map adds after a name ('Torrezno de Soria (IGP · provincia)', sources/es/food.py) in English: the EU's
+# English abbreviations (PDO, PGI, GI) and the Spanish wine categories that have none, kept as their legal names.
+KIND_EN = {"DOP": "PDO", "IGP": "PGI", "IG": "GI", "Vino de pago": "Vino de Pago", "Vino de calidad": "Vino de Calidad"}
+HOW_EN = {"comunidad": "community", "provincia": "province", "isla": "island", "municipios": "municipalities",
+          "finca": "estate", "sin zona": "no area"}
+SUFFIX = re.compile(r"^(?P<name>.*) \((?P<kind>[^()·]+?)(?: · (?P<how>[^()]+))?\)$")
+
+
+def label(name: str) -> str | Text:
+    """A designation as the tooltip lists it: the registered name as it is, and the kind and area the map adds after
+    it in each language ('Torrezno de Soria (IGP · provincia)' → '… (PGI · province)')."""
+    m = SUFFIX.match(name)
+    if not m or m["kind"] not in KIND_EN:
+        return name
+    how = f" · {', '.join(HOW_EN[h] for h in m['how'].split(', '))}" if m["how"] else ""
+    return tr(name, f"{m['name']} ({KIND_EN[m['kind']]}{how})")
 
 
 def island(municipalities: list[dict], seed: str) -> set[str]:
@@ -91,32 +111,43 @@ def food_lens(names: list[dict], proj, grid: HexGrid, world: dict, municipalitie
             else:
                 cells = sorted({c for g in codes for c in hexes_of.get(g) or [nearest(*centre_of[g])]})
         cells_of.append(cells)
-    lens = named_counts([n["name"] for n in mapped], cells_of, owner)
+    lens = named_counts([label(n["name"]) for n in mapped], cells_of, owner)
     size = [len(cells) for cells in cells_of]
     lens["labels"] = [None if ks is None else sorted(ks, key=lambda k: (size[k], k)) for ks in lens["labels"]]
     missing = [n for n in names if n["area"] == "ninguna"]
     return {
-        "id": "food", "group": "food", "name": "Denominaciones de origen", "icon": "l-food", "emoji": "🍷",
-        "unit": "denominaciones (DOP, IGP, vinos)", "format": "int", "scale": "linear", "higher_is": "neutral",
+        "id": "food", "group": "food", "name": tr("Denominaciones de origen", "Designations of origin"),
+        "icon": "l-food", "emoji": "🍷",
+        "unit": tr("denominaciones (DOP, IGP, vinos)", "designations (PDO, PGI, wines)"), "format": "int", "scale": "linear", "higher_is": "neutral",
         "ramp": ["#2b1320", "#5c1f3a", "#8e3049", "#c25a4a", "#e89a5a", "#ffe0a0"], "source": "calidad_diferenciada",
         "description": description(len(names), Counter(n["area"] for n in mapped), missing, not_registered),
         **lens,
     }
 
 
-def description(total: int, counts: Counter, missing: list[dict], not_registered: list[str]) -> str:
+def description(total: int, counts: Counter, missing: list[dict], not_registered: list[str]) -> Text:
     """The lens description: how many names, how each kind of area was obtained (`counts` by area), the names with
     no area and the Ministry's designations left out for no longer being registered."""
-    text = (f"Cuántos de los {total} nombres que España tiene en el registro de la UE (eAmbrosia: DOP, IGP, vinos y "
-            f"bebidas espirituosas) incluyen cada hexágono en su zona. {counts['mapa']} zonas son las del Ministerio de "
-            f"Agricultura (revisión de 2017). Para {counts['unidades']} que el Ministerio no ha cartografiado (casi "
-            "todos los vinos de la tierra y los registrados desde 2017) la zona es la que delimita su pliego o el "
-            "documento único de la UE, levantada sobre los límites municipales del IGN; el tooltip lo dice tras el "
-            "tipo: «comunidad», «provincia», «isla» o «municipios» (un municipio que solo entra en parte cuenta "
-            f"entero). Los {counts['finca']} vinos de pago sin zona del Ministerio son una finca: van en un hexágono, "
-            "el del centro de su municipio («finca»). Cada hexágono lista primero las zonas más pequeñas.")
+    text = tr(
+        "Cuántos de los {total} nombres que España tiene en el registro de la UE (eAmbrosia: DOP, IGP, vinos y bebidas "
+        "espirituosas) incluyen cada hexágono en su zona. {mapa} zonas son las del Ministerio de Agricultura (revisión "
+        "de 2017). Para {unidades} que el Ministerio no ha cartografiado (casi todos los vinos de la tierra y los "
+        "registrados desde 2017) la zona es la que delimita su pliego o el documento único de la UE, levantada sobre "
+        "los límites municipales del IGN; el tooltip lo dice tras el tipo: «comunidad», «provincia», «isla» o "
+        "«municipios» (un municipio que solo entra en parte cuenta entero). Los {finca} vinos de pago sin zona del "
+        "Ministerio son una finca: van en un hexágono, el del centro de su municipio («finca»). Cada hexágono lista "
+        "primero las zonas más pequeñas.",
+        "How many of the {total} names Spain has in the EU register (eAmbrosia: PDO, PGI, wines and spirit drinks) "
+        "include each hex in their area. {mapa} areas are those of the Ministry of Agriculture (2017 revision). For "
+        "{unidades} the Ministry has not mapped (nearly all the PGI wines and the names registered since 2017) the "
+        "area is the one their specification or EU single document delimits, drawn on the IGN's municipal boundaries; "
+        "the tooltip says so after the kind: “community”, “province”, “island” or “municipalities” (a municipality "
+        "only partly inside counts whole). The {finca} single-estate wines without a Ministry area are an estate: they go on "
+        "one hex, that of their municipality's centre (“estate”). Each hex lists the smallest areas first.",
+    ).format(total=total, mapa=counts["mapa"], unidades=counts["unidades"], finca=counts["finca"])
     if missing:
-        text += " Sin zona: " + "; ".join(f"{n['name']}, {n['note']}" for n in missing) + "."
+        text += tr(" Sin zona: ", " No area: ") + join_texts([label(n["name"]) + ", " + n["note"] for n in missing], "; ") + "."
     if not_registered:
-        text += f" Fuera del mapa por no estar ya registrados: {', '.join(not_registered)}."
+        text += tr(" Fuera del mapa por no estar ya registrados: ", " Left off the map as no longer registered: ") + \
+            join_texts([label(n) for n in not_registered]) + "."
     return text

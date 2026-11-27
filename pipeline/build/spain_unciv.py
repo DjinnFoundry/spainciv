@@ -27,6 +27,7 @@ from collections import Counter, defaultdict
 from ..core.geo import ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_web, write_web
+from ..core.lang import pick
 from ..countries import active
 from . import unciv
 from .spain_wonders import municipality_finder
@@ -228,6 +229,8 @@ def build() -> None:
 
     # Area resources.
     food = next(lens for lens in load_web("lenses.json")["lenses"] if lens["id"] == "food")
+    # The designations' names in every language, for the Unciv page's list of those left out ("(DOP)", "(PDO)").
+    food_names = next(lens for lens in load_web("lenses.json", texts=True)["lenses"] if lens["id"] == "food")["names"]
     families = {n["name"]: n["family"] for n in load_interim("calidad_diferenciada")["names"]}
     by_designation = designation_resources(food["names"], families)
     weights = area_weights(grid, lambda c: fine.center(*fine.col_row(c)), food["labels"], set(by_designation))
@@ -238,7 +241,7 @@ def build() -> None:
         placed[resource] += done
         unplaced[resource] += missed
         designations = [k for k, r in by_designation.items() if r == resource]
-        areas = [(weights[k], food["names"][k])  # smaller areas first
+        areas = [(weights[k], food_names[k])  # smaller areas first
                  for k in sorted(designations, key=lambda k: (sum(weights[k].values()), k))]
         if resource == "Horses":
             areas += [(area, None) for area in horses.values()]
@@ -264,7 +267,7 @@ def build() -> None:
         "river_edges": n_river_edges,
         "resources": {r: placed[r] for r in ORDER if placed[r]},
         "not_placed": {r: unplaced[r] for r in ORDER if unplaced[r]},
-        "not_placed_designations": sorted(unplaced_names),
+        "not_placed_designations": sorted(unplaced_names, key=lambda n: pick(n, "es")),
         "natural_wonders": [wonder],
         "start_gap_tiles": START_GAP,
         "starts": [{"nation": nation, "usage": usage, "city": city} for _, nation, usage, city in start_list],

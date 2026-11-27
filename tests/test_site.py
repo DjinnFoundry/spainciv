@@ -63,39 +63,50 @@ class RenderTest(unittest.TestCase):
             self.assertEqual(site.index_bytes(), (WEB / "index.html").read_bytes())
 
     def test_spain_head(self):
+        """The head is in Spanish, the language of the data: link previews never see the language a visitor picks."""
         es = countries.COUNTRIES["es"]
+        page = es.page.in_lang("es")
         self.assertEqual(es.site_url, "spainciv.djinnfoundry.com")
         h = Head(site.render_index(TEMPLATE, es))
         url = "https://spainciv.djinnfoundry.com/"
         self.assertEqual(h.lang, "es")
-        self.assertEqual(h.title, es.page.title)
+        self.assertEqual(h.title, page.title)
         self.assertEqual(h.links["canonical"], url)
-        self.assertEqual(h.meta["description"], es.page.description)
+        self.assertEqual(h.meta["description"], page.description)
         self.assertEqual(h.meta["og:site_name"], "spainciv")
         self.assertEqual(h.meta["og:url"], url)
         for k in ("og:image", "twitter:image"):
             self.assertEqual(h.meta[k], url + "og-image.png")
         for k in ("og:title", "twitter:title"):
-            self.assertEqual(h.meta[k], es.page.card_title)
+            self.assertEqual(h.meta[k], page.card_title)
         for k in ("og:description", "twitter:description"):
-            self.assertEqual(h.meta[k], es.page.description)
+            self.assertEqual(h.meta[k], page.description)
         for k in ("og:image:alt", "twitter:image:alt"):
-            self.assertEqual(h.meta[k], es.page.image_alt)
+            self.assertEqual(h.meta[k], page.image_alt)
         # The image size and card type are the template's, still right for the 1200x630 card.
         self.assertEqual((h.meta["og:image:width"], h.meta["og:image:height"], h.meta["twitter:card"]), ("1200", "630", "summary_large_image"))
         self.assertNotIn("karpathy.ai", " ".join([*h.meta.values(), *h.links.values()]))
 
     def test_spain_credits_and_settings(self):
         es = countries.COUNTRIES["es"]
+        page, en = es.page.in_lang("es"), es.page.in_lang("en")
         html = site.render_index(TEMPLATE, es)
         h = Head(html)
         self.assertIn("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", h.credits)
-        self.assertIn(es.page.data_credit, h.credits)
+        self.assertIn(page.data_credit, h.credits)
         self.assertNotIn("EuroGeographics", html)  # GISCO boundaries were replaced by the IGN's SIANE
         self.assertIn("Basado en usaciv, de Andrej Karpathy (MIT)", h.credits)
         self.assertIn('<a href="https://karpathy.ai/usaciv/"', html)
-        self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": es.page.data_credit, "notices": list(es.page.notices),
-                                    "play": "jugar.html"})
+        english = {"data_credit": en.data_credit, "notices": list(en.notices), "play": "play.html", "description": en.description,
+                   "credits": site.credits_inner(es, "en")}
+        self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
+                                    "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
+                                    "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem)})
+        self.assertIn("lenses", h.config["data"])
+        self.assertNotIn("lenses.en", h.config["data"])
+        self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
+        self.assertIn("Based on <a href=", english["credits"])
+        self.assertIn("Boundaries: Atlas Nacional de España (ANE)", english["credits"])
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.
         self.assertLess(html.index('id="map-credits"'), html.index('id="lens-area"'))
 
@@ -124,7 +135,7 @@ class GeneratedFilesTest(unittest.TestCase):
         es = countries.COUNTRIES["es"]
         files = site.generated_files(es)
         self.assertEqual(set(files), {"index.html", "og-image.png"} | set(play.files(es)))
-        self.assertIn(play.PAGE, files)
+        self.assertTrue(set(play.PAGES.values()) <= set(files))
         self.assertEqual(files["index.html"](), site.index_bytes(es))
         with mock.patch.object(site, "card_png", return_value=b"card") as card:
             self.assertEqual(files["og-image.png"](), b"card")
@@ -241,7 +252,7 @@ class CountryJsTest(unittest.TestCase):
         c = self.country(world, json.dumps(site.page_config(es)))
         self.assertEqual(c["site_url"], "spainciv.djinnfoundry.com")
         self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
-        self.assertEqual(c["data_credit"], es.page.data_credit)
+        self.assertEqual(c["data_credit"], es.page.in_lang("es").data_credit)
         self.assertEqual(c["product"], "spainciv")
 
     def test_us_without_page_settings(self):

@@ -332,7 +332,7 @@ class WikidataPersonajes(Source):
         "canonization status, sitelink count, dates of birth and death and birthplace coordinates, from Wikidata's "
         "SPARQL service. Volunteer-edited: who has an item, and which occupations it lists, follows Wikipedia's "
         "coverage, not a register.",
-        used_for=["Great people lens"],
+        used_for=["Great people lenses", "People search"],
     )
 
     def fetch(self, force=False):

@@ -253,7 +253,7 @@ def _overlap(a, b) -> bool:
 
 
 def draw_panel(canvas: Canvas, country: Country, font: Font) -> None:
-    page = country.page
+    page = country.page.in_lang(country.lang)  # link previews never see the language chosen in the page
     x0 = PANEL_X
     # A dark panel fading in over the map's edge, with a gold rule.
     fade = 90

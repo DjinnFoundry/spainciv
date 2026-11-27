@@ -11,102 +11,156 @@ from __future__ import annotations
 
 import re
 
+from ..core.lang import Text, num, pct, tr  # noqa: F401  (num and pct re-exported for the builders: Spanish by default)
 
-def num(x: float, decimals: int | None = None) -> str:
-    """A number as Spanish writes it: decimal comma, and a thousands point from five digits on ("1000", "12.000", "2,5")."""
-    if decimals is None and float(x).is_integer():
-        x = int(x)
-    whole, _, frac = (f"{x:,.{decimals}f}" if decimals is not None else f"{x:,}").partition(".")
-    if len(whole.lstrip("-").replace(",", "")) <= 4:
-        whole = whole.replace(",", "")
-    return whole.replace(",", ".") + ("," + frac if frac else "")
-
-
-def pct(x: float, decimals: int = 0) -> str:
-    return f"{num(x * 100, decimals)} %"
-
-
-YIELD_LABELS = {"food": "Comida", "production": "Producción", "gold": "Oro", "science": "Ciencia", "culture": "Cultura"}
+# Spain's site is in Spanish and English (core/lang.py): every text here is a Text, the English written for Spain.
+YIELD_LABELS = {"food": tr("Comida", "Food"), "production": tr("Producción", "Production"), "gold": tr("Oro", "Gold"),
+                "science": tr("Ciencia", "Science"), "culture": tr("Cultura", "Culture")}
 
 LENS_GROUPS = {
-    "people": "Población", "prosperity": "Prosperidad", "knowledge": "Conocimiento", "life": "Vida diaria", "faith": "Fe",
-    "hazards": "Riesgos", "land": "Territorio",
+    "people": tr("Población", "People"), "prosperity": tr("Prosperidad", "Prosperity"),
+    "knowledge": tr("Conocimiento", "Knowledge"), "life": tr("Vida diaria", "Daily life"), "faith": tr("Fe", "Faith"),
+    "hazards": tr("Riesgos", "Hazards"), "land": tr("Territorio", "Land"),
 }
-LAND_UNIT = "proporción del suelo"
+LAND_UNIT = tr("proporción del suelo", "share of land")
 LAND_LENSES = {
-    "forest": {"name": "Bosque", "description": "Proporción de la tierra del hexágono cubierta de bosque caducifolio, de "
-               "coníferas o mixto (CORINE 311–313)."},
-    "farmland": {"name": "Tierra agraria", "description": "Proporción de la tierra del hexágono con cultivos, prados o "
-                 "dehesas (CORINE 2xx, cruzadas con las clases 81 y 82 de NLCD)."},
-    "developed": {"name": "Urbanizado", "description": "Proporción de la tierra del hexágono urbanizada: tejido urbano, "
-                  "zonas industriales y comerciales, redes de transporte, puertos, aeropuertos y obras (CORINE 111, 112, "
-                  "121–124 y 133; las zonas verdes y deportivas urbanas no cuentan)."},
+    "forest": {"name": tr("Bosque", "Forest"), "description": tr(
+        "Proporción de la tierra del hexágono cubierta de bosque caducifolio, de coníferas o mixto (CORINE 311–313).",
+        "Share of the hex's land covered by broadleaved, coniferous or mixed forest (CORINE 311–313).")},
+    "farmland": {"name": tr("Tierra agraria", "Farmland"), "description": tr(
+        "Proporción de la tierra del hexágono con cultivos, prados o dehesas (CORINE 2xx, cruzadas con las clases 81 y "
+        "82 de NLCD).",
+        "Share of the hex's land in crops, meadows or dehesas (CORINE 2xx, matched to NLCD classes 81 and 82).")},
+    "developed": {"name": tr("Urbanizado", "Built-up"), "description": tr(
+        "Proporción de la tierra del hexágono urbanizada: tejido urbano, zonas industriales y comerciales, redes de "
+        "transporte, puertos, aeropuertos y obras (CORINE 111, 112, 121–124 y 133; las zonas verdes y deportivas urbanas "
+        "no cuentan).",
+        "Share of the hex's land that is built up: urban fabric, industrial and commercial areas, transport networks, "
+        "ports, airports and construction sites (CORINE 111, 112, 121–124 and 133; urban green and sports areas are not "
+        "counted).")},
 }
-DOMAIN_NOTE = " Los colores abarcan del percentil 2 al 98 de los hexágonos; los valores de fuera se pintan con el color del extremo."
+DOMAIN_NOTE = tr(" Los colores abarcan del percentil 2 al 98 de los hexágonos; los valores de fuera se pintan con el "
+                 "color del extremo.",
+                 " Colours span the 2nd–98th percentile of hexes; values beyond are drawn at the end colours.")
 
 # world.json tables (world.py: names and rules by row id; {hills}, {mountains} and {urban} are the country's thresholds).
 WORLD = {
     "water": {
-        0: {"name": "Tierra", "rule": "Al menos 4 de los 7 puntos de muestra del hexágono (el centro y 6 más) caen en un "
-            "municipio del SIANE o en un país de Natural Earth, salvo que el centro sea mar y la media de ETOPO1 esté al "
-            "nivel del mar o por debajo, o lo esté al menos la mitad de sus muestras de ETOPO1 (las rías y los estuarios "
-            "siguen siendo agua)."},
-        1: {"name": "Océano", "rule": "Mar de más de 200 m de profundidad y sin tierra al lado."},
-        2: {"name": "Costa", "rule": "Mar junto a un hexágono de tierra, o de menos de 200 m de profundidad (media de ETOPO1)."},
-        3: {"name": "Lago", "rule": "Hexágono de agua (la mayoría de sus 7 puntos fuera de tierra) con más puntos de lago de "
-            "Natural Earth 1:10m que de mar, o por encima del nivel del mar."},
+        0: {"name": tr("Tierra", "Land"), "rule": tr(
+            "Al menos 4 de los 7 puntos de muestra del hexágono (el centro y 6 más) caen en un municipio del SIANE o en un "
+            "país de Natural Earth, salvo que el centro sea mar y la media de ETOPO1 esté al nivel del mar o por debajo, o "
+            "lo esté al menos la mitad de sus muestras de ETOPO1 (las rías y los estuarios siguen siendo agua).",
+            "At least 4 of the hex's 7 sample points (the centre and 6 more) fall in a SIANE municipality or a Natural "
+            "Earth country, unless the centre is sea and the ETOPO1 mean is at or below sea level, or at least half its "
+            "ETOPO1 samples are (rías and estuaries stay water).")},
+        1: {"name": tr("Océano", "Ocean"), "rule": tr("Mar de más de 200 m de profundidad y sin tierra al lado.",
+                                                       "Sea deeper than 200 m and not next to land.")},
+        2: {"name": tr("Costa", "Coast"), "rule": tr(
+            "Mar junto a un hexágono de tierra, o de menos de 200 m de profundidad (media de ETOPO1).",
+            "Sea next to a land hex, or shallower than 200 m (ETOPO1 mean).")},
+        3: {"name": tr("Lago", "Lake"), "rule": tr(
+            "Hexágono de agua (la mayoría de sus 7 puntos fuera de tierra) con más puntos de lago de Natural Earth 1:10m "
+            "que de mar, o por encima del nivel del mar.",
+            "Water hex (most of its 7 sample points off land) with more Natural Earth 1:10m lake points than sea points, "
+            "or above sea level.")},
     },
     "relief": {
-        0: {"name": "Llano", "rule": "Desviación típica de la altitud dentro del hexágono menor de {hills} m."},
-        1: {"name": "Colinas", "rule": "Desviación típica de la altitud de {hills} m o más."},
-        2: {"name": "Montañas", "rule": "Desviación típica de la altitud de {mountains} m o más, o altitud media de 2300 m o más."},
-        3: {"name": "Cumbres", "rule": "Altitud media de 2700 m o más (alta montaña)."},
+        0: {"name": tr("Llano", "Flat"), "rule": tr("Desviación típica de la altitud dentro del hexágono menor de {hills} m.",
+                                                     "Elevation standard deviation inside the hex under {hills} m.")},
+        1: {"name": tr("Colinas", "Hills"), "rule": tr("Desviación típica de la altitud de {hills} m o más.",
+                                                        "Elevation standard deviation of {hills} m or more.")},
+        2: {"name": tr("Montañas", "Mountains"), "rule": tr(
+            "Desviación típica de la altitud de {mountains} m o más, o altitud media de 2300 m o más.",
+            "Elevation standard deviation of {mountains} m or more, or mean elevation of 2,300 m or more.")},
+        3: {"name": tr("Cumbres", "Peaks"), "rule": tr("Altitud media de 2700 m o más (alta montaña).",
+                                                        "Mean elevation of 2,700 m or more (high mountains).")},
     },
     "cover": {
-        0: {"name": "Ninguna", "rule": "Agua, tierra extranjera o ningún píxel de tierra de CORINE."},
-        1: {"name": "Bosque caducifolio", "rule": "El bosque (NLCD 41+42+43) es el grupo mayor y el caducifolio (41), su "
-            "tipo principal."},
-        2: {"name": "Bosque de coníferas", "rule": "El bosque es el grupo mayor y el perennifolio (42), su tipo principal."},
-        3: {"name": "Bosque mixto", "rule": "El bosque es el grupo mayor y el mixto (43), su tipo principal."},
-        4: {"name": "Matorral y desierto", "rule": "El matorral (52) es el grupo mayor: maquia, garriga, landas y zonas "
-            "semiáridas."},
-        5: {"name": "Pastizal", "rule": "El pastizal (71) más los espacios abiertos urbanos (21: parques, zonas deportivas) "
-            "es el grupo mayor."},
-        6: {"name": "Pastos", "rule": "Los prados y pastos (81) son el grupo mayor."},
-        7: {"name": "Cultivos", "rule": "Los cultivos (82) son el grupo mayor."},
-        8: {"name": "Humedal", "rule": "Los humedales leñosos (90) y herbáceos (95) juntos son el grupo mayor."},
-        9: {"name": "Urbano", "rule": "Lo urbanizado de intensidad baja, media o alta (22+23+24) ocupa el {urban} % o más de "
-            "la tierra del hexágono, haya lo que haya además."},
-        10: {"name": "Suelo desnudo", "rule": "El suelo desnudo (31: roca, arena, salinas) es el grupo mayor."},
-        11: {"name": "Hielo y nieve", "rule": "El hielo y la nieve perpetuos (12) son el grupo mayor."},
+        0: {"name": tr("Ninguna", "None"), "rule": tr("Agua, tierra extranjera o ningún píxel de tierra de CORINE.",
+                                                       "Water, foreign land, or no CORINE land pixels.")},
+        1: {"name": tr("Bosque caducifolio", "Broadleaved forest"), "rule": tr(
+            "El bosque (NLCD 41+42+43) es el grupo mayor y el caducifolio (41), su tipo principal.",
+            "Forest (NLCD 41+42+43) is the largest group and broadleaved (41) its largest type.")},
+        2: {"name": tr("Bosque de coníferas", "Conifer forest"), "rule": tr(
+            "El bosque es el grupo mayor y el perennifolio (42), su tipo principal.",
+            "Forest is the largest group and evergreen (42) its largest type.")},
+        3: {"name": tr("Bosque mixto", "Mixed forest"), "rule": tr(
+            "El bosque es el grupo mayor y el mixto (43), su tipo principal.",
+            "Forest is the largest group and mixed (43) its largest type.")},
+        4: {"name": tr("Matorral y desierto", "Scrub & desert"), "rule": tr(
+            "El matorral (52) es el grupo mayor: maquia, garriga, landas y zonas semiáridas.",
+            "Scrub (52) is the largest group: maquis, garrigue, heathland and semi-arid land.")},
+        5: {"name": tr("Pastizal", "Grassland"), "rule": tr(
+            "El pastizal (71) más los espacios abiertos urbanos (21: parques, zonas deportivas) es el grupo mayor.",
+            "Grassland (71) plus urban open space (21: parks, sports grounds) is the largest group.")},
+        6: {"name": tr("Pastos", "Pasture"), "rule": tr("Los prados y pastos (81) son el grupo mayor.",
+                                                         "Meadows and pasture (81) are the largest group.")},
+        7: {"name": tr("Cultivos", "Cropland"), "rule": tr("Los cultivos (82) son el grupo mayor.",
+                                                            "Crops (82) are the largest group.")},
+        8: {"name": tr("Humedal", "Wetland"), "rule": tr(
+            "Los humedales leñosos (90) y herbáceos (95) juntos son el grupo mayor.",
+            "Woody (90) and herbaceous (95) wetlands together are the largest group.")},
+        9: {"name": tr("Urbano", "Urban"), "rule": tr(
+            "Lo urbanizado de intensidad baja, media o alta (22+23+24) ocupa el {urban} % o más de la tierra del hexágono, "
+            "haya lo que haya además.",
+            "Built-up land of low, medium or high intensity (22+23+24) covers {urban}% or more of the hex's land, whatever "
+            "else is there.")},
+        10: {"name": tr("Suelo desnudo", "Barren"), "rule": tr(
+            "El suelo desnudo (31: roca, arena, salinas) es el grupo mayor.",
+            "Bare ground (31: rock, sand, salt pans) is the largest group.")},
+        11: {"name": tr("Hielo y nieve", "Ice & snow"), "rule": tr(
+            "El hielo y la nieve perpetuos (12) son el grupo mayor.", "Perennial ice and snow (12) are the largest group.")},
     },
     "notes": {
-        "water": "Los límites municipales del SIANE 1:3M y los de países y lagos de Natural Earth 1:10m no encajan del "
-        "todo. Un hexágono de mar cuya media de ETOPO1 está sobre el nivel del mar (y con menos de la mitad de sus muestras "
-        "por debajo) pasa a tierra si al menos 4 de sus 6 vecinos son tierra, o si toca a la vez tierra española y "
-        "extranjera; toma el dueño mayoritario de sus vecinos. La altitud de un hexágono de mar es la media de sus muestras "
-        "de ETOPO1 bajo el nivel del mar (su profundidad). Canarias va en un recuadro al suroeste de la península; sus "
-        "hexágonos conservan su altitud y su cubierta del suelo reales.",
-        "relief": "Sale de las muestras de ETOPO1 (1 minuto de arco, unos 1,85 km de separación, unas 25 por hexágono de "
-        "10 km) con altitud de -100 m o más, para que bahías y fondo marino no cuenten; si ninguna llega, se usan todas. "
-        "Los hexágonos de agua son siempre llanos. Los umbrales de rugosidad son más bajos que los del mapa de EE. UU. "
-        "(85 m y 260 m en hexágonos de 25 km) porque un hexágono más pequeño abarca menos relieve: se fijaron para que "
-        "España tenga la misma proporción de tierra llana, de colinas y de montaña que con la regla de EE. UU. en "
-        "hexágonos de 25 km.",
-        "cover": "Sale de CORINE Land Cover 2018 (Copernicus), muestreado en una retícula dentro de cada hexágono español. "
-        "Las clases de CORINE se cruzan con los grupos de estilo NLCD de abajo (la tabla de cruce está en la entrada de "
-        "CORINE del Almanaque); el agua (5xx) y los píxeles sin datos se descartan, las proporciones son de los puntos de "
-        "tierra restantes y el umbral urbano se aplica a la proporción urbanizada redondeada (CORINE 111, 112, 121–124 y "
-        "133). Los hexágonos extranjeros (Portugal, Francia, Andorra, Marruecos) tienen cubierta 0 (ninguna).",
+        "water": tr(
+            "Los límites municipales del SIANE 1:3M y los de países y lagos de Natural Earth 1:10m no encajan del todo. Un "
+            "hexágono de mar cuya media de ETOPO1 está sobre el nivel del mar (y con menos de la mitad de sus muestras por "
+            "debajo) pasa a tierra si al menos 4 de sus 6 vecinos son tierra, o si toca a la vez tierra española y "
+            "extranjera; toma el dueño mayoritario de sus vecinos. La altitud de un hexágono de mar es la media de sus "
+            "muestras de ETOPO1 bajo el nivel del mar (su profundidad). Canarias va en un recuadro al suroeste de la "
+            "península; sus hexágonos conservan su altitud y su cubierta del suelo reales.",
+            "The SIANE 1:3M municipal boundaries and the Natural Earth 1:10m country and lake outlines do not fit exactly. "
+            "A sea hex whose ETOPO1 mean is above sea level (with fewer than half its samples below it) becomes land if at "
+            "least 4 of its 6 neighbours are land, or if it touches both Spanish and foreign land; it takes the owner most "
+            "of its neighbours have. A sea hex's elevation is the mean of its ETOPO1 samples below sea level (its depth). "
+            "The Canary Islands are drawn in a box south-west of the peninsula; their hexes keep their real elevation and "
+            "land cover."),
+        "relief": tr(
+            "Sale de las muestras de ETOPO1 (1 minuto de arco, unos 1,85 km de separación, unas 25 por hexágono de 10 km) "
+            "con altitud de -100 m o más, para que bahías y fondo marino no cuenten; si ninguna llega, se usan todas. Los "
+            "hexágonos de agua son siempre llanos. Los umbrales de rugosidad son más bajos que los del mapa de EE. UU. "
+            "(85 m y 260 m en hexágonos de 25 km) porque un hexágono más pequeño abarca menos relieve: se fijaron para que "
+            "España tenga la misma proporción de tierra llana, de colinas y de montaña que con la regla de EE. UU. en "
+            "hexágonos de 25 km.",
+            "From the ETOPO1 samples (1 arc-minute, about 1.85 km apart, some 25 per 10 km hex) at -100 m or higher, so "
+            "that bays and sea floor do not count; if none is, all are used. Water hexes are always flat. The roughness "
+            "thresholds are lower than the US map's (85 m and 260 m on 25 km hexes) because a smaller hex spans less "
+            "relief: they were set so that Spain has the same shares of flat land, hills and mountains as the US rule "
+            "gives it on 25 km hexes."),
+        "cover": tr(
+            "Sale de CORINE Land Cover 2018 (Copernicus), muestreado en una retícula dentro de cada hexágono español. Las "
+            "clases de CORINE se cruzan con los grupos de estilo NLCD de abajo (la tabla de cruce está en la entrada de "
+            "CORINE del Almanaque); el agua (5xx) y los píxeles sin datos se descartan, las proporciones son de los puntos "
+            "de tierra restantes y el umbral urbano se aplica a la proporción urbanizada redondeada (CORINE 111, 112, "
+            "121–124 y 133). Los hexágonos extranjeros (Portugal, Francia, Andorra, Marruecos) tienen cubierta 0 (ninguna).",
+            "From CORINE Land Cover 2018 (Copernicus), sampled on a grid inside each Spanish hex. The CORINE classes are "
+            "matched to the NLCD-style groups below (the matching table is in CORINE's Almanac entry); water (5xx) and "
+            "no-data pixels are dropped, the shares are of the remaining land points, and the urban threshold applies to "
+            "the rounded built-up share (CORINE 111, 112, 121–124 and 133). Foreign hexes (Portugal, France, Andorra, "
+            "Morocco) have cover 0 (none)."),
     },
 }
 
-RAIL_TIERS = {"main": "Línea principal", "secondary": "Línea secundaria"}
-HUBS = {"L": "Hub grande", "M": "Hub mediano", "S": "Hub pequeño", "N": "Sin categoría de hub"}
+RAIL_TIERS = {"main": tr("Línea principal", "Main line"), "secondary": tr("Línea secundaria", "Secondary line")}
+HUBS = {"L": tr("Hub grande", "Large hub"), "M": tr("Hub mediano", "Medium hub"), "S": tr("Hub pequeño", "Small hub"),
+        "N": tr("Sin categoría de hub", "No hub class")}
 
-# districts.badge_for: the city-type label of a capital and the badge's sentence ({lq} is already a Spanish number).
-BADGE_TEXT = {"capital": "Capital", "seat": "Sede de gobierno", "share": "{name}: {ge}{lq} veces la cuota nacional de empleo",
-              "decimal": ","}
+# districts.badge_for: the city-type label of a capital and the badge's sentence, by language ({lq} is already a number
+# in that language). The English is the US builder's (districts.BADGE_TEXT).
+BADGE_TEXT = {"es": {"capital": "Capital", "seat": "Sede de gobierno",
+                     "share": "{name}: {ge}{lq} veces la cuota nacional de empleo", "decimal": ","},
+              "en": {"capital": "Capital city", "seat": "Seat of government",
+                     "share": "{name}: {ge}{lq}× the national share of jobs", "decimal": "."}}
 
 MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre",
           "diciembre"]
@@ -118,15 +172,29 @@ _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto d
                   (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
 
 
-def vintage(text: str | None) -> str | None:
-    """A source vintage in Spanish: '1 January 2025' → '1 de enero de 2025' and the few English words the Spanish
-    sources use."""
+# The few vintages a Spanish source writes in Spanish, and their English.
+_ES_DATE = re.compile(r"\b(?:(\d{1,2}) de )?(" + "|".join(MONTHS) + r") de (\d{4})\b")
+_ES_QUARTER = re.compile(r"\b(\d)\.º trimestre de (\d{4})\b")
+_VINTAGE_WORDS_ES = [("(zonas de 2017)", "(2017 areas)"), ("pliegos de condiciones", "product specifications"),
+                     ("Cobertura de banda ancha", "Broadband coverage"), ("viviendas turísticas", "tourist dwellings"),
+                     ("valor tasado", "appraised value")]
+
+
+def vintage(text: str | None) -> Text | str | None:
+    """A source vintage in both languages. Most sources write it in English: the Spanish translates its dates ('1
+    January 2025' → '1 de enero de 2025') and its few English words. A vintage written in Spanish gets its English the
+    other way ('junio de 2025' → 'June 2025'). Names of statistics stay as their publisher writes them. An empty
+    vintage stays as it is."""
     if not text:
         return text
-    out = _DATE.sub(lambda m: f"{m.group(1)} de {MONTHS[_EN_MONTHS.index(m.group(2))]} de {m.group(3)}", text)
-    for en, es in _VINTAGE_WORDS:
-        out = out.replace(en, es)
-    return out
+    es = _DATE.sub(lambda m: f"{m.group(1)} de {MONTHS[_EN_MONTHS.index(m.group(2))]} de {m.group(3)}", text)
+    for en_word, es_word in _VINTAGE_WORDS:
+        es = es.replace(en_word, es_word)
+    en = _ES_DATE.sub(lambda m: " ".join(filter(None, [m.group(1), _EN_MONTHS[MONTHS.index(m.group(2))], m.group(3)])), text)
+    en = _ES_QUARTER.sub(lambda m: f"Q{m.group(1)} {m.group(2)}", en)
+    for es_word, en_word in _VINTAGE_WORDS_ES:
+        en = en.replace(es_word, en_word)
+    return tr(es, en)
 
 
 _INE_LICENCE = ("CC BY 4.0 (aviso legal del INE): reutilización comercial y no comercial citando la fuente como "
@@ -324,7 +392,7 @@ SOURCES = {
         "coordenadas, del servicio SPARQL de Wikidata. Lo editan voluntarios: la cobertura se acerca a los registros "
         "oficiales, pero no es exacta.",
         "used_for": ["Maravillas de Patrimonio Mundial y catedrales", "Lente de patrimonio (Bienes de Interés Cultural)",
-                     "Lente de museos", "Lentes de castillos y de plazas de toros"],
+                     "Lente de museos", "Lente de castillos", "Lente de plazas de toros"],
     },
     "wikidata_personajes": {
         "title": "Wikidata: personajes famosos nacidos en España (oficios, cargos, premios, lugares y fechas)",
@@ -582,6 +650,18 @@ SOURCES = {
 
 
 def source(entry: dict) -> dict:
-    """A sources.json entry with its Spanish texts (fields without a translation stay as the source gives them)."""
-    return {**entry, **SOURCES.get(entry["id"], {}), "vintage": vintage(entry.get("vintage"))}
+    """A sources.json entry in Spanish and English: each field SOURCES translates is a Text of the Spanish and the
+    source's own English (pipeline/sources/es), item by item for `used_for`; the others stay as the source gives them."""
+    out = {**entry, "vintage": vintage(entry.get("vintage"))}
+    for key, es in SOURCES.get(entry["id"], {}).items():
+        en = entry.get(key)
+        if key == "used_for":
+            if len(es) != len(en or []):
+                raise ValueError(f"{entry['id']}: used_for has {len(es)} items in Spanish and {len(en or [])} in English")
+            out[key] = [tr(a, b) for a, b in zip(es, en)]
+        elif not en:
+            raise ValueError(f"{entry['id']}: no English {key} for the Spanish one")
+        else:
+            out[key] = tr(es, en)
+    return out
 

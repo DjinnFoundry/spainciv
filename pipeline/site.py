@@ -8,10 +8,15 @@ web/index.html is written for the United States and is published as is for it. A
 - a credit line on the map: its data sources, the licence notices its sources require, and usaciv's credit;
 - `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
   the world.json `country` block (so a new address or credit needs no data rebuild), and `play` when the country has
-  an Unciv map;
+  an Unciv map, and `data`, the names of its data files; a country in several languages adds `langs` (each language's
+  number locale) and `texts`, the page's texts in every language but the first;
 - the Unciv page and downloads (pipeline/play.py) when its build made an Unciv map.
 
 generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.
+
+The head and the credits are written in the country's first language, the language of the data files: link previews
+never run the page, so they cannot follow the language a visitor picks. The page switches its own texts when another
+language is chosen (web/js/app/country.js).
 """
 
 from __future__ import annotations
@@ -46,28 +51,45 @@ def _meta(html: str, attr: str, name: str, value: str) -> str:
     return _set(html, rf'<meta {attr}="{re.escape(name)}" content="[^"]*">', f'<meta {attr}="{name}" content="{_attr(value)}">')
 
 
-def credits_html(country: Country) -> str:
-    page = country.page
+def credits_inner(country: Country, lang: str) -> str:
+    """The map's credit line in `lang`, as HTML: data sources, licence notices, usaciv's credit."""
+    page = country.page.in_lang(lang)
     link = f'<a href="{USACIV_URL}" target="_blank" rel="noopener">usaciv</a>'
     parts = [escape(page.data_credit), *map(escape, page.notices), escape(page.based_on).replace("{usaciv}", link)]
-    return f'<p id="map-credits" class="map-credits">{" · ".join(parts)}</p>'
+    return " · ".join(parts)
+
+
+def credits_html(country: Country) -> str:
+    return f'<p id="map-credits" class="map-credits">{credits_inner(country, country.lang)}</p>'
 
 
 def page_config(country: Country) -> dict:
     """What the browser takes from the page rather than from world.json (see web/js/app/country.js); `play` is the
-    "Jugar en Unciv" page of a country with an Unciv map (pipeline/play.py), which the help dialog links to."""
-    config = {"lang": country.lang, "site_url": country.site_url, "data_credit": country.page.data_credit, "notices": list(country.page.notices)}
-    if play.load(country) is not None:
-        config["play"] = play.PAGE
+    "Jugar en Unciv" page of a country with an Unciv map (pipeline/play.py), which the help dialog links to. A country
+    in several languages adds `langs` and, for each language but the first, `texts`: what changes with the language."""
+    has_play = play.load(country) is not None
+
+    def texts(lang: str) -> dict:
+        page = country.page.in_lang(lang)
+        out = {"data_credit": page.data_credit, "notices": list(page.notices)}
+        return out | {"play": play.PAGES[lang]} if has_play else out
+
+    # The data files the site has, so the browser does not ask for the US-only ones (and log a 404 for each).
+    data = sorted(p.stem for p in country.web_data_dir.glob("*.json") if "." not in p.stem)
+    config = {"lang": country.lang, "site_url": country.site_url, **texts(country.lang), "data": data}
+    if len(country.langs) > 1:
+        config["langs"] = dict(country.locales)
+        config["texts"] = {lang: texts(lang) | {"description": country.page.in_lang(lang).description,
+                                                "credits": credits_inner(country, lang)} for lang in country.langs[1:]}
     return config
 
 
 def render_index(html: str, country: Country | None = None) -> str:
     """web/index.html for a country: unchanged without a `page`, else with the country's head and map credits."""
     c = country or active()
-    page = c.page
-    if page is None:
+    if c.page is None:
         return html
+    page = c.page.in_lang(c.lang)
     url = f"https://{c.site_url}/"
     image = url + "og-image.png"
     html = _set(html, r'<html lang="[^"]*">', f'<html lang="{_attr(c.lang)}">')
