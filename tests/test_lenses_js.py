@@ -39,6 +39,16 @@ class LensesJsTest(unittest.TestCase):
                           f"m.isTimeLens({clock}), m.isTimeLens({dur}), m.isTimeLens({{format: 'int'}})]")
         self.assertEqual(got, ["22:01", "≤ 20:55", "≥ 22:20", "15 h 27 min", "54 min", "1 h", True, True, False])
 
+    def test_a_bounded_share_reads_in_whole_percent_and_says_of_what(self):
+        # The wildlife lenses (spain_fauna.py): a share from 0 to 1 on its natural range. The tooltip value carries the
+        # unit and no false decimals; the legend's ticks drop the unit and the ≤/≥ marks of a clamped scale.
+        fauna = "{format: 'pct', domain: [0, 1], bounded: true, decimals: 0, unit_in_value: true, unit: 'of the hex'}"
+        plain = "{format: 'pct', domain: [0, 1]}"
+        got = self.run_js(f"[m.formatLensValue({fauna}, 1), m.formatLensValue({fauna}, 0.07), "
+                          f"m.formatLensTick({fauna}, 0, 0), m.formatLensTick({fauna}, 1, 4), "
+                          f"m.formatLensValue({plain}, 0.07), m.formatLensTick({plain}, 1, 4)]")
+        self.assertEqual(got, ["100% of the hex", "7% of the hex", "0%", "100%", "7.0%", "≥ 100%"])
+
     def test_a_lens_built_in_the_browser_never_takes_the_lens_files_vintage(self):
         # The file's lenses with a source sources.json lacks show the file's vintage; a lens added later (app.addLens
         # splices it into the same list) shows only its source, dated or not.

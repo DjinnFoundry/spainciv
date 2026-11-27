@@ -28,7 +28,7 @@ export function formatLensValue(lens, v) {
   switch (lens.format) {
     case "category": return lens.categories?.[Math.round(v)]?.name ?? t("core.lens.noData");
     case "usd": case "eur": return money(v);
-    case "pct": return pct(v, v < 0.1 ? 1 : 0);
+    case "pct": return pct(v, lens.decimals ?? (v < 0.1 ? 1 : 0)) + (lens.unit_in_value && lens.unit ? " " + lens.unit : "");
     case "int": return intish(v) + (perKm2(lens) ? t("core.lens.perKm2") : lens.unit ? " " + lens.unit : "");
     case "minutes": return t("core.lens.minutes", { n: fixed(v, 0) });
     case "clock": return clock(v);
@@ -62,11 +62,12 @@ const perKm2 = (lens) => /\/\s*km²$/.test(lens.unit || "");
 export function formatLensTick(lens, t, k = -1) {
   const raw = lensValueAt(lens, t);
   const v = lens.format === "int" && Number.isFinite(raw) ? Math.round(raw) : raw; // a count never reads "4.5"
-  const short = (lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
-    && !(lens.format === "int" && perKm2(lens)) ? { ...lens, unit: null } : lens;
+  const short = ((lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
+    && !(lens.format === "int" && perKm2(lens))) || lens.unit_in_value ? { ...lens, unit: null } : lens;
   let s = formatLensValue(short, v);
   const zero = Number.isFinite(v) && Math.abs(v) < 1e-9;
   if (zero) s = s.replace(/^(\$?)0[.,]0+(?!\d)/, (_, d) => d + "0");
+  if (lens.bounded) return s; // the domain is the value's natural range (a share from 0 to 1): nothing lies beyond
   if (k === 0 && !zero) s = "≤ " + s;
   else if (k === 4) s = "≥ " + s;
   return s;
@@ -401,8 +402,8 @@ export function initLensDock(opts) {
       mark.hidden = false;
       mark.style.left = a * 100 + "%";
       mark.style.width = Math.max(0.5, (b - a) * 100) + "%";
-      const lo = band[0] <= 0 ? "≤ " + formatLensValue(active, lensValueAt(active, b)) : null;
-      const hi = band[1] >= 1 ? "≥ " + formatLensValue(active, lensValueAt(active, a)) : null;
+      const lo = band[0] <= 0 && !active.bounded ? "≤ " + formatLensValue(active, lensValueAt(active, b)) : null;
+      const hi = band[1] >= 1 && !active.bounded ? "≥ " + formatLensValue(active, lensValueAt(active, a)) : null;
       const txt = band[0] <= 0 && band[1] >= 1 ? t("core.lens.allValues")
         : lo || hi || `${formatLensValue(active, lensValueAt(active, a))} – ${formatLensValue(active, lensValueAt(active, b))}`;
       hint.textContent = t("core.lens.showingOnly", { what: txt });
