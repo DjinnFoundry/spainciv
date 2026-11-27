@@ -651,7 +651,7 @@ export default {
   "adv.mil.m.gdpKey": "Parte del PIB del estado",
   "adv.mil.m.land": "Terreno militar",
   "adv.mil.guardReserve": "Guardia y Reserva",
-  "adv.mil.civilians": "Civiles del Departamento de Defensa",
+  "adv.mil.civilians": "Personal civil de Defensa",
   "adv.mil.contracts": "Contratos",
   "adv.mil.payroll": "Nóminas",
   "adv.mil.grants": "Subvenciones",

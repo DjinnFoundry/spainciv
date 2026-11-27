@@ -175,7 +175,7 @@ export default {
   "adv.mil.comp.other": "Other",
   "adv.mil.components": "Branches",
   "adv.mil.col.service": "Branch",
-  "adv.mil.civilians": "Department of Defense civilians",
+  "adv.mil.civilians": "Ministry of Defence civilian staff",
   "adv.mil.byService": "<b>Active duty by service:</b> {list}. Department of Defense civilians: {civ}.",
   "adv.mil.byCounty": "Contracts by county",
   "adv.mil.vets.note": "Civilian veterans 18+ and active-duty residents 16+, counted where they live ({vintage}). The shares of states and areas are sums of their counties.",
