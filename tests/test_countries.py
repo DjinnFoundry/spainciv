@@ -1416,12 +1416,21 @@ class SpainDailyLensesTest(unittest.TestCase):
 
         sq = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
         poly = {"type": "Polygon", "coordinates": sq}
-        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "40", "PROVINCE": "Ourense"}, "geometry": poly},
-                 {"properties": {"COUNTRY": "ES", "AREA_HA": "9"}, "geometry": {"type": "GeometryCollection", "geometries": [
-                     poly, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}]}},
+        date = "2025-08-11 13:40:00"
+        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "40", "PROVINCE": "Ourense", "FIREDATE": date}, "geometry": poly},
+                 {"properties": {"COUNTRY": "ES", "AREA_HA": "9", "FIREDATE": date}, "geometry": {
+                     "type": "GeometryCollection", "geometries": [poly, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}]}},
                  {"properties": {"COUNTRY": "PT", "AREA_HA": "500"}, "geometry": poly},
                  {"properties": {"COUNTRY": "ES", "AREA_HA": "0"}, "geometry": poly}]
         self.assertEqual([(f["area_ha"], len(f["rings"])) for f in fires(feats, 2025)], [(40.0, 1), (9.0, 1)])
+
+    def test_effis_keeps_the_start_month(self):
+        from pipeline.sources.es.effis import fires
+
+        poly = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "600", "FIREDATE": d}, "geometry": poly}
+                 for d in ("2022-07-17 00:00:00", "2022-12-01 09:05:00")]
+        self.assertEqual([(f["year"], f["month"]) for f in fires(feats, 2022)], [(2022, 7), (2022, 12)])
 
     def test_burnt_area_is_shared_by_the_hexes_a_fire_covers(self):
         from pipeline.build.spain_daily import burnt_cells

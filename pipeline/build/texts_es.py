@@ -590,7 +590,7 @@ SOURCES = {
         "últimas temporadas completas en cada hexágono: la superficie de cada incendio se reparte entre los hexágonos "
         "que cubre su perímetro. La estadística oficial española (EGIF, del Ministerio para la Transición Ecológica) "
         "cuenta todos los incendios, también los pequeños, pero no tiene descarga por municipio.",
-        "used_for": ["Lente de incendios"],
+        "used_for": ["Lente de incendios", "Temporada de incendios en Unciv"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
