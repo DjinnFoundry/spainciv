@@ -6,6 +6,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
+  Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.
+  Antes las playas de un municipio se turnaban entre sus hexágonos de costa sin mirar dónde estaba cada una: las de
+  Vigo caían en uno y ahora en cuatro; 6 de las 15 de embalse o río de interior dejan el centro del pueblo. El tooltip
+  da playa y municipio (E74, E75, F33).
 - **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
   castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
   enlace que se comparte la lleva (`#lang=en`).
