@@ -86,11 +86,13 @@ Per-cell arrays have length `grid.cols * grid.rows`, with index `row * cols + co
 }
 ```
 
+`version` stays 2 with `country`: the block is additive, so the original data stay valid.
 `country.projection` is the projection the pipeline used (`pipeline/core/geo.py` `to_web()` + `MapProjection.to_dict()`);
 `web/js/geo.js` inverts it. Map km → projection plane: `X = x + min_x - margin`, `Y = max_y + margin - y` (y up). An
 inset shifts the points inside its lon/lat window by `(dx, dy)` in that plane; `box` is the shifted window's extent, so
 a point inside `box` is shifted back before inverting. For other countries `states` holds the regions (provinces:
-`fips` = INE province code, `abbr` = ISO 3166-2 code) and `counties` the units (municipalities: `geoid` = INE code).
+`fips` = INE province code, `abbr` = ISO 3166-2 code) and `counties` the units (municipalities: `geoid` = INE code):
+the US keys, with ids in the same format.
 
 Cover ids (fixed): 0 none · 1 forest_deciduous · 2 forest_evergreen · 3 forest_mixed · 4 scrub (scrub & desert) ·
 5 grassland · 6 pasture · 7 cropland · 8 wetland · 9 urban · 10 barren · 11 ice.
@@ -313,8 +315,8 @@ it first opens): `{"vintage": "2026-11-24", "provisional": true, "dates": ["1988
 "boletin_name", "basin": index into basins, "use": "hidroelectrico" | "consuntivo", "lon", "lat", "x", "y" (map km), "cell", "placed":
 "boletin" | "wikidata" | null, "qids"?: [Wikidata ids], "first", "last" (indices into dates, or null), "capacity" (last
 reported hm³), "actual" (hm³ in its last reporting week)}]}`. `dates` are every Boletín Hidrológico Tuesday, ascending,
-a week apart (E92). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
-week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E93) has null
+a week apart (E91). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
+week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E91) has null
 `lon`, `lat`, `x`, `y`, `cell` and `placed`. `boletin_name` is the name as the Boletín writes it ("Conchas, Las",
 "Vellón,El-(Pedrezuela)"), the key of every match; `name` is that name tidied to read ("Las Conchas", "El Vellón
 (Pedrezuela)"). Spain's figure is not stored: the browser sums the basins.
@@ -336,7 +338,7 @@ not Tuesdays a week apart, or a reservoir's `first`/`last` disagree with its val
 ```jsonc
 {"version": 1, "vintage": "Horarios de Renfe, Ouigo e Iryo del miércoles 9 de diciembre de 2026",
  "sources": ["horarios_tren", "osm_ferrocarril", "siane"],
- "date": "2026-12-09", "week": ["2026-12-07", "2026-12-13"],   // the day (DECISIONS E102) and its Monday to Sunday
+ "date": "2026-12-09", "week": ["2026-12-07", "2026-12-13"],   // the day (DECISIONS E101) and its Monday to Sunday
  "feeds": [{"id": "renfe_av_ld", "name": "…", "trains": 1382, "window": ["2026-11-26", "2027-09-29"],
             "file_date": "2026-11-27", "unofficial": false}],
  "params": {"change_min": 10, "walk_km": 1.5, "walk_kmh": 4.5, "access_km": 30, "access_kmh": 40},
@@ -354,7 +356,7 @@ not Tuesdays a week apart, or a reservoir's `first`/`last` disagree with its val
                                "legs": [["AVE 02151", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha-Almudena Grandes"]]}}],
                                // a leg: [train label | null, from, to]; null is a walk ("a pie a …"), also a first one
  "links": [[a, b, trains]],   // hex links (a < b, neighbours) with passenger trains that day, each train once
- "ghost": [[a, b]],            // Adif track with none (E103)
+ "ghost": [[a, b]],            // Adif track with none (E101)
  "matching": {"pairs": 1985, "abroad": 16, "unmatched": 16, "unmatched_pairs": [["Antequera AV", "Málaga María Zambrano"]],
               "ghost_runs": 8, "near_unmatched": 13, "short_runs": 38, "hs_ghost": 0},
  "cuts": [{"route": "R3", "from": "La Garriga", "to": "La Tor de Querol-Enveig"}]}  // lines with no journey to Madrid that day
@@ -1017,7 +1019,7 @@ index) and every one has `community`.
 The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
 streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
 sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
-E89)) and `fiestas`
+E82)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`, or `#mes=8` alone; the fiesta rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
 only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, hash keys `dia` and `sol`, e.g.

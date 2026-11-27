@@ -35,7 +35,7 @@ COUNTRY = Country(
     site_url="spainciv.djinnfoundry.com",
     base_projection=projection,
     hex_radius_km=10 / math.sqrt(3),  # 10 km across the flats (pointy-top hexes: width = √3·radius)
-    margin_km=80.0,
+    margin_km=80.0,  # the US's 200 km is for a country four times as wide
     region=Level(tr("Provincia", "Province"), tr("Provincias", "Provinces")),
     unit=Level(tr("Municipio", "Municipality"), tr("Municipios", "Municipalities")),
     metro=Level(tr("Área urbana", "Urban area"), tr("Áreas urbanas", "Urban areas")),
