@@ -37,7 +37,6 @@ FILE = f"eptmc{EPTMC_YEAR}.tablas.xls"
 URL = f"https://www.transportes.gob.es/recursos_mfom/comodin/recursos/{FILE}"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/131.0.0.0 Safari/537.36"}
-LICENCE_URL = "https://www.transportes.gob.es/el-ministerio/buen-gobierno/licencia_datos"
 ATTRIBUTION = "Basado en datos abiertos Ministerio de Transportes y Movilidad Sostenible"
 
 CEUTA_MELILLA = "18+19"  # the survey publishes the two autonomous cities together
@@ -330,7 +329,7 @@ class Eptmc(Source):
         "loading and unloading",
         publisher="Ministerio de Transportes y Movilidad Sostenible",
         homepage=PAGE,
-        license=f"Reuse allowed, commercial or not, under the ministry's licence (Ley 37/2007, {LICENCE_URL}); derived "
+        license="Reuse allowed, commercial or not, under the ministry's data licence (Ley 37/2007); derived "
         f"data must say «{ATTRIBUTION}», link to transportes.gob.es and keep the update date",
         description=f"The annual tables of the EPTMC {EPTMC_YEAR}, a weekly sample survey of Spanish-registered heavy "
         "goods vehicles (over 3.5 t): tonnes and tonne-kilometres by community of loading and of unloading (tables "
