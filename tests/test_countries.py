@@ -1801,6 +1801,8 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
         self.assertEqual(noun(person(word="poeta")), "poeta")
         self.assertEqual(noun(person(primary="nobel", role="Q7191", trade="médico")), "médico, premio Nobel")
         self.assertEqual(noun(person(primary="artists", role="Q1028181", female=True)), "pintora")
+        # A Guanche king's own title wins over the description's "rey".
+        self.assertEqual(noun(person(primary="monarchs", role="Q3323725", word="rey")), "guanarteme")
         self.assertEqual(note(person(born={"year": 1547, "precision": 11}, died={"year": 1616, "precision": 11})),
                          {"es": "escritor, 1547–1616", "en": "writer, 1547–1616"})
         self.assertEqual(noun(person(primary="nobel", role="Q7191", trade="médico"), "en"), "physician, Nobel laureate")

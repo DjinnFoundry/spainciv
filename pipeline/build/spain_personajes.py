@@ -20,7 +20,7 @@ from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
 from ..core.lang import Text, tr
 from ..core.store import load_interim_payload
-from ..sources.es.personajes import KIND_IDS, KINDS
+from ..sources.es.personajes import GUANARTEME, KIND_IDS, KINDS, MENCEY
 from .cities import nearest_land, ring_search
 from .spain_named import shore_cell
 from .world import FOREIGN
@@ -194,12 +194,15 @@ def years(born: dict | None, died: dict | None, lang: str = "es") -> str | None:
     return DATE_WORDS["died"][k].format(d) if d else None
 
 
+OWN_TITLES = {MENCEY, GUANARTEME}  # titles that name the role better than a description's 'rey'
+
+
 def noun(person: dict, lang: str = "es") -> str:
     """What a person was: the word of Wikidata's description for its primary category ('poeta', 'tenista'), a Nobel
     with the trade the description names first ('médico, premio Nobel'), or else the noun of its role, in the
     person's gender; in English, the English of that word (NOUN_EN)."""
     en = (lambda w: NOUN_EN[w]) if lang == "en" else (lambda w: w)
-    if person["word"]:
+    if person["word"] and person["role"] not in OWN_TITLES:
         return en(person["word"])
     if person["primary"] == "nobel" and person["trade"]:
         return f"{en(person['trade'])}, {en('premio Nobel')}"
