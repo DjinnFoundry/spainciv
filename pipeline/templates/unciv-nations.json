@@ -1,5 +1,5 @@
 {
-  "_comment": "The texts of each autonomous community as an Unciv nation, in each language: the name of its unique (a bonus on the resource it holds most of, relative to its size), the text Unciv shows when a game starts, and what the page and the README say of it (where it starts, its advantage, its start bias, a city-state's type). Terrain and technology names are Unciv's own in that language (android/assets/jsons/translations). English is the mod's own text (jsons/Nations.json) and Spanish its translation (jsons/translations/Spanish.properties). Filled in by pipeline/play.py from unciv.json's summary.",
+  "_comment": "The texts of each autonomous community as an Unciv nation, in each language: the name of its unique (a bonus on the resource it holds most of, relative to its size), the text Unciv shows when a game starts, and what the page and the README say of it (where it starts, its advantage, its start bias, a city-state's type), and the longevity trait of the community with the highest oldest-old index. Terrain and technology names are Unciv's own in that language (android/assets/jsons/translations). English is the mod's own text (jsons/Nations.json) and Spanish its translation (jsons/translations/Spanish.properties). Filled in by pipeline/play.py from unciv.json's summary.",
   "es": {
     "unique_name": "Tierra de $resource_word",
     "intro": "$name: $population habitantes en $municipalities municipios (INE, Padrón $year). $start En este mapa tienes $land_tiles casillas de tierra, y en tu tierra y tu costa hay $resource_tiles de las $resource_map_tiles casillas de $resource_word del mapa: tus ciudades sacan una más de comida, producción y oro de cada una que trabajen.$hidden",
@@ -10,6 +10,9 @@
     "hidden": " Ese recurso no se ve ni da nada hasta que descubres $tech.",
     "advantage": "$resource: $resource_tiles de las $resource_map_tiles casillas de $resource_word del mapa (+1 comida, producción y oro$hidden_short)",
     "hidden_short": "; se ve con $tech",
+    "longevity_name": "$unique_name y de longevidad",
+    "longevity_intro": " Además tienes la mayor proporción de mayores de 85: el $index de tus vecinos de 65 años o más tiene 85 o más (España, $spain; INE, Censo anual de población $census_year). Tus ciudades crecen un $growth % más rápido, una convención del juego.",
+    "longevity_advantage": "; longevidad: el $index de los de 65 o más tiene 85 o más, la mayor proporción (España, $spain): +$growth % de crecimiento",
     "fallback": "; si no llega a $unique_min en ninguno, entre todos: $names",
     "editorial": "; elegido a mano en $names, lo que se espera de cada una",
     "city_state": "Ciudad-estado marítima",
@@ -44,6 +47,9 @@
     "hidden": " That resource stays hidden, and gives nothing, until you discover $tech.",
     "advantage": "$resource: $resource_tiles of the map's $resource_map_tiles $resource_word tiles (+1 food, production and gold$hidden_short)",
     "hidden_short": "; revealed by $tech",
+    "longevity_name": "$unique_name and of long life",
+    "longevity_intro": " You also have the largest share of the oldest old: $index of your residents aged 65 and over are 85 or older (Spain: $spain; INE Annual Population Census $census_year). Your cities grow $growth% faster, a game convention.",
+    "longevity_advantage": "; longevity: $index of those 65 and over are 85 or older, the highest share (Spain: $spain): +$growth% growth",
     "fallback": ", or among all it holds if none reaches $unique_min: $names",
     "editorial": "; picked by hand for $names, what anyone expects of each",
     "city_state": "Maritime city-state",

@@ -523,6 +523,8 @@ class ModAndPageTest(unittest.TestCase):
         self.assertIn("## Español", text)
         self.assertIn("## English", text)
         self.assertNotIn("$", text)
+        self.assertIn("crece además un 10 % más rápido: es una convención del juego", text)
+        self.assertIn("also grows 10% faster: a game convention", text)
         for lang in ("es", "en"):
             names = play.resource_texts(self.doc["summary"], lang)
             for resource, n in self.doc["summary"]["resources"].items():
@@ -564,6 +566,13 @@ class ModAndPageTest(unittest.TestCase):
             for name in s["not_placed_designations"]:
                 self.assertIn(escape(pick(name, lang)), html)
         self.assertIn("(PDO)", self.files[play.PAGES["en"]]().decode("utf-8"))
+        # the longevity row: the real index and the convention it gives
+        for lang, row, convention in (("es", "<tr><td>Longevidad</td>", "Convención: lo que da, un\n      10 %"),
+                                      ("en", "<tr><td>Longevity</td>", "Convention:\n      what it gives, 10%")):
+            html = self.files[play.PAGES[lang]]().decode("utf-8")
+            self.assertIn(row, html)
+            self.assertIn(convention, html)
+            self.assertIn(play.longevity_fields(s["longevity"], lang)["index"], html)
 
 
 class NationRulesTest(unittest.TestCase):
@@ -679,7 +688,8 @@ class NationsTest(unittest.TestCase):
             if n["city_state"]:
                 continue
             self.assertIn(n["resource"], unciv.RESOURCES)
-            self.assertEqual(j["uniques"], [unciv.NATION_UNIQUE.format(resource=n["resource"])])
+            extra = ["[+10]% growth [in all cities]"] if "longevity" in n else []
+            self.assertEqual(j["uniques"], [unciv.NATION_UNIQUE.format(resource=n["resource"]), *extra])
             self.assertLessEqual(n["resource_tiles"], n["resource_map_tiles"])
             self.assertTrue(n["start_bias"] is None or n["start_bias"] in spain_unciv.BIAS_TERRAINS)
             self.assertTrue(pick(n["leader"], "es").startswith("Presidencia") or n["code"] == "16", n["name"])
@@ -718,6 +728,30 @@ class NationsTest(unittest.TestCase):
         self.assertIn("revealed by Industrialization", play.nation_texts(self.summary, asturias, "en")["advantage"])
         self.assertNotIn("revealed", play.nation_texts(self.summary, cyl, "en")["advantage"])  # sheep: always seen
         self.assertNotIn("revealed", play.nation_texts(self.summary, by_name["Canarias"], "en")["advantage"])
+
+    def test_only_the_community_with_the_highest_oldest_old_index_has_the_longevity_unique(self):
+        from pipeline.sources.es.provinces import COMMUNITY_OF
+
+        ages = json.loads((ROOT / "data" / "interim" / "es" / "ine_censo_edad.json").read_text(encoding="utf-8"))["data"]
+        index = spain_unciv.longevity_index(ages["provinces"])
+        self.assertEqual(set(index), set(spain_unciv.COMMUNITY_NATIONS))  # majors only: no Ceuta or Melilla
+        old = sum(spain_unciv.group_sum(c, spain_unciv.OLD) for p, c in ages["provinces"].items() if COMMUNITY_OF[p] == "07")
+        self.assertAlmostEqual(index["07"], sum(spain_unciv.group_sum(c, spain_unciv.OLDEST) for p, c in
+                                                ages["provinces"].items() if COMMUNITY_OF[p] == "07") / old)
+        longest = self.summary["longevity"]
+        self.assertEqual((longest["code"], longest["name"]), ("07", "Castilla y León"))
+        self.assertEqual(longest["code"], max(index, key=index.get))
+        self.assertGreater(longest["index"], longest["spain"])
+        self.assertEqual(longest["e65_top"]["name"], "Madrid")  # life expectancy at 65 picks another community
+        with_trait = [j["name"] for j in self.nations_json if "[+10]% growth [in all cities]" in j.get("uniques", [])]
+        self.assertEqual(with_trait, ["Castilla y León"])
+        self.assertEqual([n["name"] for n in self.nations if "longevity" in n], ["Castilla y León"])
+        cyl = next(n for n in self.nations if n["code"] == "07")
+        for lang, needle in (("es", "convención del juego"), ("en", "a game convention")):
+            t = play.nation_texts(self.summary, cyl, lang)
+            self.assertIn(needle, t["intro"])
+            self.assertIn(play.longevity_fields(cyl["longevity"], lang)["index"], t["advantage"])
+        self.assertIn("Tierra de ovejas y de longevidad", self.spanish)
 
     def test_editorial_picks_are_held_and_said(self):
         by_code = {n["code"]: n for n in self.nations}
@@ -772,6 +806,9 @@ class FormatHelpersTest(unittest.TestCase):
         major = unciv.nation_json("Galicia", (1, 2, 3), (4, 5, 6), ["Santiago"], leader="President", start_bias="Forest",
                                   unique_name="Land of Iron", resource="Iron", intro="Hola")
         self.assertEqual((major["startBias"], major["uniques"]), (["Forest"], ["[+1 Food, +1 Production, +1 Gold] from [Iron] tiles [in all cities]"]))
+        longevity = unciv.nation_json("Castilla y León", (1, 2, 3), (4, 5, 6), ["Valladolid"], resource="Sheep",
+                                      extra_uniques=(unciv.LONGEVITY_UNIQUE.format(n=unciv.LONGEVITY_GROWTH),))
+        self.assertEqual(longevity["uniques"][1], "[+10]% growth [in all cities]")
         cs = unciv.nation_json("Ceuta", (0, 0, 0), (255, 255, 255), ["Ceuta"], city_state_type="Maritime")
         self.assertEqual(set(cs), {"name", "cityStateType", "outerColor", "innerColor", "cities"})
 

@@ -31,7 +31,7 @@ from .build import spain_unciv, unciv
 from .core.archive import zip_bytes
 from .core.paths import ROOT
 from .core.store import read_web
-from .core.lang import num, pick
+from .core.lang import num, pct, pick
 from .core.png import encode
 from .core.raster import Canvas, circle
 from .countries import Country
@@ -222,9 +222,21 @@ def nation_texts(summary: dict, nation: dict, lang: str) -> dict[str, str]:
               "resource_tiles": nation["resource_tiles"], "resource_map_tiles": nation["resource_map_tiles"],
               "hidden": sub("hidden", tech=t["techs"][tech]) if tech else "",
               "hidden_short": sub("hidden_short", tech=t["techs"][tech]) if tech else ""}
-    return {"leader": pick(nation["leader"], lang), "unique_name": sub("unique_name", **fields),
-            "intro": sub("intro", **fields), "advantage": sub("advantage", **fields),
-            "starts_in": sub("start_cell_near", capital=capital, distance=distance) if off else capital}
+    out = {"leader": pick(nation["leader"], lang), "unique_name": sub("unique_name", **fields),
+           "intro": sub("intro", **fields), "advantage": sub("advantage", **fields),
+           "starts_in": sub("start_cell_near", capital=capital, distance=distance) if off else capital}
+    if "longevity" in nation:  # the longevity trait (unciv.LONGEVITY_UNIQUE)
+        lf = longevity_fields(nation["longevity"], lang)
+        out["unique_name"] = sub("longevity_name", unique_name=out["unique_name"])
+        out["intro"] += sub("longevity_intro", **lf)
+        out["advantage"] += sub("longevity_advantage", **lf)
+    return out
+
+
+def longevity_fields(longevity: dict, lang: str) -> dict[str, str]:
+    """The numbers of the longevity trait as `lang` writes them: the index, Spain's, the census year and the growth."""
+    return {"index": pct(longevity["index"], 1, lang), "spain": pct(longevity["spain"], 1, lang),
+            "census_year": str(longevity["year"]), "growth": str(unciv.LONGEVITY_GROWTH)}
 
 
 def nation_json(summary: dict, nation: dict) -> dict:
@@ -233,9 +245,10 @@ def nation_json(summary: dict, nation: dict) -> dict:
         return unciv.nation_json(nation["name"], nation["outer"], nation["inner"], nation["cities"],
                                  city_state_type=nation["type"])
     t = nation_texts(summary, nation, TEXT_LANG)
+    extra = (unciv.LONGEVITY_UNIQUE.format(n=unciv.LONGEVITY_GROWTH),) if "longevity" in nation else ()
     return unciv.nation_json(nation["name"], nation["outer"], nation["inner"], nation["cities"], leader=t["leader"],
                              start_bias=nation["start_bias"], unique_name=t["unique_name"], resource=nation["resource"],
-                             intro=t["intro"])
+                             intro=t["intro"], extra_uniques=extra)
 
 
 def translations(summary: dict, lang: str) -> dict[str, str]:
@@ -320,7 +333,8 @@ def common_fields(country: Country, summary: dict, lang: str | None = None) -> d
             "height": s["grid"]["height"], "tile_km": f"{s['tile_km']:g}", "land_tiles": s["land_tiles"],
             "national_land_tiles": s["national_land_tiles"], "release": s["unciv_release"],
             "n_starts": len(s["starts"]) - 1, "map_name": s["map_name"], "padron_year": s["padron_year"],
-            "n_nations": n_nations(s), "moved": moved_starts(s)}
+            "n_nations": n_nations(s), "moved": moved_starts(s), "longevity_name": s["longevity"]["name"],
+            "growth": unciv.LONGEVITY_GROWTH}
 
 
 def readme(country: Country, summary: dict) -> str:
@@ -355,6 +369,9 @@ def page_html(country: Country, summary: dict, lang: str | None = None) -> str:
         "bias_pct": round(spain_unciv.BIAS_SHARE * 100), "unique_min": spain_unciv.UNIQUE_MIN_TILES,
         "city_gap": spain_unciv.MIN_SEAT_GAP - 1, "city_names": spain_unciv.CITY_NAMES,
         "rivals": n_nations(s) - 1,
+        **{f"longevity_{k}": escape(v) for k, v in longevity_fields(s["longevity"], lang).items()},
+        "e65_name": escape(s["longevity"]["e65_top"]["name"]), "e65_year": s["longevity"]["e65_top"]["year"],
+        "e65_value": num(s["longevity"]["e65_top"]["value"], 2, lang),
         "not_placed": escape(", ".join(f"{texts[r][0].lower()} {n}" for r, n in s["not_placed"].items())),
         "designations": escape(", ".join(pick(d, lang) for d in s["not_placed_designations"])),
         "home": f"./#lang={lang}" if len(country.langs) > 1 else "./",

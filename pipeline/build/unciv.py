@@ -543,18 +543,24 @@ def mod_options(author: str, url: str) -> dict:
 # A nation's unique: one more of each base yield on the tiles of its resource that its cities work (UniqueType
 # StatsFromTiles, "[stats] from [tileFilter] tiles [cityFilter]"; a resource's name is a tile filter).
 NATION_UNIQUE = "[+1 Food, +1 Production, +1 Gold] from [{resource}] tiles [in all cities]"
+# The longevity trait (DECISIONS E99): faster growth, a game convention (UniqueType.GrowthPercentBonus, the unique the
+# base ruleset gives Tradition Complete as "[+15]% growth [in all cities]").
+LONGEVITY_GROWTH = 10
+LONGEVITY_UNIQUE = "[+{n}]% growth [in all cities]"
 
 
 def nation_json(name: str, outer, inner, cities: list[str], leader: str = "", start_bias: str | None = None,
                 unique_name: str = "", resource: str | None = None, intro: str = "",
-                city_state_type: str | None = None) -> dict:
-    """A Nations.json entry (Nation.kt fields): a major civilization, or a city-state of `city_state_type`."""
+                city_state_type: str | None = None, extra_uniques: tuple[str, ...] = ()) -> dict:
+    """A Nations.json entry (Nation.kt fields): a major civilization, or a city-state of `city_state_type`. A major
+    civilization's uniques are its resource's (NATION_UNIQUE) and then `extra_uniques`."""
     out = {"name": name}
     if city_state_type:
         out["cityStateType"] = city_state_type
     else:
         out |= {"leaderName": leader, "startBias": [start_bias] if start_bias else [], "uniqueName": unique_name,
-                "uniques": [NATION_UNIQUE.format(resource=resource)] if resource else [], "startIntroPart1": intro}
+                "uniques": ([NATION_UNIQUE.format(resource=resource)] if resource else []) + list(extra_uniques),
+                "startIntroPart1": intro}
     return out | {"outerColor": list(outer), "innerColor": list(inner), "cities": list(cities)}
 
 
