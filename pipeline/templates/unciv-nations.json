@@ -11,6 +11,7 @@
     "advantage": "$resource: $resource_tiles de las $resource_map_tiles casillas de $resource_word del mapa (+1 comida, producción y oro$hidden_short)",
     "hidden_short": "; se ve con $tech",
     "fallback": "; si no llega a $unique_min en ninguno, entre todos: $names",
+    "editorial": "; elegido a mano en $names, lo que se espera de cada una",
     "city_state": "Ciudad-estado marítima",
     "no_bias": "ninguna",
     "techs": {
@@ -44,6 +45,7 @@
     "advantage": "$resource: $resource_tiles of the map's $resource_map_tiles $resource_word tiles (+1 food, production and gold$hidden_short)",
     "hidden_short": "; revealed by $tech",
     "fallback": ", or among all it holds if none reaches $unique_min: $names",
+    "editorial": "; picked by hand for $names, what anyone expects of each",
     "city_state": "Maritime city-state",
     "no_bias": "none",
     "techs": {

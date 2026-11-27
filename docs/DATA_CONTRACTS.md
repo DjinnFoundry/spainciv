@@ -276,8 +276,8 @@ it first opens): `{"vintage": "2026-11-24", "provisional": true, "dates": ["1988
 "boletin_name", "basin": index into basins, "use": "hidroelectrico" | "consuntivo", "lon", "lat", "x", "y" (map km), "cell", "placed":
 "boletin" | "wikidata" | null, "qids"?: [Wikidata ids], "first", "last" (indices into dates, or null), "capacity" (last
 reported hm³), "actual" (hm³ in its last reporting week)}]}`. `dates` are every Boletín Hidrológico Tuesday, ascending,
-a week apart (E91). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
-week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E92) has null
+a week apart (E92). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
+week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E93) has null
 `lon`, `lat`, `x`, `y`, `cell` and `placed`. `boletin_name` is the name as the Boletín writes it ("Conchas, Las",
 "Vellón,El-(Pedrezuela)"), the key of every match; `name` is that name tidied to read ("Las Conchas", "El Vellón
 (Pedrezuela)"). Spain's figure is not stored: the browser sums the basins.

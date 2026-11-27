@@ -266,12 +266,17 @@ PAGE_COLUMNS = 3  # the columns of nation_rows the page shows
 
 
 def unique_fallback(summary: dict, lang: str) -> str:
-    """What the page adds to the unique's rule for the nations that hold no resource on UNIQUE_MIN_TILES tiles (their
-    resource is chosen among all they hold): "; si no llega a 2 en ninguno, entre todos: Madrid", or nothing."""
-    names = [n["name"] for n in summary["nations"]
-             if not n["city_state"] and n["resource_tiles"] < spain_unciv.UNIQUE_MIN_TILES]
-    return Template(nation_templates(lang)["fallback"]).substitute(
-        unique_min=spain_unciv.UNIQUE_MIN_TILES, names=", ".join(names)) if names else ""
+    """What the page adds to the unique's rule: the nations whose resource was picked by hand (UNIQUE_PICKS, "; elegido
+    a mano en Galicia (Peces), …") and those that hold no resource on UNIQUE_MIN_TILES tiles (chosen among all they
+    hold: "; si no llega a 2 en ninguno, entre todos: Madrid"), or nothing."""
+    texts, majors = nation_templates(lang), [n for n in summary["nations"] if not n["city_state"]]
+    names = resource_texts(summary, lang)
+    picked = [f"{n['name']} ({names[n['resource']][2]})" for n in majors if n.get("resource_editorial")]
+    low = [n["name"] for n in majors if not n.get("resource_editorial") and n["resource_tiles"] < spain_unciv.UNIQUE_MIN_TILES]
+    out = Template(texts["editorial"]).substitute(names=", ".join(picked)) if picked else ""
+    if low:
+        out += Template(texts["fallback"]).substitute(unique_min=spain_unciv.UNIQUE_MIN_TILES, names=", ".join(low))
+    return out
 
 
 def n_nations(summary: dict) -> int:

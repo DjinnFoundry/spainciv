@@ -42,7 +42,7 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
-- Embalses (E90–E92): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
+- Embalses (E91–E93): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
   embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
   no los da). Contraste hecho con 20 notas semanales de prensa del MITECO: 26-9, 3-10, 10-10, 17-10, 24-10, 31-10, 14-11
   y 21-11-2023; 8-10, 15-10, 22-10 y 26-11-2024; 4-11 y 18-11-2025; 24-2, 29-9, 3-11 y 17-11-2026 coinciden con la cifra

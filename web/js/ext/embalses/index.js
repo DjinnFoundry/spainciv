@@ -24,7 +24,7 @@ const FILE = "embalses", WEEKS_FILE = "embalses_semanas";
 const PLAY_MS = 800; // a year a step while "year by year" plays
 const PAINT_GAP_MS = 120; // while the slider drags, the map repaints at most this often
 const FLY_SCALE = 1.2; // css px per km at most when a basin flies into view
-// Empty to full: dry earth to water, lightness rising all the way (DECISIONS E90).
+// Empty to full: dry earth to water, lightness rising all the way (DECISIONS E91).
 const RAMP = ["#593215", "#774e23", "#82734b", "#689693", "#6ab0ca", "#8ac7ea", "#bbe0fc"];
 const CHART = { w: 328, h: 120, top: 8, bottom: 18, left: 28, right: 6 };
 
