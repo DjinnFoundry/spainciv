@@ -10,6 +10,7 @@ import math
 
 from ..core.geo import Inset, InsetProjection, LambertAzimuthal
 from ..core.lang import tr
+from ..sources.es.provinces import COMMUNITIES, COMMUNITY_NAMES
 from .base import Country, Level, Page, country_dirs
 
 CENTRE = (40.0, -3.7)  # lat, lon
@@ -71,6 +72,8 @@ COUNTRY = Country(
         based_on=tr("Basado en {usaciv}, de Andrej Karpathy (MIT)", "Based on {usaciv} by Andrej Karpathy (MIT)"),
         game=True,
         sunset=True,
+        # The fog of war counts what is explored by autonomous community (their provinces are the map's regions).
+        explore=tuple((COMMUNITY_NAMES[code], tuple(provs)) for code, (_, provs) in COMMUNITIES.items()),
     ),
     interim_dir=_interim,
     web_data_dir=_web,

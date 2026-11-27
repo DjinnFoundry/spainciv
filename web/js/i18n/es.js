@@ -6,5 +6,6 @@ import advisors from "./es/advisors.js";
 import game from "./es/game.js";
 import fiestas from "./es/fiestas.js";
 import sun from "./es/sun.js";
+import explore from "./es/explore.js";
 
-export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun };
+export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore };

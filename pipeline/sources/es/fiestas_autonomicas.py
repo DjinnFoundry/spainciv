@@ -29,7 +29,9 @@ from .tls import FNMT_SERVIDORES_SEGUROS, GLOBALSIGN_R46, SECTIGO_R46_DV_R36
 TABLE = Path(__file__).parent / "data" / "fiestas_autonomicas.csv"
 
 # Community → its name, its declaration as its rules name it, those rules, and documents cached beside the cited ones
-# (where the dates come from when that is not the list itself). A community absent here declares none (NONE).
+# (where the dates come from when that is not the list itself). A community absent here declares none (NONE). The name
+# is the one its list uses, as the rest of the transcription; the interface's own short names are
+# provinces.COMMUNITY_NAMES.
 COMMUNITIES = {
     "andalucia": {"name": "Andalucía", "declaration": "Fiesta de Interés Turístico de Andalucía",
                   "rules": "Ley 13/2011 del Turismo de Andalucía, art. 58; Decreto 116/2016"},
