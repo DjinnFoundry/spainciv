@@ -47,8 +47,11 @@ import { lodFor } from "./lod.js";
 import { rng } from "./sprites.js";
 
 /** Cities draw as a dot (on top of the terrain) rather than a full tile when hexes are small. */
+const DOT_RPX = [9, 18, 26]; // below each: every city, those under 250 000 people, those under 100 000
 export const cityIsDot = (city, Rpx) =>
-  Rpx < 9 || (Rpx < 18 && city.population < 2.5e5) || (Rpx < 26 && city.population < 1e5);
+  Rpx < DOT_RPX[0] || (Rpx < DOT_RPX[1] && city.population < 2.5e5) || (Rpx < DOT_RPX[2] && city.population < 1e5);
+/** Which of cityIsDot()'s Rpx bands Rpx falls in: at any two Rpx of one band the same cities are dots. */
+export const cityDotBand = (Rpx) => DOT_RPX.filter((t) => Rpx >= t).length;
 
 // --- metro spill ----------------------------------------------------------------------------------------------
 const SPILL_MIN_POP = 1.5e6;

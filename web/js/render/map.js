@@ -282,6 +282,15 @@ export function shiftRegions(W, H, dx, dy, pad) {
   return out;
 }
 
+/** The device-px rectangles of a W×H cache outside its inner rectangle inset by m: top, bottom, left, right. */
+export function marginRegions(W, H, m) {
+  if (2 * m >= W || 2 * m >= H) return [{ x0: 0, y0: 0, x1: W, y1: H }];
+  return [
+    { x0: 0, y0: 0, x1: W, y1: m }, { x0: 0, y0: H - m, x1: W, y1: H },
+    { x0: 0, y0: m, x1: m, y1: H - m }, { x0: W - m, y0: m, x1: W, y1: H - m },
+  ];
+}
+
 function drawCityTiles(ctx, w, Rpx, s, lod, selectedCity, vp) {
   const { grid } = w;
   const R = grid.R;

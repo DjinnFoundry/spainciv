@@ -50,7 +50,7 @@ import { mapProjection, US_ALBERS } from "../../geo.js";
 import { COVER } from "../../terrain.js";
 import { FOREIGN } from "../../world.js";
 import { css, mix, shade, parseHex } from "../../color.js";
-import { cityIsDot, metroSpill, SUBURB_ART } from "./city.js";
+import { cityDotBand, cityIsDot, metroSpill, SUBURB_ART } from "./city.js";
 import { lodFor, atLeast } from "./lod.js";
 import { bucketPx, deviceScale, getSprite, drawSprite, makePattern, wrapDraw, rng, spriteStats } from "./sprites.js";
 
@@ -82,7 +82,7 @@ export function drawTerrainGlyphs(ctx, cells, w, { Rpx, s, lod, bridges } = {}) 
   // Bridges join relief across neighbouring hexes; a lone specimen hex (the dev gallery) is drawn without them.
   bridges = bridges ?? !(Array.isArray(cells) && cells.length === 1);
   const env = { w, R, Rpx, lod, upx, bridges, ground: null, upright: null, memo: new Map() };
-  const plans = planCache(w, `${lod}|${upx}|${Rpx}|${bridges}`);
+  const plans = planCache(w, `${lod}|${upx}|${cityDotBand(Rpx)}|${bridges}`);
   for (const i of cells) {
     let pl = plans.get(i);
     if (!pl) {
@@ -110,8 +110,9 @@ export function drawTerrainGlyphs(ctx, cells, w, { Rpx, s, lod, bridges } = {}) 
   ctx.restore();
 }
 
-// Per-cell stamp plans depend only on the world, the cell and the zoom (lod, sprite bucket, Rpx for city tiles),
-// so while the map pans at one zoom the static layer re-renders without re-planning the cells it has seen. A few
+// Per-cell stamp plans depend only on the world, the cell and the zoom (lod, sprite bucket, and which cities are
+// dots: cityDotBand, not the exact Rpx), so a pan, or a zoom that stays in the same sprite bucket, re-renders the
+// static layer without re-planning the cells it has seen (planning is about a third of a cold render). A few
 // zooms are kept (main.js warms sprites for the next zoom steps in idle time, which plans those too), least
 // recently used first out, each capped at PLAN_CACHE_CELLS cells. Plans hold their sprites, so a palette change
 // that clears the sprite cache (sprites.js clearSprites, unused today) would also need to clear this one.
