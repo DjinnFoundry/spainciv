@@ -126,12 +126,24 @@ def index_bytes(country: Country | None = None) -> bytes:
     return render_index((WEB / "index.html").read_text(encoding="utf-8"), country).encode("utf-8")
 
 
+# Cloudflare Pages headers for a country we publish: scripts and styles revalidate on every visit, like the page and
+# the data already do. Pages' default lets a browser keep them 4 hours, so after a deploy a returning visitor ran the
+# old scripts against the new data (the fiesta calendar link opened the plain map).
+HEADERS = """/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+"""
+
+
 def generated_files(country: Country | None = None) -> dict[str, Callable[[], bytes]]:
-    """Site files made from code, by path in the site: index.html, og-image.png for a country with a `page` (the US
-    keeps web/og-image.png), and the Unciv page and downloads of a country with an Unciv map (pipeline/play.py)."""
+    """Site files made from code, by path in the site: index.html, og-image.png and the Pages `_headers` for a country
+    with a `page` (the US keeps web/og-image.png), and the Unciv page and downloads of a country with an Unciv map
+    (pipeline/play.py)."""
     c = country or active()
     files = {"index.html": lambda: index_bytes(c)}
     if c.page is not None:
         files["og-image.png"] = lambda: card_png(c)
+        files["_headers"] = lambda: HEADERS.encode("utf-8")
         files |= play.files(c)
     return files

@@ -136,7 +136,8 @@ class GeneratedFilesTest(unittest.TestCase):
     def test_spain_draws_its_card_and_ships_its_unciv_map(self):
         es = countries.COUNTRIES["es"]
         files = site.generated_files(es)
-        self.assertEqual(set(files), {"index.html", "og-image.png"} | set(play.files(es)))
+        self.assertEqual(set(files), {"index.html", "og-image.png", "_headers"} | set(play.files(es)))
+        self.assertIn("/js/*\n  Cache-Control: public, max-age=0, must-revalidate", files["_headers"]().decode())
         self.assertTrue(set(play.PAGES.values()) <= set(files))
         self.assertEqual(files["index.html"](), site.index_bytes(es))
         with mock.patch.object(site, "card_png", return_value=b"card") as card:
