@@ -26,7 +26,7 @@ export const CAPTION_H = 118;
 const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
 const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
 
-async function copyText(text) {
+export async function copyText(text) {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);

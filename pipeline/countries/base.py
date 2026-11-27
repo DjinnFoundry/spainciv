@@ -32,6 +32,7 @@ class Page:
     data_credit: str  # the data sources, on the map and on share images
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
     based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
+    game: bool = False  # the daily game "Adivina el hexágono" (web/js/ext/game) in the top bar
 
     def in_lang(self, lang: str) -> "Page":
         """The page with every text in `lang`."""
