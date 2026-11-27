@@ -97,12 +97,16 @@ class RenderTest(unittest.TestCase):
         self.assertNotIn("EuroGeographics", html)  # GISCO boundaries were replaced by the IGN's SIANE
         self.assertIn("Basado en usaciv, de Andrej Karpathy (MIT)", h.credits)
         self.assertIn('<a href="https://karpathy.ai/usaciv/"', html)
-        english = {"data_credit": en.data_credit, "notices": list(en.notices), "play": "play.html", "description": en.description,
-                   "credits": site.credits_inner(es, "en")}
+
+        def groups(p):  # the fog of war's groups of regions (Page.explore) in that page's language
+            return {"groups": [{"name": name, "regions": list(regions)} for name, regions in p.explore]}
+
+        english = {"data_credit": en.data_credit, "notices": list(en.notices), "explore": groups(en), "play": "play.html",
+                   "description": en.description, "credits": site.credits_inner(es, "en")}
         self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
-                                    "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
+                                    "explore": groups(page), "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
                                     "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem),
-                                    "game": True})
+                                    "game": True, "sunset": True})
         self.assertIn("lenses", h.config["data"])
         self.assertNotIn("lenses.en", h.config["data"])
         self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
@@ -120,7 +124,9 @@ class RenderTest(unittest.TestCase):
         self.assertIn("n&lt;", html)
         self.assertEqual(html.count("</script>"), TEMPLATE.count("</script>") + 1)
         self.assertEqual(Head(html).config["data_credit"], "</script>x")
-        self.assertNotIn("game", Head(html).config)  # the daily game is the page's choice
+        self.assertNotIn("game", Head(html).config)  # the daily game, the sun lens and the fog of war are the page's choice
+        self.assertNotIn("sunset", Head(html).config)
+        self.assertNotIn("explore", Head(html).config)
 
     def test_a_changed_template_fails_loudly(self):
         with self.assertRaises(ValueError):
@@ -240,9 +246,12 @@ class PackageTest(unittest.TestCase):
 
 @unittest.skipUnless(NODE, "node is not installed")
 class CountryJsTest(unittest.TestCase):
-    def country(self, world, page_json):
+    def country(self, world, page_json, browser=()):
+        """setCountry in node, with the page settings `page_json` and the browser's languages `browser`. Node has its own
+        `navigator`, whose languages follow the machine's locale: replaced so the result does not depend on it."""
         doc = "null" if page_json is None else "{getElementById: (id) => id === 'country-page' ? {textContent: %s} : null}" % json.dumps(page_json)
         script = (
+            f"Object.defineProperty(globalThis, 'navigator', {{value: {{languages: {json.dumps(list(browser))}}}}});"
             f"import({json.dumps(COUNTRY_JS.as_uri())}).then(({{setCountry}}) => "
             f"console.log(JSON.stringify(setCountry({json.dumps(world)}, {doc}))));"
         )
@@ -257,6 +266,13 @@ class CountryJsTest(unittest.TestCase):
         self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
         self.assertEqual(c["data_credit"], es.page.in_lang("es").data_credit)
         self.assertEqual(c["product"], "spainciv")
+
+    def test_browser_language_picks_its_texts(self):
+        es = countries.COUNTRIES["es"]
+        c = self.country({"country": {"id": "es"}}, json.dumps(site.page_config(es)), browser=["en-GB"])
+        self.assertEqual((c["lang"], c["locale"]), ("en", dict(es.locales)["en"]))
+        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        self.assertEqual(c["data_credit"], es.page.in_lang("en").data_credit)
 
     def test_us_without_page_settings(self):
         c = self.country({}, None)

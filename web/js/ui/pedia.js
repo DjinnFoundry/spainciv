@@ -5,6 +5,7 @@ import { t } from "../i18n.js";
 import { country } from "../app/country.js";
 import { parseHex, luminance } from "../color.js";
 import { icon, glyph } from "./icon.js";
+import { formatLensValue, isTimeLens } from "./lenses.js";
 
 const COVER_ICON = { forest_deciduous: "l-forest", forest_evergreen: "l-forest", forest_mixed: "l-forest", cropland: "l-farmland", pasture: "l-farmland", urban: "l-developed" };
 // Glyph colour that reads on a resource medallion (dark on light faces such as nuclear yellow or silver).
@@ -12,6 +13,8 @@ const inkOn = (hex) => {
   try { return /^#[0-9a-f]{6}$/i.test(hex || "") && luminance(parseHex(hex)) > 0.4 ? "#1c1710" : "#f8f0d8"; } catch { return "#f8f0d8"; }
 };
 const CATEGORY = { energy: "core.pedia.cat.energy", mineral: "core.pedia.cat.mineral", agri: "core.pedia.cat.agri" };
+// A lens's scale ends: as numbers, or as the times of day / durations a time lens holds.
+const bound = (l, v) => (isTimeLens(l) ? formatLensValue(l, v) : localeNum(v));
 const PAGE_LABEL = { "About this map": "core.pedia.about", Yields: "core.pedia.yields", Terrain: "core.pedia.terrain", Lenses: "core.lens.lenses",
   Resources: "core.pedia.resources", Sources: "core.pedia.sources" };
 
@@ -70,7 +73,7 @@ export function initPedia(data) {
           <div class="lens-entry"><div class="le-ic">${glyph(l, 26)}</div><div>
           <h4>${esc(l.name)}</h4><p>${esc(l.description)}<br>
           <i class="le-ramp" style="background:linear-gradient(90deg, ${(l.ramp || []).map(esc).join(",")})"></i>
-          <span class="muted">${t("core.pedia.lenses.scale", { scale: esc(l.scale === "log" ? t("core.pedia.scale.log") : l.scale === "linear" ? t("core.pedia.scale.linear") : l.scale), from: localeNum(l.domain[0]), to: localeNum(l.domain[1]), unit: esc(l.unit) })}${
+          <span class="muted">${l.scale_text ? esc(l.scale_text) : t("core.pedia.lenses.scale", { scale: esc(l.scale === "log" ? t("core.pedia.scale.log") : l.scale === "linear" ? t("core.pedia.scale.linear") : l.scale), from: bound(l, l.domain[0]), to: bound(l, l.domain[1]), unit: esc(l.unit) })}${
             l.higher_is === "good" ? t("core.pedia.lenses.better") : l.higher_is === "bad" ? t("core.pedia.lenses.worse") : ""}${l.source ? " · " + esc(srcName(l.source)) : ""}</span></p></div></div>`).join("")}`;
       }).join("")}`,
     Resources: () => {

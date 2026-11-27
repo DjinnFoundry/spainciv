@@ -232,12 +232,40 @@ kbd {
 .gm-answer { font-size: 15px; }
 .gm-share { margin: 8px 0; padding: 8px 10px; background: rgba(0,0,0,.3); border-radius: 4px; font: 12px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gm-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.gm-tabs { display: flex; gap: 4px; margin: 8px 0 10px; border-bottom: 1px solid var(--line); }
+.gm-tab { flex: 1; padding: 5px 8px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; background: none; color: var(--ink-dim); font: 13px var(--sans); cursor: pointer; }
+.gm-tab[aria-selected="true"] { color: var(--gold-bright); border-color: var(--line); background: var(--panel-2); margin-bottom: -1px; }
+.gm-album-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+/* the province album (ext/game/albumPanel.js) */
+.al-title { margin: 0; font-family: var(--serif); font-size: 16px; font-weight: normal; color: var(--gold-bright); }
+.al-counts { margin: 2px 0 8px; color: var(--ink-dim); }
+.al-map { display: block; width: 100%; height: auto; margin-bottom: 10px; }
+.al-comms { list-style: none; margin: 0; padding: 0; }
+.al-comm { border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px 7px; margin-bottom: 6px; background: var(--panel-2); }
+.al-comm.complete { border-color: var(--gold-bright); box-shadow: inset 0 0 0 1px rgba(236,208,142,.35); }
+.al-comm h4 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; }
+.al-comm.complete h4 { color: var(--gold-bright); }
+.al-of { color: var(--ink-dim); font-family: var(--sans); font-size: 12px; }
+.al-bar { height: 3px; margin-bottom: 6px; background: rgba(201,164,92,.18); border-radius: 2px; overflow: hidden; }
+.al-bar i { display: block; height: 100%; background: var(--gold); }
+.al-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.al-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 7px; border: 1px solid rgba(201,164,92,.5); border-radius: 10px; background: none; color: var(--ink-dim); font: 12px var(--sans); cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.al-chip.got { background: var(--al-c); border-color: var(--al-c); color: var(--al-t); }
+.al-clock { flex: none; }
+.al-legend { display: flex; align-items: center; gap: 5px; margin: 0 0 8px; font-size: 12px; }
+.al-times { font-weight: bold; }
+.al-line { margin: 5px 0 0; font-size: 12px; }
+.al-note { margin: 6px 0 0; font-size: 12px; }
+.al-buttons { margin-top: 10px; }
 @media (max-width: 700px) { .game-dock { padding-top: 18px; } }
 
-/* ---------- the fiesta calendar (ext/fiestas), in the left dock ---------- */
-.fiestas-dock { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
-.fc-head { display: flex; align-items: flex-start; gap: 8px; }
-.fc-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
+/* ---------- a lens's panel in the left dock (app/lensPanel.js: the fiesta calendar, the sun lens) ---------- */
+.lens-panel { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
+.lens-panel-head { display: flex; align-items: flex-start; gap: 8px; }
+.lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
+@media (max-width: 700px) { .lens-panel { padding-top: 18px; } }
+
+/* ---------- the fiesta calendar (ext/fiestas) ---------- */
 .fc-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
 .fc-month {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; height: 58px; padding: 3px 0;
@@ -262,7 +290,25 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .fc-where, .fc-when { font-size: 12px; overflow-wrap: anywhere; }
 .fc-where { color: var(--ink-dim); }
 .fc-undated { margin: 14px 0 0; font-size: 12px; }
-@media (max-width: 700px) { .fiestas-dock { padding-top: 18px; } }
+
+/* ---------- the sun lens (ext/sun) ---------- */
+.sn-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 10px 0; }
+.sn-mode {
+  padding: 6px 4px; background: none; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font: inherit; cursor: pointer;
+}
+.sn-mode:hover { color: var(--ink); }
+.sn-mode.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.sn-day { display: flex; align-items: center; gap: 8px; }
+.sn-day input { flex: 1; min-width: 0; padding: 4px 6px; background: rgba(0,0,0,.3); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: inherit; color-scheme: dark; }
+.lens-panel .chip.on { background: rgba(201,164,92,.35); }
+.sn-note { margin: 12px 0 8px; color: var(--gold-bright); }
+/* The colour key and the spread are the legend's; they show in the panel only on phones, where the sheet covers it. */
+.sn-key { margin: 12px 0 0; }
+.sn-ramp { display: block; height: 10px; border-radius: 2px; }
+.sn-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
+@media (min-width: 701px) { .sn-key, .sn-note { display: none; } }
+/* The minimap sits over the Canaries' inset, which the lens's text names: it gives way while the panel is open. */
+body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
 
 @media (max-width: 1360px) and (min-width: 701px) {
   body.dock-open #minimap-wrap { display: none; }
@@ -511,6 +557,32 @@ body.panel-open #lens-area { right: calc(394px + var(--dock-right, 0px)); }
   font-family: var(--serif); font-size: 22px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-bright);
 }
 #loading.error { font-size: 15px; letter-spacing: 0; text-transform: none; padding: 40px; text-align: center; }
+
+/* ---------- the fog of war (ext/explore): its progress panel, top left over the map ---------- */
+.explore-panel {
+  position: fixed; top: calc(var(--topbar-h) + 10px); left: calc(12px + var(--dock-left, 0px)); z-index: 11;
+  width: 260px; max-height: calc(100vh - 220px); max-height: calc(100dvh - 220px); overflow-y: auto;
+  padding: 10px 12px; font-size: 13px; line-height: 1.4;
+}
+.ex-head { display: flex; align-items: baseline; gap: 8px; }
+.explore-panel h2 { flex: 1; margin: 0 0 4px; font-family: var(--serif); font-size: 16px; font-weight: normal; color: var(--gold-bright); }
+.ex-fold { border: 0; background: none; color: var(--gold-bright); font-size: 14px; cursor: pointer; padding: 2px 6px; margin: -2px -6px 0 0; }
+.explore-panel.folded .ex-more { display: none; }
+.ex-line { margin: 0 0 6px; }
+.ex-line b { color: var(--gold-bright); font-size: 15px; }
+.ex-bar, .ex-mini { display: block; height: 6px; border-radius: 3px; background: rgba(230,215,180,.18); overflow: hidden; }
+.ex-bar i, .ex-mini i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.ex-hint { margin: 6px 0; font-size: 12px; }
+.ex-groups summary { cursor: pointer; color: var(--gold-bright); font-family: var(--serif); margin: 4px 0; }
+.ex-groups ol { list-style: none; margin: 0; padding: 0; }
+.ex-groups li { display: grid; grid-template-columns: 1fr 54px 44px; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px; }
+.ex-groups li b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ex-groups li.done span:first-child::after { content: " ✓"; color: var(--gold-bright); }
+.ex-mini { height: 4px; }
+.ex-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+@media (max-width: 700px) {
+  .explore-panel { top: calc(var(--topbar-h) + 6px); left: 8px; right: 8px; width: auto; max-height: 45vh; padding: 8px 10px; }
+}
 
 /* ---------- narrower desktops ---------- */
 #topbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }

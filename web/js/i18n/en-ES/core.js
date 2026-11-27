@@ -46,10 +46,11 @@ export default {
   "core.pedia.states.none": "This data has no states.json, so province panels show only the name and the cities.",
   "core.pedia.terrain.beyondBody": `Foreign land (Portugal, France, Andorra and Morocco) is drawn under a light fog: it is
       shown for context and not mapped in detail.`,
-  "core.pedia.lenses.intro": `<p>Lenses recolour the map by one measure, built from municipal data ({vintage}). Each hex
-      is sampled at 7 points, and a municipality covering some of them covers that share of the hex. A municipality so
+  "core.pedia.lenses.intro": `<p>Lenses recolour the map by one measure. Nearly all are built from municipal data
+      ({vintage}): each hex is sampled at 7 points, and a municipality covering some of them covers that share of the hex. A municipality so
       small that no sample hits it is added to the hex containing its centre. Income is averaged over the municipalities
-      in a hex, weighted by population.</p>
+      in a hex, weighted by population. A few are worked out in the browser, such as the fiesta calendar or Sun and clock,
+      and their descriptions say where each value comes from.</p>
       <p>The legend shows how many hexes fall at each value. Hover or drag on it to show only that range on the map.</p>`,
   "core.pedia.yields.amenities": `<h4>Amenities &amp; housing</h4>
       <p>Unemployment = unemployed ÷ (employed + unemployed), from INE's Annual Population Census, counted where people live.

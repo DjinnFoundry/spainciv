@@ -23,8 +23,8 @@ export function siteLabel() {
 export const IMG_W = 1600;
 export const IMG_H = 900;
 export const CAPTION_H = 118;
-const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
-const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
+export const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
+export const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
 
 export async function copyText(text) {
   try {
@@ -46,6 +46,20 @@ export async function copyText(text) {
   } catch {
     return false;
   }
+}
+
+/** Save a canvas as a PNG file through a temporary link; false when the browser cannot make the image. */
+export async function downloadCanvas(canvas, fileName) {
+  const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+  if (!blob) return false;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return true;
 }
 
 function spaced(ctx, px) {
@@ -211,7 +225,8 @@ export function composeImage(info, { height = IMG_H } = {}) {
   return cv;
 }
 
-function fit(ctx, text, maxW) {
+/** `text` shortened with an ellipsis to fit `maxW` px in the context's current font. */
+export function fit(ctx, text, maxW) {
   if (ctx.measureText(text).width <= maxW) return text;
   let t = text;
   while (t.length > 3 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
@@ -295,17 +310,9 @@ export function initShare(opts) {
       status.textContent = t("share.drawing");
       await new Promise((r) => setTimeout(r, 30)); // let the status paint
       try {
-        const cv = composeImage(opts.getInfo());
-        const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
-        if (!blob) throw new Error("toBlob failed");
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = opts.fileName();
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        status.textContent = t("share.saved", { name: a.download });
+        const name = opts.fileName();
+        if (!(await downloadCanvas(composeImage(opts.getInfo()), name))) throw new Error("toBlob failed");
+        status.textContent = t("share.saved", { name });
       } catch (err) {
         console.warn(err);
         status.textContent = t("share.failed");

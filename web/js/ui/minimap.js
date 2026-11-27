@@ -1,4 +1,5 @@
-// Minimap: a pre-rendered thumbnail of the current colours + the camera's view box.
+// Minimap: a pre-rendered thumbnail of the current colours + the camera's view box. An extension may lay a cover
+// over the colours (setCover: the fog of war), composed into the thumbnail once, not on every frame.
 export class Minimap {
   constructor(canvas, world, camera, onJump) {
     this.canvas = canvas;
@@ -17,6 +18,8 @@ export class Minimap {
     this.base = document.createElement("canvas");
     this.base.width = canvas.width;
     this.base.height = canvas.height;
+    this.shown = this.base; // the thumbnail drawn under the view box: base, or base + cover
+    this.cover = null;
 
     let dragging = false;
     const jump = (e) => {
@@ -39,6 +42,30 @@ export class Minimap {
       ctx.fillStyle = this.w.colors[i];
       ctx.fillRect((g.cx(i) - g.W / 2) * k, (g.cy(i) - g.H / 2) * k, cw, ch);
     }
+    this.compose();
+  }
+
+  /** Lay cover(ctx) over the colours, ctx in world km (null removes it); call again when the cover changed. */
+  setCover(cover) {
+    this.cover = cover || null;
+    this.compose();
+  }
+
+  compose() {
+    if (this.cover) {
+      if (this.shown === this.base) {
+        this.shown = document.createElement("canvas");
+        this.shown.width = this.base.width;
+        this.shown.height = this.base.height;
+      }
+      const ctx = this.shown.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(this.base, 0, 0);
+      const k = this.k * this.dpr;
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      this.cover(ctx);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    } else this.shown = this.base;
     this.sig = "";
     this.draw();
   }
@@ -51,7 +78,7 @@ export class Minimap {
     this.sig = sig;
     const ctx = this.canvas.getContext("2d");
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.base, 0, 0);
+    ctx.drawImage(this.shown, 0, 0);
     const k = this.k * this.dpr;
     ctx.strokeStyle = "#ffe9a8";
     ctx.lineWidth = 1.5 * this.dpr;

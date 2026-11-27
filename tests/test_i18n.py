@@ -299,7 +299,7 @@ class LanguageJsTest(unittest.TestCase):
                 pickLang(langs, { loc: at(""), saved: "es", browser: ["en-US"] }),
                 pickLang(langs, { loc: at("#lang=xx"), saved: null, browser: ["fr-FR", "en-GB"] }),
                 pickLang(langs, { loc: at(""), saved: null, browser: ["fr-FR"] }),
-                pickLang(langs, { loc: at(""), saved: null, browser: undefined }),
+                pickLang(langs, { loc: at(""), saved: null, browser: [] }),
                 pickLang(undefined, { loc: at("#lang=en"), saved: "en", browser: ["en"] }),
             ]));
         """))
@@ -410,7 +410,7 @@ class EnglishDataTest(unittest.TestCase):
         ("personajes.json", ".people[].name"), ("personajes.json", ".people[].place"),
         ("world.json", ".counties[].name"), ("world.json", ".states[].name"), ("world.json", ".rivers[].name"),
         ("world.json", ".country.projection.insets[].name"),
-        ("cities.json", "[].name"), ("states.json", "[].name"),
+        ("cities.json", "[].name"), ("states.json", "[].name"), ("states.json", "[].community.name"),
         ("infrastructure.json", ".airports[].name"), ("infrastructure.json", ".ports[].name"),
         ("resources.json", ".items[].name"),
         ("wonders.json", ".wonders[].name"), ("wonders.json", ".wonders[].short"), ("wonders.json", ".wonders[].metrics.municipality"),
@@ -462,7 +462,8 @@ class EnglishDataTest(unittest.TestCase):
                    r"Indicadores Demográficos Básicos|Movimiento Natural de la Población|Censo anual de población|"
                    r"Censos de Población y Viviendas|calidad_diferenciada_zonas|vino de pago|Vinos? de la Tierra|"
                    r"Estadística sobre actividades de I\+D|Relación con la actividad|Grandes Áreas Urbanas|"
-                   r"Calidad diferenciada|Estadística de Matrimonios|Convenio de Cooperación para la Defensa|"
+                   r"Calidad diferenciada|Estadística de Matrimonios|Balance de Criminalidad|Sistema Estadístico de Criminalidad|"
+                   r"Portal Estadístico de Criminalidad|Policía (?:Nacional|Foral de Navarra)|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",

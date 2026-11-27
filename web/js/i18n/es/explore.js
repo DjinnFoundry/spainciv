@@ -1,0 +1,20 @@
+// Spanish strings of the fog of war, «España por descubrir» (web/js/ext/explore; see web/js/i18n.js).
+export default {
+  "explore.toggle": "Por descubrir",
+  "explore.toggle.title": "Cubre de niebla la tierra que aún no has explorado",
+  "explore.title": "{name} por descubrir",
+  "explore.line": "Has explorado el {pct} de {name}",
+  "explore.hint": "Deja el ratón sobre un hexágono, pincha en él, busca una ciudad o juega al juego del día para despejar la niebla. Cuanto más lejos ves el mapa, más tierra despeja cada vez.",
+  "explore.hint.touch": "Toca el mapa, busca una ciudad o juega al juego del día para despejar la niebla. Con el mapa más alejado, cada toque despeja más tierra.",
+  "explore.collapse": "Recoger el panel",
+  "explore.expand": "Desplegar el panel",
+  "explore.groups": "Por comunidades",
+  "explore.copy": "Copiar",
+  "explore.copied": "Copiado: pégalo donde quieras",
+  "explore.copyFailed": "No se pudo copiar",
+  "explore.reset": "Empezar de nuevo",
+  "explore.reset.confirm": "¿Seguro? Pulsa otra vez",
+  "explore.share": "He explorado el {pct} de {name} en {product} 🧭",
+  "explore.groupDone": "{name}: ya no queda niebla",
+  "explore.allDone": "{name}: ya no queda niebla en todo el mapa",
+};
