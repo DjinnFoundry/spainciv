@@ -106,11 +106,16 @@ export function install(app) {
 
   const fromHash = () => { const l = app.lensById.get(app.hash.value("lens")); return ours(l) ? l : null; };
 
-  // The dock's name is the lens's own: paint() puts the year in the lenses' names.
+  // Before the year's panel is built: its head (so the ✕ is there in every state) and one line.
+  const message = (dock, key) => {
+    dock.innerHTML = `${panelHead(t("timeline.lens.name"), t("timeline.close"))}<p class="muted">${esc(t(key))}</p>`;
+  };
+
+  // An explicit label: paint() puts the year in the lenses' names, and lensPanel's default would read the first lens's.
   const panel = lensPanel(app, [countLens, kindLens], {
-    mode: MODE, label: t("timeline.lens.name"), pick: () => fromHash() ?? countLens,
+    mode: MODE, label: t("timeline.lens.name"),
     open(dock) {
-      dock.innerHTML = `<p class="muted">${esc(t("timeline.loading"))}</p>`;
+      message(dock, "timeline.loading");
       document.addEventListener("visibilitychange", onVisibility);
       offDots = app.registerOverlay(dots);
       load(++token);
@@ -137,14 +142,8 @@ export function install(app) {
     const data = doc || await app.loadData(FILE).catch(() => null);
     if (my !== token) return; // closed meanwhile
     const dock = panel.dock;
-    if (!data?.people) {
-      dock.innerHTML = `<p class="muted">${esc(t("timeline.loadError"))}</p>`;
-      return;
-    }
-    if (!data.timeline || !data.people.some((p) => p.life)) {
-      dock.innerHTML = `<p class="muted">${esc(t("timeline.noDates"))}</p>`;
-      return;
-    }
+    if (!data?.people) return message(dock, "timeline.loadError");
+    if (!data.timeline || !data.people.some((p) => p.life)) return message(dock, "timeline.noDates");
     if (!doc) {
       doc = data;
       P = L.pack(doc.people, doc.categories.length);
@@ -267,7 +266,7 @@ export function install(app) {
       <p class="tl-note muted">${esc(t("timeline.leftOut", { n: out, count: int(out), birth: int(left.no_birth), death: int(left.no_death), bad: int(left.inconsistent) }))}</p>`;
     const q = (s) => dock.querySelector(s);
     el = { title: q(".lens-panel-head h2"), y: q(".tl-y"), c: q(".tl-c"), now: q(".tl-now"), svg: q(".tl-strip svg"), slider: q(".tl-slider"),
-      prev: q(".tl-prev"), next: q(".tl-next"), play: q(".tl-play"), sum: q(".tl-sum"), famous: q(".tl-famous") };
+      prev: q(".tl-prev"), next: q(".tl-next"), play: q(".tl-play"), sum: q(".tl-sum"), famousHead: q(".tl-h3"), famous: q(".tl-famous") };
     el.slider.oninput = () => { stop(); setYear(+el.slider.value); };
     el.slider.onchange = () => setYear(+el.slider.value, true);
     el.slider.onkeydown = (e) => {
@@ -326,7 +325,9 @@ export function install(app) {
     el.sum.setAttribute("aria-live", playing ? "off" : "polite");
     el.sum.textContent = t("timeline.summary", { n: alive, count: int(alive), year: y, total: int(P.dated) })
       + (approx ? " " + t("timeline.approx", { n: approx, count: int(approx) }) : "");
-    el.famous.innerHTML = L.famous(P, year, TOP).map((k) => {
+    const famous = L.famous(P, year, TOP);
+    el.famousHead.hidden = !famous.length; // a year with nobody alive: the summary says so, no heading over nothing
+    el.famous.innerHTML = famous.map((k) => {
       const p = doc.people[k];
       return `<li><button type="button" class="dk-item" data-k="${k}" title="${esc(t("timeline.show"))}">
         <b class="dk-name">${esc(p.name)}</b><span class="dk-when">${esc(p.note || "")}</span><span class="dk-where">${esc(p.place)}</span></button></li>`;
