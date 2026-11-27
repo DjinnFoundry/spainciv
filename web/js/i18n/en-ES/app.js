@@ -44,4 +44,6 @@ export default {
   "wonder.amongOther": " among protected areas",
   "tip.hub.N": "No hub category",
   "tip.air.pax": "<b>{n}</b> passengers in {year}{change}",
+  "tip.fort.site": "Military installation",
+  "tip.fort.joint": " · joint use",
 };

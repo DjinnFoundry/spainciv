@@ -104,7 +104,7 @@ class RenderTest(unittest.TestCase):
                                     "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem)})
         self.assertIn("lenses", h.config["data"])
         self.assertNotIn("lenses.en", h.config["data"])
-        self.assertNotIn("military", h.config["data"])
+        self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
         self.assertIn("Based on <a href=", english["credits"])
         self.assertIn("Boundaries: Atlas Nacional de España (ANE)", english["credits"])
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.

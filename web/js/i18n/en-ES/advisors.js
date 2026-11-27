@@ -3,7 +3,7 @@ export default {
   // council
   "adv.economy.blurb": "Who makes what: jobs by industry, the provinces' GDP and the urban areas that stand out.",
   "adv.knowledge.blurb": "R&D personnel and where it is concentrated.",
-  "adv.military.blurb": "Bases and training areas, troops and defence spending, and where veterans live.",
+  "adv.military.blurb": "Bases, barracks and training areas, by province and by city.",
   "adv.commerce.blurb": "The busiest ports and airports, and the road and rail network.",
   "adv.councilSources": "All figures are public data: INE's Padrón and Annual Population Census, its Regional Accounts and its Household Income Distribution Atlas, CORINE land cover, IGN boundaries, the Ministry of Housing's urban areas, OAPN's National Parks and Wikidata. Each dashboard lists its sources and caveats at the bottom.",
 
@@ -169,4 +169,17 @@ export default {
   "adv.culture.blurb": "The country's wonders: World Heritage sites, National Parks, great universities and cathedrals.",
   "adv.know.most": "Most personnel",
   "adv.land.food.fallback": "Employed in agriculture, livestock farming, forestry and fishing.",
+
+  // military (Spain's branches: Tierra, Armada, Aire y Espacio, UME, Otras)
+  "adv.mil.comp.air_force": "Air and Space Force",
+  "adv.mil.comp.other": "Other",
+  "adv.mil.components": "Branches",
+  "adv.mil.col.service": "Branch",
+  "adv.mil.civilians": "Department of Defense civilians",
+  "adv.mil.byService": "<b>Active duty by service:</b> {list}. Department of Defense civilians: {civ}.",
+  "adv.mil.byCounty": "Contracts by county",
+  "adv.mil.vets.note": "Civilian veterans 18+ and active-duty residents 16+, counted where they live ({vintage}). The shares of states and areas are sums of their counties.",
+  "adv.mil.nSites": {one: "{count} site", other: "{count} sites"},
+  "adv.mil.navalNote": "⚓ naval: the area has more Navy installations than Army and Air and Space Force ones together. Area is the land inside their boundaries, not troops.",
+  "adv.mil.ranges": "Training areas and restricted ground",
 };

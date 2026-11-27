@@ -26,18 +26,20 @@ from ..core.geo import Shape, ring_area, ring_centroid
 from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..countries import active
 from .spain_wonders import Placer
-from .texts_es import num, vintage
+from .texts_es import tr, vintage
 
 REQUIRES = ["_world", "osm_militar", "wikidata_militar", "cities.json", "world.json", "states.json"]
 PRODUCES = ["military.json"]
 COUNTRIES = ("es",)
 
+# Spain's site is in Spanish and English (core/lang.py). The branches keep their official Spanish name in English.
 COMPONENTS = [
-    {"id": "army", "name": "Ejército de Tierra"},
-    {"id": "navy", "name": "Armada"},
-    {"id": "air_force", "name": "Ejército del Aire y del Espacio"},
-    {"id": "ume", "name": "Unidad Militar de Emergencias"},
-    {"id": "other", "name": "Órgano Central, servicios comunes o rama sin identificar"},
+    {"id": "army", "name": tr("Ejército de Tierra", "Army (Ejército de Tierra)")},
+    {"id": "navy", "name": tr("Armada", "Navy (Armada)")},
+    {"id": "air_force", "name": tr("Ejército del Aire y del Espacio", "Air and Space Force (Ejército del Aire y del Espacio)")},
+    {"id": "ume", "name": tr("Unidad Militar de Emergencias", "Military Emergencies Unit (UME)")},
+    {"id": "other", "name": tr("Órgano Central, servicios comunes o rama sin identificar",
+                               "Central bodies, common services or unidentified branch")},
 ]
 COMPONENT_IDS = [c["id"] for c in COMPONENTS]
 SHORT = {"army": "et", "navy": "arm", "air_force": "ea", "ume": "ume", "other": "oc"}  # id suffixes
@@ -98,33 +100,62 @@ OPERATORS = [  # (component, pattern on the OSM or Wikidata operator)
 TAG_BRANCH = {"airfield": "air_force", "naval_base": "navy"}
 
 RULES = {
-    "installations": "Zonas militares de OpenStreetMap (landuse=military y military=base, barracks, airfield, naval_base, "
-                     "range, office y, dentro de terreno militar, training_area y danger_area), cada una en el hexágono "
-                     "donde cae su centro. Una zona dentro de otra mayor cuenta como parte de ella, y una sin nombre "
-                     "toma el de su parte con nombre más grande. Quedan fuera los puestos de la Guardia Civil y la "
-                     "policía, los sitios civiles (Navantia, AENA), los antiguos y los de patrimonio (cuarteles antiguos, "
-                     "búnkeres, museos), y las zonas sin nombre.",
-    "branch": "La rama sale del operador de OpenStreetMap; si no lo tiene, del nombre («Base Aérea», «Arsenal», "
-              "«Acuartelamiento», «Campo de Maniobras y Tiro»…); si no, de la etiqueta (aeródromo o base naval), y si "
-              f"no, del operador que Wikidata da al elemento a menos de {num(LINK_KM)} km. Lo demás queda como «otra».",
-    "tier": f"No se publica la plantilla de cada base, así que el tamaño sale del terreno dentro de su límite: «grande» "
-            f"desde {num(MAJOR_KM2)} km², «base» desde {num(BASE_KM2)} km² y «sitio» el resto, también las que solo "
-            "son un punto.",
-    "ranges": f"Los {RANGES_N} límites militares más grandes de OpenStreetMap, de al menos {num(RANGE_MIN_KM2)} km² "
-              "(campos de maniobras y tiro, polígonos de tiro y las bases más extensas). Ocupan los hexágonos cuyo centro "
-              "cae dentro; uno que no cubre ningún centro se dibuja en el hexágono de su punto. Un hexágono mide unos "
-              "87 km², así que los campos pequeños se ven más grandes de lo que son.",
-    "garrisons": "Un área urbana tiene guarnición cuando alguno de sus municipios tiene una instalación de nivel «grande» "
-                 "o «base», o uno de sus hexágonos está en un campo de maniobras.",
-    "joint": "Rota y Morón son de uso conjunto con Estados Unidos según el Convenio de Cooperación para la Defensa de "
-             "1988 (BOE de 6 de mayo de 1989, enmendado en 2002, 2012 y 2015); siguen siendo bases españolas.",
+    "installations": tr(
+        "Zonas militares de OpenStreetMap (landuse=military y military=base, barracks, airfield, naval_base, range, "
+        "office y, dentro de terreno militar, training_area y danger_area), cada una en el hexágono donde cae su centro. "
+        "Una zona dentro de otra mayor cuenta como parte de ella, y una sin nombre toma el de su parte con nombre más "
+        "grande. Quedan fuera los puestos de la Guardia Civil y la policía, los sitios civiles (Navantia, AENA), los "
+        "antiguos y los de patrimonio (cuarteles antiguos, búnkeres, museos), y las zonas sin nombre.",
+        "OpenStreetMap military areas (landuse=military and military=base, barracks, airfield, naval_base, range, "
+        "office and, inside military land, training_area and danger_area), each on the hex where its centre falls. An "
+        "area inside a larger one counts as part of it, and one without a name takes that of its largest named part. "
+        "Guardia Civil and police posts, civilian sites (Navantia, AENA), former and heritage sites (old barracks, "
+        "bunkers, museums) and areas without a name are left out."),
+    "branch": tr(
+        "La rama sale del operador de OpenStreetMap; si no lo tiene, del nombre («Base Aérea», «Arsenal», "
+        "«Acuartelamiento», «Campo de Maniobras y Tiro»…); si no, de la etiqueta (aeródromo o base naval), y si no, del "
+        "operador que Wikidata da al elemento a menos de {km} km. Lo demás queda como «otra».",
+        "The branch comes from the OpenStreetMap operator; failing that, from the name («Base Aérea», «Arsenal», "
+        "«Acuartelamiento», «Campo de Maniobras y Tiro»…); failing that, from the tag (airfield or naval base), and "
+        "failing that, from the operator Wikidata gives the item within {km} km. The rest is left as “other”.",
+    ).format(km=LINK_KM),
+    "tier": tr(
+        "No se publica la plantilla de cada base, así que el tamaño sale del terreno dentro de su límite: «grande» desde "
+        "{major} km², «base» desde {base} km² y «sitio» el resto, también las que solo son un punto.",
+        "No headcount is published for each base, so size comes from the ground inside its boundary: “major” from "
+        "{major} km², “base” from {base} km² and “site” for the rest, including those that are only a point.",
+    ).format(major=MAJOR_KM2, base=BASE_KM2),
+    "ranges": tr(
+        "Los {n} límites militares más grandes de OpenStreetMap, de al menos {km2} km² (campos de maniobras y tiro, "
+        "polígonos de tiro y las bases más extensas). Ocupan los hexágonos cuyo centro cae dentro; uno que no cubre "
+        "ningún centro se dibuja en el hexágono de su punto. Un hexágono mide unos 87 km², así que los campos pequeños "
+        "se ven más grandes de lo que son.",
+        "The {n} largest OpenStreetMap military boundaries of at least {km2} km² (manoeuvre and firing grounds, firing "
+        "ranges and the largest bases). They take the hexes whose centre falls inside; one that covers no centre is "
+        "drawn on the hex of its point. A hex is about 87 km², so small grounds look larger than they are.",
+    ).format(n=RANGES_N, km2=RANGE_MIN_KM2),
+    "garrisons": tr(
+        "Un área urbana tiene guarnición cuando alguno de sus municipios tiene una instalación de nivel «grande» o "
+        "«base», o uno de sus hexágonos está en un campo de maniobras.",
+        "An urban area has a garrison when one of its municipalities has an installation of tier “major” or “base”, "
+        "or one of its hexes lies in a training ground."),
+    "joint": tr(
+        "Rota y Morón son de uso conjunto con Estados Unidos según el Convenio de Cooperación para la Defensa de 1988 "
+        "(BOE de 6 de mayo de 1989, enmendado en 2002, 2012 y 2015); siguen siendo bases españolas.",
+        "Rota and Morón are used jointly with the United States under the 1988 Agreement on Defense Cooperation "
+        "(Convenio de Cooperación para la Defensa, BOE of 6 May 1989, amended in 2002, 2012 and 2015); they remain "
+        "Spanish bases."),
 }
 RULE = RULES["garrisons"]
-CAVEATS = ("El Ministerio de Defensa no publica una lista abierta de sus instalaciones ni de sus límites: los de este "
-           "mapa son los de OpenStreetMap, que trazan voluntarios, y algunos solo cubren parte de un recinto (el campo "
-           "de San Gregorio, por ejemplo). Tampoco publica la plantilla de cada base, así que se miden por superficie, "
-           "no por efectivos. La rama se deduce del operador o del nombre y puede fallar en un recinto compartido.")
-
+CAVEATS = tr(
+    "El Ministerio de Defensa no publica una lista abierta de sus instalaciones ni de sus límites: los de este mapa son "
+    "los de OpenStreetMap, que trazan voluntarios, y algunos solo cubren parte de un recinto (el campo de San Gregorio, "
+    "por ejemplo). Tampoco publica la plantilla de cada base, así que se miden por superficie, no por efectivos. La rama "
+    "se deduce del operador o del nombre y puede fallar en un recinto compartido.",
+    "The Ministry of Defence publishes no open list of its installations or their boundaries: the ones on this map are "
+    "OpenStreetMap's, drawn by volunteers, and some cover only part of a site (the San Gregorio training ground, for "
+    "example). Nor does it publish each base's headcount, so they are measured by area, not by personnel. The branch "
+    "is inferred from the operator or the name and can be wrong on a shared site.")
 
 def norm(text: str) -> str:
     t = unicodedata.normalize("NFD", text.lower())

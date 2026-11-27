@@ -417,13 +417,19 @@ class EnglishDataTest(unittest.TestCase):
         ("unciv.json", ".summary.starts[].city"), ("unciv.json", ".summary.map_name"),
         ("unciv.json", ".summary.not_placed_designations[]"),  # denomination names; their kind is checked as a suffix
         ("sources.json", "[].publisher"),  # bodies by their own names (Instituto Nacional de Estadística, ADEAC…)
+        # military installations and their parts as OpenStreetMap names them
+        ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
+        ("military.json", ".ranges[].name"),
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.
     NAME_PARTS = {
         ("cities.json", "[].full"): [re.compile(r"^.+(?= urban area$)")],
         ("resources.json", ".items[].detail"): [re.compile(r"(?<=including ).+?(?= \()"), re.compile(r"^[^;]+; [^;]+;")],
+        ("military.json", ".components[].name"): [re.compile(r"\([^()]+\)$")],  # the branch's official Spanish name
     }
+    # An id made from a name ("base-aerea-de-zaragoza-ea", military.json), never shown.
+    SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
     # What a text quotes is cited as its source writes it (a deposit's name, INE's citation formula, a category title).
     QUOTED = re.compile(r"“[^”]*”|«[^»]*»|\"[^\"]*\"|(?<!\w)'[^']+'(?!\w)")
     # The lens whose categories are proper names: the ancient peoples, in Latin or Greek as Pleiades writes them.
@@ -449,7 +455,7 @@ class EnglishDataTest(unittest.TestCase):
                    r"Indicadores Demográficos Básicos|Movimiento Natural de la Población|Censo anual de población|"
                    r"Censos de Población y Viviendas|calidad_diferenciada_zonas|vino de pago|Vinos? de la Tierra|"
                    r"Estadística sobre actividades de I\+D|Relación con la actividad|Grandes Áreas Urbanas|"
-                   r"Calidad diferenciada|Estadística de Matrimonios|"
+                   r"Calidad diferenciada|Estadística de Matrimonios|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",
@@ -500,7 +506,8 @@ class EnglishDataTest(unittest.TestCase):
             elif isinstance(x, list):
                 for v in x:
                     walk(v, f"{path}[]", lens)
-            elif isinstance(x, str) and not x.startswith("http") and x not in SpanishDataTest.CODE_VALUES:
+            elif isinstance(x, str) and not x.startswith("http") and x not in SpanishDataTest.CODE_VALUES \
+                    and not self.SLUG.match(x):
                 proper = (name, path) in self.NAME_KEYS or (path.endswith("categories[].name") and lens in self.NAME_CATEGORIES)
                 if proper:
                     names.add(x)
