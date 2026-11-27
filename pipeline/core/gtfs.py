@@ -7,8 +7,8 @@ same service day), services given by `calendar.txt`, by `calendar_dates.txt` or 
 - `columns(z, name, cols)`: the rows of one file as tuples of the named columns ("" for a column the file lacks).
 - `seconds("8:30:00")`: a GTFS time in seconds from the start of its service day.
 - `Calendar(z)`: which services run on a date (`on`), and the first and last date any service runs (`window`).
-- `trips_by_day(trips, calendar, days)`: how many trips run on each day, by a group of the trip (an operator, a
-  network), for choosing a representative day (`pick_day`).
+- `trains_by_day(trips, calendar, days)`: how many distinct trains run on each day, by a group of the trip (an
+  operator, a network), for choosing a representative day (`pick_day`).
 """
 
 from __future__ import annotations
@@ -89,20 +89,23 @@ def days_between(first: date, last: date) -> list[date]:
     return [first + timedelta(days=k) for k in range((last - first).days + 1)]
 
 
-def trips_by_day(trips: Iterable[tuple[str, str]], calendar: Calendar, days: Iterable[date]) -> dict[str, dict[date, int]]:
-    """{group: {day: trips that run that day}} from (service_id, group) pairs, one per trip."""
-    per_service: dict[str, Counter] = defaultdict(Counter)
-    for sid, group in trips:
-        per_service[sid][group] += 1
-    out: dict[str, dict[date, int]] = defaultdict(dict)
+def trains_by_day(trips: Iterable[tuple[str, str, str]], calendar: Calendar, days: Iterable[date]) -> dict[str, dict[date, int]]:
+    """{group: {day: distinct trains that run that day}} from (service_id, group, train) triples, one per trip. A train
+    the feed writes as several trips (Renfe gives one per set of stops where it may be boarded; Iryo one per route
+    through Madrid) counts once."""
+    per_service: dict[str, set[tuple[str, str]]] = defaultdict(set)
+    for sid, group, train in trips:
+        per_service[sid].add((group, train))
+    groups = {g for trains in per_service.values() for g, _ in trains}
+    out: dict[str, dict[date, int]] = {g: {} for g in groups}
     for day in days:
-        running = calendar.on(day)
-        totals: Counter = Counter()
-        for sid in running:
-            totals.update(per_service.get(sid, {}))
-        for g in {g for c in per_service.values() for g in c}:
+        running: set[tuple[str, str]] = set()
+        for sid in calendar.on(day):
+            running |= per_service.get(sid, set())
+        totals = Counter(g for g, _ in running)
+        for g in groups:
             out[g][day] = totals.get(g, 0)
-    return dict(out)
+    return out
 
 
 class NoDayError(RuntimeError):

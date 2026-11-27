@@ -6,7 +6,7 @@ import zipfile
 from datetime import date
 
 from pipeline.core.archive import zip_bytes
-from pipeline.core.gtfs import Calendar, NoDayError, clock, columns, days_between, failing, pick_day, seconds, trips_by_day
+from pipeline.core.gtfs import Calendar, NoDayError, clock, columns, days_between, failing, pick_day, seconds, trains_by_day
 
 
 def feed(**files: str) -> zipfile.ZipFile:
@@ -51,12 +51,13 @@ class CalendarTest(unittest.TestCase):
         self.assertEqual(cal.window(), (date(2026, 12, 9), date(2026, 12, 9)))
         self.assertIsNone(Calendar(feed()).window())
 
-    def test_trips_by_day_per_group(self):
+    def test_trains_by_day_per_group(self):
         cal = Calendar(self.Z)
         days = days_between(date(2026, 12, 8), date(2026, 12, 9))
-        got = trips_by_day([("WK", "10"), ("WK", "10"), ("XTRA", "51"), ("SAT", "10")], cal, days)
-        self.assertEqual(got, {"10": {date(2026, 12, 8): 0, date(2026, 12, 9): 2},
-                               "51": {date(2026, 12, 8): 1, date(2026, 12, 9): 0}})
+        # train 190 is written twice (two sets of boarding stops): it counts once
+        trips = [("WK", "10", "190"), ("WK", "10", "190"), ("WK", "10", "192"), ("XTRA", "51", "7"), ("SAT", "10", "9")]
+        self.assertEqual(trains_by_day(trips, cal, days), {"10": {date(2026, 12, 8): 0, date(2026, 12, 9): 2},
+                                                          "51": {date(2026, 12, 8): 1, date(2026, 12, 9): 0}})
 
 
 class PickDayTest(unittest.TestCase):
