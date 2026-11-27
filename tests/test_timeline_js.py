@@ -33,28 +33,29 @@ def run(body: str):
 @unittest.skipUnless(NODE, "node is not installed")
 class YearLayerTest(unittest.TestCase):
     def test_everyone_kept_gives_the_lenses_the_builder_wrote(self):
-        # The JS count and tie rule are Python's hex_values and dominant(): exact equality on the whole map.
+        # The JS count and tie rule are Python's hex_values and dominant(): exact equality on the whole map, but for
+        # land with nobody, which the year's lens leaves empty (grey) rather than 0.
         got = run("""
-            const all = L.yearLayer(P, owner, () => true);
+            const all = L.yearLayer(P, owner.length, () => true);
             out({ count: all.count, kind: all.kind });
         """)
         lenses = {l["id"]: l for l in json.loads((ROOT / "sites/es/data/lenses.json").read_text())["lenses"]}
-        self.assertEqual(got["count"], lenses["great_people"]["values"])
+        self.assertEqual(got["count"], [v or None for v in lenses["great_people"]["values"]])
         self.assertEqual(got["kind"], lenses["great_people_kind"]["values"])
 
     def test_a_tie_goes_to_the_lowest_category(self):
         got = run("""
             const p = (cell, kind) => ({ cell, kind, life: [1, 2] });
             const tie = L.pack([p(1, 5), p(1, 2), p(1, 5), p(1, 2), p(2, 7)], 8);
-            const layer = L.yearLayer(tie, [-1, 0, 0, 0], L.aliveIn(tie, 1));
+            const layer = L.yearLayer(tie, 4, L.aliveIn(tie, 1));
             out(layer);
         """)
-        self.assertEqual(got, {"count": [None, 4, 1, 0], "kind": [None, 2, 7, None],
-                               "labels": [None, [0, 1, 2, 3], [4], None], "alive": 5})
+        self.assertEqual(got, {"count": [None, 4, 1, None], "kind": [None, 2, 7, None],
+                               "labels": [None, [0, 1, 2, 3], [4], None], "alive": 5, "approx": 0})
 
     def test_the_year_1000(self):
         got = run("""
-            const y = L.yearLayer(P, owner, L.aliveIn(P, 1000));
+            const y = L.yearLayer(P, owner.length, L.aliveIn(P, 1000));
             const sum = y.count.reduce((a, b) => a + (b || 0), 0);
             const max = y.count.indexOf(Math.max(...y.count.filter((v) => v != null)));
             const labelled = y.labels.flatMap((l, c) => (l || []).map((k) => [c, k]));
@@ -109,8 +110,11 @@ class YearStepsTest(unittest.TestCase):
                                -99])
 
     def test_a_year_from_the_url(self):
-        got = run("out(['1550', '-669', '3000', '-5000', '1550.5', 'abc', '', null, ' 1550', '1e3'].map((v) => L.parseYear(v, -669, 2026)));")
-        self.assertEqual(got, [1550, -669, 2026, -669, None, None, None, None, None, None])
+        # Signed as people write years: -670 is 670 BC (-669), -1 is 1 BC (0); there is no year 0.
+        got = run("out([['1550', '-670', '-1', '3000', '-5000', '0', '-0', '1550.5', 'abc', '', null, ' 1550', '1e3']"
+                  ".map((v) => L.parseYear(v, -669, 2026)), [1520, 1, 0, -669].map(L.urlYear)]);")
+        self.assertEqual(got, [[1550, -669, 0, 2026, -669, None, None, None, None, None, None, None, None],
+                               ["1520", "1", "-1", "-670"]])
 
     def test_historical_years_and_centuries_match_the_builder(self):
         years = [-669, -100, -99, 0, 1, 100, 101, 1500, 1501, 1550, 2026]
@@ -128,6 +132,139 @@ class YearStepsTest(unittest.TestCase):
         self.assertEqual(got["es"][0], "s. VII a. C.")
         from pipeline.build.spain_personajes import ordinal
         self.assertEqual(got["ord"], [ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111, 112)])
+
+
+# The extension itself (web/js/ext/timeline/index.js) on a stand-in for main.js's app: the real hash state, modes and
+# events of app/api.js, Spain's lenses and people, a dock whose elements are plain objects, and a browser history
+# that Back walks. `go(hash)` loads the page at a link; `paste(hash)` puts another link in the address bar;
+# `back()` is the Back button.
+APP = """
+import { readFileSync } from 'node:fs';
+const read = (n) => JSON.parse(readFileSync(`sites/es/data/${n}.json`, 'utf8'));
+const world = read('world');
+const { setCountry } = await import('./web/js/app/country.js');
+setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', data: ['personajes'] } }, null);
+const listeners = {};
+const stack = [''];
+let at = 0;
+Object.assign(globalThis, {
+  window: globalThis,
+  addEventListener: (type, fn) => (listeners[type] ||= []).push(fn),
+  location: { pathname: '/', search: '', hash: '' },
+  history: {
+    pushState(_, __, url) { stack.splice(++at, Infinity, url.replace(/^[^#]*/, '')); location.hash = stack[at]; },
+    replaceState(_, __, url) { stack[at] = url.replace(/^[^#]*/, ''); location.hash = stack[at]; },
+  },
+  document: { hidden: false, addEventListener() {}, removeEventListener() {} },
+  requestAnimationFrame: (f) => setTimeout(f, 0),
+  cancelAnimationFrame: clearTimeout,
+});
+const node = () => {
+  const kids = new Map();
+  return { classList: { add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, querySelectorAll: () => [],
+           querySelector: (s) => (kids.has(s) || kids.set(s, node()), kids.get(s)) };
+};
+const { createEmitter, createHashState, createModes } = await import('./web/js/app/api.js');
+const lenses = read('lenses').lenses;
+const lensById = new Map(lenses.map((l) => [l.id, l]));
+const state = { lens: null, highlight: null };
+const app = createEmitter();
+const modes = createModes(app);
+let dock = null;
+function setLens(ref) {
+  const lens = ref == null ? null : typeof ref === 'string' ? lensById.get(ref) || null : ref;
+  if (lens === state.lens) return;
+  state.lens = lens;
+  url.schedule();
+  app.emit('lens', lens);
+}
+const url = createHashState({
+  read: () => ({ lens: state.lens?.id || null }),
+  apply(p) { setLens(p.lens ? lensById.get(p.lens) || null : null); },
+});
+const people = read('personajes');
+Object.assign(app, {
+  registerMode: modes.registerMode, setMode: modes.setMode, lensById, state, setLens,
+  hash: { register: url.register, update: url.schedule, value: url.value },
+  w: { raw: { owner: world.owner } },
+  addLens(lens) { lensById.set(lens.id, lens); },
+  refreshLens() {}, registerOverlay: () => () => {}, setHighlight(h) { state.highlight = h; }, highlightBounds: () => null,
+  loadData: async () => people,
+  ui: { dock: () => (dock = node()), undock() { dock = null; } },
+});
+Object.defineProperty(app, 'mode', { get: () => modes.mode });
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const settle = async () => { await tick(); await tick(); url.flush(); };
+const go = async (hash) => { location.hash = hash; stack[at] = hash; url.applyCurrent(true); (await import('./web/js/ext/timeline/index.js')).install(app); await settle(); };
+const paste = async (hash) => { stack.splice(++at, Infinity, hash); location.hash = hash; listeners.hashchange.forEach((f) => f()); await settle(); };
+const back = async () => { location.hash = stack[--at]; listeners.popstate.forEach((f) => f()); await settle(); };
+const shown = () => ({ hash: location.hash, entries: stack.length, mode: app.mode, year: dock?.querySelector('.tl-y').textContent ?? null,
+                       lens: state.lens?.name ?? null });
+const out = (x) => console.log(JSON.stringify(x));
+"""
+
+
+def drive(body: str):
+    res = subprocess.run([NODE, "--input-type=module", "-e", APP + body], cwd=ROOT, capture_output=True, text=True)
+    if res.returncode:
+        raise AssertionError(res.stderr)
+    return json.loads(res.stdout)
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class TimelineLinkTest(unittest.TestCase):
+    def test_back_to_the_picker_entry_shows_the_download_year_again(self):
+        # Opened from the picker (no anio), a step back writes anio; Back returns to the download year, and a later
+        # write of the hash adds no year and no history entry, so Forward still has the step.
+        got = drive("""
+            await go('');
+            setLens('great_people_year');
+            await settle();
+            const opened = shown();
+            dock.querySelector('.tl-prev').onclick();
+            await settle();
+            const stepped = shown();
+            await back();
+            const backed = shown();
+            url.flush();
+            out({ opened, stepped, backed, after: shown(), forward: stack[at + 1] });
+        """)
+        self.assertEqual(got["opened"], {"hash": "#lens=great_people_year", "entries": 2, "mode": "timeline",
+                                         "year": "2026", "lens": "Personajes vivos en 2026"})
+        self.assertEqual((got["stepped"]["hash"], got["stepped"]["year"], got["stepped"]["entries"]),
+                         ("#lens=great_people_year&anio=2020", "2020", 3))
+        self.assertEqual(got["backed"], got["opened"] | {"entries": 3})
+        self.assertEqual(got["after"], got["backed"])
+        self.assertEqual(got["forward"], "#lens=great_people_year&anio=2020")
+
+    def test_a_link_names_the_year_as_people_write_it(self):
+        got = drive("""
+            await go('#lens=great_people_year&anio=-201');
+            const bc = shown();
+            dock.querySelector('.tl-next').onclick();
+            await settle();
+            const next = shown();
+            await paste('#lens=great_people_year&anio=0');
+            out({ bc, next, zero: shown() });
+        """)
+        self.assertEqual((got["bc"]["year"], got["bc"]["mode"]), ("201 a. C.", "timeline"))
+        self.assertEqual((got["next"]["year"], got["next"]["hash"]), ("200 a. C.", "#lens=great_people_year&anio=-200"))
+        self.assertEqual(got["zero"]["year"], "2026")  # there is no year 0: the download year
+
+    def test_a_year_without_the_lens_opens_the_timeline_and_no_year_without_it_does_nothing(self):
+        got = drive("""
+            await go('#anio=1520');
+            const open = shown();
+            setLens(null);
+            await settle();
+            const closed = shown();
+            await back();
+            out({ open, closed, again: shown() });
+        """)
+        self.assertEqual((got["open"]["mode"], got["open"]["year"], got["open"]["lens"]),
+                         ("timeline", "1520", "Personajes vivos en 1520"))
+        self.assertEqual((got["closed"]["mode"], got["closed"]["hash"]), (None, ""))
+        self.assertEqual((got["again"]["mode"], got["again"]["year"]), ("timeline", "1520"))
 
 
 if __name__ == "__main__":

@@ -1,12 +1,16 @@
 // Great people through time, "¿Quién vivía en {año}?" / "Who was alive in {year}?", on a map whose data has
-// personajes.json with years of life (Spain; DECISIONS E84, E85, A27).
+// personajes.json with years of life (Spain; DECISIONS E87, E88, A28).
 //
 //   lenses "great_people_year" (people alive per hex, the ramp and fixed domain of great_people, so a colour is the
-//     same count in every year) and "great_people_year_kind" (the trade with most people alive, the categories of
-//     great_people_kind), after great_people_kind in the picker; their names carry the year
+//     same count in every year; a hex with nobody alive is grey, not the colour of one) and "great_people_year_kind"
+//     (the trade with most people alive, the categories of great_people_kind, the legend showing only those with
+//     someone alive), after great_people_kind in the picker; their names carry the year
 //   mode "timeline" (opens and closes with either lens): the left dock with the year, a strip of people alive per
 //     decade, a slider, steps by decade or century, play, the view switch and the most famous people alive
-//   URL hash: #lens=great_people_year&anio=1000 (astronomical years: 0 = 1 BC); no anio = the download year
+//   URL hash: #lens=great_people_year&anio=1000, signed as people write years (anio=-201 = 201 BC, no year 0);
+//     no anio (or one that is not a year) = the download year
+//   overlay "timeline-dots": while the hexes are too small to read, a dot on each hex with someone alive, in its lens
+//     colour and bigger with more people, so a year with a few dozen people still shows where they are
 // personajes.json is loaded the first time the timeline opens; the year rules live in lifespan.js. A year change
 // repaints with refreshLens() only (A18 and A26 stay intact); play adds no history entries.
 import { country } from "../../app/country.js";
@@ -22,9 +26,11 @@ const MODE = "timeline";
 const HASH_KEY = "anio";
 const FILE = "personajes";
 const TICK_MS = { 10: 400, 100: 1000 }; // play: one step per tick
+const PLAY_FROM = 10; // play from the end starts again at the first decade with this many people alive
 const PAGE = 100; // PageUp / PageDown on the slider
 const TOP = 10; // "the most famous" list
 const FLY_SCALE = 2.4; // css px per km at most when a person's hex flies into view
+const DOT = { min: 3, per: 1.2, max: 9 }; // dot radius in css px: min + per × log2(people), at most max
 
 export function install(app) {
   const base = app.lensById.get("great_people"), baseKind = app.lensById.get("great_people_kind");
@@ -37,12 +43,12 @@ export function install(app) {
   const countLens = { ...shared(base), id: COUNT, name: t("timeline.lens.name"), unit: base.unit,
     description: t("timeline.lens.desc"), values: empty() };
   const kindLens = { ...shared(baseKind), id: KIND, name: t("timeline.kind.name"), unit: t("timeline.kindUnit"),
-    description: t("timeline.kind.desc"), categories: baseKind.categories, values: empty() };
+    description: t("timeline.kind.desc"), categories: baseKind.categories, hide_empty: true, values: empty() };
   app.addLens(countLens, { after: baseKind.id });
   app.addLens(kindLens, { after: COUNT });
   const ours = (l) => l === countLens || l === kindLens;
 
-  let doc = null, P = null, names = null, span = null, decades = null;
+  let doc = null, P = null, names = null, span = null, decades = null, playStart = 0;
   let year = null; // the year on screen (null until the data is in)
   let committed = null; // the year in the URL: changed by a manual change, never by play (null = the download year)
   let step = 10;
@@ -58,10 +64,12 @@ export function install(app) {
   };
 
   // --- the lenses ------------------------------------------------------------------------------------------------
-  let alive = 0;
+  let alive = 0, approx = 0, lived = []; // lived: [cell, people] of each hex with someone alive
   function paint() {
-    const layer = L.yearLayer(P, owner, L.aliveIn(P, year));
-    alive = layer.alive;
+    const layer = L.yearLayer(P, owner.length, L.aliveIn(P, year));
+    ({ alive, approx } = layer);
+    lived = [];
+    layer.count.forEach((n, c) => n && lived.push([c, n]));
     const y = yearText(year), none = t("timeline.none", { year: y });
     Object.assign(countLens, { values: layer.count, labels: layer.labels, names, null_label: none,
       name: t("timeline.lens.nameYear", { year: y }) });
@@ -78,6 +86,30 @@ export function install(app) {
     } else if (app.mode === MODE && !leaving) app.setMode(null);
   });
 
+  // Drawn every frame over the cached map (like the game's guesses), so a year change never repaints the static map
+  // for it; a hex whose dot would be smaller than the hex itself is left to the lens colour.
+  const dots = {
+    id: "timeline-dots", z: 40,
+    draw(ctx, cam) {
+      const g = app.w.grid, s = cam.scale, colors = app.w.colors;
+      if (!ours(app.state.lens) || !colors) return;
+      if (DOT.max <= g.R * s) return; // zoomed in: every hex reads by itself
+      const hw = cam.w / 2 / s + DOT.max / s, hh = cam.h / 2 / s + DOT.max / s;
+      ctx.lineWidth = 1 / s;
+      ctx.strokeStyle = "rgba(12,9,20,.9)";
+      for (const [c, n] of lived) {
+        const r = Math.min(DOT.max, DOT.min + DOT.per * Math.log2(n)), x = g.cx(c), y = g.cy(c);
+        if (r <= g.R * s || Math.abs(x - cam.x) > hw || Math.abs(y - cam.y) > hh) continue;
+        ctx.beginPath();
+        ctx.arc(x, y, r / s, 0, 2 * Math.PI);
+        ctx.fillStyle = colors[c];
+        ctx.fill();
+        ctx.stroke();
+      }
+    },
+  };
+  let offDots = null;
+
   const fromHash = () => { const l = app.lensById.get(app.hash.value("lens")); return ours(l) ? l : null; };
 
   app.registerMode(MODE, {
@@ -87,6 +119,7 @@ export function install(app) {
       dock.innerHTML = `<p class="muted">${esc(t("timeline.loading"))}</p>`;
       if (!ours(app.state.lens)) app.setLens(fromHash() || countLens);
       document.addEventListener("visibilitychange", onVisibility);
+      offDots = app.registerOverlay(dots);
       open(++token);
     },
     exit() {
@@ -95,6 +128,8 @@ export function install(app) {
         token++;
         stop();
         document.removeEventListener("visibilitychange", onVisibility);
+        offDots?.();
+        offDots = null;
         if (mark && app.state.highlight === mark) app.setHighlight(null);
         mark = null;
         dock?.classList.remove("ext-dock", "tl-dock");
@@ -130,6 +165,8 @@ export function install(app) {
       names = namesFrom(doc, owner.length).names;
       span = L.range(P, doc.timeline.until);
       decades = L.perDecade(P, span.min, span.max);
+      const i = decades.counts.findIndex((c) => c >= PLAY_FROM);
+      playStart = i < 0 ? span.min : Math.max(span.min, decades.base + 10 * i);
     }
     year = committed == null ? span.max : clamp(committed);
     build();
@@ -154,14 +191,16 @@ export function install(app) {
     render();
   }
 
+  // set() runs on load and on Back / Forward. A hash with one of the lenses and no year (or one that is not a year)
+  // means the download year; with neither a year nor one of the lenses the lens key decides (no lens = no timeline).
   app.hash.register(HASH_KEY, {
-    get: () => (app.mode === MODE && committed != null ? String(committed) : null),
+    get: () => (app.mode === MODE && committed != null ? L.urlYear(committed) : null),
     set(v) {
       const y = L.parseYear(v, -Infinity, Infinity);
-      if (y == null) return; // without the key the lens key decides (no lens = no timeline)
+      if (y == null && !fromHash()) return;
       stop();
-      committed = doc ? clamp(y) : y;
-      setYear(committed);
+      committed = y == null ? null : doc ? clamp(y) : y;
+      if (doc) setYear(committed ?? span.max);
       if (app.mode !== MODE) app.setMode(MODE);
     },
   });
@@ -173,7 +212,7 @@ export function install(app) {
   function play() {
     if (playing || !doc) return;
     playing = true;
-    if (year >= span.max) setYear(span.min);
+    if (year >= span.max) setYear(playStart);
     afterFrames();
     render();
   }
@@ -240,8 +279,8 @@ export function install(app) {
       <h3 class="tl-h3">${esc(t("timeline.famous"))}</h3>
       <ol class="dk-list tl-famous"></ol>
       <p class="tl-note muted">${esc(t("timeline.caption"))}</p>
-      <p class="tl-note muted">${esc(t("timeline.rules", { approx: int(meta.approximate), until: meta.until, cutoff }))}</p>
-      <p class="tl-note muted">${esc(t("timeline.leftOut", { n: out, count: int(out), birth: int(left.no_birth), cutoff, death: int(left.no_death), bad: int(left.inconsistent) }))}</p>`;
+      <p class="tl-note muted">${esc(t("timeline.rules", { approx: int(meta.approximate), until: meta.until, cutoff, max: meta.max_life, next: meta.max_life + 1, longer: int(meta.longer) }))}</p>
+      <p class="tl-note muted">${esc(t("timeline.leftOut", { n: out, count: int(out), birth: int(left.no_birth), death: int(left.no_death), bad: int(left.inconsistent) }))}</p>`;
     const q = (s) => dock.querySelector(s);
     el = { title: q(".tl-title"), y: q(".tl-y"), c: q(".tl-c"), now: q(".tl-now"), svg: q(".tl-strip svg"), slider: q(".tl-slider"),
       prev: q(".tl-prev"), next: q(".tl-next"), play: q(".tl-play"), sum: q(".tl-sum"), famous: q(".tl-famous") };
@@ -301,7 +340,8 @@ export function install(app) {
     dock.querySelectorAll("[data-step]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.step === step)));
     updateView();
     el.sum.setAttribute("aria-live", playing ? "off" : "polite");
-    el.sum.textContent = t("timeline.summary", { n: alive, count: int(alive), year: y, total: int(P.dated) });
+    el.sum.textContent = t("timeline.summary", { n: alive, count: int(alive), year: y, total: int(P.dated) })
+      + (approx ? " " + t("timeline.approx", { n: approx, count: int(approx) }) : "");
     el.famous.innerHTML = L.famous(P, year, TOP).map((k) => {
       const p = doc.people[k];
       return `<li><button type="button" class="dk-item" data-k="${k}" title="${esc(t("timeline.show"))}">

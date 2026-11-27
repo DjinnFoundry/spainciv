@@ -1,19 +1,22 @@
 // Who was alive in a year, from personajes.json (docs/DATA_CONTRACTS.md): each person's `life` = [from, to], the
 // astronomical years (0 = 1 BC) in which the builder says they may have been alive, both included
-// (pipeline/build/spain_personajes.py lifespan, DECISIONS E84). No DOM, so tests/test_timeline_js.py runs it in node;
+// (pipeline/build/spain_personajes.py lifespan, DECISIONS E87); `approx` marks a decade or a century among the dates. No DOM, so tests/test_timeline_js.py runs it in node;
 // the twins of the builder's dominant(), roman(), ordinal() and century arithmetic are pinned there against Python.
 
 const NONE_FROM = 2 ** 31 - 1; // a person without `life` is alive in no year
 const NONE_TO = -(2 ** 31);
 
 /** The people in typed arrays, in file order (k = the index in doc.people and in the names of ui/lenses.js
- *  namesFrom): from, to, cell, kind; `dated` = how many have a `life`, `kinds` = the number of categories. */
+ *  namesFrom): from, to, cell, kind, approx (1 = dates by decade or century); `dated` = how many have a `life`,
+ *  `kinds` = the number of categories. */
 export function pack(people, kinds = 1 + Math.max(0, ...people.map((p) => p.kind))) {
   const n = people.length;
-  const P = { n, kinds, dated: 0, from: new Int32Array(n), to: new Int32Array(n), cell: new Int32Array(n), kind: new Uint8Array(n) };
+  const P = { n, kinds, dated: 0, from: new Int32Array(n), to: new Int32Array(n), cell: new Int32Array(n), kind: new Uint8Array(n),
+    approx: new Uint8Array(n) };
   people.forEach((p, k) => {
     P.cell[k] = p.cell;
     P.kind[k] = p.kind;
+    P.approx[k] = p.approx ? 1 : 0;
     P.from[k] = p.life ? p.life[0] : NONE_FROM;
     P.to[k] = p.life ? p.life[1] : NONE_TO;
     if (p.life) P.dated++;
@@ -34,22 +37,22 @@ export function range(P, until) {
   return { min, max: until };
 }
 
-/** The two lenses' per-hex data for the people that keep(k) keeps: `count` (people per land hex, 0 on land with
- *  nobody, null off land, as the builder's hex_values), `kind` (the category with most of them, a tie going to the
- *  lowest index as Python's dominant(), null where nobody is), `labels` (their indices, in file order, so most famous
- *  first) and `alive` (how many in all). `owner` is world.json's: land is owner >= 0. */
-export function yearLayer(P, owner, keep) {
-  const n = owner.length;
-  const count = new Array(n);
-  for (let c = 0; c < n; c++) count[c] = owner[c] >= 0 ? 0 : null;
+/** The two lenses' per-hex data for the people that keep(k) keeps: `count` (people per hex, null where nobody is,
+ *  so the map greys a hex with nobody alive instead of giving it the colour of one person), `kind` (the category with
+ *  most of them, a tie going to the lowest index as Python's dominant(), null where nobody is), `labels` (their
+ *  indices, in file order, so most famous first), `alive` (how many in all) and `approx` (how many of them by a
+ *  decade or a century). `n` is the number of hexes. */
+export function yearLayer(P, n, keep) {
+  const count = new Array(n).fill(null);
   const kind = new Array(n).fill(null);
   const labels = new Array(n).fill(null);
   const per = new Map(); // cell → people per category
-  let total = 0;
+  let total = 0, approx = 0;
   for (let k = 0; k < P.n; k++) {
     if (!keep(k)) continue;
     const c = P.cell[k];
-    count[c]++;
+    count[c] = (count[c] || 0) + 1;
+    approx += P.approx[k];
     (labels[c] ||= []).push(k);
     let a = per.get(c);
     if (!a) per.set(c, (a = new Int32Array(P.kinds)));
@@ -61,7 +64,7 @@ export function yearLayer(P, owner, keep) {
     for (let i = 1; i < a.length; i++) if (a[i] > a[best]) best = i;
     kind[c] = best;
   }
-  return { count, kind, labels, alive: total };
+  return { count, kind, labels, alive: total, approx };
 }
 
 const floorDiv = (a, b) => Math.floor(a / b);
@@ -107,11 +110,15 @@ export const next = (y, step, min = -Infinity, max = Infinity) =>
 export const prev = (y, step, min = -Infinity, max = Infinity) =>
   clamp(land(Math.ceil(signed(y) / step) * step - step, -step), min, max);
 
-/** A year from the URL: a whole number, clamped to [min, max]; null for anything else. */
+/** A year from the URL, as people write it with a sign (-201 = 201 BC, no year 0; urlYear): the astronomical year,
+ *  clamped to [min, max]; null for anything else. */
 export function parseYear(v, min, max) {
-  if (v == null || !/^-?\d{1,6}$/.test(String(v))) return null;
-  return clamp(Number(v), min, max);
+  if (v == null || !/^-?\d{1,6}$/.test(String(v)) || Number(v) === 0) return null;
+  return clamp(fromSigned(Number(v)), min, max);
 }
+
+/** The URL's spelling of astronomical year y: 1520, or -201 for 201 BC (-200). */
+export const urlYear = (y) => String(signed(y));
 
 /** The year as people write it: {n, bc} (0 is 1 BC, -669 is 670 BC). */
 export const historical = (y) => (y <= 0 ? { n: 1 - y, bc: true } : { n: y, bc: false });
