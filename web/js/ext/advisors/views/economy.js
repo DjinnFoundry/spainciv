@@ -32,7 +32,7 @@ export function mount(ctx) {
   // The bar list keys BEA's "government"; the jobs table (and the specialisation picker) call it "public_admin".
   const toBar = (k) => (byGdp && k === "public_admin" ? "government" : k);
   const fromBar = (k) => (byGdp && k === "government" ? "public_admin" : k);
-  // GDP by place: metros where they have it (US), else the regions (Spain: the INE stops at the province, DECISIONS E9/E31).
+  // GDP by place: metros where they have it (US), else the regions (Spain: the INE stops at the province, DECISIONS E9).
   const metroGdp = rows.some((r) => fin(r.v.gdp));
   const place = metroGdp
     ? { level: metros, min: METRO_MIN, name: t("adv.metro"), open: (r) => app.selectCity(r.ref), at: (r) => [app.w.grid.cx(r.ref.cell), app.w.grid.cy(r.ref.cell)] }

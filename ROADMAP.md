@@ -9,7 +9,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Huecos conocidos
 
-- Lentes diarias (E33–E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
+- Lentes diarias (E32, E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
   los demás llevan el resto de su provincia (o la provincia, en la esperanza de vida). Incendios: faltan los
   menores de unas 30 ha que no ve el EFFIS, y no hay lente de inundaciones (sin conjunto oficial abierto por municipio).
   La banda ancha es cobertura, no contratación.
@@ -21,16 +21,16 @@ decisiones que salgan van a `DECISIONS.md`.
   `especies.py`: los códigos de cuadrícula son los mismos. Se ve la falta en el lobo (552 cuadrículas en el mapa;
   la distribución de 2019-2024 del censo tiene 1.357 de presencia estable) y en el lince, que el censo de 2025 ya cuenta
   en la Región de Murcia, Castilla y León y la Comunidad de Madrid.
-- El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E31).
+- El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E9).
 - Valor de la vivienda: la lente es provincial (E49); el valor tasado municipal (más de 25.000 habitantes) solo está en un XLS binario de un servidor que responde 503. Si vuelve, la lente puede bajar a municipio.
-- Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).
+- Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E39) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E39).
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
 - Los ciudadanos de la City View y los desastres siguen siendo solo de EE UU. Las rutas comerciales de España son de
   mercancías por carretera entre comunidades (A30). Falta el comercio exterior por provincia en euros, que el plan
   saca de DataComex (Secretaría de Estado de Comercio, con los datos de Aduanas de la AEAT): David decide si entra y
   cómo se dibuja.
-- Ejército (E67-E71): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
+- Ejército (E67): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
   `publicaciones.defensa.gob.es` no respondía el 27-11-2026) y el gasto de Defensa por provincia. Los límites son los
   de OpenStreetMap, y 165 de las 478 instalaciones no tienen rama (oficinas, residencias, institutos del Órgano
   Central y sitios cuyo nombre no la dice).
@@ -50,7 +50,7 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
-- Embalses (E91–E93): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
+- Embalses (E91): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
   embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
   no los da). Contraste hecho con 20 notas semanales de prensa del MITECO: 26-9, 3-10, 10-10, 17-10, 24-10, 31-10, 14-11
   y 21-11-2023; 8-10, 15-10, 22-10 y 26-11-2024; 4-11 y 18-11-2025; 24-2, 29-9, 3-11 y 17-11-2026 coinciden con la cifra
@@ -59,7 +59,7 @@ decisiones que salgan van a `DECISIONS.md`.
   de capacidad y la lente 56.049. Las posiciones de 16 grandes embalses (Alcántara, Buendía, Mequinenza, Almendra,
   Entrepeñas, Iznájar, Cenajo, Yesa, Contreras, Alarcón, Valdecañas, Riaño, Belesar, Sau, Canelles, Ricobayo) y sus hm³
   coinciden con `Embalses_Mapa`; las situadas con Wikidata son verosímiles. Falta contrastar 1995 con una nota de prensa.
-- Tren a Madrid (E101–E104): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
+- Tren a Madrid (E101): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
   cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026
   (`check` lo avisa), y el fichero propio de Renfe Feve no entra: cuentan los trenes de Feve del fichero AV/LD de
   Renfe, pero la vía métrica sin tren en ese fichero no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y tranvías.
@@ -78,7 +78,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Más adelante
 
-- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E89). Los datos están:
+- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E82). Los datos están:
   `wonders.json` tiene los 16 parques con sus límites del OAPN y sus hexágonos, y un mod puede añadir terrenos
   `"type": "NaturalWonder"` en `jsons/Terrains.json` (`TileNormalizer` conserva el `naturalWonder` de una casilla si
   el ruleset lo tiene). Lo que cuesta, visto en el código de Unciv 5.0.1: el tileset por defecto es HexaRealm, con
@@ -98,7 +98,7 @@ decisiones que salgan van a `DECISIONS.md`.
 ## Por decidir (David)
 
 - Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
-  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E89).
+  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E82).
 - Tren a Madrid (F42): abrir una cuenta en el NAP para la clave (`NAP_API_KEY`), que trae Ouigo oficial y Renfe Feve;
   si vale el fichero no oficial de Iryo; y si se acepta la cláusula «siempre actualizada» de la licencia del MITRAMS
   con un horario de un día fijo (hoy la fecha sale en la lente y en el Almanaque).

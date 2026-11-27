@@ -6,7 +6,7 @@ covers the chosen day. Stops are Adif station codes in every feed once Ouigo's U
 same station has the same id across feeds. The Renfe CSVs pad their fields with spaces and write `8:30:00`; Ouigo gives
 its times in Europe/Paris and Europe/Amsterdam, which keep Madrid's offset all year.
 
-The day (DECISIONS E102): the first Tuesday, Wednesday or Thursday inside every feed's window, after the day the newest
+The day (DECISIONS E101): the first Tuesday, Wednesday or Thursday inside every feed's window, after the day the newest
 file was written, on which every feed, and every Cercanías network (the first two characters of its route_id), runs at
 least 90 % of the trains of its busiest day of the same weekday in that window. A train is counted once however many
 trips the feed writes for it (Renfe writes one per set of stops where it may be boarded). Only the cached files decide it, so the same raw data always gives the same

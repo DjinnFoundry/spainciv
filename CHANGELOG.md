@@ -7,7 +7,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 
 ### Añadido
 - Unciv: Galicia juega con peces, Extremadura con cerdo ibérico, Asturias con carbón y Castilla y León con ovejas, elegidos a mano en vez de por la regla (que les daba hierro, piedra, caballos y uranio). La página de jugar lo dice (E90).
-- Lente **Embalses** (grupo de riesgos, junto a la de incendios): el agua de cada cuenca la semana elegida, en % de su capacidad, desde el 5 de enero de 1988 hasta la última semana del Boletín Hidrológico del MITECO, con un anillo por embalse que se llena según su reserva. Panel con deslizador semana a semana, año, «Año a año» (la misma semana de cada año), el mínimo de la serie (7 de noviembre de 1995, 24,8 %), el máximo (7 de mayo de 2013, 85,8 %), la línea de España desde 1988, las cuencas de la más seca a la más llena y la serie de un embalse al pulsarlo. Siempre dice de qué semana es y que los datos son provisionales. 375 embalses en su punto del mapa del Boletín, 12 retirados situados con Wikidata y 15 sin posición; con España entera en pantalla solo se pintan los anillos de los grandes. Nuevas fuentes `boletin_hidrologico` y `wikidata_presas` en el Almanaque. El enlace guarda la semana y el embalse pulsado (`#lens=embalses&semana=1995-11-07&embalse=Alcántara`). En castellano e inglés; el mapa de EE. UU. no la tiene (E91–E93, F37, A31).
+- Lente **Embalses** (grupo de riesgos, junto a la de incendios): el agua de cada cuenca la semana elegida, en % de su capacidad, desde el 5 de enero de 1988 hasta la última semana del Boletín Hidrológico del MITECO, con un anillo por embalse que se llena según su reserva. Panel con deslizador semana a semana, año, «Año a año» (la misma semana de cada año), el mínimo de la serie (7 de noviembre de 1995, 24,8 %), el máximo (7 de mayo de 2013, 85,8 %), la línea de España desde 1988, las cuencas de la más seca a la más llena y la serie de un embalse al pulsarlo. Siempre dice de qué semana es y que los datos son provisionales. 375 embalses en su punto del mapa del Boletín, 12 retirados situados con Wikidata y 15 sin posición; con España entera en pantalla solo se pintan los anillos de los grandes. Nuevas fuentes `boletin_hidrologico` y `wikidata_presas` en el Almanaque. El enlace guarda la semana y el embalse pulsado (`#lens=embalses&semana=1995-11-07&embalse=Alcántara`). En castellano e inglés; el mapa de EE. UU. no la tiene (E91, F37, A31).
 - **Temporada de incendios en Unciv**. El mod trae un suceso: cada 5 turnos, cada civilización mayor puede sufrir un
   gran incendio en su territorio, más probable en colinas y montañas (unas 3 veces más por casilla que en el resto de
   la tierra), según el reparto por casilla de los 311 incendios de 500 ha o más que el EFFIS cartografió en España de
@@ -15,13 +15,13 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   Se elige entre pagar brigadas (60, 150 o 400 de oro según la era) o perder un 25 % de producción 5 turnos.
   Las páginas `jugar.html` y `play.html` y el README del mod separan el dato de cada convención del juego. El aviso
   sale en castellano o inglés según el idioma de Unciv (E95, F40, A32).
-- **Clima del mes** (grupo Territorio): cuatro lentes, temperatura media, lluvia, días de helada y horas de sol, para el mes que se elija, con la misma escala los doce meses. Temperatura, lluvia y heladas salen de la rejilla diaria ROCIO de AEMET (5 km; 2,5 km en Canarias), promediada por spainciv de 1991 a 2020 en cada hexágono; las horas de sol solo están en las 76 estaciones que las miden, cada una con un disco que se ve desde la vista de España, y el resto de hexágonos nombra la más cercana. El tooltip dice de dónde sale cada cifra y, donde hay estación, da también su normal OMM 1991-2020 (Burgos Aeropuerto, enero: 3,6 °C). El panel lleva la tira de meses con la normal de la España peninsular (con el sol y las heladas, la estación con más y con menos), la escala de colores en el móvil, donde el panel tapa la leyenda, el diagrama de Walter-Lieth de la provincia bajo el puntero o la que se toque con las normales oficiales de AEMET y sus doce meses (Córdoba, julio: 27,0 °C), y un enlace a las fiestas del mismo mes, que a su vez enlazan con el clima. El enlace guarda lente y mes (`#lens=clima_temp&mes=1`); `#mes=8` sigue abriendo las fiestas. Fuente: AEMET. En castellano e inglés; el mapa de EE. UU. no lo tiene (A33, E96-E95, F41).
+- **Clima del mes** (grupo Territorio): cuatro lentes, temperatura media, lluvia, días de helada y horas de sol, para el mes que se elija, con la misma escala los doce meses. Temperatura, lluvia y heladas salen de la rejilla diaria ROCIO de AEMET (5 km; 2,5 km en Canarias), promediada por spainciv de 1991 a 2020 en cada hexágono; las horas de sol solo están en las 76 estaciones que las miden, cada una con un disco que se ve desde la vista de España, y el resto de hexágonos nombra la más cercana. El tooltip dice de dónde sale cada cifra y, donde hay estación, da también su normal OMM 1991-2020 (Burgos Aeropuerto, enero: 3,6 °C). El panel lleva la tira de meses con la normal de la España peninsular (con el sol y las heladas, la estación con más y con menos), la escala de colores en el móvil, donde el panel tapa la leyenda, el diagrama de Walter-Lieth de la provincia bajo el puntero o la que se toque con las normales oficiales de AEMET y sus doce meses (Córdoba, julio: 27,0 °C), y un enlace a las fiestas del mismo mes, que a su vez enlazan con el clima. El enlace guarda lente y mes (`#lens=clima_temp&mes=1`); `#mes=8` sigue abriendo las fiestas. Fuente: AEMET. En castellano e inglés; el mapa de EE. UU. no lo tiene (A33, E96, F41).
 - **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A29).
 - **Álbum de provincias** en «Adivina el hexágono»: una pestaña nueva del panel colorea en la silueta de España la
   provincia de cada hexágono acertado, con una tira por comunidad autónoma que se marca en dorado al completarla. Cada
   provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
   Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
-  día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
+  día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E82).
 - **Rutas comerciales de España**: el interruptor «Rutas comerciales» del menú Mapa dibuja las 30 mayores corrientes
   de mercancías por carretera entre las 15 comunidades peninsulares en 2025 (Encuesta Permanente de Transporte de
   Mercancías por Carretera, Ministerio de Transportes), en línea recta entre comunidades y con el grosor según las
@@ -47,7 +47,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   ven las 1.437 estaciones (el tooltip da sus trenes del día y el mejor viaje, también si empieza andando a otra
   estación; en el móvil sale al tocarla), las vías con tren, más gruesas cuantas más trenes llevan, y 63 enlaces de
   hexágono de vía de Adif sin trenes de viajeros ese día (8 tramos), a trazos. El enlace es `#lens=rail_madrid`. El
-  mapa de EE. UU. no cambia (E101–E104, F42, F43, A34).
+  mapa de EE. UU. no cambia (E101, F42, F43, A34).
 - **Personajes en el tiempo** («¿Quién vivía en 1520?»): dos lentes nuevas junto a las de grandes personajes,
   «Personajes vivos en {año}» y «Oficios en {año}», con un panel para elegir el año (de Argantonio, 670 a. C., a
   hoy), avanzar por décadas o siglos y reproducir desde el año 50. Cada hexágono con alguien vivo lleva un punto que
@@ -56,7 +56,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   entera); en 2000, 3.093. Cuenta a quien vivía ese año, no a quien había nacido. 83 de los 6.119 se quedan fuera por
   fechas que faltan o no casan, entre ellos quienes Wikidata da por muertos sin fecha utilizable. El enlace guarda el
   año (`#lens=great_people_year&anio=1000`; `anio=-201` es 201 a. C.). Solo en el mapa de España, en sus dos idiomas
-  (E105, E106, A35).
+  (E105, A35).
 - **Grandes personajes**: los pilotos de automovilismo y de motociclismo salen como deportistas cuando su descripción
   de Wikidata lo dice (Fernando Alonso salía como «actor» porque Wikidata también le da ese oficio), y quien Wikidata
   da por muerto sin fecha lleva «1915–?» en vez de «n. 1915».
@@ -65,7 +65,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
   un río, la lengua y el pueblo prerromano; la tercera ya nombra algo de allí, la cuarta sitúa el hexágono respecto a
   una ciudad del mapa y la quinta la nombra. Los recuentos de patrimonio salen solo si no son cero. El día 1 pasa a ser
-  Guadix; una partida guardada con otro hexágono vuelve a empezar (E82, E83).
+  Guadix; una partida guardada con otro hexágono vuelve a empezar (E82).
 - Lente **Sol y reloj** (grupo Territorio): la hora del reloj a la que se pone el sol en cada hexágono el día elegido, o la salida, el mediodía solar o las horas de luz. España usa la hora de Europa central aunque casi toda queda al oeste de Greenwich; el 21 de junio el sol se pone a las 22:20 en Muxía y a las 20:56 en Antigua (Fuerteventura, una hora menos en el reloj). Panel con el día (hoy en España, 21 de junio, 21 de diciembre; de 1996 a 2099) y las cuatro horas; el tooltip da el resto del día («Salida 06:53 · Mediodía solar 14:35 · 15 h 25 min de luz · CEST») y la leyenda, la diferencia entre el primer hexágono y el último, y con la hora de Europa central sola si uno está en Canarias. Ecuaciones de la NOAA, en teoría a ±1 min; nueva fuente `noaa_solar` en el Almanaque. El enlace guarda día y hora (`#lens=atardecer&dia=2026-06-21&sol=puesta`). En castellano e inglés; el mapa de EE. UU. no la tiene (A27, E84).
 - **Criminalidad**, en Riesgos: infracciones penales conocidas en 2025 por 1.000 habitantes, del Balance de
   Criminalidad del Ministerio del Interior. Los 427 municipios que lista el balance (los de más de 20.000 habitantes
@@ -73,7 +73,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   provincia o de su isla. El tooltip da la tasa de cada unidad, sus tres tipos con más casos y lo que suman los demás.
   Una segunda lente, **Delito que más destaca**, pinta el tipo que más supera la tasa de España, cuando llega a 1,25
   veces y la unidad tiene 20.000 residentes o más, y el tooltip dice cuántas veces es la de España. La nota avisa de
-  que la tasa es por residente y los sitios turísticos salen altos (E85, E86, F35).
+  que la tasa es por residente y los sitios turísticos salen altos (E85, F35).
 - **Juega con tu comunidad** en Unciv: el mod trae las 17 comunidades autónomas como civilizaciones y Ceuta y Melilla
   como ciudades-estado. Cada comunidad empieza en la capital que da su Estatuto, con su bandera simplificada, sus 40
   municipios más poblados como nombres de ciudad y una ventaja en el recurso del mapa que más tiene (Andalucía, peces;
@@ -82,7 +82,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   El líder es el cargo («Presidencia de la Xunta de Galicia»), nunca una persona. Textos del juego en castellano e
   inglés; la página `jugar.html` / `play.html` dice qué es dato y qué convención. El mapa suelto, sin mod, sigue con
   España en Madrid (E87, E88, A28).
-- **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E80, E81).
+- **Calendario de fiestas** («¿Dónde hay fiesta este mes?»), en el selector de lentes junto a la de fiestas: elige un mes y el mapa pinta los hexágonos con fiesta ese mes, del color de su categoría, con la fecha que da la fuente en el tooltip; el panel las lista por categoría y nombre y lleva a cada una en el mapa. Las que no tienen mes conocido (610 de 1.296) se cuentan aparte. Una fiesta Internacional o Nacional toma las fechas de su declaración autonómica, si la tiene. El enlace guarda el mes (`#lens=fiestas_mes&mes=8`). En castellano e inglés; el mapa de EE. UU. no lo tiene (E81).
 - Capa **Bandera Azul**: cada playa va en el hexágono donde está. 604 de las 677 casan por nombre y municipio con
   Wikidata (518) u OpenStreetMap (86); las 73 que no casan siguen repartidas por la costa de su municipio, como antes.
   Antes las playas de un municipio se turnaban entre sus hexágonos de costa sin mirar dónde estaba cada una: las de
@@ -92,13 +92,13 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   hexágono de 10 km sacadas de los datos del mapa (terreno, gente, renta, lengua, patrimonio y, al final, la inicial de
   la provincia, quién nació allí y qué se come); seis intentos con la distancia y una flecha; el resultado se copia o
   se comparte sin desvelar el lugar. Guarda la partida del día y la racha en el navegador. En castellano e inglés; el
-  mapa de EE. UU. no lo tiene (A25, E76).
+  mapa de EE. UU. no lo tiene (A25, E82).
 - **Fiestas autonómicas** en la lente de fiestas: 1.042 fiestas que declaran de interés turístico 15 comunidades
   autónomas, cada una con su nombre (Fiesta de Interés Turístico de Andalucía, Festa de Interese Turístico de Galicia,
   Fiesta de Interés Turístico Regional de Castilla-La Mancha…), de la lista oficial de cada comunidad. Pasan a
   sumar 0,5 puntos en el índice de fiesta. `fiestas.json` guarda todas las fiestas con sus fechas, donde la fuente las
   da (798 de 1.296), para un calendario futuro. Euskadi, Illes Balears, Ceuta y Melilla no declaran ninguna
-  (E77–E79, F34).
+  (E45, F34).
 - **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
   castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
   enlace que se comparte la lleva (`#lang=en`).
@@ -107,7 +107,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   - Los nombres propios se quedan como los escribe su fuente.
   - Los números siguen al idioma: «1,6 B €» en castellano y «€1.6T» en inglés.
   - Las capas inglesas pesan unos 80 kB comprimidas, 38 kB sin la de personajes, que solo se carga al abrir sus
-    lentes. No repiten ningún valor (A20–A24, E72).
+    lentes. No repiten ningún valor (A17, A20–A23, E72).
 - Los ficheros de datos que España no tiene (los del Ejército y del comercio de EE. UU.) ya no se piden, así que
   desaparecen los dos 404 de la consola.
 - Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
@@ -118,13 +118,13 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   (Torrezno de Soria, Miel de Málaga, Queso de Burgos…), con la zona de su documento único o pliego sobre los límites
   municipales; el tooltip dice cómo se obtuvo cada zona. Penedès, Priorat, Idiazabal, los txakolis y otros que no
   casaban por el nombre quedan enlazados a su registro. En el mapa de Unciv, el vino pasa de 81 a 132 casillas
-  (E64–E66, F31).
+  (E64, F31).
 - **Ejército** para España: el General deja de estar vacío. 478 instalaciones militares de OpenStreetMap (23 grandes,
   75 bases), con su rama (Tierra, Armada, Aire y del Espacio, UME), su superficie y su enlace a Wikidata; los 15 mayores
   campos de maniobras como terreno restringido (San Gregorio, 338 km²; Chinchilla, 149; Sierra del Retín, 100); las
   instalaciones y el terreno militar por provincia; y 29 ciudades con guarnición. Rota y Morón van marcadas como de uso
   conjunto con Estados Unidos. La capa militar del mapa dibuja sus fuertes y campos. Sin efectivos ni gasto por
-  provincia: el anuario de Defensa no se pudo descargar (E67–E71, A19, F32).
+  provincia: el anuario de Defensa no se pudo descargar (E67, A19, F32).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
@@ -132,8 +132,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   explotaciones del IGME, cobre y oro de sus minas, ganado, ovejas, pescado, cítricos y especias de sus IGP y DOP. El
   Peñón de Gibraltar es la maravilla natural. España empieza en Madrid y los demás en las grandes áreas urbanas.
   Probado en Unciv 5.0.1: el mod se instala desde su enlace, el mapa se abre en el editor y una partida de 40 turnos
-  corre sobre él (E51–E57).
-- **Grandes personajes**: 6.119 personas famosas nacidas en la España actual, de Wikidata, en el hexágono de su lugar de nacimiento, en 19 categorías al estilo de los grandes personajes de Civilization (de premios Nobel y conquistadores a cantantes y deportistas) con un umbral de fama cada una (E58, E59, F27). Dos lentes: personajes por hexágono y categoría con más personajes; la ayuda emergente da nombre, oficio y fechas («Pablo Picasso (pintor, 1881–1973)»). El buscador encuentra a las personas y por su pueblo: «Cervantes» lleva a Alcalá de Henares.
+  corre sobre él (E51).
+- **Grandes personajes**: 6.119 personas famosas nacidas en la España actual, de Wikidata, en el hexágono de su lugar de nacimiento, en 19 categorías al estilo de los grandes personajes de Civilization (de premios Nobel y conquistadores a cantantes y deportistas) con un umbral de fama cada una (E58, F27). Dos lentes: personajes por hexágono y categoría con más personajes; la ayuda emergente da nombre, oficio y fechas («Pablo Picasso (pintor, 1881–1973)»). El buscador encuentra a las personas y por su pueblo: «Cervantes» lleva a Alcalá de Henares.
 - Mapa de Unciv: carbón, uranio, hierro, oro, plata y cobre de los yacimientos grandes y medianos del BDMIN del IGME,
   se exploten o no; caballos en las 20 comarcas con más équidos por km² del Censo Agrario 2020; y un recurso propio
   del mod, el **cerdo ibérico**, en las cuatro DOP de jamón ibérico. El mod pasa a ser de extensión y Unciv lo activa
@@ -141,17 +141,17 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   de nuevo en Unciv 5.0.1 (E60–E62).
 - Lente de **valor de la vivienda** por provincia: valor tasado de la vivienda libre del Ministerio de Vivienda, 2.º trimestre de 2026 (España 2.355 €/m²; de Ciudad Real, 854, a Madrid, 4.090). Va en €/m²: no hay fuente con el valor de una vivienda entera.
 - Lentes de Conocimiento, Vida diaria, Fe y Riesgos para España, equivalentes a las de EE UU con datos oficiales
-  (E32–E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la
+  (E32, E38). **Banda ancha**: hogares con cobertura de 100 Mbps o más, por municipio (Ministerio para la
   Transformación Digital, junio de 2025; España 97,9 %). **Trabajan fuera**: ocupados que trabajan en otro municipio
   (Censo anual del INE, 2024; Madrid capital 28,6 %, el resto de su provincia 85,0 %). **Esperanza de vida** al nacer
   (INE, 2024; de 80,3 años en La Línea de la Concepción a 87,1 en Majadahonda). **Bodas religiosas**, proporción de los matrimonios
   (INE, 2025; España 16,1 %, de Girona 6,1 % a Jaén 38,5 %). **Incendios**: hectáreas quemadas por hexágono de 2016 a
   2025 según los perímetros del EFFIS (1,28 M ha). Las tres del INE llevan dato propio en unos 150 municipios y el del
   resto de su provincia en los demás. No hay lente de personas sin seguro médico: la sanidad pública es universal.
-- Lentes de pobreza, edad media, nacidos en el extranjero, estudios superiores y vivienda en propiedad, con los iconos y grupos del mapa de EE. UU. Pobreza: residentes por debajo del 60 % de la mediana nacional de renta por unidad de consumo (Atlas de Distribución de Renta de los Hogares, 2024). Edad media: del mismo atlas (2024). Nacidos en el extranjero: Censo anual de población, 1 de enero de 2026. Estudios superiores: población de 15 años o más del Censo anual, 2024. Vivienda en propiedad: Censo de 2021. Madrid: 17,4 %, 43,9 años, 29,9 %, 46,8 %, 70,1 %; Zamora: 19,6 %, 48,7 años, 10,7 %, 35,6 %, 78,8 %. El valor de la vivienda sigue sin lente: no hay fuente municipal que lo dé por vivienda (E44).
+- Lentes de pobreza, edad media, nacidos en el extranjero, estudios superiores y vivienda en propiedad, con los iconos y grupos del mapa de EE. UU. Pobreza: residentes por debajo del 60 % de la mediana nacional de renta por unidad de consumo (Atlas de Distribución de Renta de los Hogares, 2024). Edad media: del mismo atlas (2024). Nacidos en el extranjero: Censo anual de población, 1 de enero de 2026. Estudios superiores: población de 15 años o más del Censo anual, 2024. Vivienda en propiedad: Censo de 2021. Madrid: 17,4 %, 43,9 años, 29,9 %, 46,8 %, 70,1 %; Zamora: 19,6 %, 48,7 años, 10,7 %, 35,6 %, 78,8 %. El valor de la vivienda sigue sin lente: no hay fuente municipal que lo dé por vivienda (E49).
 - Lentes de fiesta. **Fiestas de interés turístico**: las 90 Internacionales y 164 Nacionales de la Secretaría de Estado de Turismo, con su nombre al pasar el ratón (Murcia tiene cuatro Internacionales: Semana Santa, Bando de la Huerta, Entierro de la Sardina y Moros y Cristianos). **Bares**: bares y pubs de OpenStreetMap por 1.000 habitantes (Benidorm, 5,3; Donostia y Salamanca, 2,5; Madrid, 0,7), con el aviso de que OSM cubre mucho mejor las ciudades que los pueblos. **Viviendas turísticas** por 1.000 habitantes, de la estadística experimental del INE (mayo de 2026: La Oliva 133, Roses 124, Nerja 123; España 6,9). **Índice de fiesta**, propio de este mapa: cuántas veces lo habitual en España tiene un hexágono de bares, viviendas turísticas y fiestas, como media geométrica, con lo habitual en oscuro (Sallent de Gállego, Peñíscola, Llanes y Naut Aran arriba). El grupo «Comida y bebida» pasa a «Comida, bebida y fiestas».
 - Lentes de **castillos** (3.009) y **plazas de toros** (650) de Wikidata en el grupo de patrimonio, con sus nombres al pasar el ratón.
-- Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
+- Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E9, E49).
 
 ### Corregido
 - Panel del Maestre del Comercio: los puertos de España se partían con «…» («Bahía de Algecira…») y sus barras
@@ -165,7 +165,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Las descargas reintentan también el HTTP 429 (demasiadas peticiones), esperando lo que pida la cabecera `Retry-After` del servidor, hasta 5 minutos. La de grandes personajes se cortaba en Wikidata.
 - Denominaciones: el mapa del Ministerio archiva Mongeta del Ganxet con el código del Cordero de Extremadura y Siurana con el de Les Garrigues, y el cordero extremeño salía en Barcelona y Girona. Cada zona va ahora con su nombre, y Mongeta del Ganxet y Siurana toman el polígono del Ministerio en vez de su lista de municipios.
 - Nombres de las áreas urbanas con guion o barra como se escriben («Tarragona-Reus», «Alcoy/Alcoi», «Vitoria/Gasteiz») y
-  «Santa Cruz de Tenerife - La Laguna», que el AUDES escribe «Salta Cruz» (E73).
+  «Santa Cruz de Tenerife - La Laguna», que el AUDES escribe «Salta Cruz» (E14).
 - El Almanaque ya no dice que el paro, la renta y el alquiler no tienen fuente municipal en España: explica de dónde sale
   cada uno (E27–E29) y que el valor de una vivienda sigue sin fuente por municipio.
 - Arrastrar el mapa se engancha menos: al entrar terreno nuevo se pinta solo la franja que aparece, no el

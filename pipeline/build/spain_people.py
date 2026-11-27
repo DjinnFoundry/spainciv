@@ -14,7 +14,7 @@ municipalities in each hex (lenses.spread_population weights), null where none o
 
 * `home`: appraised value of a free-market dwelling per m² (Ministerio de Vivienda), by province: every municipality
   takes its province's value. The US lens is the median value of a whole dwelling, which no Spanish source gives by
-  municipality (DECISIONS E30, E49).
+  municipality (DECISIONS E49).
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@
 import { t } from "../../i18n.js";
 import { MIN_FIRST, dailyCell, shuffled } from "./puzzle.js";
 
-/** A province that comes up less than once in this many days gets the clock (a UI convention, DECISIONS E89). */
+/** A province that comes up less than once in this many days gets the clock (a UI convention, DECISIONS E82). */
 export const LONG_WAIT_DAYS = 100;
 
 /** The album as saved, cleaned: {INE province code: [puzzle day, …]} with known codes only and each list sorted

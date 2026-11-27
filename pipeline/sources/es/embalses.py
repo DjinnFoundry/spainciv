@@ -10,7 +10,7 @@ with the positions and basins of the Boletín's own map.
 * **DDHH** (the Boletín's basin layer): the 16 basins as polygons, named exactly as the database's ámbitos, with the
   latest week's water stored and percentage, which must equal the database's sums for that week.
 
-Cleaning (DECISIONS E92): a number must read `^\\d+(,\\d+)?$` (else the process fails); an empty one is null. Rows
+Cleaning (DECISIONS E91): a number must read `^\\d+(,\\d+)?$` (else the process fails); an empty one is null. Rows
 before the series' first week (START) are dropped and counted. A reservoir reports in a week when that week has its
 row with both numbers; otherwise it counts in neither sum. Each week keeps its own capacity, and values above
 capacity are kept as written. The use (hydroelectric or not) is the flag of the reservoir's latest row.
@@ -134,7 +134,7 @@ def basin_totals(reservoirs: list[dict], basins: list[str], n: int) -> dict[str,
 
 
 def capacity_report(reservoirs: list[dict]) -> dict:
-    """The capacity changes and the weeks above capacity in the series, for the build log and DECISIONS E92:
+    """The capacity changes and the weeks above capacity in the series, for the build log and DECISIONS E91:
     {changing: reservoirs with more than one capacity, runs: capacity runs in all, over: weekly values above that
     week's capacity, over_reservoirs: reservoirs with any, top: the three with most, [(name, weeks)]}."""
     over = {}

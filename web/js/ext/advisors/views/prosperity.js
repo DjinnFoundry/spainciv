@@ -16,7 +16,7 @@ export function mount(ctx) {
   const n = data.nat;
   const { states, metros, counties } = data.levels;
   // Housing cost against income: home value where the country publishes it (US), else a year's rent (Spain: no
-  // official home value by place, DECISIONS E30; rent from SERPAVI, E29).
+  // official home value by place, DECISIONS E49; rent from SERPAVI, E29).
   const byHome = fin(n.home_value);
   const cost = byHome
     ? { of: (r) => r.v.home_value, domain: [2, 10], ref: [3, 5, 8].map((k) => ({ k, label: `${k}×` })), fmt: (v) => times(+v, 1), legendFmt: (v) => `×${v}` }

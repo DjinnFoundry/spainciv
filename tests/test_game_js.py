@@ -319,7 +319,7 @@ class AlbumTest(unittest.TestCase):
                   every: provs.every((p) => p.everyDays === Math.round(pool.length / p.hexes)),
                   unassigned: [view({}, { won: 3 }).unassigned, view({ '18': [1, 2] }, { won: 1 }).unassigned, view({}, undefined).unassigned] });
         """)
-        # Ceuta and Melilla are the only land hexes in their first-clue area, under MIN_FIRST (E89).
+        # Ceuta and Melilla are the only land hexes in their first-clue area, under MIN_FIRST (E82).
         self.assertEqual(got["outside"], [["Ceuta", "first", True], ["Melilla", "first", True]])
         self.assertEqual((got["communities"], got["cTotal"], got["total"]), (17, 17, 50))
         self.assertEqual((got["got"], got["complete"]), (0, 0))

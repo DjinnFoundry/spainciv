@@ -4,7 +4,7 @@ The Ministry's statistic of appraisals (tasaciones) made for mortgages and other
 for free-market dwellings (vivienda libre; protected dwellings have a capped price and their own series). The open CSV
 gives Spain, the communities and the provinces; a single-province community (Madrid, Asturias, Navarra, Murcia,
 Cantabria, La Rioja, the Balearic Islands) appears only as a community row, and Murcia's row comes without its code.
-The municipal series (towns over 25,000) is published only as a binary XLS on a server that answers 503 (DECISIONS E44).
+The municipal series (towns over 25,000) is published only as a binary XLS on a server that answers 503 (DECISIONS E49).
 """
 
 from __future__ import annotations

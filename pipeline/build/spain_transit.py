@@ -1,5 +1,5 @@
 """Hours to Madrid by train (`transit.json`): the shortest timetabled journey to Madrid on one weekday, from every land
-hex, with the stations and the passenger track of that day (DECISIONS E101–E104).
+hex, with the stations and the passenger track of that day (DECISIONS E101).
 
 * **Madrid** is every stop inside the SIANE outline of municipality 28079.
 * **Router**: a profile Connection Scan over the day's trains (pipeline/core/csa.py), CHANGE_MIN minutes to change
