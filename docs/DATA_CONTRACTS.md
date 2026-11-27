@@ -775,6 +775,29 @@ NOAA events span many states: never add state costs together into a national fig
 helper `disasters.county_declarations(fema_interim, geoids)` gives the per-county counts used by the `disasters` lens,
 the counties.json column and this file, so the three always agree.
 
+## unciv.json (Spain)
+
+Not loaded by the map: `pipeline/play.py` makes the Unciv downloads and pages from it (docs/SPAIN.md, "Unciv").
+`{summary, map}`: `map` is the Unciv `TileMap` JSON, `summary` what is on it (`grid`, `terrain`, `resources`,
+`starts`…). Written with `write_web`, so its texts go in Spanish and `unciv.en.json` holds the English.
+
+`summary.fire_season` (`pipeline/build/spain_unciv_fire.py`, DECISIONS E84):
+
+```
+{"threshold_ha": 500, "years": [2016, 2025], "great_fires": 311,   // EFFIS fires of threshold_ha or more
+ "per_season": [24, 52, …],          // great fires by season, years[0] to years[1]
+ "on_spanish_tiles": 304.0,          // their shares that fall on Spain's land tiles
+ "summer_share": 0.763,              // share of all EFFIS burnt area in fires that started June to September
+ "seasons": 10, "fires_per_season": 30.4,
+ "classes": [{"class": "Mountain", "tiles": 68, "per_tile_season": 0.0694, "weight": 228}, …],  // Mountain, Hill, Land
+ "unit": 100000,                     // Spain's tiles add up to about unit: Σ weight × tiles
+ "texts": {"name", "event", "pay", "burn", "pedia"}}   // Texts; English is the Events.json text and translation key
+```
+
+`classes` count each Spanish land tile once, as Unciv's filters do: `Mountain` (base terrain), `Hill` (feature, wooded
+or not), `Land` (any other). The bands, brigade costs and the penalty are not stored: the module's constants and the
+weights give them when the mod is packaged. The numbers above are those of the current cache.
+
 ## sources.json
 
 A list of `{id, title, publisher, homepage, license, description, used_for, vintage, files: [{file, url, retrieved, sha256, bytes}]}`.

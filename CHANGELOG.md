@@ -6,6 +6,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Temporada de incendios en Unciv**. El mod trae un suceso: cada 5 turnos, cada civilización mayor puede sufrir un
+  gran incendio en su territorio, con una probabilidad que sale de los 311 incendios de 500 ha o más que el EFFIS
+  cartografió en España de 2016 a 2025, repartidos por casilla (una colina o una montaña arde unas 3 veces más que el
+  llano). Se elige entre pagar brigadas (60, 150 o 400 de oro según la era) o perder un 25 % de producción 5 turnos.
+  Las páginas `jugar.html` y `play.html` y el README del mod separan el dato de cada convención del juego. El aviso
+  sale en castellano o inglés según el idioma de Unciv (E84, F35, A27).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

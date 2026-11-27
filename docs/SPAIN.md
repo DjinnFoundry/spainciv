@@ -86,7 +86,7 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `ine_censo_lugar_trabajo` | INE tables 69968 and 69987 (Annual Population Census, employed by place of work: Spain, provinces, 151 main cities) | CC BY 4.0, citing INE | Commuting lens: employed who work in another municipality ÷ employed with a known workplace; other municipalities take the rest of their province |
 | `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
-| `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers |
+| `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS, with each fire's start month (`FIREDATE`) | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers; the Unciv fire season: the fires of 500 ha or more per tile class |
 | `ine_censo_agrario` | INE Censo Agrario 2020, tables 51175 (equine heads by agricultural comarca) and 75479 (each municipality's comarca) | CC BY 4.0, citing INE | Horses of the Unciv map: the comarcas with at least 4 times Spain's equines per km² |
 
 Each source's exact files, URLs and checksums are in `sources.json` (the Almanac).
@@ -113,20 +113,27 @@ the rivers on tile edges and the resource placement that keeps every resource on
 the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
-  `jsons/TileResources.json` (its own resource, the Iberian pig), `maps/España` (the map, gzip + base64 as Unciv saves
+  `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Events.json` and `jsons/GlobalUniques.json`
+  (the fire season, E84), `jsons/translations/Spanish.properties` (the Spanish of the mod's texts, one file for every
+  feature, written by `unciv.properties`: A27), `maps/España` (the map, gzip + base64 as Unciv saves
   it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
   with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
   `README.md` and `LICENSE` (CC BY 4.0);
-- `unciv/espana`: the bare map for the game without mods (the same map without the pig), saved as `España` by the
+- `unciv/espana`: the bare map for the game without mods (the same map without the pig or the fire season), saved as `España` by the
   page's link;
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
 The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
-The rules and the reasons are DECISIONS.md E51–E57, E60–E62, A15, A17, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the
+The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E84, A15, A17, A27, F26, F28, F29 and F35. The map was checked in Unciv 5.0.1 (the jar of the
 GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
 every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
-locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).
+locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`). The fire season was checked in
+the same jar with the mod installed from its URL: the combined ruleset validates; over a 100-turn game on Quick speed
+with seven AI civilizations, five of them took the production penalty, each for 5 turns, always started on a turn
+that is a multiple of 5, never two at once and never on a city-state; Unciv's countable equals the Python weights on
+every civilization's tiles; with 40 gold (60 × 0.67) only "let it burn" is offered and with 41 both choices; the
+popup reads in Spanish and in English by the game's language (`docs/images/es-unciv-incendio.jpg`).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

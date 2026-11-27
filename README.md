@@ -41,7 +41,8 @@ lists the public data behind the map.
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
-  salt, marble and iron where the IGME lists workings). How to install it:
+  salt, marble and iron where the IGME lists workings) and a fire season: every 5 turns a great fire can break out on
+  a civilization's land, as often as EFFIS saw them burn in Spain's hills, mountains and plains. How to install it:
   [spainciv.djinnfoundry.com/play.html](https://spainciv.djinnfoundry.com/play.html).
 - **Guess the hex**: a daily game on the map. Six clues from the map's data describe one 10 km hex; click where you
   think it is, with six tries, distance and direction after each, and a spoiler-free result to share
