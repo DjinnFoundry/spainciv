@@ -1,5 +1,6 @@
 """The daily game "Adivina el hexágono" (web/js/ext/game/puzzle.js): the day's hex, distances, points, the share
-text, the saved stats and the clues it builds from Spain's data (sites/es/data). Run with node; skipped without it."""
+text, the saved game and stats, the clues it builds from Spain's data (sites/es/data) and how far they narrow the
+answer. Run with node; skipped without it."""
 
 import json
 import shutil
@@ -28,9 +29,12 @@ const cities = load('cities');
 const w = prepareWorld(world, cities, {});
 const lenses = new Map(load('lenses').lenses.map((l) => [l.id, l]));
 const proj = mapProjection(world.country.projection);
-const pool = P.puzzlePool(w.raw, lenses.get('density'));
 const names = [...w.raw.counties, ...w.raw.states, ...cities].map((x) => x.name);
 const people = load('personajes').people;
+const g = P.gameData({ w, proj, lenses, names, cities, people, wonders: load('wonders').wonders, resources: load('resources'),
+                       infrastructure: load('infrastructure') });
+const pool = g.pool; // land hexes with things of their own, in cell order
+const own = (cell) => [w.raw.counties[w.raw.county[cell]].name, ...w.raw.states[w.raw.owner[cell]].name.split('/')];
 const out = (x) => console.log(JSON.stringify(x));
 """
 
@@ -50,16 +54,23 @@ class DailyPickTest(unittest.TestCase):
                   "P.dayNumber(new Date(2026, 10, 28, 0, 0)), P.dayNumber(new Date(2026, 10, 26, 12)), P.dayNumber(new Date(2027, 10, 27))]);")
         self.assertEqual(got, [1, 1, 2, 0, 366])
 
-    def test_pool_is_inhabited_land_with_a_municipality(self):
+    def test_pool_is_land_with_distinctive_things_of_two_kinds(self):
         got = run("""
-            const d = lenses.get('density').values;
-            out({ n: pool.length, sorted: pool.every((c, k) => !k || pool[k - 1] < c),
-                  ok: pool.every((c) => w.raw.owner[c] >= 0 && w.raw.county[c] >= 0 && d[c] >= P.POOL_DENSITY),
-                  missed: d.filter((v, c) => v >= P.POOL_DENSITY && w.raw.owner[c] >= 0 && w.raw.county[c] >= 0).length });
+            const { t } = await import('./web/js/i18n.js');
+            const things = new Set(P.SOURCES.map((s) => t(`game.k.${s.id}`)));
+            out({ n: pool.length, land: g.land.length, sorted: pool.every((c, k) => !k || pool[k - 1] < c),
+                  land_ok: pool.every((c) => w.raw.owner[c] >= 0 && w.raw.county[c] >= 0),
+                  kinds_ok: pool.every((c) => g.kinds(c).size >= P.MIN_KINDS),
+                  named_ok: pool.every((c) => things.has(P.buildClues(g, c)[2].facts[0].label)),
+                  villarrobledo: pool.includes(12111), // the playtest's day 1: nothing of its own until the last clue
+                  kinds: Object.fromEntries([...new Set(pool.flatMap((c) => [...g.kinds(c)]))].map((k) => [k, pool.filter((c) => g.kinds(c).has(k)).length])) });
         """)
-        self.assertTrue(got["sorted"] and got["ok"])
-        self.assertEqual(got["missed"], got["n"])
-        self.assertGreater(got["n"], 1000)
+        self.assertTrue(got["sorted"] and got["land_ok"] and got["kinds_ok"] and got["named_ok"])
+        self.assertFalse(got["villarrobledo"])
+        self.assertGreater(got["n"], 3 * 365)  # three years without a repeat
+        self.assertLess(got["n"], got["land"] / 3)  # most of Spain's hexes have too little of their own
+        for kind in ("fiestas", "castles", "museums", "people", "wonders", "works", "food", "city"):
+            self.assertGreater(got["kinds"].get(kind, 0), 0, kind)
 
     def test_the_same_hex_for_everyone_and_no_repeat_until_the_pool_runs_out(self):
         got = run("""
@@ -71,8 +82,17 @@ class DailyPickTest(unittest.TestCase):
         """)
         self.assertTrue(got["again"] and got["inPool"] and got["wraps"] and got["before"] and got["notInOrder"])
         self.assertEqual(got["distinct"], got["n"])
-        # A changed seed, pool rule or epoch changes every day's puzzle: this pins them.
-        self.assertEqual(got["first"], [12111, 9667, 14885])
+        # A changed seed, pool rule or epoch changes every day's puzzle: this pins them (day 1 is Guadix).
+        self.assertEqual(got["first"], [16283, 6022, 6574])
+
+    def test_a_game_saved_for_another_hex_starts_afresh(self):
+        got = run("""
+            const saved = { today: { day: 1, cell: 16283, guesses: [9492], clues: 2 } };
+            out([P.savedGame(saved, 1, 16283), P.savedGame(saved, 1, 14118), P.savedGame(saved, 2, 16283),
+                 P.savedGame({ today: { day: 1, guesses: [9492], clues: 2 } }, 1, 16283), P.savedGame({}, 1, 16283), P.savedGame(null, 1, 1)]);
+        """)
+        self.assertEqual(got[0], {"day": 1, "cell": 16283, "guesses": [9492], "clues": 2})
+        self.assertEqual(got[1:], [None, None, None, None, None])  # another hex, another day, a game saved before cells were
 
 
 @unittest.skipUnless(NODE, "node is not installed")
@@ -99,8 +119,8 @@ class DistanceAndPointsTest(unittest.TestCase):
 
     def test_arrow_points_from_the_guess_to_the_hex_on_the_map(self):
         got = run("""
-            const g = { cx: (i) => [0, 10, 0, -10, 10][i], cy: (i) => [0, 0, -10, 0, 10][i] };
-            out([P.arrow(g, 0, 1), P.arrow(g, 0, 2), P.arrow(g, 0, 3), P.arrow(g, 0, 4), P.arrow(g, 4, 0), P.arrow(g, 0, 0)]);
+            const hg = { cx: (i) => [0, 10, 0, -10, 10][i], cy: (i) => [0, 0, -10, 0, 10][i] };
+            out([P.arrow(hg, 0, 1), P.arrow(hg, 0, 2), P.arrow(hg, 0, 3), P.arrow(hg, 0, 4), P.arrow(hg, 4, 0), P.arrow(hg, 0, 0)]);
         """)
         self.assertEqual(got, ["→", "↑", "←", "↘", "↖", ""])  # map y runs down
 
@@ -160,55 +180,89 @@ class ShareAndStatsTest(unittest.TestCase):
 @unittest.skipUnless(NODE, "node is not installed")
 class CluesTest(unittest.TestCase):
     def test_masker_hides_place_names_as_whole_words(self):
-        got = run("""const m = P.placeMasker(['Villaviciosa', 'Alicante/Alacant', 'Vic', 'Sella'], ['Vic']);
-            out([m('Festival de la Manzana, Villaviciosa'), m('Hogueras de Alacant'), m('Salchichón de Vic'), m('Sellado de Vicente')]);""")
-        self.assertEqual(got, ["Festival de la Manzana, …", "Hogueras de …", "Salchichón de …", "Sellado de Vicente"])
+        got = run("""const m = P.placeMasker(['Villaviciosa', 'Alicante/Alacant', 'Vic', 'Sella', 'Castro-Urdiales', "L'Hospitalet de Llobregat"], ['Vic']);
+            out([m('Festival de la Manzana, Villaviciosa'), m('Hogueras de Alacant'), m('Salchichón de Vic'), m('Sellado de Vicente'),
+                 m('Plaza de toros de Castro Urdiales'), m("Fira de l'Hospitalet de Llobregat"), m('VILLAVICIOSA y alicante')]);""")
+        self.assertEqual(got, ["Festival de la Manzana, …", "Hogueras de …", "Salchichón de …", "Sellado de Vicente",
+                               "Plaza de toros de …", "Fira de …", "… y …"])
 
     def test_clues_come_from_the_data(self):
         for lang in ("es", "en"):
             got = run("""
-                const cell = P.dailyCell(pool, 300);
-                const clues = P.buildClues({ w, lenses, people, names }, cell);
+                const { t } = await import('./web/js/i18n.js');
+                const { int } = await import('./web/js/format.js');
+                const cell = P.dailyCell(pool, 1); // Guadix
+                const clues = P.buildClues(g, cell);
                 const L = (id) => lenses.get(id);
-                out({ ids: clues.map((c) => c.id), titles: clues.map((c) => c.title), facts: clues.map((c) => c.facts),
+                out({ ids: clues.map((c) => c.id), titles: clues.map((c) => c.title), facts: clues.map((c) => c.facts.map(({ label, value }) => ({ label, value }))),
                       density: formatLensValue(L('density'), L('density').values[cell]),
                       lang: formatLensValue(L('languages'), L('languages').values[cell]),
-                      castles: L('castles').values[cell], unitCastles: L('castles').unit,
-                      relief: w.tables.relief.find((r) => r.id === w.relief[cell]).name, elev: world.elev[cell],
-                      initial: w.raw.states[w.raw.owner[cell]].name[0],
-                      person: people.find((p) => p.cell === cell), foodName: L('food').name, foods: (L('food').labels[cell] || []).map((k) => L('food').names[k]) });
+                      relief: w.tables.relief.find((r) => r.id === w.relief[cell]).name, elev: `${int(world.elev[cell])} m`,
+                      initial: w.raw.states[w.raw.owner[cell]].name[0], person: people.find((p) => p.cell === cell),
+                      fiesta: t('game.k.fiestas'), zone: t('game.zone.s'), seaLabel: t('game.f.sea'), sea: t('game.sea.100'),
+                      position: t('game.f.position') });
             """, lang)
-            self.assertEqual(got["ids"], ["terrain", "people", "money", "roots", "heritage", "last"])
+            self.assertEqual(got["ids"], ["where", "people", "thing", "near", "city", "last"])
             self.assertTrue(all(got["titles"]) and all(got["facts"]), lang)
-            values = {f["label"]: f["value"] for clue in got["facts"] for f in clue}
             flat = [f["value"] for clue in got["facts"] for f in clue]
-            self.assertIn(got["density"], flat)
-            self.assertIn(got["lang"], flat)
-            self.assertIn(got["relief"], flat)
-            self.assertIn(f"{got['elev']} m", flat)
-            self.assertEqual(values[got["unitCastles"][0].upper() + got["unitCastles"][1:]], str(got["castles"]))
-            self.assertIn(f"«{got['initial']}»", flat)
-            self.assertIn(got["person"]["name"], " ".join(flat))
-            # A denomination of the hex, with any place name in it hidden.
-            food = values[got["foodName"]]
-            self.assertTrue(any(f == food or ("…" in food and f.startswith(food.split("…")[0])) for f in got["foods"]), food)
+            first = {f["label"]: f["value"] for f in got["facts"][0]}
+            self.assertEqual(first[got["seaLabel"]], got["sea"])
+            for v in (got["zone"], got["density"], got["lang"], got["relief"], got["elev"], f"«{got['initial']}»"):
+                self.assertIn(v, flat, lang)
+            self.assertIn(got["person"]["name"], " ".join(f["value"] for f in got["facts"][5]))  # the most famous native, last
+            # The Cascamorras by clue 4, its place names hidden; the hex placed from the city of Granada by clue 5,
+            # unnamed first ("a city on the map"), then as the province's capital (naming Granada would name the province).
+            self.assertIn("El Cascamorras de … y …", [f["value"] for f in got["facts"][3] if f["label"] == got["fiesta"]][0])
+            near, named = ([f["value"] for f in got["facts"][k] if f["label"] == got["position"]][0] for k in (3, 4))
+            self.assertRegex(near, r"50 km")
+            self.assertNotIn("Granada", near + named)
+
+    def test_every_fact_fits_its_own_answer(self):
+        """The measure below counts the hexes a clue fits; the answer must always be one of them."""
+        got = run("""
+            out(pool.flatMap((c) => P.buildClues(g, c).flatMap((cl) => cl.facts.filter((f) => !f.same(c)).map((f) => [c, f.label, f.value]))));
+        """)
+        self.assertEqual(got, [])
 
     def test_no_clue_names_the_answer(self):
-        """Over the first 200 days no clue holds the answer's municipality or province name."""
-        got = run("""
+        """Over the whole pool no clue holds the answer's municipality or province name (a hyphen or a space alike)."""
+        got = run(r"""
             const leaks = [];
-            for (let d = 1; d <= 200; d++) {
-              const cell = P.dailyCell(pool, d);
-              const text = P.buildClues({ w, lenses, people, names }, cell).flatMap((c) => c.facts.map((f) => f.value)).join(' | ');
-              const own = [w.raw.counties[w.raw.county[cell]].name, ...w.raw.states[w.raw.owner[cell]].name.split('/')];
-              for (const n of own) {
-                const re = new RegExp(`(?<![\\\\p{L}])${n.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}(?![\\\\p{L}])`, 'iu');
-                if (re.test(text)) leaks.push([d, n, text]);
+            for (const cell of pool) {
+              const text = P.buildClues(g, cell).flatMap((c) => c.facts.map((f) => `${f.label}: ${f.value}`)).join(' | ');
+              for (const n of own(cell)) {
+                const re = new RegExp(`(?<![\\p{L}])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[\s-]+/g, '[\\s-]+')}(?![\\p{L}])`, 'iu');
+                if (re.test(text)) leaks.push([cell, n, text]);
               }
             }
             out(leaks);
         """)
         self.assertEqual(got, [])
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class GuessabilityTest(unittest.TestCase):
+    """How many land hexes of Spain still fit the clues after each one, over the first year of puzzles (P.candidates):
+    a category or a name must match, a count must be there; numbers do not narrow (a reader cannot search the map for
+    "42.8 years"). The playtest's day 1 under the old clues fitted 1,143 hexes until clue 4 and 11 after the last."""
+
+    def test_each_clue_narrows_and_a_named_thing_settles_it_by_clue_3(self):
+        got = run("""
+            const rows = Array.from({ length: 365 }, (_, k) => P.candidates(g, P.dailyCell(pool, k + 1)));
+            const median = (k) => { const a = rows.map((r) => r[k]).sort((x, y) => x - y); return a[a.length >> 1]; };
+            out({ land: g.land.length, pool: pool.length, medians: [0, 1, 2, 3, 4, 5].map(median),
+                  first: Math.min(...rows.map((r) => r[0])), fifth: Math.max(...rows.map((r) => r[4])),
+                  narrowing: rows.every((r) => r.every((n, k) => !k || n <= r[k - 1])),
+                  allFirst: Math.min(...pool.map((c) => P.candidates(g, c)[0])) });
+        """)
+        m = got["medians"]
+        self.assertGreaterEqual(m[0], 50)  # the first clue is a region, not an answer
+        self.assertGreaterEqual(got["allFirst"], 20)  # on any day of the pool (P.MIN_FIRST)
+        self.assertGreater(m[0], m[1])
+        self.assertGreater(m[1], m[2])
+        self.assertLessEqual(m[2], min(5, 0.05 * got["pool"]))  # a named thing pins the hex by clue 3 on most days
+        self.assertLessEqual(got["fifth"], 3)  # and on every day the last clue only confirms it
+        self.assertTrue(got["narrowing"])
 
 
 if __name__ == "__main__":

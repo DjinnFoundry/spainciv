@@ -43,10 +43,7 @@ export function install(app) {
   if (!country().game) return;
   const { w } = app;
   const proj = mapProjection(app.data.world.country?.projection);
-  const density = app.lensById.get("density");
-  if (!proj || !density) return;
-  const pool = P.puzzlePool(w.raw, density);
-  if (!pool.length) return;
+  if (!proj) return;
   const names = [...w.raw.counties, ...w.raw.states, ...app.data.cities].map((x) => x.name);
   const isLand = (i) => Number.isInteger(i) && i >= 0 && i < w.grid.size && w.raw.owner[i] >= 0;
   const placeOf = (i) => {
@@ -56,6 +53,7 @@ export function install(app) {
 
   let saved = loadSaved();
   let game = null; // {day, cell, guesses: [cell], clues: n, list: buildClues()}
+  let gameData = null; // a promise of P.gameData(), made the first time the game opens
   let dock = null, mark = null, offOverlay = null, token = 0;
   const now = () => P.standing({ grid: w.grid, proj, cell: game.cell, guesses: game.guesses, clues: game.clues });
 
@@ -124,17 +122,30 @@ export function install(app) {
     },
   });
 
+  // The files the clues read besides the map and the lenses; a country without one plays without its things.
+  async function loadGameData() {
+    const files = ["personajes", "wonders", "resources", "infrastructure"];
+    const has = (n) => country().data?.includes(n);
+    const [people, wonders, resources, infrastructure] = await Promise.all(files.map((n) => (has(n) ? app.loadData(n).catch(() => null) : null)));
+    return P.gameData({ w, proj, lenses: app.lensById, names, cities: app.data.cities, people: people?.people,
+      wonders: wonders?.wonders, resources, infrastructure });
+  }
+
   async function start(my) {
-    const day = P.dayNumber();
-    const cell = P.dailyCell(pool, day);
-    const people = country().data?.includes("personajes") ? (await app.loadData("personajes"))?.people : null;
+    const data = await (gameData ||= loadGameData());
     if (my !== token) return; // the game was closed meanwhile
-    const today = saved.today?.day === day ? saved.today : null;
+    if (!data.pool.length) {
+      dock.innerHTML = `<p class="gm-loading muted">${esc(t("game.unavailable"))}</p>`;
+      return;
+    }
+    const day = P.dayNumber();
+    const cell = P.dailyCell(data.pool, day);
+    const today = P.savedGame(saved, day, cell);
     game = {
       day, cell,
       guesses: (today?.guesses || []).filter(isLand).slice(0, P.MAX_GUESSES),
       clues: Math.max(1, Math.min(P.CLUES.length, today?.clues | 0)),
-      list: P.buildClues({ w, lenses: app.lensById, people, names }, cell),
+      list: P.buildClues(data, cell),
     };
     render();
     if (now().over) reveal();
@@ -148,7 +159,7 @@ export function install(app) {
   });
 
   function persist() {
-    saved = { ...loadSaved(), today: { day: game.day, guesses: game.guesses, clues: game.clues } };
+    saved = { ...loadSaved(), today: { day: game.day, cell: game.cell, guesses: game.guesses, clues: game.clues } };
     save(saved);
   }
 
