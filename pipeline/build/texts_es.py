@@ -625,7 +625,7 @@ SOURCES = {
         "description": "Las normales mensuales 1991-2020 de AEMET de temperatura media, media de las máximas, media de "
         "las mínimas y precipitación de cada provincia, Ceuta, Melilla y la España peninsular: AEMET interpola los datos "
         "de sus estaciones a una rejilla y la promedia en cada región.",
-        "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, Ceuta y Melilla)"],
+        "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, hexágonos sin rejilla)"],
     },
     "aemet_rocio": {
         "title": "Rejilla diaria ROCIO de temperatura y precipitación (AEMET), medias 1991-2020",

@@ -3,12 +3,12 @@
 * **Grid** (temperature, rain, frost): AEMET's daily ROCIO grids averaged by spainciv over 1991-2020 for each point
   and month (sources/es/aemet_rocio.py). Each point is projected with the map's projection (the Canaries into their
   inset) and a land hex takes the mean of the points inside it; a land hex with none takes the nearest point within
-  one grid spacing of its centre, else it has no grid value (Ceuta and Melilla, which ROCIO does not cover). The mean
+  one grid spacing of its centre, else it has no grid value and the browser shows its province's AEMET normal. The mean
   temperature is (tmax + tmin) / 2, as AEMET derives its own 1991-2020 mean-temperature maps; the browser computes it.
 * **Stations**: the WMO 1991-2020 normals of AEMET's 83 stations (sources/es/omm_normales.py), each on the land hex
   holding it or the nearest land hex. Sunshine exists only there and is never spread to other hexes.
 * **Provinces**: AEMET's official 1991-2020 province normals (sources/es/aemet_normales.py), for the Walter-Lieth
-  chart, Ceuta and Melilla, and the check that compares the grid with them; "ESPAÑA PENINSULAR" gives the month strip.
+  chart, the hexes without a grid value, and the check that compares the grid with them; "ESPAÑA PENINSULAR" gives the month strip.
 * **Domains**: the 2nd-98th percentile of the hex values over all 12 months (of the station values for sunshine), so
   every month is drawn on one scale.
 """

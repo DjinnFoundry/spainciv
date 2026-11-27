@@ -3,7 +3,7 @@ month.
 
 ROCIO_IBEB covers the peninsula and the Balearic Islands at 0.05° (about 5 km): temperature v1 (Amblar et al. 2020)
 and precipitation v2 (Peral, Navascués and Ramos 2017, AEMET Nota técnica 24). ROCIO+_CAN covers the Canary Islands at
-0.025°. Neither covers Ceuta or Melilla. The archives hold netCDF classic files (core/netcdf.py): the peninsula one
+0.025°. ROCIO_IBEB's mask has one point in Ceuta and one in Melilla. The archives hold netCDF classic files (core/netcdf.py): the peninsula one
 file a year with a fixed variable, the Canaries several years in a gzipped file with record variables, in kelvin.
 
 For each grid point and month, over every day of that month from 1991 to 2020:

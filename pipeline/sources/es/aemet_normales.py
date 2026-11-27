@@ -80,7 +80,7 @@ class AemetNormalesProvincias(Source):
         description="AEMET's monthly normals for 1991-2020 of mean, maximum and minimum temperature and precipitation for "
         "each province, Ceuta, Melilla and the peninsula: station data interpolated to a grid by AEMET and averaged over "
         "each region.",
-        used_for=["Climate this month (province chart, month strip, Ceuta and Melilla)"],
+        used_for=["Climate this month (province chart, month strip, hexes without a grid value)"],
     )
 
     def fetch(self, force=False):
