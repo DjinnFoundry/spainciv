@@ -6,6 +6,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Adivina el hexágono**, el juego del día (botón en la barra superior, o el enlace `#juego`). Seis pistas sobre un
+  hexágono de 10 km sacadas de los datos del mapa (terreno, gente, renta, lengua, patrimonio y, al final, la inicial de
+  la provincia, quién nació allí y qué se come); seis intentos con la distancia y una flecha; el resultado se copia o
+  se comparte sin desvelar el lugar. Guarda la partida del día y la racha en el navegador. En castellano e inglés; el
+  mapa de EE. UU. no lo tiene (A25, E76).
 - **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
   castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
   enlace que se comparte la lleva (`#lang=en`).
