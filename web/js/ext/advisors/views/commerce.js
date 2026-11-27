@@ -1,11 +1,14 @@
-// Commerce advisor ("Master of Trade"): FAF5 freight routes between zones (trade.json), the busiest ports and airports
-// and the road and rail network (infrastructure.json).
+// Commerce advisor ("Master of Trade"): freight routes between zones (trade.json: FAF5 values between US metros and
+// states, or EPTMC road tonnes between Spain's autonomous communities), the busiest ports and airports and the road and
+// rail network (infrastructure.json). The trade section reads either file through one adapter (`size`, `fmt`, the
+// zone cells); the US text of the FAF file stays in its branches.
 import { esc, fin, el as mk, withAlpha } from "../core/util.js";
-import { int, pct, money, count3, signedPct, shownTons, shownWeight } from "../core/fmt.js";
+import { int, pct, money, compact, count3, signedPct, shownTons, shownWeight } from "../core/fmt.js";
 import { barList, shareBar, stackedBars, swatchLegend, sizeLegend } from "../core/charts.js";
 import { createTable } from "../core/table.js";
 import { section, tiles, segmented, sourcesHtml } from "../core/view.js";
 import { frameBox, focusPoint } from "../core/frame.js";
+import { routeSize } from "../../../render/art/improvements.js";
 import { t } from "../../../i18n.js";
 
 // Route colours by FAF mode (original palette: ochre road, iron rail, blue water, lilac air, sea-green mixed,
@@ -25,16 +28,34 @@ export async function mount(ctx) {
   const metros = data.levels.metros;
   const api = { hotRoute: null };
   let zoneOfCity = null;
+  // The file's measure: "tons" (Spain, thousand tonnes) or value (the US, million dollars).
+  const tons = trade?.measure === "tons";
+  const size = (r) => routeSize(trade, r);
+  const fmt = tons ? (kt) => (fin(kt) ? t("adv.tons", { v: compact(kt * 1e3) }) : "–") : (musd) => money(musd * MUSD);
+  // A community's cells: those of its provinces (zone.provinces, the world's state fips).
+  const fips = (app.w.raw.states || []).map((st) => st.fips);
+  const zoneOfProvince = new Map((trade?.zones || []).flatMap((z) => (z.provinces || []).map((p) => [p, z.id])));
+  const provinceCells = (z) => {
+    const want = new Set(z.provinces || []), cells = new Set(), own = app.w.raw.owner;
+    for (let i = 0; i < own.length; i++) if (own[i] >= 0 && want.has(fips[own[i]])) cells.add(i);
+    return cells;
+  };
 
   // --- headline -------------------------------------------------------------------------------------------------
-  const nm = trade?.national_musd || {};
+  const nm = trade?.national_musd || {}, nk = trade?.national_k || {};
   const topPort = infra?.ports?.[0], topAir = infra?.airports?.[0];
+  const headline = tons
+    ? { label: t("adv.com.interregional"), value: fmt(nk.interregional), sub: t("adv.com.byTons", { vintage: esc(trade.vintage || "") }) }
+    : { label: t("adv.com.freight"), value: fin(nm.domestic) ? money(nm.domestic * MUSD) : "–", sub: t("adv.com.byValue", { vintage: esc(trade?.vintage || "FAF") }) };
+  const callout = tons
+    ? t("adv.com.callout.es", { intra: fmt(nk.intra), sent: fmt(nk.intl_sent), received: fmt(nk.intl_received) })
+    : `Freight values are model estimates from the Freight Analysis Framework, in current dollars: what moves between places, not what each place produces. Imports ${money(nm.import * MUSD)} and exports ${money(nm.export * MUSD)} are counted separately.`;
   el.insertAdjacentHTML("beforeend", tiles([
     // A headline only for what this map has (the US map has all three).
-    ...(trade ? [{ label: t("adv.com.freight"), value: fin(nm.domestic) ? money(nm.domestic * MUSD) : "–", sub: t("adv.com.byValue", { vintage: esc(trade?.vintage || "FAF") }) }] : []),
+    ...(trade ? [headline] : []),
     ...(topPort ? [{ label: t("adv.com.busiestPort"), value: t("adv.tons", { v: count3(shownTons(topPort.tons)) }), sub: topPort.name }] : []),
     ...(topAir ? [{ label: t("adv.com.busiestAirport"), value: count3(topAir.enplanements), sub: t("adv.com.boardings", { id: topAir.id, year: topAir.year }) }] : []),
-  ]) + (trade ? `<p class="adv-callout">Freight values are model estimates from the Freight Analysis Framework, in current dollars: what moves between places, not what each place produces. Imports ${money(nm.import * MUSD)} and exports ${money(nm.export * MUSD)} are counted separately.</p>` : ""));
+  ]) + (trade ? `<p class="adv-callout">${callout}</p>` : ""));
 
   // --- trade routes ---------------------------------------------------------------------------------------------
   let routes = [], zoneById = new Map(), routeCells = new Map(), overlayOff = null;
@@ -46,21 +67,25 @@ export async function mount(ctx) {
     const modeName = new Map((trade.modes || []).map((m) => [m.id, m.name]));
     const comm = trade.commodities || {};
     const zName = (id) => zoneById.get(id)?.short || zoneById.get(id)?.name || id;
+    // A route's line: its path's cells (the US), or the straight segment between its zones' anchors (Spain).
+    const anchorPt = (id) => { const a = zoneById.get(id)?.anchor; return a && a.cell >= 0 && a.cell < grid.size ? [grid.cx(a.cell), grid.cy(a.cell)] : null; };
     routes = (trade.routes || []).map((r) => {
-      const pts = (r.path || []).filter((c) => c >= 0 && c < grid.size).map((c) => [grid.cx(c), grid.cy(c)]);
+      const pts = Array.isArray(r.path) ? r.path.filter((c) => c >= 0 && c < grid.size).map((c) => [grid.cx(c), grid.cy(c)])
+        : [anchorPt(r.a), anchorPt(r.b)].filter(Boolean);
       return { ...r, key: `${r.a}-${r.b}`, label: `${zName(r.a)} ⇄ ${zName(r.b)}`, pts, path2d: smoothPath(pts) };
     });
-    routes.forEach((r) => { for (const c of r.path || []) { if (!routeCells.has(c)) routeCells.set(c, []); routeCells.get(c).push(r); } });
-    for (const list of routeCells.values()) list.sort((a, b) => b.value_musd - a.value_musd);
-    const vMax = Math.max(1, ...routes.map((r) => r.value_musd));
+    routes.forEach((r) => { for (const c of r.path || segmentCells(r.pts, grid)) { if (!routeCells.has(c)) routeCells.set(c, []); routeCells.get(c).push(r); } });
+    for (const list of routeCells.values()) list.sort((a, b) => size(b) - size(a));
+    const vMax = Math.max(1, ...routes.map(size));
 
-    const rBody = section(el, { title: "Trade routes", kicker: esc(trade.vintage || ""), note: `${esc(trade.rule || "")}` });
-    // Mode mix of the routes, value-weighted.
+    const rBody = section(el, { title: t("adv.com.routes"), kicker: esc(trade.vintage || ""), note: `${esc(trade.rule || "")}` });
+    // Mode mix of the routes, value-weighted (a file with one mode, Spain's road survey, has no mix to show).
     const modeTot = {};
-    for (const r of routes) for (const [m, s] of Object.entries(r.modes || {})) modeTot[m] = (modeTot[m] || 0) + (s || 0) * r.value_musd;
+    for (const r of routes) for (const [m, s] of Object.entries(r.modes || {})) modeTot[m] = (modeTot[m] || 0) + (s || 0) * size(r);
+    const oneMode = (trade.modes || []).length === 1;
     const modeParts = (trade.modes || []).map((m) => ({ key: m.id, label: m.name, value: modeTot[m.id] || 0, color: MODE_COLOR[m.id] || "#999", text: money((modeTot[m.id] || 0) * MUSD) })).filter((p) => p.value > 0);
-    rBody.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">How the ${routes.length} routes' freight moves (by value)</h4>`);
-    const modeBar = shareBar(rBody, {
+    if (!oneMode) rBody.insertAdjacentHTML("beforeend", `<h4 class="adv-h4">How the ${routes.length} routes' freight moves (by value)</h4>`);
+    const modeBar = oneMode ? { setSelected() {} } : shareBar(rBody, {
       parts: modeParts,
       onHover: (p) => { api.modeHot = p ? p.key : null; redraw(); },
       onClick: (p) => setMode(st.mode === p.key ? null : p.key),
@@ -74,7 +99,8 @@ export async function mount(ctx) {
     const rHost = mk("div");
     rBody.appendChild(rHost);
     rBody.appendChild(rDetail);
-    rBody.insertAdjacentHTML("beforeend", `<p class="adv-note">${esc(trade.path_note || "")} Line width follows value; colour, the main mode (pipeline dashed).</p>${swatchLegend((trade.modes || []).filter((m) => modeTot[m.id] > 0).map((m) => ({ label: m.name, color: MODE_COLOR[m.id] })))}`);
+    rBody.insertAdjacentHTML("beforeend", oneMode ? `<p class="adv-note">${esc(trade.path_note || "")} ${t("adv.com.widthTons")}</p>`
+      : `<p class="adv-note">${esc(trade.path_note || "")} Line width follows value; colour, the main mode (pipeline dashed).</p>${swatchLegend((trade.modes || []).filter((m) => modeTot[m.id] > 0).map((m) => ({ label: m.name, color: MODE_COLOR[m.id] })))}`);
 
     const routeHighlight = (r) => {
       const za = zoneById.get(r.a), zb = zoneById.get(r.b);
@@ -83,6 +109,7 @@ export async function mount(ctx) {
       for (const z of [za, zb]) {
         if (z?.anchor?.city) cities.add(z.anchor.city);
         for (const id of z?.cities || []) for (const c of metros.byKey.get(id)?.ref.footprint || []) cells.add(c);
+        if (z?.provinces) for (const c of provinceCells(z)) cells.add(c);
       }
       return { cells, cities, label: r.label };
     };
@@ -91,10 +118,12 @@ export async function mount(ctx) {
       const vis = visibleRoutes();
       rHost.innerHTML = "";
       routeBars = barList(rHost, {
-        rank: !st.mode && !st.zone, ariaLabel: "Largest freight routes", max: vMax,
+        rank: !st.mode && !st.zone, ariaLabel: t("adv.com.routesAria"), max: vMax,
         rows: vis.map((r) => ({
-          key: r.key, label: r.label, value: r.value_musd, text: money(r.value_musd * MUSD), color: MODE_COLOR[r.top_mode],
-          sub: `${modeName.get(r.top_mode) || r.top_mode} · ${comm[r.top_commodity] || "–"}`, full: `#${r.rank} ${zoneById.get(r.a)?.name || r.a} ⇄ ${zoneById.get(r.b)?.name || r.b}`,
+          key: r.key, label: r.label, value: size(r), text: fmt(size(r)), color: MODE_COLOR[r.top_mode],
+          sub: tons ? t("trade.tip.dirs", { a: zName(r.a), b: zName(r.b), ab: fmt(r.ab_k), ba: fmt(r.ba_k) }) // barList escapes it
+            : `${modeName.get(r.top_mode) || r.top_mode} · ${comm[r.top_commodity] || "–"}`,
+          full: `#${r.rank} ${zoneById.get(r.a)?.name || r.a} ⇄ ${zoneById.get(r.b)?.name || r.b}`,
         })),
         selected: st.route?.key,
         onHover: (row) => {
@@ -105,8 +134,9 @@ export async function mount(ctx) {
         onClick: (row) => selectRoute(routes.find((x) => x.key === row.key)),
       });
       fRow.innerHTML = (st.mode ? `<span class="adv-fchip">Mode: <b>${esc(modeName.get(st.mode) || st.mode)}</b><button type="button" data-clear-mode aria-label="Clear the mode filter">✕</button></span>` : "")
-        + (st.zone ? `<span class="adv-fchip">Zone: <b>${esc(zName(st.zone))}</b> · ${vis.length} routes<button type="button" data-clear-zone aria-label="Clear the zone filter">✕</button></span>` : "");
-      if (!vis.length) rHost.innerHTML = `<p class="adv-empty">None of the ${routes.length} largest routes${st.zone ? " touches this zone" : ""}${st.mode ? " goes mainly by this mode" : ""}.</p>`;
+        + (st.zone ? `<span class="adv-fchip">${t("adv.com.zoneFilter", { name: esc(zName(st.zone)), n: vis.length })}<button type="button" data-clear-zone aria-label="${t("adv.com.clearZone")}">✕</button></span>` : "");
+      if (!vis.length) rHost.innerHTML = tons ? `<p class="adv-empty">${t("adv.com.noRoutes", { n: routes.length })}</p>`
+        : `<p class="adv-empty">None of the ${routes.length} largest routes${st.zone ? " touches this zone" : ""}${st.mode ? " goes mainly by this mode" : ""}.</p>`;
       modeBar.setSelected(st.mode);
       redraw();
     };
@@ -140,31 +170,56 @@ export async function mount(ctx) {
       const r = st.route;
       if (!r) { rDetail.innerHTML = ""; return; }
       const parts = Object.entries(r.modes || {}).filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]);
-      rDetail.innerHTML = `<div class="adv-card-detail">
-        <h4 class="adv-h4">#${r.rank} ${esc(zoneById.get(r.a)?.name || r.a)} ⇄ ${esc(zoneById.get(r.b)?.name || r.b)}</h4>
+      const head = `<h4 class="adv-h4">#${r.rank} ${esc(zoneById.get(r.a)?.name || r.a)} ⇄ ${esc(zoneById.get(r.b)?.name || r.b)}</h4>`;
+      const close = `<button type="button" class="adv-mini" data-unpin>${t("adv.com.closeRoute")}</button>`;
+      rDetail.innerHTML = tons ? `<div class="adv-card-detail">${head}
+        ${tiles([
+          { label: t("adv.com.route.tons"), value: fmt(r.tons_k), sub: t("adv.com.route.both") },
+          { label: t("adv.com.route.ab", { a: esc(zName(r.a)), b: esc(zName(r.b)) }), value: fmt(r.ab_k) },
+          { label: t("adv.com.route.ab", { a: esc(zName(r.b)), b: esc(zName(r.a)) }), value: fmt(r.ba_k) },
+          { label: t("adv.com.route.haul"), value: fin(r.haul_km) ? `${int(r.haul_km)} km` : "–", sub: t("adv.com.route.haulSub") },
+        ])}
+        ${close}</div>` : `<div class="adv-card-detail">
+        ${head}
         ${tiles([
           { label: "Value", value: money(r.value_musd * MUSD), sub: "both directions" },
           { label: "Weight", value: `${count3(r.tons_k * 1000)} t`, sub: "short tons" },
           { label: "Distance", value: `${int(r.dist_km)} km`, sub: `${count3(r.tmiles_m * 1e6)} ton-miles` },
         ])}
         <p class="adv-note"><b>By mode:</b> ${parts.map(([m, s]) => `${esc(modeName.get(m) || m)} ${pct(s)}`).join(" · ")}. <b>Largest commodity:</b> ${esc(comm[r.top_commodity] || "–")} (among each zone pair's top five).</p>
-        <button type="button" class="adv-mini" data-unpin>Close</button></div>`;
+        ${close}</div>`;
       rDetail.querySelector("[data-unpin]").addEventListener("click", () => selectRoute(st.route));
     }
 
-    // Zones table.
-    const zBody = section(el, {
-      title: "Freight zones",
-      note: "FAF splits the country into metro areas and the rest of each state. Value of freight that starts or ends in each zone (domestic), plus its trade with other countries. Hover to outline a zone's cities; click to see its routes and partners.",
-    });
+    // Zones table: FAF zones (the US) or autonomous communities (Spain).
     const zoneHighlight = (z) => {
-      const cells = new Set();
+      const cells = z.provinces ? provinceCells(z) : new Set();
       for (const id of z.cities || []) for (const c of metros.byKey.get(id)?.ref.footprint || []) cells.add(c);
       if (!cells.size && z.anchor?.cell != null) cells.add(z.anchor.cell);
       return { cells, cities: z.anchor?.city ? new Set([z.anchor.city]) : undefined, label: z.name };
     };
     const zones = (trade.zones || []).map((z) => ({ ...z, key: z.id }));
-    zTable = createTable(zBody, {
+    const zBody = section(el, tons ? { title: t("adv.com.zones"), note: t("adv.com.zones.note") } : {
+      title: "Freight zones",
+      note: "FAF splits the country into metro areas and the rest of each state. Value of freight that starts or ends in each zone (domestic), plus its trade with other countries. Hover to outline a zone's cities; click to see its routes and partners.",
+    });
+    const tk = (z, k) => z.totals_k?.[k];
+    const tkCol = (key, k, extra = {}) => ({ key, value: (z) => tk(z, k), text: (z) => fmt(tk(z, k)), ...extra });
+    const intl = (z) => (fin(tk(z, "intl_sent")) || fin(tk(z, "intl_received")) ? (tk(z, "intl_sent") || 0) + (tk(z, "intl_received") || 0) : null);
+    zTable = createTable(zBody, tons ? {
+      caption: t("adv.com.zones"), rank: true, maxHeight: 320, search: t("adv.com.zoneSearch"),
+      searchText: (z) => z.name,
+      columns: [
+        { key: "name", label: t("adv.com.col.zone"), align: "l", width: "minmax(0,1.6fr)", value: (z) => z.short || z.name, html: (z) => esc(z.short || z.name), tip: (z) => z.name },
+        tkCol("within", "within", { label: t("adv.com.col.within"), title: t("adv.com.col.withinTitle") }),
+        tkCol("sent", "sent", { label: t("adv.com.col.sent"), bar: { max: Math.max(...zones.map((z) => tk(z, "sent") || 0), 1), color: "rgba(217,164,87,.35)" } }),
+        tkCol("received", "received", { label: t("adv.com.col.received") }),
+        { key: "intl", label: t("adv.com.col.intl"), title: t("adv.com.col.intlTitle"), value: intl, text: (z) => fmt(intl(z)), hideBelow: 380 },
+      ],
+      rows: zones, sort: { key: "sent", dir: "desc" },
+      onHover: (z) => link.hover(z ? zoneHighlight(z) : null),
+      onClick: (z) => setZone(st.zone === z.id ? null : z.id),
+    } : {
       caption: "FAF freight zones", rank: true, maxHeight: 260, search: "Search zones",
       searchText: (z) => `${z.name} ${(z.states || []).join(" ")}`,
       columns: [
@@ -179,18 +234,35 @@ export async function mount(ctx) {
     });
     const zDetail = mk("div", "adv-detail");
     zBody.appendChild(zDetail);
+    const partnerBars = (host, z, sub) => barList(host, {
+      compact: true, ariaLabel: tons ? t("adv.com.partners") : "Top partner zones",
+      rows: (z.partners || []).map(([id, v, m]) => ({ key: id, label: zoneById.get(id)?.name || `Zone ${id} (off the map)`, value: v, text: fmt(v), sub: sub(m), color: MODE_COLOR[m] })),
+      onHover: (row) => { const pz = row ? zoneById.get(row.key) : null; link.hover(pz ? zoneHighlight(pz) : null); },
+      onClick: (row) => { if (zoneById.has(row.key)) setZone(row.key); },
+    });
     function drawZoneDetail() {
       const z = st.zone ? zoneById.get(st.zone) : null;
       if (!z) { zDetail.innerHTML = ""; return; }
+      if (tons) { drawCommunityDetail(z); return; }
       zDetail.innerHTML = `<div class="adv-card-detail"><h4 class="adv-h4">${esc(z.name)}</h4>
         <p class="adv-note">${z.kind === "rest_of_state" ? "The rest of the state outside its FAF metro zones. " : ""}${int(z.counties)} counties on the map · cities: ${(z.cities || []).slice(0, 6).map((id) => esc(metros.byKey.get(id)?.name || id)).join(", ") || "none on the map"}${(z.cities || []).length > 6 ? "…" : ""}</p>
         <h4 class="adv-h4">Top partners (any state)</h4><div class="adv-zp"></div></div>`;
-      barList(zDetail.querySelector(".adv-zp"), {
-        compact: true, ariaLabel: "Top partner zones",
-        rows: (z.partners || []).map(([id, v, m]) => ({ key: id, label: zoneById.get(id)?.name || `Zone ${id} (off the map)`, value: v, text: money(v * MUSD), sub: modeName.get(m) || m, color: MODE_COLOR[m] })),
-        onHover: (row) => { const pz = row ? zoneById.get(row.key) : null; link.hover(pz ? zoneHighlight(pz) : null); },
-        onClick: (row) => { if (zoneById.has(row.key)) setZone(row.key); },
-      });
+      partnerBars(zDetail.querySelector(".adv-zp"), z, (m) => modeName.get(m) || m);
+    }
+    // A community: its provinces, partners, goods classes sent and received (table 7.5) and its balance.
+    function drawCommunityDetail(z) {
+      const names = new Map((app.w.raw.states || []).map((st) => [st.fips, st.name]));
+      const provs = (z.provinces || []).map((p) => esc(names.get(p) || p)).join(", ");
+      const goods = (kind) => (z.goods_k?.[kind] || []).map((v, k) => [k, v]).filter(([, v]) => fin(v)).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([k, v]) => `${esc(comm[k] || k)} ${fmt(v)}`).join(" · ") || "–";
+      const sent = tk(z, "sent"), rec = tk(z, "received");
+      const balance = fin(sent) && fin(rec) ? `${sent - rec >= 0 ? "+" : "−"}${fmt(Math.abs(sent - rec))}` : "–";
+      zDetail.innerHTML = `<div class="adv-card-detail"><h4 class="adv-h4">${esc(z.name)}</h4>
+        <p class="adv-note">${t("adv.com.provinces", { list: provs })}${z.significant ? "" : ` ${t("adv.com.notSignificant")}`}</p>
+        ${z.significant ? `<h4 class="adv-h4">${t("adv.com.partners")}</h4><div class="adv-zp"></div>
+        <p class="adv-note"><b>${t("adv.com.goodsSent")}</b> ${goods("sent")}<br><b>${t("adv.com.goodsReceived")}</b> ${goods("received")}</p>` : ""}
+        <p class="adv-note">${t("adv.com.balance", { v: balance })}</p></div>`;
+      if (z.significant) partnerBars(zDetail.querySelector(".adv-zp"), z, () => "");
     }
 
     // The routes overlay: all visible routes (unless the map-art layer already draws them), the hovered one on top.
@@ -209,7 +281,7 @@ export async function mount(ctx) {
         if (!tradeLayerOn()) {
           for (const r of vis) {
             if (r === hot) continue;
-            const wpx = 1.2 + 4.5 * Math.sqrt(r.value_musd / vMax);
+            const wpx = 1.2 + 4.5 * Math.sqrt(size(r) / vMax);
             const faded = api.modeHot && r.top_mode !== api.modeHot;
             ctx2.setLineDash(r.top_mode === "pipeline" ? [6 / s, 4 / s] : []);
             ctx2.strokeStyle = "rgba(10,8,4,.55)";
@@ -222,7 +294,7 @@ export async function mount(ctx) {
         }
         if (hot) {
           ctx2.setLineDash([]);
-          const wpx = 2.5 + 5 * Math.sqrt(hot.value_musd / vMax);
+          const wpx = 2.5 + 5 * Math.sqrt(size(hot) / vMax);
           ctx2.strokeStyle = "rgba(10,8,4,.9)";
           ctx2.lineWidth = (wpx + 4) / s;
           ctx2.stroke(hot.path2d);
@@ -359,7 +431,8 @@ export async function mount(ctx) {
 
   el.insertAdjacentHTML("beforeend", sourcesHtml(data, [...(trade?.sources || []), ...(infra?.sources || [])], [
     // Each caveat only where its data is on this map (the US map has them all).
-    ...(trade ? [t("adv.com.c.faf1"), t("adv.com.c.faf2"), t("adv.com.c.faf3")] : []),
+    ...(trade?.sources?.includes("faf5") ? [t("adv.com.c.faf1"), t("adv.com.c.faf2"), t("adv.com.c.faf3")] : []),
+    ...(trade?.sources?.includes("eptmc") ? [t("adv.com.c.eptmc1"), t("adv.com.c.eptmc2"), t("adv.com.c.eptmc3"), t("adv.com.c.eptmc4")] : []),
     ...(infra?.ports?.length || infra?.airports?.length ? [t("adv.com.c.ports")] : []),
     t("adv.com.c.ne"),
   ]));
@@ -393,10 +466,23 @@ export async function mount(ctx) {
   };
 
   function zoneOfCell(cell) {
+    if (tons) { const o = app.w.raw.owner[cell]; return o >= 0 ? zoneOfProvince.get(fips[o]) ?? null : null; }
     if (!zoneOfCity) { zoneOfCity = new Map(); for (const z of zoneById.values()) for (const id of z.cities || []) zoneOfCity.set(id, z.id); }
     const m = metros.rowAtCell(cell);
     return m ? zoneOfCity.get(m.key) ?? null : null;
   }
+}
+
+/** The cells a straight segment [[x, y], [x, y]] crosses, sampled every half hex radius (routes without a path). */
+function segmentCells(pts, grid) {
+  if (pts.length !== 2) return [];
+  const [[x0, y0], [x1, y1]] = pts, n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (grid.R / 2)));
+  const out = new Set();
+  for (let k = 0; k <= n; k++) {
+    const c = grid.cellAt(x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n);
+    if (c >= 0) out.add(c);
+  }
+  return [...out];
 }
 
 /** A smooth Path2D through hex-centre points (quadratic curves through the midpoints), in km. */
