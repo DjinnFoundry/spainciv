@@ -71,6 +71,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Denominaciones: el mapa del Ministerio archiva Mongeta del Ganxet con el código del Cordero de Extremadura y Siurana con el de Les Garrigues, y el cordero extremeño salía en Barcelona y Girona. Cada zona va ahora con su nombre, y Mongeta del Ganxet y Siurana toman el polígono del Ministerio en vez de su lista de municipios.
 - Nombres de las áreas urbanas con guion o barra como se escriben («Tarragona-Reus», «Alcoy/Alcoi», «Vitoria/Gasteiz») y
   «Santa Cruz de Tenerife - La Laguna», que el AUDES escribe «Salta Cruz» (E73).
 - El Almanaque ya no dice que el paro, la renta y el alquiler no tienen fuente municipal en España: explica de dónde sale

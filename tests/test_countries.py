@@ -941,6 +941,15 @@ class SpainFoodTest(unittest.TestCase):
         self.assertFalse(matches(["Queso de Murcia"], ["Murcia"], "Wine"))
         self.assertFalse(matches(["Queso de Murcia"], ["Jumilla"], "Food"))
 
+    def test_a_zone_filed_under_another_designations_code_keeps_its_own_key(self):
+        from pipeline.sources.es.food import ministry_code
+
+        seen = {"DO276": {"cal_ds_codigo": "DO276", "cal_ds_nombre": "I.G.P.Cordero de Extremadura"}}
+        self.assertEqual(ministry_code(seen["DO276"], seen), "DO276")
+        beans = {"cal_ds_codigo": "DO276", "cal_ds_nombre": "D.O.P.Mongeta del Ganxet"}
+        self.assertEqual(ministry_code(beans, seen), "DO276|D.O.P.Mongeta del Ganxet")
+        self.assertEqual(ministry_code(beans, {}), "DO276")
+
     def test_register_matching_by_product_and_renames(self):
         from pipeline.sources.es.food import match_register
 

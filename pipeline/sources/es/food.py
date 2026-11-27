@@ -203,7 +203,7 @@ class CalidadDiferenciada(Source):
         for file in files:
             for f in json.loads((self.raw_dir / file).read_text())["features"]:
                 if f.get("geometry"):
-                    code = f["properties"]["cal_ds_codigo"]
+                    code = ministry_code(f["properties"], ministry)
                     ministry.setdefault(code, f["properties"])
                     rings.setdefault(code, []).extend(
                         [(round(x, 4), round(y, 4)) for x, y in r] for r in geojson_rings(f["geometry"]))
@@ -215,6 +215,15 @@ class CalidadDiferenciada(Source):
                     and g["registration"]["status"] == "REGISTERED"]
         return {"vintage": "eAmbrosia; MAPA, Calidad diferenciada (zonas de 2017); pliegos de condiciones",
                 "_files": files + eambrosia, **register_areas(register, ministry, rings, read_areas())}
+
+
+def ministry_code(p: dict, seen: dict[str, dict]) -> str:
+    """A Ministry zone's key: its code, unless an earlier zone with that code is another designation. The layer files
+    Mongeta del Ganxet (Barcelona, Girona) under DO276, the code of Cordero de Extremadura; keyed by code alone, the
+    lamb's area took in the beans'."""
+    code = p["cal_ds_codigo"]
+    first = seen.get(code)
+    return code if first is None or first["cal_ds_nombre"] == p["cal_ds_nombre"] else f"{code}|{p['cal_ds_nombre']}"
 
 
 def register_areas(register: list[dict], ministry: dict[str, dict], rings: dict[str, list], areas: list[dict]) -> dict:
