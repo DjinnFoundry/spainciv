@@ -12,11 +12,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   65** (España, 21,87 años en 2024; el tooltip da hombres y mujeres) y las **zonas de longevidad**: los hexágonos que
   tocan con las tres medidas en lo alto, con nombre (Zamora, Ourense, Béjar, Segovia, Madrid…). Del Censo anual de
   población del INE de 2026 (provisional) y sus Indicadores Demográficos Básicos. La descripción avisa de que las
-  zonas se apoyan en la España rural y envejecida (E96, E97, F40).
+  zonas se apoyan en la España rural y envejecida (E107, E108, F44).
 - «Adivina el hexágono»: la pista 2 dice «Muchos centenarios» cuando el hexágono tiene 1,5 veces la tasa de España o
-  más. Los días ya fijados no cambian (E98).
+  más. Los días ya fijados no cambian (E109).
 - Unciv: Castilla y León, la comunidad con mayor proporción de mayores de 85 entre los de 65 o más (19,2 %), crece un
-  10 % más rápido. La página de jugar dice que el índice es dato y el crecimiento convención (E99).
+  10 % más rápido. La página de jugar dice que el índice es dato y el crecimiento convención (E110).
 - Unciv: Galicia juega con peces, Extremadura con cerdo ibérico, Asturias con carbón y Castilla y León con ovejas, elegidos a mano en vez de por la regla (que les daba hierro, piedra, caballos y uranio). La página de jugar lo dice (E90).
 - **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A29).
 - **Álbum de provincias** en «Adivina el hexágono»: una pestaña nueva del panel colorea en la silueta de España la

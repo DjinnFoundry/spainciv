@@ -543,7 +543,7 @@ def mod_options(author: str, url: str) -> dict:
 # A nation's unique: one more of each base yield on the tiles of its resource that its cities work (UniqueType
 # StatsFromTiles, "[stats] from [tileFilter] tiles [cityFilter]"; a resource's name is a tile filter).
 NATION_UNIQUE = "[+1 Food, +1 Production, +1 Gold] from [{resource}] tiles [in all cities]"
-# The longevity trait (DECISIONS E99): faster growth, a game convention (UniqueType.GrowthPercentBonus, the unique the
+# The longevity trait (DECISIONS E110): faster growth, a game convention (UniqueType.GrowthPercentBonus, the unique the
 # base ruleset gives Tradition Complete as "[+15]% growth [in all cities]").
 LONGEVITY_GROWTH = 10
 LONGEVITY_UNIQUE = "[+{n}]% growth [in all cities]"

@@ -1,4 +1,4 @@
-"""Spain's longevity lenses (group "longevity", DECISIONS E96–E97).
+"""Spain's longevity lenses (group "longevity", DECISIONS E107–E108).
 
 * **Life expectancy** at birth and **at 65** (INE Indicadores Demográficos Básicos, `life_lens`): the 155 municipalities
   INE computes it for carry their own figure, every other municipality its province's (a life expectancy cannot be

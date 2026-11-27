@@ -254,7 +254,7 @@ only its own `names`, in that lens's order; the map copies the other lens's `lab
 lens: "Nadie", nobody born there).
 
 **Spain's longevity lenses** (group `longevity`, right after `life`; `pipeline/build/spain_longevity.py`, DECISIONS
-E96–E97). The census counts (`ine_censo_edad`, INE table 65034) are pooled per hex before dividing: each municipality
+E107–E108). The census counts (`ine_censo_edad`, INE table 65034) are pooled per hex before dividing: each municipality
 adds its count × the share of its census residents the hex holds. Life expectancy is the municipality's own for INE's
 155, else its province's, as a population-weighted mean. Every text is bilingual.
 

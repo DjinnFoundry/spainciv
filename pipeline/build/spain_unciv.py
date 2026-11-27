@@ -376,7 +376,7 @@ def longevity_index(provinces: dict[str, dict]) -> dict[str, float]:
 
 
 def longevity(ages: dict, at65: dict) -> dict:
-    """The longevity trait (E99): the major nation with the highest oldest-old index, with Spain's and the census year,
+    """The longevity trait (E110): the major nation with the highest oldest-old index, with Spain's and the census year,
     and the community that leads in life expectancy at 65 (table 1449, its own year) for the page."""
     index = longevity_index(ages["provinces"])
     code = max(index, key=lambda c: (index[c], c))
