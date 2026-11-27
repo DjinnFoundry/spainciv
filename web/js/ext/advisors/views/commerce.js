@@ -3,7 +3,9 @@
 // rail network (infrastructure.json). The trade section reads either file through one adapter (`size`, `fmt`, the
 // zone cells); the US text of the FAF file stays in its branches.
 import { esc, fin, el as mk, withAlpha } from "../core/util.js";
-import { int, pct, money, compact, count3, signedPct, shownTons, shownWeight } from "../core/fmt.js";
+import { int, pct, money, count3, signedPct, shownTons, shownWeight } from "../core/fmt.js";
+import { longDate } from "../../../format.js";
+import { country } from "../../../app/country.js";
 import { barList, shareBar, stackedBars, swatchLegend, sizeLegend } from "../core/charts.js";
 import { createTable } from "../core/table.js";
 import { section, tiles, segmented, sourcesHtml } from "../core/view.js";
@@ -31,7 +33,8 @@ export async function mount(ctx) {
   // The file's measure: "tons" (Spain, thousand tonnes) or value (the US, million dollars).
   const tons = trade?.measure === "tons";
   const size = (r) => routeSize(trade, r);
-  const fmt = tons ? (kt) => (fin(kt) ? t("adv.tons", { v: compact(kt * 1e3) }) : "–") : (musd) => money(musd * MUSD);
+  // Every tonne figure of the section takes three significant digits ("54,6 M t", "932 mil t"), the table's too.
+  const fmt = tons ? (kt) => (fin(kt) ? t("adv.tons", { v: count3(kt * 1e3) }) : "–") : (musd) => money(musd * MUSD);
   const nb = (s) => s.replace(/ /g, "\u00a0"); // an amount never breaks between number and unit ("9,5 M t")
   // A community's cells: those of its provinces (zone.provinces, the world's state fips).
   const fips = (app.w.raw.states || []).map((st) => st.fips);
@@ -206,9 +209,7 @@ export async function mount(ctx) {
       note: "FAF splits the country into metro areas and the rest of each state. Value of freight that starts or ends in each zone (domestic), plus its trade with other countries. Hover to outline a zone's cities; click to see its routes and partners.",
     });
     const tk = (z, k) => z.totals_k?.[k];
-    // table cells take three significant digits ("932 mil t", not "931,7 mil t"), so a narrow column never cuts them
-    const cell = (kt) => (fin(kt) ? t("adv.tons", { v: count3(kt * 1e3) }) : "–");
-    const tkCol = (key, k, extra = {}) => ({ key, value: (z) => tk(z, k), text: (z) => cell(tk(z, k)), ...extra });
+    const tkCol = (key, k, extra = {}) => ({ key, value: (z) => tk(z, k), text: (z) => fmt(tk(z, k)), ...extra });
     const intl = (z) => (fin(tk(z, "intl_sent")) || fin(tk(z, "intl_received")) ? (tk(z, "intl_sent") || 0) + (tk(z, "intl_received") || 0) : null);
     zTable = createTable(zBody, tons ? {
       caption: t("adv.com.zones"), rank: true, maxHeight: 320, search: t("adv.com.zoneSearch"),
@@ -217,9 +218,11 @@ export async function mount(ctx) {
         // 124px keeps "Castilla-La Mancha" whole
         { key: "name", label: t("adv.com.col.zone"), align: "l", width: "minmax(124px,2fr)", value: (z) => z.short || z.name, html: (z) => esc(z.short || z.name), tip: (z) => z.name },
         tkCol("within", "within", { label: t("adv.com.col.within"), title: t("adv.com.col.withinTitle") }),
-        tkCol("sent", "sent", { label: t("adv.com.col.sent"), bar: { max: Math.max(...zones.map((z) => tk(z, "sent") || 0), 1), color: "rgba(217,164,87,.35)" } }),
-        tkCol("received", "received", { label: t("adv.com.col.received") }),
-        { key: "intl", label: t("adv.com.col.intl"), title: t("adv.com.col.intlTitle"), value: intl, text: (z) => cell(intl(z)), hideBelow: 380 },
+        // one-word headers that fit the 56px column with the sort arrow; the full wording is the button's title
+        tkCol("sent", "sent", { label: t("adv.com.col.sent"), title: t("adv.com.col.sentTitle"), bar: { max: Math.max(...zones.map((z) => tk(z, "sent") || 0), 1), color: "rgba(217,164,87,.35)" } }),
+        tkCol("received", "received", { label: t("adv.com.col.received"), title: t("adv.com.col.receivedTitle") }),
+        // dropped on a phone; the community's card gives the same figures
+        { key: "intl", label: t("adv.com.col.intl"), title: t("adv.com.col.intlTitle"), value: intl, text: (z) => fmt(intl(z)), hideBelow: 380 },
       ],
       rows: zones, sort: { key: "sent", dir: "desc" },
       onHover: (z) => link.hover(z ? zoneHighlight(z) : null),
@@ -266,7 +269,7 @@ export async function mount(ctx) {
         <p class="adv-note">${t("adv.com.provinces", { list: provs })}${z.significant ? "" : ` ${t("adv.com.notSignificant")}`}</p>
         ${z.significant ? `<h4 class="adv-h4">${t("adv.com.partners")}</h4><div class="adv-zp"></div>
         <p class="adv-note"><b>${t("adv.com.goodsSent")}</b> ${goods("sent")}<br><b>${t("adv.com.goodsReceived")}</b> ${goods("received")}</p>` : ""}
-        <p class="adv-note">${t("adv.com.balance", { v: balance })}</p></div>`;
+        <p class="adv-note">${t("adv.com.balance", { v: balance })}<br>${t("adv.com.abroad", { sent: fmt(tk(z, "intl_sent")), received: fmt(tk(z, "intl_received")) })}</p></div>`;
       if (z.significant) partnerBars(zDetail.querySelector(".adv-zp"), z, () => "");
     }
 
@@ -349,6 +352,7 @@ export async function mount(ctx) {
       portBubbles?.setHot(p ? p.key : null);
     };
     portBars = stackedBars(pBody, {
+      wrap: country().id !== "us", // Spain's port names are long ("Bahía de Algeciras"); the US list stays as it was
       rows: ports.slice(0, 15).map((p) => ({ key: p.key, label: p.name, sub: p.state, parts: { domestic: p.domestic, imports: p.imports, exports: p.exports }, total: p.tons, text: t("adv.tons", { v: count3(p.tons) }) })),
       keys: PK, fmt: (x) => t("adv.tons", { v: count3(x) }), ariaLabel: t("adv.com.portsAria"),
       onHover: (x) => portHover(x ? ports.find((p) => p.key === x.row.key) : null),
@@ -437,7 +441,8 @@ export async function mount(ctx) {
   el.insertAdjacentHTML("beforeend", sourcesHtml(data, [...(trade?.sources || []), ...(infra?.sources || [])], [
     // Each caveat only where its data is on this map (the US map has them all).
     ...(trade?.sources?.includes("faf5") ? [t("adv.com.c.faf1"), t("adv.com.c.faf2"), t("adv.com.c.faf3")] : []),
-    ...(trade?.sources?.includes("eptmc") ? [t("adv.com.c.eptmc1"), t("adv.com.c.eptmc2"), t("adv.com.c.eptmc3"), t("adv.com.c.eptmc4")] : []),
+    ...(trade?.sources?.includes("eptmc") ? [t("adv.com.c.eptmc1"), t("adv.com.c.eptmc2"), t("adv.com.c.eptmc3"),
+      t("adv.com.c.eptmc4", { vintage: esc(trade.vintage || ""), updated: esc(isoDay(trade.updated)) })] : []),
     ...(infra?.ports?.length || infra?.airports?.length ? [t("adv.com.c.ports")] : []),
     t("adv.com.c.ne"),
   ]));
@@ -476,6 +481,12 @@ export async function mount(ctx) {
     const m = metros.rowAtCell(cell);
     return m ? zoneOfCity.get(m.key) ?? null : null;
   }
+}
+
+/** An ISO day ("2026-11-16") written out in the country's locale, or the text as it is when it is not one. */
+function isoDay(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? longDate(+m[1], +m[2], +m[3]) : iso || "";
 }
 
 /** The cells a straight segment [[x, y], [x, y]] crosses, sampled every half hex radius (routes without a path). */

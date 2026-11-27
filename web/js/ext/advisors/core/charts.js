@@ -85,7 +85,7 @@ export function barList(host, opts) {
 
 /**
  * rows: [{key, label, sub, parts: {partKey: value}, total, text}]; keys: [{key, label, color}]
- * opts: {normalize, max, onHover({row, part}), onClick({row, part}), sortKey}
+ * opts: {normalize, max, onHover({row, part}), onClick({row, part}), sortKey, wrap (the label wraps instead of being cut)}
  */
 export function stackedBars(host, opts) {
   const rows = opts.rows || [];
@@ -93,7 +93,7 @@ export function stackedBars(host, opts) {
   const totalOf = (r) => r.total ?? keys.reduce((a, k) => a + (fin(r.parts[k.key]) ? r.parts[k.key] : 0), 0);
   const max = opts.max ?? Math.max(1e-12, ...rows.map(totalOf));
   const root = document.createElement("div");
-  root.className = "adv-stack";
+  root.className = `adv-stack${opts.wrap ? " wrap" : ""}`;
   root.setAttribute("role", "list");
   if (opts.ariaLabel) root.setAttribute("aria-label", opts.ariaLabel);
   root.innerHTML = rows.map((r) => {

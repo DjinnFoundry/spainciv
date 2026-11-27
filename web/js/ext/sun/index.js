@@ -16,7 +16,7 @@
 import { country } from "../../app/country.js";
 import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
-import { clock, esc } from "../../format.js";
+import { clock, esc, longDate } from "../../format.js";
 import { mapProjection } from "../../geo.js";
 import { formatDuration, formatLensTick } from "../../ui/lenses.js";
 import * as S from "./solar.js";
@@ -38,8 +38,6 @@ export function install(app) {
   if (!proj) return;
   const n = w.grid.size;
   const placeOf = (i) => w.raw.counties[w.raw.county[i]]?.name || w.raw.states[w.raw.owner[i]]?.name || "";
-  const longDate = (d) => new Intl.DateTimeFormat(country().locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
-    .format(new Date(Date.UTC(d.y, d.m - 1, d.d)));
 
   const lens = {
     id: LENS, group: GROUP, name: t("sun.lens.name"), icon: "l-sunset", emoji: "🌇", format: "clock", scale: "linear",
@@ -83,7 +81,7 @@ export function install(app) {
     const { low, high, zones } = layer;
     // When the Canaries hold an extreme, the spread includes their hour of clock: give the one on CET too.
     const ce = zones.CE, mixed = mode !== "day" && low.zone !== high.zone;
-    const note = [`${t(`sun.mode.${mode}`)}, ${longDate(day)}.`, t("sun.spread", spread(low, high)),
+    const note = [`${t(`sun.mode.${mode}`)}, ${longDate(day.y, day.m, day.d)}.`, t("sun.spread", spread(low, high)),
       mixed ? t("sun.spread.ce", spread(ce.low, ce.high)) : ""].filter(Boolean).join(" ");
     Object.assign(lens, {
       values: layer.values, tip, heading: t(`sun.mode.${mode}`), format: mode === "day" ? "duration" : "clock",

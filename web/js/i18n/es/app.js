@@ -136,7 +136,7 @@ export default {
   "layers.wonders.title": "Patrimonio Mundial, Parques Nacionales, grandes universidades y catedrales",
   "layers.trade": "Rutas comerciales",
   "layers.trade.title": "Los mayores flujos de mercancías por carretera entre comunidades (EPTMC)",
-  "trade.tip.rank": "ruta n.º {rank}",
+  "trade.tip.rank": "ruta n.º\u00a0{rank}",
   "trade.tip.tons": "<b>{tons}</b> por carretera en {year} (EPTMC)",
   "trade.tip.dirs": "{a} → {b} {ab} · {b} → {a} {ba}",
   "trade.tip.haul": "Recorrido medio: {km} km (toneladas-km ÷ toneladas, las dos de la encuesta)",
