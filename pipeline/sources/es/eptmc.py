@@ -12,19 +12,27 @@ community, and Ceuta and Melilla are published together. Read from the workbook'
   communities, international received and sent; Spanish trucks only).
 * 7.5p1…7.5p8: thousand tonnes by NST/R chapter (10 classes) sent to and received from other communities.
 
-Cells marked `..` (not significant: every interregional flow of the Balearic and Canary Islands, Ceuta and Melilla),
-`.` and `-` are kept as null, never as zero. Labels are matched by their text through LABELS, never by position: the
+Cells marked `..` (not significant: every interregional flow of the Balearic and Canary Islands, Ceuta and Melilla,
+as the sheets' footnote says), `.` and `-` are kept as null, never as zero. The workbook does not say what `.` and `-`
+mean (it has no legend for them; 6.3 writes `.` for Canarias' tonnes sent to other communities and `-` for the
+intermunicipal traffic of Ceuta and Melilla), so they are not read as zero either. Labels are matched by their text through LABELS, never by position: the
 survey sorts Castilla-La Mancha before Castilla y León, the reverse of the INE codes. The matrix is checked against
 the table's own totals and against table 6.3 (see `check_consistency`).
 
 The ministry's web firewall refuses scripted User-Agent strings (403), so the download sends a desktop browser's.
+
+The ministry's reuse conditions (https://www.transportes.gob.es/aviso-legal) ask to cite the source, suggesting
+ATTRIBUTION's wording, and to give the date the documents were last updated: the server's Last-Modified for the
+workbook, kept in the manifest by the download and passed on as `updated`.
 """
 
 from __future__ import annotations
 
 import re
 import unicodedata
+from email.utils import parsedate_to_datetime
 
+from ...core.fetch import read_manifest
 from ...core.lang import tr
 from ...core.source import Source, SourceInfo
 from ...core.xls import sheets
@@ -37,12 +45,12 @@ FILE = f"eptmc{EPTMC_YEAR}.tablas.xls"
 URL = f"https://www.transportes.gob.es/recursos_mfom/comodin/recursos/{FILE}"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/131.0.0.0 Safari/537.36"}
-ATTRIBUTION = "Basado en datos abiertos Ministerio de Transportes y Movilidad Sostenible"
+ATTRIBUTION = "Origen de los datos: Ministerio de Transportes y Movilidad Sostenible"  # the aviso legal's own example
 
 CEUTA_MELILLA = "18+19"  # the survey publishes the two autonomous cities together
 NOT_SIGNIFICANT = {"04", "05", CEUTA_MELILLA}  # every interregional cell of theirs is `..`
 CODES = [f"{i:02d}" for i in range(1, 18)] + [CEUTA_MELILLA]
-MISSING = {"..", ".", "-"}  # not significant, nil, not applicable: all kept as null
+MISSING = {"..", ".", "-"}  # not significant (`..`) and two marks the workbook does not define: all kept as null
 
 
 def norm(text: str | None) -> str:
@@ -329,8 +337,9 @@ class Eptmc(Source):
         "loading and unloading",
         publisher="Ministerio de Transportes y Movilidad Sostenible",
         homepage=PAGE,
-        license="Reuse allowed, commercial or not, under the ministry's data licence (Ley 37/2007); derived "
-        f"data must say «{ATTRIBUTION}», link to transportes.gob.es and keep the update date",
+        license="Reuse allowed, commercial or not, under the ministry's conditions (Ley 37/2007, "
+        f"transportes.gob.es/aviso-legal): cite the source («{ATTRIBUTION}») and give the date the data was last "
+        "updated",
         description=f"The annual tables of the EPTMC {EPTMC_YEAR}, a weekly sample survey of Spanish-registered heavy "
         "goods vehicles (over 3.5 t): tonnes and tonne-kilometres by community of loading and of unloading (tables "
         "6.7 and 6.8), tonnes by kind of trip (6.3) and by NST/R goods chapter (7.5). Flows with the Balearic and "
@@ -343,4 +352,14 @@ class Eptmc(Source):
 
     def process(self):
         book = sheets(self.raw_dir / FILE, only={"6.3", "6.7", "6.7s", "6.8", "6.8s"} | {f"7.5p{k}" for k in range(1, 9)})
-        return {**parse(book), "vintage": f"EPTMC {EPTMC_YEAR}", "_files": [FILE]}
+        return {**parse(book), "updated": updated(read_manifest(self.id).get(FILE, {})), "vintage": f"EPTMC {EPTMC_YEAR}",
+                "_files": [FILE]}
+
+
+def updated(entry: dict) -> str:
+    """The workbook's last update, from its manifest entry's Last-Modified, as an ISO date ("2026-11-16")."""
+    try:
+        return parsedate_to_datetime(entry["last_modified"]).date().isoformat()
+    except (KeyError, TypeError, ValueError):
+        raise EptmcError(f"{FILE}: no Last-Modified in the manifest (fetch eptmc --force); the licence needs the "
+                         "update date") from None

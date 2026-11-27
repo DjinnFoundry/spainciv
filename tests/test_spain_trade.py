@@ -164,8 +164,23 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(d["tons_k"]["09"]["04"])
         self.assertIsNone(d["tons_k"]["05"]["13"])
         self.assertIsNone(d["goods_k"]["04"]["sent"][0])
-        self.assertIsNone(d["trips_k"]["05"]["intl_received"])  # "." (nil) is null as well
+        self.assertIsNone(d["trips_k"]["05"]["intl_received"])  # "." is null as well
         self.assertEqual(d["not_significant"], ["04", "05", "18+19"])
+
+    def test_each_marker_is_null_and_a_blank_raises(self):
+        # `..` not significant; `.` and `-`, marks the workbook leaves undefined: none of them is read as zero
+        for mark in ("..", ".", "-", " .. "):
+            self.assertIsNone(eptmc.cell(mark, "here"), mark)
+        self.assertEqual(eptmc.cell("0", "here"), 0.0)
+        for bad in ("", None, "n.d."):
+            with self.assertRaises(eptmc.EptmcError):
+                eptmc.cell(bad, "here")
+
+    def test_updated_from_last_modified(self):
+        self.assertEqual(eptmc.updated({"last_modified": "Mon, 16 Nov 2026 11:05:08 GMT"}), "2026-11-16")
+        for entry in ({}, {"last_modified": "yesterday"}, {"last_modified": None}):
+            with self.assertRaises(eptmc.EptmcError):
+                eptmc.updated(entry)
 
     def test_unknown_label_raises(self):
         book = workbook()
@@ -199,6 +214,7 @@ class ParseTest(unittest.TestCase):
         self.assertAlmostEqual(d["tons_k"]["08"]["13"], 23687.1, delta=0.05)
         self.assertAlmostEqual(d["tons_k"]["13"]["08"], 16955.8, delta=0.05)
         self.assertAlmostEqual(d["trips_k"]["national"]["sent"], 402640.3, delta=0.05)
+        self.assertRegex(d["updated"], r"^\d{4}-\d{2}-\d{2}$")
 
 
 # ------------------------------------------------------------------ builder
@@ -242,6 +258,9 @@ class BuilderTest(unittest.TestCase):
         self.assertFalse(self.zones["04"]["significant"])
         self.assertEqual(self.zones["18+19"]["provinces"], ["51", "52"])
         self.assertIsNone(self.zones["12"]["anchor"])  # Galicia has no cells here
+        self.assertIsNone(self.zones["04"]["anchor"])  # the Balearics have cells, but no published flows
+        self.assertEqual(self.zones["10"]["short"], {"es": "C. Valenciana", "en": "Valencia region"})
+        self.assertEqual(self.zones["18+19"]["short"]["es"], "Ceuta y Melilla")
         self.assertEqual(z["totals_k"]["within"], 5000.0)
 
     def test_anchor_inside_a_c_shaped_zone(self):
@@ -286,7 +305,8 @@ def doc_fixture():
     world = world_fixture()
     zones = spain_trade.build_zones(world, data)
     return pick_all({
-        "version": 1, "vintage": "EPTMC 2025", "year": 2025, "sources": ["eptmc"], "measure": "tons", "rule": "r",
+        "version": 1, "vintage": "EPTMC 2025", "year": 2025, "updated": "2026-11-16", "sources": ["eptmc"],
+        "measure": "tons", "rule": "r",
         "modes": [{"id": "truck", "name": "Carretera"}], "commodities": {}, "national_k": {},
         "zones": sorted(zones.values(), key=lambda z: z["id"]), "routes": spain_trade.build_routes(zones, data),
     }, "es"), world
@@ -316,6 +336,9 @@ class CheckTest(unittest.TestCase):
             "order": lambda d: d["routes"][1].update(tons_k=1e6, ab_k=5e5, ba_k=5e5),
             "measure": lambda d: d.update(measure="value"),
             "anchor": lambda d: d["zones"][0]["anchor"].update(cell=-1),
+            "anchor without flows": lambda d: d["zones"][3].update(anchor=d["zones"][0]["anchor"]),
+            "no update date": lambda d: d.pop("updated"),
+            "bad update date": lambda d: d.update(updated="16/11/2026"),
             "a path": lambda d: d["routes"][0].update(path=[1, 2]),
         }
         for what, change in cases.items():

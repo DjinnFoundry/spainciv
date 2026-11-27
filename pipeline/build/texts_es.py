@@ -427,10 +427,9 @@ SOURCES = {
     "eptmc": {
         "title": "Encuesta Permanente de Transporte de Mercancías por Carretera (EPTMC 2025): toneladas por comunidad "
         "autónoma de carga y de descarga",
-        "license": "Reutilización comercial o no con la licencia de datos del Ministerio (Ley 37/2007); los datos "
-        "derivados deben decir "
-        "«Basado en datos abiertos Ministerio de Transportes y Movilidad Sostenible», enlazar a transportes.gob.es y "
-        "conservar la fecha de actualización",
+        "license": "Reutilización comercial o no con las condiciones del Ministerio (Ley 37/2007, "
+        "transportes.gob.es/aviso-legal): citar la fuente («Origen de los datos: Ministerio de Transportes y Movilidad "
+        "Sostenible») y la fecha de la última actualización",
         "description": "Las tablas anuales de la EPTMC 2025, una encuesta semanal por muestreo a los vehículos pesados "
         "de mercancías matriculados en España (más de 3,5 t): toneladas y toneladas-kilómetro por comunidad de carga y "
         "de descarga (tablas 6.7 y 6.8), toneladas por tipo de desplazamiento (6.3) y por capítulo de mercancía NST/R "

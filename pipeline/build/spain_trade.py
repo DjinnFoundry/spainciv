@@ -4,7 +4,10 @@ the trade.json contract of the US (pipeline/build/trade.py) with tonnes for doll
 * A zone is an autonomous community (Ceuta and Melilla together, as the survey publishes them), drawn by its
   provinces' cells and anchored on its cell nearest the middle of them (trade.middle_anchor).
 * The survey does not publish the flows of the Balearic and Canary Islands, Ceuta and Melilla (`..`): those zones are
-  `significant: false`, have their totals and no routes.
+  `significant: false`, have their totals, no routes and no anchor (nothing is drawn from them, and one cell would
+  put Ceuta and Melilla's zone in one of the two cities).
+* `updated` is the date the ministry last updated the workbook (its Last-Modified), which its reuse conditions ask to
+  show.
 * A route is a pair of the 15 mainland communities, both directions summed; the TOP_N largest by tonnes are kept (an
   editorial cut). The survey says where goods are loaded and unloaded, not the road they take, so a route has no
   `path`: the map draws a straight line between the two anchors.
@@ -14,13 +17,14 @@ the trade.json contract of the US (pipeline/build/trade.py) with tonnes for doll
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
 from ..sources.es.eptmc import CEUTA_MELILLA, CLASSES, NOT_SIGNIFICANT
-from ..sources.es.provinces import COMMUNITIES, COMMUNITY_NAMES
+from ..sources.es.provinces import COMMUNITIES, COMMUNITY_NAMES, COMMUNITY_SHORT_NAMES
 from .texts_es import tr, vintage
 from .trade import anchor_problem, load_doc, load_grid, middle_anchor, route_problems, size_warning
 
@@ -32,7 +36,9 @@ TOP_N = 30
 PARTNERS = 5
 ROAD = "truck"  # the mode id the map's art knows (render/art/improvements.js MODE_STYLE)
 PROVINCES = {**{c: provs for c, (_, provs) in COMMUNITIES.items()}, CEUTA_MELILLA: COMMUNITIES["18"][1] + COMMUNITIES["19"][1]}
-NAMES = {**COMMUNITY_NAMES, CEUTA_MELILLA: (tr("Ceuta y Melilla", "Ceuta and Melilla"), tr("Ceuta y Melilla", "Ceuta and Melilla"))}
+CEUTA_MELILLA_NAME = tr("Ceuta y Melilla", "Ceuta and Melilla")
+NAMES = {code: (COMMUNITY_NAMES[code], COMMUNITY_SHORT_NAMES[code]) for code in COMMUNITY_NAMES}
+NAMES[CEUTA_MELILLA] = (CEUTA_MELILLA_NAME, CEUTA_MELILLA_NAME)
 
 RULE = tr(
     f"Los {TOP_N} mayores flujos de mercancías por carretera entre las 15 comunidades autónomas peninsulares en "
@@ -70,9 +76,10 @@ def build_zones(world: dict, eptmc: dict) -> dict[str, dict]:
                 partners.append([other, round(ab + ba, 1), ROAD])
         partners.sort(key=lambda p: (-p[1], p[0]))
         t = trips[code]
+        significant = code not in NOT_SIGNIFICANT
         zones[code] = {
             "id": code, "name": name, "short": short, "kind": "community", "provinces": PROVINCES[code],
-            "significant": code not in NOT_SIGNIFICANT, "anchor": middle_anchor(grid, cells[code]),
+            "significant": significant, "anchor": middle_anchor(grid, cells[code]) if significant else None,
             "partners": partners[:PARTNERS],
             "totals_k": {"within": r1(t["within"]), "sent": r1(t["sent"]), "received": r1(t["received"]),
                          "intl_sent": r1(t["intl_sent"]), "intl_received": r1(t["intl_received"])},
@@ -112,6 +119,7 @@ def build() -> None:
         "version": 1,
         "vintage": vintage(payload["vintage"]),
         "year": eptmc["year"],
+        "updated": eptmc["updated"],
         "sources": ["eptmc"],
         "measure": "tons",
         "rule": RULE.format(year=str(eptmc["year"])),
@@ -135,18 +143,27 @@ def build() -> None:
 # ------------------------------------------------------------------ check
 
 
+def iso_date(v) -> bool:
+    try:
+        return isinstance(v, str) and date.fromisoformat(v).isoformat() == v
+    except ValueError:
+        return False
+
+
 ZONE_KEYS = ("id", "name", "short", "kind", "provinces", "significant", "anchor", "partners", "totals_k", "goods_k")
 
 
 def check(web_dir: Path) -> list[tuple[str, str]]:
     if active().id not in COUNTRIES:  # the other country's trade.json has its own check
         return []
-    path, doc, out = load_doc(web_dir, ("version", "vintage", "year", "sources", "measure", "rule", "modes",
+    path, doc, out = load_doc(web_dir, ("version", "vintage", "year", "updated", "sources", "measure", "rule", "modes",
                                         "commodities", "national_k", "zones", "routes"), "spain_trade")
     if doc is None:
         return out
     if doc["measure"] != "tons":
         out.append(("FAIL", f"trade.json measure {doc['measure']!r} (expected 'tons')"))
+    if not iso_date(doc["updated"]):
+        out.append(("FAIL", f"trade.json updated {doc['updated']!r}: the licence needs the data's update date"))
     grid, owner = load_grid(web_dir)
     zones, probs = {}, []
     for z in doc["zones"]:
@@ -156,6 +173,8 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
             probs.append(f"zone {z.get('id')} kind {z.get('kind')!r}")
         if (p := anchor_problem(z, grid, owner, "Spanish land")) is not None:
             probs.append(p)
+        if z.get("anchor") and not z.get("significant"):
+            probs.append(f"zone {z.get('id')}: an anchor without published flows")
         if z.get("significant") != (z.get("id") not in NOT_SIGNIFICANT):
             probs.append(f"zone {z.get('id')} significant {z.get('significant')!r}")
     if len(zones) != len(doc["zones"]):
