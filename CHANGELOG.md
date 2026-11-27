@@ -6,6 +6,17 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
+  castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
+  enlace que se comparte la lleva (`#lang=en`).
+  - Interfaz, lentes, Almanaque, consejeros, fuentes, maravillas, recursos, distritos, personajes y la página de
+    Unciv (`play.html`) están en los dos idiomas.
+  - Los nombres propios se quedan como los escribe su fuente.
+  - Los números siguen al idioma: «1,6 B €» en castellano y «€1.6T» en inglés.
+  - Las capas inglesas pesan unos 80 kB comprimidas, 38 kB sin la de personajes, que solo se carga al abrir sus
+    lentes. No repiten ningún valor (A18–A22, E67).
+- Los ficheros de datos que España no tiene (los del Ejército y del comercio de EE. UU.) ya no se piden, así que
+  desaparecen los dos 404 de la consola.
 - Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
   1 de aluminio). Los yacimientos del BDMIN con coordenadas en metros UTM (27 de 280) quedan en su sitio: el carbón de
   Villablino, el oro de Salave y la bauxita de La Vansa ya están en el mapa (E63).

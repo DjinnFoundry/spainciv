@@ -23,6 +23,12 @@ Per-cell arrays have length `grid.cols * grid.rows`, with index `row * cols + co
   `Source.discard(rel_path)` forgets a cached file that turned out to be bad. All three wrap `core.fetch`.
 * Under `--offline` (`core.fetch.OFFLINE`, `Source.offline`) sources skip discovery requests and use the newest complete
   cached data; a download of a file that is not cached raises `OfflineError`.
+* **Languages.** A country published in several languages (`Country.locales`, Spain: es, en) writes every generated
+  text as a `core.lang.Text` (`tr(es, en)`); `write_web` puts the first language in `<name>.json` and an overlay
+  `<name>.<lang>.json` beside it for each other language, with only the strings that differ at the same path (list
+  indices as object keys) and nothing else, even when empty (`{}`). A plain string is the same in every language (a
+  proper name, a code). `load_web(name, texts=True)` joins the overlays back for a builder that rewrites a file;
+  web/js/app/data.js lays the chosen language's overlay over each file it loads. The US writes no overlays.
 * **Builder checks.** Any module in `pipeline/build/` may define `check(web_dir: Path) -> list[(level, message)]`, level one
   of `PASS`, `NOTE`, `WARN`, `FAIL`. `pipeline check` discovers and runs them after its own checks (section "builder
   checks", each line prefixed with the module name), so a new builder never edits `pipeline/check.py`. Rules: read only
@@ -769,6 +775,9 @@ saved by `download_prefix()` has a `partial` note in the manifest, and its `sha2
 * `camera.js`: `Camera` with `fit()`, `toScreen()`, `toWorld()`, `zoomAt()`, `panBy()`, `centerOn()`, `flyTo(x, y, scale, ms)`,
   `step(dt) → bool stillMoving`, `view()`.
 * `render/*`: map drawing and banners. `main.js` owns input, state and wiring. `ui/*` owns DOM panels.
+* `app/data.js`: `loadData(name)` fetches `data/<name>.json` and, when the chosen language is not the data's, lays
+  `data/<name>.<lang>.json` over it (`overlay(data, patch)`); `app/country.js` picks the language (`pickLang`) and
+  `switchLang(lang)` remembers it, puts it in the hash and reloads.
 * The `state` object (owned by `main.js`, read by `render/*`): `cities`, `lens` (a lenses.json lens or null = terrain),
   `band` (`[t0, t1]` in normalised lens units 0..1, or null: cells outside are dimmed, see `applyLens`), `hoverCell`,
   `selectedCity` (a city object or null), `selectedState` (a state index, abbr, fips or `{index|abbr|fips}`, or null;
@@ -779,8 +788,9 @@ saved by `download_prefix()` has a `partial` note in the manifest, and its `sha2
 
 ## Browser extension API (window.__app; main.js "extension API", app/api.js)
 
-Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/index.js` loads `cityView`, `advisors` and
-`layers` (roads, rail, forts, ports, airports, wonders and trade routes). The API:
+Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/index.js` loads `cityView`, `advisors`,
+`layers` (roads, rail, forts, ports, airports, wonders and trade routes) and `lang` (the language switch of a country in
+several languages, with the `lang` hash key). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded

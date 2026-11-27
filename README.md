@@ -42,9 +42,11 @@ lists the public data behind the map.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
   salt, marble and iron where the IGME lists workings). How to install it:
-  [spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html).
+  [spainciv.djinnfoundry.com/play.html](https://spainciv.djinnfoundry.com/play.html).
 
-The interface is in Spanish (`web/js/i18n/`; the US map keeps its English). What is still missing, and why, is in
+The map is in Spanish and English: it opens in the browser's language and a switch in the top bar changes it
+(interface in `web/js/i18n/`, data texts in an English overlay next to each data file; see docs/SPAIN.md). The US
+map keeps its English. What is still missing, and why, is in
 [ROADMAP.md](ROADMAP.md): ports and airports, power plants, universities and the national-park visitor counts.
 
 ## Run it
@@ -88,6 +90,7 @@ cubierta del suelo, provincias y municipios del IGN, las 86 grandes áreas urban
 Censo del INE, PIB provincial, renta, carreteras, ferrocarril y los 16 Parques Nacionales. Es un port del
 [usaciv](https://karpathy.ai/usaciv/) de Andrej Karpathy, con la misma licencia MIT. El mapa está en
 [spainciv.djinnfoundry.com](https://spainciv.djinnfoundry.com/); las fuentes y sus licencias, en
-[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). La interfaz está en castellano. El
+[docs/SPAIN.md](docs/SPAIN.md), y lo que falta, en [ROADMAP.md](ROADMAP.md). El mapa está en castellano e inglés:
+abre en el idioma del navegador y se cambia con un botón de la barra superior. El
 mismo mapa se juega en Unciv, la versión libre de Civilization V:
 [spainciv.djinnfoundry.com/jugar.html](https://spainciv.djinnfoundry.com/jugar.html).
