@@ -101,7 +101,6 @@ export default {
   "game.album.every": { one: "comes up once a day on average", other: "comes up once every {n} days on average" },
   "game.album.won": { one: "won once", other: "won {n} times" },
   "game.album.notYet": "not in your album yet",
-  "game.album.slow": "Comes up less than once every {days} days",
   "game.album.note": "Each day brings a different hex and none repeats within {pool} days. A province comes up as many times as it has hexes in the game: from {most} ({mostName}) to {least} ({leastName}). The ones with a clock come up less than once every {days} days.",
   "game.album.hexCount": { one: "{n} possible hex", other: "{n} possible hexes" },
   "game.album.outside.first": { one: "{list} never comes up in the game: the first clue (“{zone}”, {sea}) would leave only {fits}, and it takes {min}.", other: "{list} never come up in the game: the first clue (“{zone}”, {sea}) would leave only {fits}, and it takes {min}." },

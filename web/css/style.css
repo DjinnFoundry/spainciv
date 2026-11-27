@@ -232,6 +232,30 @@ kbd {
 .gm-answer { font-size: 15px; }
 .gm-share { margin: 8px 0; padding: 8px 10px; background: rgba(0,0,0,.3); border-radius: 4px; font: 12px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gm-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.gm-tabs { display: flex; gap: 4px; margin: 8px 0 10px; border-bottom: 1px solid var(--line); }
+.gm-tab { flex: 1; padding: 5px 8px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; background: none; color: var(--ink-dim); font: 13px var(--sans); cursor: pointer; }
+.gm-tab[aria-selected="true"] { color: var(--gold-bright); border-color: var(--line); background: var(--panel-2); margin-bottom: -1px; }
+.gm-album-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+/* the province album (ext/game/albumPanel.js) */
+.al-title { margin: 0; font-family: var(--serif); font-size: 16px; font-weight: normal; color: var(--gold-bright); }
+.al-counts { margin: 2px 0 8px; color: var(--ink-dim); }
+.al-map { display: block; width: 100%; height: auto; margin-bottom: 10px; }
+.al-comms { list-style: none; margin: 0; padding: 0; }
+.al-comm { border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px 7px; margin-bottom: 6px; background: var(--panel-2); }
+.al-comm.complete { border-color: var(--gold-bright); box-shadow: inset 0 0 0 1px rgba(236,208,142,.35); }
+.al-comm h4 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; }
+.al-comm.complete h4 { color: var(--gold-bright); }
+.al-of { color: var(--ink-dim); font-family: var(--sans); font-size: 12px; }
+.al-bar { height: 3px; margin-bottom: 6px; background: rgba(201,164,92,.18); border-radius: 2px; overflow: hidden; }
+.al-bar i { display: block; height: 100%; background: var(--gold); }
+.al-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.al-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 7px; border: 1px solid rgba(201,164,92,.5); border-radius: 10px; background: none; color: var(--ink-dim); font: 12px var(--sans); cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.al-chip.got { background: var(--al-c); border-color: var(--al-c); color: var(--al-t); }
+.al-clock { flex: none; }
+.al-times { font-weight: bold; }
+.al-line { margin: 5px 0 0; font-size: 12px; }
+.al-note { margin: 6px 0 0; font-size: 12px; }
+.al-buttons { margin-top: 10px; }
 @media (max-width: 700px) { .game-dock { padding-top: 18px; } }
 
 /* ---------- the fiesta calendar (ext/fiestas), in the left dock ---------- */

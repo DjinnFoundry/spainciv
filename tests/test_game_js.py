@@ -290,14 +290,13 @@ class AlbumTest(unittest.TestCase):
     def test_add_win_is_idempotent_and_does_not_mutate(self):
         got = self.album("""
             const a = { '18': [3] }, b = A.addWin(a, '18', 1), c = A.addWin(b, '18', 1), d = A.addWin(undefined, '15', 2);
-            out([a, b, c, b === c, d, A.hasWin(b, '18', 1), A.hasWin(b, '18', 2)]);
+            out([a, b, c, b === c, d]);
         """)
         self.assertEqual(got[0], {"18": [3]})
         self.assertEqual(got[1], {"18": [1, 3]})
         self.assertEqual(got[2], {"18": [1, 3]})
         self.assertFalse(got[3])  # always a new object
         self.assertEqual(got[4], {"15": [2]})
-        self.assertEqual(got[5:], [True, False])
 
     def test_empty_album_counts_the_provinces_that_can_come_up(self):
         got = self.album("""

@@ -101,7 +101,6 @@ export default {
   "game.album.every": { one: "sale una vez al día de media", other: "sale una vez cada {n} días de media" },
   "game.album.won": { one: "ganada una vez", other: "ganada {n} veces" },
   "game.album.notYet": "aún no la tienes",
-  "game.album.slow": "Sale menos de una vez cada {days} días",
   "game.album.note": "Cada día sale un hexágono distinto y ninguno se repite en {pool} días. Una provincia sale tantas veces como hexágonos suyos hay en el juego: de {most} ({mostName}) a {least} ({leastName}). Las del reloj salen menos de una vez cada {days} días.",
   "game.album.hexCount": { one: "{n} hexágono posible", other: "{n} hexágonos posibles" },
   "game.album.outside.first": { one: "{list} no sale en el juego: la primera pista («{zone}», {sea}) solo dejaría {fits} y hacen falta {min}.", other: "{list} no salen en el juego: la primera pista («{zone}», {sea}) solo dejaría {fits} y hacen falta {min}." },

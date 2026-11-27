@@ -32,9 +32,6 @@ export function addWin(album, fips, day) {
   return { ...album, [fips]: [...days, day].sort((a, b) => a - b) };
 }
 
-/** Whether puzzle `day` is in the album for `fips`. */
-export const hasWin = (album, fips, day) => !!album?.[fips]?.includes(day);
-
 /** How many pool hexes each province has: {fips: n} (provinces without one are absent). */
 export function poolByProvince(pool, raw) {
   const out = {};

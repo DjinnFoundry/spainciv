@@ -23,8 +23,8 @@ export function siteLabel() {
 export const IMG_W = 1600;
 export const IMG_H = 900;
 export const CAPTION_H = 118;
-const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
-const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
+export const SERIF = '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
+export const SANS = '-apple-system, "Segoe UI", system-ui, sans-serif';
 
 export async function copyText(text) {
   try {
@@ -225,7 +225,8 @@ export function composeImage(info, { height = IMG_H } = {}) {
   return cv;
 }
 
-function fit(ctx, text, maxW) {
+/** `text` shortened with an ellipsis to fit `maxW` px in the context's current font. */
+export function fit(ctx, text, maxW) {
   if (ctx.measureText(text).width <= maxW) return text;
   let t = text;
   while (t.length > 3 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
