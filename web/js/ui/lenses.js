@@ -40,8 +40,9 @@ export function namesFrom(doc, n) {
   return { names, labels };
 }
 
-// A density unit ("people / km²", "habitantes / km²") prints as " /km²" after the number.
-const perKm2 = (lens) => /^(people|habitantes)\b/.test(lens.unit || "");
+// A density unit ("people / km²", "habitantes / km²", "inhabitants / km²") prints as " /km²" after the number; a count
+// of people ("people", the great people lens in English) does not.
+const perKm2 = (lens) => /\/\s*km²$/.test(lens.unit || "");
 
 // A legend tick: the number alone (a long unit such as "adherents per 100 residents" is printed once on the legend's
 // unit line instead, so five ticks never overprint), "0" rather than "≤ 0.0" when the scale starts at zero, and

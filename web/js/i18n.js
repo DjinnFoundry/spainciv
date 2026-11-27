@@ -1,17 +1,24 @@
-// Interface strings in the country's language (world.json country.lang, or the page's <script id="country-page">).
+// Interface strings in the country's language (world.json country.lang, or the page's <script id="country-page">, or the
+// language picked on a country published in several, app/country.js).
 //
 // Each language is one table in i18n/<lang>.js: {key: string | {one, other}}. English is the original usaciv text and
-// the fallback for any key a table lacks. A string may hold HTML (the tables are ours) and {name} placeholders; the
+// the fallback for any key a table lacks. The Spanish table is written for Spain, the only Spanish map. English on
+// another country's map takes that country's own strings first, where the usaciv English speaks of the United States
+// (counties, the ACS, dollars): i18n/en-ES.js for Spain in English. A string may hold HTML (the tables are ours) and {name} placeholders; the
 // values passed in are inserted as they are, so callers escape data with format.js esc() first. A {one, other} entry
 // is picked by vars.n with the language's plural rules. Call t() when rendering, never at module load: the country
 // (and so the language) is only known once main.js has read world.json.
 import { country } from "./app/country.js";
 import en from "./i18n/en.js";
 import es from "./i18n/es.js";
+import enES from "./i18n/en-ES.js";
 
 export const TABLES = { en, es };
+/** A language's strings for one country's map, by `<lang>-<COUNTRY ID>`, over that language's table. */
+export const VARIANTS = { "en-ES": enES };
 
 export const lang = () => (TABLES[country().lang] ? country().lang : "en");
+const variant = () => VARIANTS[`${lang()}-${String(country().id).toUpperCase()}`];
 
 const plurals = new Map();
 function pluralForm(n) {
@@ -22,7 +29,7 @@ function pluralForm(n) {
 
 /** The string for `key`, with {placeholders} filled from `vars`. An unknown key comes back as the key itself. */
 export function t(key, vars) {
-  let s = TABLES[lang()][key] ?? en[key];
+  let s = variant()?.[key] ?? TABLES[lang()][key] ?? en[key];
   if (s == null) {
     console.warn(`i18n: no string for "${key}"`);
     return key;
@@ -61,9 +68,9 @@ export const PAGE_STRINGS = [
   ["#loading", null, "page.loading"],
 ];
 
-/** Put index.html's static text in the country's language (nothing to do for English). */
+/** Put index.html's static text in the country's language (nothing to do for the US English). */
 export function translatePage(doc = globalThis.document) {
-  if (lang() === "en" || !doc) return;
+  if ((lang() === "en" && !variant()) || !doc) return;
   for (const [sel, attr, key] of PAGE_STRINGS) {
     const el = doc.querySelector(sel);
     if (!el) continue;

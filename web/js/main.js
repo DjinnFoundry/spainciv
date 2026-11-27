@@ -19,6 +19,7 @@ import { resourceFilterSig, layerActive, layerError, Z as LAYER_Z } from "./rend
 import { installExtensions } from "./ext/index.js";
 import { initShare } from "./app/share.js";
 import { setCountry, applyCountryChrome, country } from "./app/country.js";
+import { loadData } from "./app/data.js";
 import { initHelp } from "./app/help.js";
 import { t, translatePage } from "./i18n.js";
 
@@ -26,9 +27,7 @@ const { drawStatic, drawOverlay, OCEAN_BG } = mapRender;
 
 async function loadJSON(name, optional = false) {
   try {
-    const r = await fetch(`data/${name}.json`);
-    if (!r.ok) throw new Error(`data/${name}.json: HTTP ${r.status}`);
-    return await r.json();
+    return await loadData(name);
   } catch (err) {
     if (optional) return null;
     throw err;

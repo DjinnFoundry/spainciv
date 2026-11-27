@@ -75,6 +75,7 @@ svg.icon { display: inline-block; flex: none; }
 .btn:hover { background: linear-gradient(180deg, #4a6584, #2b4057); }
 .btn[aria-expanded="true"] { background: linear-gradient(180deg, #5a4a24, #3a2f15); }
 .btn-icon { padding: 4px 7px; }
+.btn-lang { font-size: 11px; letter-spacing: .06em; min-width: 28px; justify-content: center; } /* ext/lang */
 
 /* search */
 .search { position: relative; display: flex; align-items: center; flex: 0 1 230px; min-width: 150px; }
