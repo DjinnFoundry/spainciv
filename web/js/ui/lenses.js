@@ -149,7 +149,17 @@ export function initLensDock(opts) {
     moreBtn.innerHTML = `${icon("layers", "▤", { size: 15 })}<span>${inRow ? t("core.lens.lenses") : esc(active.name)}</span><span class="caret" aria-hidden="true">▾</span>`;
     moreBtn.title = t("core.lens.allTitle");
     moreBtn.hidden = !lenses.length;
+    fitQuick();
   }
+
+  // When the quick row does not fit its dock (a panel open beside it), the lenses that are not active show their
+  // icon only, instead of the last button being cut off. Measured with the labels shown; nothing changes when it fits.
+  function fitQuick() {
+    quick.classList.remove("icons");
+    quick.classList.toggle("icons", quick.scrollWidth > quick.clientWidth + 1);
+  }
+  const area = document.getElementById("lens-area");
+  if (area && typeof ResizeObserver === "function") new ResizeObserver(() => fitQuick()).observe(area);
 
   function renderPicker() {
     const groups = [...(lensFile?.groups || [])];
