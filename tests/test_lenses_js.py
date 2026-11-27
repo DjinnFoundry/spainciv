@@ -31,6 +31,12 @@ class LensesJsTest(unittest.TestCase):
                           "m.formatLensValue({format: 'category', categories: [{name: 'A'}]}, 0)]")
         self.assertEqual(got, ["Nadie", "A"])
 
+    def test_a_lens_with_decimals_writes_them_all_and_the_default_does_not(self):
+        # The climate lenses ask for one decimal ("23,0 °C" next to "23,1 °C"); without `decimals` nothing changes.
+        got = self.run_js("[1, 0].map((d) => [23, 23.1, 6].map((v) => m.formatLensValue({format: 'float', unit: '°C', decimals: d}, v)))"
+                          ".concat([[23, 6].map((v) => m.formatLensValue({format: 'float', unit: '°C'}, v))])")
+        self.assertEqual(got, [["23.0 °C", "23.1 °C", "6.0 °C"], ["23 °C", "23 °C", "6 °C"], ["23 °C", "6.0 °C"]])
+
     def test_time_lenses_show_clock_times_and_durations(self):
         # A browser-built lens holds minutes (the sun lens): times of day on the legend's ticks, durations in hours.
         clock, dur = "{format: 'clock', domain: [1255, 1340]}", "{format: 'duration', domain: [534, 927]}"

@@ -265,17 +265,23 @@ kbd {
 .lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
 @media (max-width: 700px) { .lens-panel { padding-top: 18px; } }
 
-/* ---------- the fiesta calendar (ext/fiestas) ---------- */
-.fc-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
-.fc-month {
+/* ---------- the month strip and the links between month pages (ext/month.js) ---------- */
+.ms-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
+.ms-month {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; height: 58px; padding: 3px 0;
   background: none; border: 1px solid transparent; border-radius: 4px; color: var(--ink-dim); font: inherit; font-size: 11px; cursor: pointer;
 }
-.fc-month i { display: block; width: 60%; min-height: 2px; background: rgba(201,164,92,.45); border-radius: 2px 2px 0 0; }
-.fc-month span { text-transform: capitalize; }
-.fc-month:hover { color: var(--ink); border-color: var(--line); }
-.fc-month.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
-.fc-month.on i { background: var(--gold-bright); }
+.ms-bare .ms-month { height: 30px; }
+.ms-month i { display: block; width: 60%; min-height: 2px; background: rgba(201,164,92,.45); border-radius: 2px 2px 0 0; }
+.ms-month span { text-transform: capitalize; }
+.ms-month:hover { color: var(--ink); border-color: var(--line); }
+.ms-month.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.ms-month.on i { background: var(--gold-bright); }
+.ms-links { margin: 14px 0 0; }
+.ms-link { padding: 0; background: none; border: none; color: var(--gold-bright); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.ms-link:hover { color: var(--ink); }
+
+/* ---------- the fiesta calendar (ext/fiestas) ---------- */
 .fc-sum { margin: 0 0 8px; }
 .fc-group h3 { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
 .fc-group h3 i { width: 11px; height: 11px; border-radius: 2px; flex: none; }
@@ -291,6 +297,35 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .fc-where { color: var(--ink-dim); }
 .fc-undated { margin: 14px 0 0; font-size: 12px; }
 
+/* ---------- a lens panel's colour key (app/lensPanel.js panelKey): phones only, where the sheet covers the legend ---------- */
+.pk-key { margin: 12px 0 0; }
+.pk-ramp { display: block; height: 10px; border-radius: 2px; }
+.pk-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
+@media (min-width: 701px) { .pk-key { display: none; } }
+
+/* ---------- the climate of the month (ext/clima) ---------- */
+.cl-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 0 10px; }
+.cl-tab {
+  padding: 5px 6px; background: none; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font: inherit; cursor: pointer;
+}
+.cl-tab:hover { color: var(--ink); }
+.cl-tab.on { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.cl-sum { margin: 0 0 6px; color: var(--gold-bright); }
+.cl-rule { margin: 0 0 10px; font-size: 12px; }
+.cl-chart h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 14px 0 2px; font-family: var(--serif); font-size: 15px; font-weight: normal; color: var(--gold-bright); }
+.cl-chart h3 .ms-link { font-family: var(--sans); font-size: 12px; }
+.cl-chart-how { margin: 0 0 6px; font-size: 12px; }
+.wl { display: block; color: var(--ink); }
+.wl .wl-grid { stroke: rgba(201,164,92,.16); }
+.wl .wl-axis { stroke: var(--ink-dim); }
+.cl-cap { margin: 4px 0 8px; font-size: 11.5px; }
+.cl-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cl-table caption { text-align: left; color: var(--ink-dim); padding-bottom: 3px; }
+.cl-table th, .cl-table td { padding: 1px 4px; text-align: right; border-bottom: 1px solid rgba(201,164,92,.12); }
+.cl-table th[scope="row"] { text-align: left; text-transform: capitalize; color: var(--ink-dim); font-weight: normal; }
+.cl-table thead th { color: var(--ink-dim); font-weight: normal; }
+.cl-credit { margin: 12px 0 0; font-size: 11.5px; }
+
 /* ---------- the sun lens (ext/sun) ---------- */
 .sn-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 10px 0; }
 .sn-mode {
@@ -302,11 +337,8 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .sn-day input { flex: 1; min-width: 0; padding: 4px 6px; background: rgba(0,0,0,.3); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: inherit; color-scheme: dark; }
 .lens-panel .chip.on { background: rgba(201,164,92,.35); }
 .sn-note { margin: 12px 0 8px; color: var(--gold-bright); }
-/* The colour key and the spread are the legend's; they show in the panel only on phones, where the sheet covers it. */
-.sn-key { margin: 12px 0 0; }
-.sn-ramp { display: block; height: 10px; border-radius: 2px; }
-.sn-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
-@media (min-width: 701px) { .sn-key, .sn-note { display: none; } }
+/* The spread is the legend's; it shows in the panel only on phones, where the sheet covers the legend (.pk-key). */
+@media (min-width: 701px) { .sn-note { display: none; } }
 /* The minimap sits over the Canaries' inset, which the lens's text names: it gives way while the panel is open. */
 body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
 

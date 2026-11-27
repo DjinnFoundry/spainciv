@@ -908,6 +908,40 @@ const RAW = {
       TS('M5.4 20h13.2', 1.6),
     ],
   },
+  // the climate of the month (ext/clima)
+  'l-temperature': {
+    // a thermometer, its bulb full and its scale marks
+    bg: '#7a2f34',
+    paths: [
+      F(circle(12, 17.4, 4.4) + 'M9.6 4.2a2.4 2.4 0 0 1 4.8 0V14.2H9.6Z'),
+      TS('M15.8 5.6h3M15.8 8.6h3M15.8 11.6h3', 1.6),
+      D('M12 7v8', 1.4),
+    ],
+  },
+  'l-rain': {
+    // a raindrop with its highlight
+    bg: '#1f4a7a',
+    paths: [
+      F('M12 2.2C12 2.2 5.2 10.2 5.2 14.8a6.8 6.8 0 0 0 13.6 0C18.8 10.2 12 2.2 12 2.2Z'),
+      D('M8.6 15a3.4 3.4 0 0 0 3.2 3.4', 1.4),
+    ],
+  },
+  'l-frost': {
+    // a snowflake: three crossed arms, each with its tips
+    bg: '#3a3f7a',
+    paths: [
+      S('M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10', 2.2),
+      S('M9.4 3.6L12 6.2l2.6-2.6M9.4 20.4L12 17.8l2.6 2.6M3.6 10.6L7 9.6 6.1 6.1M20.4 13.4L17 14.4l.9 3.5M3.6 13.4L7 14.4l-.9 3.5M20.4 10.6L17 9.6l.9-3.5', 1.6),
+    ],
+  },
+  'l-sunshine': {
+    // the sun and its rays
+    bg: '#7a5a1a',
+    paths: [
+      F(circle(12, 12, 4.8)),
+      TS('M12 1.6v3M12 19.4v3M1.6 12h3M19.4 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1', 2),
+    ],
+  },
   // lens groups (ui/lenses.js and ui/pedia.js look up `g-<group id>`)
   'g-faith': {
     bg: '#5a3a7a',

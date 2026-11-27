@@ -10,6 +10,7 @@ export default {
   "fiestas.title.now": "Where's the party this month?",
   "fiestas.close": "Close the calendar (Esc)",
   "fiestas.months": "Month",
+  "fiestas.link": "Fiestas in {month}",
   "fiestas.month": { one: "{month}: {n} fiesta", other: "{month}: {n} fiestas" },
   "fiestas.summary": { one: "{n} fiesta dated in {month}. Pick it to see it on the map.", other: "{n} fiestas dated in {month}. Pick one to see it on the map." },
   "fiestas.undated": { one: "{n} fiesta has no month in its source (it gives no date, or the feast is movable, like Holy Week or Carnival) and appears in no month.", other: "{n} fiestas have no month in their source (it gives no date, or the feast is movable, like Holy Week or Carnival) and appear in no month." },

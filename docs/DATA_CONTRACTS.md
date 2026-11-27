@@ -435,7 +435,7 @@ a `check(web_dir)` (see Pipeline conventions). Shared rules:
 * Rules that pick things (districts, wonders, routes) are published inside the file as text (`rule` / `rules`) so the UI
   and the Almanac can quote them.
 * **Loading** (browser): `infrastructure`, `military`, `wonders`, `trade` load eagerly right after the first frame (keep
-  each **under ~300 kB**); `citizens`, `districts`, `disasters` load on demand with `app.loadData(name)`.
+  each **under ~300 kB**); `citizens`, `districts`, `disasters` (and Spain's `fiestas`, `clima`) load on demand with `app.loadData(name)`.
 
 ### citizens.json (lazy)
 
@@ -862,6 +862,46 @@ NOAA events span many states: never add state costs together into a national fig
 helper `disasters.county_declarations(fema_interim, geoids)` gives the per-county counts used by the `disasters` lens,
 the counties.json column and this file, so the three always agree.
 
+### clima.json (lazy, Spain)
+
+Built by `pipeline/build/spain_clima.py` (`COUNTRIES = ("es",)`) from `aemet_rocio` (AEMET's ROCIO daily grid, averaged
+over 1991-2020 by spainciv), `omm_normales_es` (the WMO 1991-2020 normals of AEMET's 83 stations) and
+`aemet_normales_provincias` (AEMET's official 1991-2020 province normals). Loaded by the climate of the month
+(`web/js/ext/clima`) when its panel first opens. About 1.4 MB.
+
+```jsonc
+{
+  "version": 1, "vintage": "1991-2020",  // the ROCIO grid's period
+  "provinces_period": "1991-2020",        // the province normals' period (aemet_normales_provincias): the diagram's
+  "sources": ["aemet_rocio", "omm_normales_es", "aemet_normales_provincias"],
+  "rules": {"grid": Text, "province": Text, "station": Text, "frost": Text, "sun": Text, "rain": Text},  // quoted by the panel
+  "cells": [int],                  // land hexes with a grid value, ascending
+  "points": [int],                 // per cells[k]: grid points averaged (0 = the nearest point within one grid spacing)
+  "grid": {"tmax": [[number|null × len(cells)] × 12], "tmin": …, "prec": …, "frost": …},  // °C, mm, days; 1 decimal
+  "provinces": {"09": {"tmed": [12], "tmax": [12], "tmin": [12], "prec": [12]}, …},   // AEMET, 52 INE codes
+  "peninsular": {"tmed": [12], "prec": [12]},  // AEMET's "ESPAÑA PENINSULAR": the month strip's bars
+  "stations": [{"wmo": "08075", "aemet": "2331" | null, "name": "Burgos Aeropuerto", "province": "09", "lon", "lat",
+                "alt", "coords": "aemet" | "wmo", "cell", "tmed": [12], "tmax": [12], "tmin": [12], "prec": [12],
+                "frost": [12], "sun": [12] | null}],
+  "domains": {"temp": [lo, hi], "prec": [lo, hi], "frost": [lo, hi], "sun": [lo, hi]}
+}
+```
+
+* The mean temperature of a hex is (tmax + tmin) / 2, worked out in the browser (`ext/clima/season.js`), as AEMET derives
+  its own 1991-2020 mean-temperature maps. A grid point-month with a missing day in any year is null.
+* A land hex not in `cells`, or null for a month, takes its province's AEMET normal for temperature and rain; frost has no
+  province figure. A hex's province is world.json `owner` → states.json `fips`.
+* Frost on the grid is days with a minimum ≤ 0 °C; the stations' `frost` counts days < 0 °C (the WMO's rule).
+* `sun` exists only for the 76 stations that measure it; it is never spread to other hexes.
+* `domains`: the 0.2nd-99.8th percentile of the hex values over all 12 months (temperature rounded outward to whole
+  degrees), and the lowest to the highest station value for sunshine, so the twelve months share one colour scale. Under
+  2 % of any month's land hexes fall beyond the ends (tests/test_clima.py), and those are drawn in the end colours.
+* `rules` are bilingual (`tr`; the English overlay is `clima.en.json`). Station names are those of AEMET's station
+  pages without a leading "Estación de"; a station without a page takes the `nombre` of
+  `pipeline/sources/es/data/aemet_estaciones_omm.csv` (Rota, Base Naval).
+* `check` fails on a station off its province or over 15 km from its hex, warns on a province whose grid means are off
+  AEMET's normal, and lists the five largest station-vs-hex gaps in mean temperature (on the Canaries a hex runs up the
+  slopes, up to 4 °C colder than the coastal station).
 ## unciv.json (Spain)
 
 Not loaded by the map: `pipeline/play.py` makes the Unciv downloads and pages from it (docs/SPAIN.md, "Unciv").
@@ -923,15 +963,21 @@ streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `a
 sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
 E89)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
+`#lens=fiestas_mes&mes=8`, or `#mes=8` alone; the fiesta rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
 only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, hash keys `dia` and `sol`, e.g.
-`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`) and `explore` (the fog of war "España por
+`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`), `explore` (the fog of war "España por
 descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
 the groups its progress panel counts by; the explored set, its storage and the reveal radius are in
-`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`) and
+`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`),
 `embalses` (the reservoirs week by week, only where the data has `embalses.json`: lens `embalses`, mode `embalses`,
 static layer `reservoirs`, hash keys `semana` and `embalse` (a reservoir's `name`), e.g.
-`#lens=embalses&semana=1995-11-07&embalse=Alcántara`; the series rules are in `ext/embalses/series.js`). The API:
+`#lens=embalses&semana=1995-11-07&embalse=Alcántara`; the series rules are in `ext/embalses/series.js`) and
+`clima` (the climate of the month, only where the data has `clima.json`: lenses `clima_temp`, `clima_lluvia`,
+`clima_heladas`, `clima_sol`, mode `clima`, e.g. `#lens=clima_temp&mes=1`; the values are in `ext/clima/season.js`, the
+Walter-Lieth diagram in `ext/clima/walter.js`). The calendar and the climate share one month (`ext/month.js`, hash key
+`mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. Moving between the
+two keeps the month; closing the last one open puts it back to this month, so a page opened again shows what the URL,
+which has lost `mes`, would open. The API:
 
 
 **Data.**
@@ -1033,11 +1079,19 @@ when renaming a field in those files.
 Such a lens can hold minutes: `format: "clock"` shows them as a time of day ("22:01") and `format: "duration"` as hours
 and minutes ("15 h 24 min"), in the tooltip, the legend's ticks and the Almanac; `note` is a line under the legend's
 title. Optional for such a lens: `heading`, the name of what it shows now, for the legend's title and the tooltip
-(`name` stays in the picker); `tip(cell)`, a line of plain text the tooltip asks for the hex under the pointer, instead
-of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
-the user's choices. Its `source` is an id of sources.json, and the legend never gives it the lenses.json `vintage`.
+(`name` stays in the picker); `tip(cell)`, a line of plain text (or a list of lines) the tooltip asks for the hex under
+the pointer, instead of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
+the user's choices; `decimals`, for `format: "float"`, writes every value with that many decimals ("23,0 °C" next to
+"23,1 °C"; without it a value of 10 or more drops them); `click_hint`, the tooltip's last line in place of "Click to open
+<province>" when the lens's panel takes the click; `domain: null` while its values are not in yet (the legend shows its
+name and description only, and the map paints its land as no data). Its `source` is an id of sources.json, and the
+legend never gives it the lenses.json `vintage`.
 A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
 {mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
+Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the climate's four): moving between them
+keeps it open, and `pick()` names the lens it opens on. On a phone the dock is a bottom sheet that covers the legend:
+`panelKey()` in the panel's HTML and `updatePanelKey(dock, lens, label)` give it the lens's ramp and three ticks, shown on
+phones only (the sun lens and the climate).
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).

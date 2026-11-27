@@ -171,7 +171,8 @@ _EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "A
 _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
 _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
                   (" (final)", " (datos definitivos)"), ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
-                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
+                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)"),
+                  ("(AEMET CSVs of ", "(CSV de AEMET del ")]
 
 
 # The few vintages a Spanish source writes in Spanish, and their English.
@@ -202,6 +203,8 @@ def vintage(text: str | None) -> Text | str | None:
 _INE_LICENCE = ("CC BY 4.0 (aviso legal del INE): reutilización comercial y no comercial citando la fuente como "
                 "«Elaboración propia con datos del INE»; el INE no avala este mapa")
 _REUSE = "Información del sector público, reutilizable citando la fuente (Ley 37/2007)"
+_AEMET = ("Nota legal de AEMET: reutilización permitida citando a AEMET como autora (Ley 37/2007, modificada por la "
+          "Ley 18/2015); AEMET no avala este mapa")
 _PINNED = "Los ficheros están fijados en la versión v5.1.2 de natural-earth-vector."
 # The Almanac entry of each Spanish source (sources.json): the fields in Spanish, by source id.
 SOURCES = {
@@ -670,6 +673,34 @@ SOURCES = {
         "El mapa cita sus totales y las comunidades que nombran junto a las "
         "cuadrículas de 2013-2018 de las lentes de fauna, que son anteriores.",
         "used_for": ["Lentes de fauna (lince y lobo)"],
+    },
+    "aemet_normales_provincias": {
+        "title": "Valores normales 1991-2020 por provincia (AEMET, Estadística de Vigilancia del Clima)",
+        "license": _AEMET,
+        "description": "Las normales mensuales 1991-2020 de AEMET de temperatura media, media de las máximas, media de "
+        "las mínimas y precipitación de cada provincia, Ceuta, Melilla y la España peninsular: AEMET interpola los datos "
+        "de sus estaciones a una rejilla y la promedia en cada región.",
+        "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, hexágonos sin rejilla)"],
+    },
+    "aemet_rocio": {
+        "title": "Rejilla diaria ROCIO de temperatura y precipitación (AEMET), medias 1991-2020",
+        "license": _AEMET,
+        "description": "Las rejillas diarias de AEMET de temperatura máxima y mínima (ROCIO_IBEB v1) y precipitación "
+        "(v2), cada 0,05° en la península y Baleares, y ROCIO+_CAN cada 0,025° en Canarias, promediadas por spainciv en "
+        "cada punto y mes de 1991 a 2020: media de las máximas y de las mínimas, lluvia media del mes y días de media con "
+        "la mínima a 0 °C o menos. Método: Nota técnica 24 de AEMET (Peral, Navascués y Ramos, 2017) y Amblar y otros "
+        "(2020).",
+        "used_for": ["Clima del mes (temperatura, lluvia, días de helada)"],
+    },
+    "omm_normales_es": {
+        "title": "Normales climatológicas estándar de la OMM 1991-2020, España (AEMET, vía la NCEI, accession 0253808 "
+        "v6.6)",
+        "publisher": "Agencia Estatal de Meteorología (AEMET); archivo de la NCEI (NOAA) para la OMM",
+        "license": _AEMET + " (la NCEI no indica licencia en los ficheros)",
+        "description": "Las normales mensuales 1991-2020 que AEMET envió a la OMM para 83 estaciones: temperatura media, "
+        "máxima y mínima, precipitación, días con la mínima por debajo de 0 °C y horas de sol (76 estaciones). El nombre "
+        "y la posición de cada estación salen de su página de AEMET.",
+        "used_for": ["Clima del mes (estaciones, horas de sol)"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",

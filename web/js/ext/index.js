@@ -7,10 +7,11 @@
 // game/: the daily game "Adivina el hexágono", for a country whose page settings enable it.
 // fiestas/: the fiesta calendar, for a country whose data has fiestas.json.
 // sun/: the sun lens "Sol y reloj", for a country whose page settings enable it.
+// clima/: the climate of the month, for a country whose data has clima.json (its month is shared with fiestas/).
 // explore/: the fog of war "España por descubrir", for a country whose page settings have `explore`.
 // embalses/: the reservoirs week by week, for a country whose data has embalses.json.
 const MODULES = ["./cityView/index.js", "./advisors/index.js", "./layers/index.js", "./lang/index.js", "./game/index.js", "./fiestas/index.js",
-  "./sun/index.js", "./explore/index.js", "./embalses/index.js"];
+  "./sun/index.js", "./clima/index.js", "./explore/index.js", "./embalses/index.js"];
 
 export async function installExtensions(app, list = MODULES) {
   const loads = list.map((spec) => import(spec).then((m) => ({ m }), (err) => ({ err })));

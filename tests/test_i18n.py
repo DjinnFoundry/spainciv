@@ -431,6 +431,7 @@ class EnglishDataTest(unittest.TestCase):
         # reservoirs and basins as the Boletín Hidrológico writes them ("Breña, La", "Miño - Sil")
         ("embalses.json", ".reservoirs[].name"), ("embalses.json", ".reservoirs[].boletin_name"),
         ("embalses.json", ".basins[].name"),
+        ("clima.json", ".stations[].name"),  # AEMET's weather stations as AEMET (or the WMO header) names them
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.

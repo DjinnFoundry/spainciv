@@ -185,7 +185,7 @@ export function applyLens(w, lens, band = null) {
     for (let i = 0; i < n; i++) rgb[i] = w.terrainColors[i];
   } else {
     const stops = lens.ramp.map(parseHex);
-    const t = lensScale(lens);
+    const t = lens.domain ? lensScale(lens) : () => null; // no domain yet: every land hex is "no data"
     const { owner } = w.raw;
     for (let i = 0; i < n; i++) {
       const base = w.terrainColors[i];
