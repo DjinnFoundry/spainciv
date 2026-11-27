@@ -64,8 +64,10 @@ COUNTRY = Country(
         ),
         image_alt=tr("Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
                      "Hex map of Spain with its cities labelled, in the style of a strategy game"),
-        data_credit=tr("Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap",
-                       "Data: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap"),
+        data_credit=tr("Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, AEMET, Wikidata, "
+                       "OpenStreetMap",
+                       "Data: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, AEMET, Wikidata, "
+                       "OpenStreetMap"),
         # SIANE boundaries are CC BY 4.0: the attribution the IGN asks for stays visible on the map (docs/SPAIN.md).
         notices=(tr("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",
                     "Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"),),

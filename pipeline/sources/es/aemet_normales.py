@@ -7,11 +7,11 @@ Ceuta, Melilla and "ESPAÑA PENINSULAR". The CSVs are Latin-1, `;`-separated, on
 
 from __future__ import annotations
 
+import calendar
 import csv
 import io
 import zipfile
 
-from ...core.fetch import read_manifest
 from ...core.source import Source, SourceInfo
 
 URL = "https://www.aemet.es/documentos/es/datos_abiertos/Estadisticas/Vigilancia_Clima/evc_normales_1991-2020.zip"
@@ -73,7 +73,7 @@ def read_zip(path) -> tuple[dict, dict, list]:
 class AemetNormalesProvincias(Source):
     info = SourceInfo(
         id="aemet_normales_provincias",
-        title="Normal values 1991-2020 by province (AEMET, Estadística de Vigilancia del Clima)",
+        title="Normal values 1991-2020 by province (AEMET, “Estadística de Vigilancia del Clima”)",
         publisher="Agencia Estatal de Meteorología (AEMET)",
         homepage="https://www.aemet.es/es/datos_abiertos/estadisticas/vigilancia_clima",
         license="AEMET Nota legal: reuse allowed citing AEMET as the author (Ley 37/2007 as amended by Ley 18/2015)",
@@ -88,7 +88,7 @@ class AemetNormalesProvincias(Source):
 
     def process(self):
         provinces, peninsula, dated = read_zip(self.raw_dir / ZIP)
-        csv_date = "-".join(f"{x:02d}" for x in dated[-1])
-        retrieved = read_manifest(self.id).get(ZIP, {}).get("retrieved", "")[:10]
-        return {"vintage": f"1991-2020 (AEMET CSVs of {csv_date}, retrieved {retrieved})", "_files": [ZIP],
+        y, m, d = dated[-1]
+        when = f"{d} {calendar.month_name[m]} {y}"
+        return {"vintage": f"1991-2020 (AEMET CSVs of {when})", "_files": [ZIP],
                 "provinces": provinces, "peninsula": peninsula}

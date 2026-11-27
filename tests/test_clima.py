@@ -1,14 +1,18 @@
 """The climate of the month (Spain): AEMET's sources (province normals, WMO station normals, ROCIO grids) and
 clima.json (pipeline/build/spain_clima.py) with its check."""
 
+import json
+import tempfile
 import unittest
 from array import array
+from pathlib import Path
 from unittest import mock
 
+from pipeline.build import spain_clima as C
+from pipeline.core.hexgrid import HexGrid
 from pipeline.sources.es import aemet_normales as N
 from pipeline.sources.es import aemet_rocio as R
 from pipeline.sources.es import omm_normales as O
-
 
 # Trimmed from NCEI's BURGOSVILLAFRIA_8075.csv: its real rows, fewer blocks (and a MaxMon row to skip).
 BURGOS_CSV = "\ufeff" + "\r\n".join([
@@ -181,6 +185,165 @@ class RocioNormalsTest(unittest.TestCase):
         self.assertEqual(R.month_spans(dates), {(1991, 1): (0, 2), (1991, 2): (2, 3)})
         with self.assertRaisesRegex(ValueError, "consecutive"):
             R.month_spans([date(1991, 1, 1), date(1991, 2, 1), date(1991, 1, 2)])
+
+
+class Flat:
+    """A projection for the tests: lon/lat are map km already."""
+
+    def __call__(self, lon, lat):
+        return lon, lat
+
+    def occluded(self, lon, lat):
+        return False
+
+
+GRID = HexGrid(25.0, 12, 9)  # tests/make_hex_fixture.py's grid
+
+
+def centre(c):
+    return GRID.center(*GRID.col_row(c))
+
+
+def region(points, spacing=5.5, value=lambda k: 1.0):
+    return {"lon": [p[0] for p in points], "lat": [p[1] for p in points], "spacing_km": spacing,
+            **{v: [[value(k) + m for m in range(12)] for k in range(len(points))] for v in C.GRID_VARS}}
+
+
+class ClimaBuilderTest(unittest.TestCase):
+    def setUp(self):
+        self.owner = [0] * GRID.size
+        for c in (0, 1, 2):
+            self.owner[c] = -1  # sea
+
+    def test_a_hex_takes_the_mean_of_its_points(self):
+        x, y = centre(20)
+        reg = region([(x - 3, y), (x + 3, y), (x, y + 2)], value=lambda k: [1.0, 2.0, None][k] if k < 2 else 9.0)
+        reg["tmax"][2] = [None] * 12  # a null point is left out of the mean
+        cells, counts, vals = C.grid_layer({"ibeb": reg}, Flat(), GRID, self.owner)
+        k = cells.index(20)
+        self.assertEqual(counts[k], 3)
+        self.assertEqual(vals["tmax"][0][k], 1.5)
+        self.assertEqual(vals["tmin"][0][k], round((1 + 2 + 9) / 3, 1))
+        self.assertEqual(vals["tmax"][11][k], 12.5)
+
+    def test_a_land_hex_without_points_takes_one_within_its_spacing(self):
+        owner = list(self.owner)
+        x, y = centre(30)
+        owner[30] = 0
+        px, py = centre(31)  # the only point, on the sea hex next door (25 km hexes: a spacing of 50 km reaches it)
+        owner[31] = -1
+        reg = {"ibeb": region([(px, py)], spacing=50.0)}
+        cells, counts, vals = C.grid_layer(reg, Flat(), GRID, owner)
+        self.assertIn(30, cells)
+        self.assertEqual(counts[cells.index(30)], 0)  # the nearest point
+        self.assertEqual(vals["prec"][0][cells.index(30)], 1.0)
+        tight = {"ibeb": region([(px, py)], spacing=5.5)}
+        cells, _, _ = C.grid_layer(tight, Flat(), GRID, owner)
+        self.assertNotIn(30, cells)  # 43 km away: beyond one spacing
+
+    def test_station_takes_its_province_hex_near_a_boundary(self):
+        owner = [0] * GRID.size
+        owner[41] = 1  # the station's province
+        x, y = centre(40)  # the station is on hex 40, of province 0, next to hex 41
+        x += 0.4 * GRID.radius
+        self.assertEqual(C.station_cell(GRID, owner, x, y, 1), 41)
+        self.assertEqual(C.station_cell(GRID, owner, x, y, 0), 40)
+
+    def test_domains_span_all_months(self):
+        grid_vals = {"tmax": [[m + 10.0] * 50 for m in range(12)], "tmin": [[m * 1.0] * 50 for m in range(12)],
+                     "prec": [[m + 1.0] * 50 for m in range(12)], "frost": [[0.0] * 50 for _ in range(12)]}
+        grid_vals["frost"][0] = [5.0] * 50
+        d = C.domains(grid_vals, [{"sun": [100.0 + m for m in range(12)]}, {"sun": None}])
+        self.assertLessEqual(d["temp"][0], 5.0)
+        self.assertGreaterEqual(d["temp"][1], 15.5)  # July's (16 + 5) / 2 … December's (21 + 11) / 2
+        self.assertEqual(d["frost"][0], 0)
+        self.assertGreaterEqual(d["frost"][1], 5)
+        self.assertLessEqual(d["sun"][0], 100)
+        self.assertGreaterEqual(d["sun"][1], 110)
+
+
+def good_doc(owner):
+    cells = [c for c, o in enumerate(owner) if o >= 0]
+    n = len(cells)
+    row = lambda v: [v] * n  # noqa: E731
+    station = {"wmo": "08075", "aemet": "2331", "name": "Burgos Aeropuerto", "province": "09", "lon": 0, "lat": 0,
+               "alt": 891, "coords": "aemet", "cell": cells[0], "tmed": [3.6] * 12, "tmax": [8.9] * 12,
+               "tmin": [-1.6] * 12, "prec": [47.2] * 12, "frost": [16.6] * 12, "sun": [190.0] * 12}
+    return {"version": 1, "vintage": "1991-2020", "sources": [], "rules": {}, "cells": cells, "points": [1] * n,
+            "grid": {"tmax": [row(10.0)] * 12, "tmin": [row(2.0)] * 12, "prec": [row(50.0)] * 12, "frost": [row(1.0)] * 12},
+            "provinces": {f"{c:02d}": {"tmed": [6.0] * 12, "tmax": [10.0] * 12, "tmin": [2.0] * 12, "prec": [50.0] * 12}
+                          for c in range(1, 53)},
+            "peninsular": {"tmed": [6.0] * 12, "prec": [50.0] * 12}, "stations": [station],
+            "domains": {"temp": [3, 27], "prec": [3, 180], "frost": [0, 21], "sun": [86, 380]}}
+
+
+class ClimaCheckTest(unittest.TestCase):
+    owner = [-1, 0, 0, 1, 1, -1]
+    world = {"owner": owner, "grid": {"radius": 25.0, "cols": 6, "rows": 1}, "states": [{"fips": "09"}, {"fips": "30"}],
+             "country": {"id": "es"}}
+
+    def run_check(self, doc, world=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "world.json").write_text(json.dumps(world or self.world))
+            if doc is not None:
+                (Path(tmp) / "clima.json").write_text(json.dumps(doc))
+            return C.check(tmp)
+
+    def levels(self, lines):
+        return [level for level, _ in lines]
+
+    def test_missing_file_is_a_note_on_spain_and_nothing_elsewhere(self):
+        self.assertEqual(self.levels(self.run_check(None)), ["NOTE"])
+        self.assertEqual(self.run_check(None, {**self.world, "country": {"id": "us"}}), [])
+
+    def test_a_good_file_passes(self):
+        lines = self.run_check(good_doc(self.owner))
+        self.assertNotIn("FAIL", self.levels(lines))
+        self.assertNotIn("WARN", self.levels(lines))
+        self.assertEqual(self.levels(lines)[-1], "PASS")
+
+    def test_bad_shape_fails(self):
+        doc = good_doc(self.owner)
+        doc["grid"]["prec"] = doc["grid"]["prec"][:11]
+        self.assertEqual(self.levels(self.run_check(doc)), ["FAIL"])
+        doc = good_doc(self.owner)
+        doc["grid"]["tmax"] = [[60.0] * 4] * 12
+        self.assertIn("outside", self.run_check(doc)[0][1])
+        doc = good_doc(self.owner)
+        del doc["provinces"]["52"]
+        self.assertEqual(self.levels(self.run_check(doc)), ["FAIL"])
+
+    def test_a_station_in_the_wrong_province_fails(self):
+        doc = good_doc(self.owner)
+        doc["stations"][0]["cell"] = 3  # a hex of province 30
+        lines = self.run_check(doc)
+        self.assertTrue(any(level == "FAIL" and "Burgos" in m for level, m in lines))
+        doc["stations"][0]["cell"] = 0  # sea
+        self.assertIn("FAIL", self.levels(self.run_check(doc)))
+
+    def test_province_deviation_warns(self):
+        doc = good_doc(self.owner)
+        doc["provinces"]["09"]["tmax"] = [12.0] * 12  # the grid's 10 °C is 2 °C below
+        warn = [m for l, m in self.run_check(doc) if l == "WARN"]
+        self.assertTrue(warn and "09" in warn[0] and "30" not in warn[0])
+        doc = good_doc(self.owner)
+        doc["provinces"]["30"]["prec"] = [40.0] * 12  # rain 25 % above
+        self.assertIn("30 (", [m for l, m in self.run_check(doc) if l == "WARN"][0])
+
+
+class RealClimaTest(unittest.TestCase):
+    def test_built_file_when_present(self):
+        from pipeline.countries import COUNTRIES
+        path = COUNTRIES["es"].web_data_dir / "clima.json"
+        if not path.exists():
+            self.skipTest("clima.json not built")
+        doc = json.loads(path.read_text())
+        burgos = next(s for s in doc["stations"] if s["wmo"] == "08075")
+        self.assertEqual((burgos["tmed"][0], burgos["frost"][0], round(sum(burgos["sun"]), 1)), (3.6, 16.6, 2297.5))
+        self.assertEqual(doc["provinces"]["09"]["tmed"][0], 3.6)
+        self.assertEqual(sum(s["sun"] is not None for s in doc["stations"]), 76)
+        murcia = next(s for s in doc["stations"] if s["wmo"] == "08430")
+        self.assertEqual((murcia["coords"], murcia["province"]), ("aemet", "30"))
 
 
 if __name__ == "__main__":

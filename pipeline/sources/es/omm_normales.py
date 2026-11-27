@@ -98,7 +98,7 @@ class OmmNormalesEs(Source):
     info = SourceInfo(
         id="omm_normales_es",
         title="WMO Climatological Standard Normals 1991-2020, Spain (AEMET, via NCEI accession 0253808 v6.6)",
-        publisher="Agencia Estatal de Meteorología (AEMET), archived by NOAA NCEI for the WMO",
+        publisher="Agencia Estatal de Meteorología (AEMET); archived by NOAA NCEI for the WMO",
         homepage="https://www.ncei.noaa.gov/archive/accession/0253808",
         license="AEMET Nota legal: reuse allowed citing AEMET as the author (NCEI states no licence on the files)",
         description="The 1991-2020 monthly normals AEMET submitted to the WMO for 83 stations: mean, maximum and minimum "
@@ -126,7 +126,7 @@ class OmmNormalesEs(Source):
     def process(self):
         table = read_table()
         names = json.loads((self.raw_dir / LISTING).read_text())
-        stations, files = [], [LISTING]
+        stations, files = [], ["index.html"]  # the listing the CSV names came from
         for name in names:
             files.append(f"csv/{name}")
             wmo = parse_station((self.raw_dir / "csv" / name).read_text(encoding="utf-8"))

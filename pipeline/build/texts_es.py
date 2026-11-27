@@ -169,7 +169,8 @@ _EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "A
 _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
 _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
                   (" (final)", " (datos definitivos)"), ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
-                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
+                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)"),
+                  ("(AEMET CSVs of ", "(CSV de AEMET del ")]
 
 
 # The few vintages a Spanish source writes in Spanish, and their English.
@@ -626,15 +627,6 @@ SOURCES = {
         "de sus estaciones a una rejilla y la promedia en cada región.",
         "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, Ceuta y Melilla)"],
     },
-    "omm_normales_es": {
-        "title": "Normales climatológicas estándar de la OMM 1991-2020, España (AEMET, vía la NCEI, accession 0253808 "
-        "v6.6)",
-        "license": _AEMET + " (la NCEI no indica licencia en los ficheros)",
-        "description": "Las normales mensuales 1991-2020 que AEMET envió a la OMM para 83 estaciones: temperatura media, "
-        "máxima y mínima, precipitación, días con la mínima por debajo de 0 °C y horas de sol (76 estaciones). El nombre "
-        "y la posición de cada estación salen de su página de AEMET.",
-        "used_for": ["Clima del mes (estaciones, horas de sol)"],
-    },
     "aemet_rocio": {
         "title": "Rejilla diaria ROCIO de temperatura y precipitación (AEMET), medias 1991-2020",
         "license": _AEMET,
@@ -644,6 +636,16 @@ SOURCES = {
         "la mínima a 0 °C o menos. Método: Nota técnica 24 de AEMET (Peral, Navascués y Ramos, 2017) y Amblar y otros "
         "(2020).",
         "used_for": ["Clima del mes (temperatura, lluvia, días de helada)"],
+    },
+    "omm_normales_es": {
+        "title": "Normales climatológicas estándar de la OMM 1991-2020, España (AEMET, vía la NCEI, accession 0253808 "
+        "v6.6)",
+        "publisher": "Agencia Estatal de Meteorología (AEMET); archivo de la NCEI (NOAA) para la OMM",
+        "license": _AEMET + " (la NCEI no indica licencia en los ficheros)",
+        "description": "Las normales mensuales 1991-2020 que AEMET envió a la OMM para 83 estaciones: temperatura media, "
+        "máxima y mínima, precipitación, días con la mínima por debajo de 0 °C y horas de sol (76 estaciones). El nombre "
+        "y la posición de cada estación salen de su página de AEMET.",
+        "used_for": ["Clima del mes (estaciones, horas de sol)"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
