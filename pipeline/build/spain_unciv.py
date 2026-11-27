@@ -29,11 +29,12 @@ from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_web, write_web
 from ..core.lang import pick
 from ..countries import active
+from . import spain_unciv_fire as fire
 from . import unciv
 from .spain_wonders import municipality_finder
 
 REQUIRES = ["world.json", "cities.json", "resources.json", "lenses.json", "_world", "calidad_diferenciada",
-            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario"]
+            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario", "effis_incendios"]
 PRODUCES = ["unciv.json"]
 COUNTRIES = ("es",)
 
@@ -271,6 +272,7 @@ def build() -> None:
         "natural_wonders": [wonder],
         "start_gap_tiles": START_GAP,
         "starts": [{"nation": nation, "usage": usage, "city": city} for _, nation, usage, city in start_list],
+        "fire_season": fire.season(load_interim("effis_incendios"), tiles, fine, proj),
     }
     write_web("unciv.json", {"summary": summary, "map": doc})
     print(f"    {grid.width}×{grid.height} tiles, {len(land)} land; " + ", ".join(f"{r} {n}" for r, n in summary["resources"].items())

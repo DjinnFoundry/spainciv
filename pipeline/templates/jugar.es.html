@@ -26,7 +26,8 @@ code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-s
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
-td.n { text-align: right; white-space: nowrap; }
+td.n, th.n { text-align: right; }
+td.n { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -58,7 +59,7 @@ td.n { text-align: right; white-space: nowrap; }
       <code>$url/$zip_href</code> y pulsa <b>Descargar</b>.</li>
     <li>Vuelve al menú y pulsa <b>Nueva partida</b>. En <b>Mapa</b> elige <b>Personalizado</b> y, en <b>Escoger mapa</b>,
       <b>$map_name</b>. El juego activa por sí solo el mod <b>$mod_name</b> (lo verás marcado en <b>Mods de extensión</b>): trae
-      el cerdo ibérico.</li>
+      el cerdo ibérico y la temporada de incendios.</li>
     <li>Pulsa <b>Seleccionar jugadores según las posiciones iniciales</b>: juegas con España. Añade rivales con el
       <b>+</b> de la lista de jugadores; cada uno empieza en una gran ciudad: $starts.</li>
     <li>Pulsa <b>¡Empezar partida!</b>.</li>
@@ -66,7 +67,7 @@ td.n { text-align: right; white-space: nowrap; }
   <p>Sin el mod: descarga <a href="$map_href" download="$map_name">solo el mapa</a> y guárdalo, con el nombre
   <code>$map_name</code> y sin extensión, en la carpeta <code>maps</code> de los datos de Unciv (si lo abres con
   <code>java -jar Unciv.jar</code>, es la carpeta del .jar). Aparece en <b>Escoger mapa</b> y en el editor de mapas.
-  Es el mismo mapa sin el cerdo ibérico, que solo existe con el mod.</p>
+  Es el mismo mapa sin el cerdo ibérico ni la temporada de incendios, que solo existen con el mod.</p>
 
   <h2>En Android</h2>
   <ol>
@@ -118,7 +119,7 @@ td.n { text-align: right; white-space: nowrap; }
   y varios yacimientos de lo mismo juntos dan uno. Las cantidades de los recursos estratégicos son las de un yacimiento
   grande de Unciv.</p>
   <table>
-    <tr><th>Recurso</th><th>Casillas</th><th>De dónde sale</th></tr>
+    <tr><th>Recurso</th><th class=n>Casillas</th><th>De dónde sale</th></tr>
     $resource_rows
   </table>
   <p>Sin casilla se quedaron: $not_placed. Casi todas las canteras de piedra caen en llanura, donde Unciv no pone
@@ -130,9 +131,63 @@ td.n { text-align: right; white-space: nowrap; }
   cuatro denominaciones protegen el jamón ibérico, un producto curado, igual que las del vino protegen el vino y no la
   uva.</p>
 
+  <h2>Temporada de incendios</h2>
+  <p>El mod añade un suceso: cada $fire_check turnos (en el 5, el 10, el 15…), cada civilización mayor puede sufrir un
+  gran incendio en su territorio; las ciudades-estado, no. Cuantas más casillas tiene, más probable es, y las colinas y
+  montañas pesan más. Si te toca, eliges:</p>
+  <ul>
+    <li><b>Enviar brigadas</b>: pagas oro, $fire_cost_1 antes de la Edad Media, $fire_cost_2 desde la Edad Media hasta
+      la Era Industrial y $fire_cost_3 desde la Era Industrial, multiplicado según la velocidad de la partida (×0,67 en
+      rápida, ×1,5 en épica, ×3 en maratón). Solo aparece si tienes más oro que eso.</li>
+    <li><b>Dejar que se apague solo</b>: −$fire_penalty % de producción en todas tus ciudades durante
+      $fire_penalty_turns turnos.</li>
+  </ul>
+  <p>Las civilizaciones de la máquina eligen al azar: si pueden pagar, mandan las brigadas $fire_ai de cada
+  $fire_ai_of veces.</p>
+
+  <figure>
+    <img src="$fire_shot" alt="El aviso de la temporada de incendios en Unciv, con sus dos opciones" loading="lazy">
+    <figcaption>El aviso en Unciv $release, en español: debajo de cada opción, lo que hace.</figcaption>
+  </figure>
+
+  <p>Lo que es dato: el EFFIS, el sistema europeo de información sobre incendios forestales (Copernicus, licencia
+  CC BY 4.0), cartografió en España $fire_n incendios de $fire_ha ha o más entre $fire_from y $fire_to, entre
+  $fire_min y $fire_max por temporada. El $fire_summer de toda la superficie que cartografió ardió en incendios que
+  empezaron entre junio y septiembre. El Ministerio para la Transición Ecológica llama gran incendio forestal al que
+  pasa de 500 ha de superficie forestal; los perímetros del EFFIS cuentan también cultivos, así que estos $fire_n son
+  los incendios del EFFIS de $fire_ha ha o más y no la estadística oficial de grandes incendios.</p>
+  <p>Cada uno de esos incendios se reparte entre las casillas que cubre su perímetro. En las casillas de tierra
+  española caen $fire_on_spain de ellos, $fire_per_season por temporada. Por clase de casilla, tal como las cuenta Unciv, una
+  colina o una montaña tiene unas $fire_times veces más grandes incendios que el resto de la tierra:</p>
+  <table>
+    <tr><th>Casilla</th><th class=n>Casillas españolas</th><th class=n>Grandes incendios por casilla y temporada</th><th class=n>Peso (de $fire_unit)</th></tr>
+    $fire_rows
+  </table>
+  <p>El peso es la parte de los grandes incendios de España que cae en una casilla de esa clase: las casillas de
+  España suman unos $fire_unit.</p>
+  <p>Lo que es del juego:</p>
+  <ul>
+    <li>Convención: un turno es una temporada de incendios. En Unciv un turno va de un mes a 60 años, según la velocidad
+      y el momento de la partida, así que no puede ser literal.</li>
+    <li>Convención: cada temporada, el gran incendio de España cae en tu territorio con la parte de España que tienes,
+      la suma de los pesos de tus casillas entre $fire_unit. Con toda España, uno cada temporada.</li>
+    <li>Convención: se comprueba cada $fire_check turnos, con la probabilidad de que haya al menos uno en esas
+      $fire_check temporadas. Unciv solo admite porcentajes enteros, así que va en $fire_bands tramos de un 1&nbsp;%.</li>
+    <li>Convención: el castigo dura $fire_penalty_turns turnos, lo mismo que va de una comprobación a la siguiente, para
+      que dos castigos no se sumen.</li>
+    <li>Convención: el precio de las brigadas y el −$fire_penalty % de producción.</li>
+    <li>Supuesto: la tierra de Portugal, Francia y el norte de África no tiene datos del EFFIS en este mapa y cuenta
+      con las tasas de España para su clase.</li>
+  </ul>
+  <p>Probabilidad en cada comprobación según las casillas que tienes. La última fila es toda España:</p>
+  <table>
+    <tr><th class=n>Casillas del resto de la tierra</th><th class=n>Colinas</th><th class=n>Montañas</th><th class=n>Probabilidad</th></tr>
+    $fire_examples
+  </table>
+
   <h2>Créditos</h2>
   <p>Mapa: <a href="$url/">$product</a>, con datos del IGN, Copernicus (CORINE Land Cover 2018), NOAA (ETOPO1),
-  Natural Earth, el IGME, el INE y el Ministerio de Agricultura. El mod se publica con licencia CC BY 4.0.
+  Natural Earth, el IGME, el INE y el Ministerio de Agricultura; los incendios, del EFFIS (Copernicus). El mod se publica con licencia CC BY 4.0.
   Unciv es de Yair Morgenstern y sus colaboradores (MPL 2.0).</p>
 </main>
 </body>

@@ -92,6 +92,9 @@ RESOURCES = {
     "Stone": ("Bonus", {"Grassland", "Desert", "Tundra"}, 0),
     "Bananas": ("Bonus", {"Jungle"}, 0),
 }
+# Eras.json, in order.
+ERAS = ("Ancient era", "Classical era", "Medieval era", "Renaissance era", "Industrial era", "Modern era", "Atomic era",
+        "Information era", "Future era")
 # Resources a mod adds to the base ruleset: its TileResources.json entry (TileResource.kt fields). "Doesn't generate
 # naturally" keeps the map generator from scattering it on other maps while the mod is on.
 MOD_RESOURCES = {
@@ -525,6 +528,30 @@ def tile_resources_json() -> list[dict]:
     """jsons/TileResources.json of the mod: MOD_RESOURCES. Unciv merges an extension mod's resources into the base
     ruleset's (Ruleset.kt: add), and draws each with the image ResourceIcons/<name> of the mod's atlas."""
     return [{"name": name, **fields} for name, fields in MOD_RESOURCES.items()]
+
+
+PROPERTIES_SEP = " = "  # TranslationFileReader.keyValueSeparator
+PROPERTIES_BAD = ("[", "]", "{", "}", "\n")  # placeholders and nested translations in Unciv's texts; a line per entry
+
+
+def properties(pairs: Iterable[tuple[str, str]]) -> str:
+    """A mod's translation file, jsons/translations/<Language>.properties, from (English text, translation) pairs.
+
+    Unciv reads one such file per language per mod (Translations.kt: tryReadTranslationForLanguage), a line per entry
+    split at the first " = " (TranslationFileReader.read); a line starting with "#" or without the separator is a
+    comment. The English text is the key, exactly as the ruleset writes it. Texts with brackets or braces (Unciv's
+    placeholders), a separator, a line break, a leading "#" or a key given twice are refused: they would not read back
+    as written. Every feature of a mod that adds translations goes through here, so they share the one file."""
+    seen, lines = set(), []
+    for key, value in pairs:
+        for text in (key, value):
+            if not text.strip() or PROPERTIES_SEP in text or text.lstrip().startswith("#") or any(b in text for b in PROPERTIES_BAD):
+                raise ValueError(f"not a translation Unciv can read back: {text!r}")
+        if key in seen:
+            raise ValueError(f"translated twice: {key!r}")
+        seen.add(key)
+        lines.append(f"{key}{PROPERTIES_SEP}{value}")
+    return "\n".join(lines) + "\n"
 
 
 ICON_PX = 100  # the size of Unciv's own resource icons (android/assets/Icons.atlas: ResourceIcons/*)

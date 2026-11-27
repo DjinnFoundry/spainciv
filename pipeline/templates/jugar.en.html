@@ -26,7 +26,8 @@ code { background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; font-s
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid rgba(201,164,92,.25); }
 th { color: var(--gold); font-weight: normal; }
-td.n { text-align: right; white-space: nowrap; }
+td.n, th.n { text-align: right; }
+td.n { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -58,7 +59,7 @@ td.n { text-align: right; white-space: nowrap; }
       <code>$url/$zip_href</code> and press <b>Download</b>.</li>
     <li>Back in the menu, press <b>Start new game</b>. Under <b>Map Type</b> choose <b>Custom</b> and, under
       <b>Map file</b>, <b>$map_name</b>. The game turns on the <b>$mod_name</b> mod by itself (you will see it ticked
-      under <b>Extension mods</b>): it brings the Iberian pig.</li>
+      under <b>Extension mods</b>): it brings the Iberian pig and the fire season.</li>
     <li>Press <b>Select players from starting locations</b>: you play Spain. Add rivals with the <b>+</b> of the
       player list; each starts in a large city: $starts.</li>
     <li>Press <b>Start game!</b>.</li>
@@ -66,7 +67,7 @@ td.n { text-align: right; white-space: nowrap; }
   <p>Without the mod: download <a href="$map_href" download="$map_name">the map only</a> and save it, named
   <code>$map_name</code> and without an extension, in the <code>maps</code> folder of Unciv's data (if you run it
   with <code>java -jar Unciv.jar</code>, that is the folder of the .jar). It shows under <b>Map file</b> and in the
-  map editor. It is the same map without the Iberian pig, which only exists with the mod.</p>
+  map editor. It is the same map without the Iberian pig or the fire season, which only exist with the mod.</p>
 
   <h2>On Android</h2>
   <ol>
@@ -117,7 +118,7 @@ td.n { text-align: right; white-space: nowrap; }
   50 km from the deposit. There is one per tile, and several deposits of the same thing close together give one. The
   amounts of the strategic resources are those of a large Unciv deposit.</p>
   <table>
-    <tr><th>Resource</th><th>Tiles</th><th>Where it comes from</th></tr>
+    <tr><th>Resource</th><th class=n>Tiles</th><th>Where it comes from</th></tr>
     $resource_rows
   </table>
   <p>Left without a tile: $not_placed. Nearly all the stone quarries fall on plains, where Unciv puts no stone, and
@@ -128,9 +129,61 @@ td.n { text-align: right; white-space: nowrap; }
   because the four designations protect Iberian ham, a cured product, just as the wine designations protect wine and
   not grapes.</p>
 
+  <h2>Fire season</h2>
+  <p>The mod adds an event: every $fire_check turns (on turns 5, 10, 15…), each major civilization may get a great
+  fire on its land; city-states never do. The more tiles it owns, the likelier it is, and hills and mountains weigh
+  more. When it happens, you choose:</p>
+  <ul>
+    <li><b>Send fire brigades</b>: you pay gold, $fire_cost_1 before the Medieval era, $fire_cost_2 from the Medieval
+      era up to the Industrial era and $fire_cost_3 from the Industrial era on, multiplied by the game speed (×0.67 on Quick, ×1.5
+      on Epic, ×3 on Marathon). It only shows when you have more gold than that.</li>
+    <li><b>Let it burn out</b>: −$fire_penalty% Production in all your cities for $fire_penalty_turns turns.</li>
+  </ul>
+  <p>AI civilizations choose at random: when they can pay, they send the brigades $fire_ai times in $fire_ai_of.</p>
+
+  <figure>
+    <img src="$fire_shot" alt="The fire season popup in Unciv, with its two choices" loading="lazy">
+    <figcaption>The popup in Unciv $release, in Spanish: under each choice, what it does.</figcaption>
+  </figure>
+
+  <p>What is data: EFFIS, the European Forest Fire Information System (Copernicus, CC BY 4.0 licence), mapped
+  $fire_n fires of $fire_ha ha or more in Spain from $fire_from to $fire_to, between $fire_min and $fire_max a season.
+  Of all the area it mapped, $fire_summer burnt in fires that started between June and September. Spain's Ministry for
+  the Ecological Transition calls a fire a great forest fire when it passes 500 ha of forest land; EFFIS perimeters also
+  take in farmland, so these $fire_n are the EFFIS fires of $fire_ha ha or more, not the official count of great
+  fires.</p>
+  <p>Each of those fires is shared among the tiles its perimeter covers. Spanish land tiles get $fire_on_spain of them,
+  $fire_per_season a season. By class of tile, as Unciv counts them, a hill or mountain tile has about $fire_times times
+  as many great fires as any other land:</p>
+  <table>
+    <tr><th>Tile</th><th class=n>Spanish tiles</th><th class=n>Great fires per tile per season</th><th class=n>Weight (of $fire_unit)</th></tr>
+    $fire_rows
+  </table>
+  <p>The weight is the share of Spain's great fires that falls on one tile of that class: Spain's tiles add up to
+  about $fire_unit.</p>
+  <p>What is the game's:</p>
+  <ul>
+    <li>Convention: one turn is one fire season. An Unciv turn lasts from a month to 60 years, depending on the speed
+      and how far the game has gone, so it cannot be literal.</li>
+    <li>Convention: each season, Spain's great fire lands on your territory with the share of Spain you own, the sum
+      of your tiles' weights over $fire_unit. With all of Spain, one every season.</li>
+    <li>Convention: the check runs every $fire_check turns, with the chance of at least one fire in those $fire_check
+      seasons. Unciv only takes whole percentages, so it comes in $fire_bands steps of 1%.</li>
+    <li>Convention: the penalty lasts $fire_penalty_turns turns, the same as the gap between checks, so two penalties
+      never add up.</li>
+    <li>Convention: the price of the brigades and the −$fire_penalty% Production.</li>
+    <li>Assumption: the land of Portugal, France and North Africa has no EFFIS data on this map and counts with Spain's
+      rates for its class.</li>
+  </ul>
+  <p>Chance at each check by the tiles you own. The last row is all of Spain:</p>
+  <table>
+    <tr><th class=n>Other land tiles</th><th class=n>Hills</th><th class=n>Mountains</th><th class=n>Chance</th></tr>
+    $fire_examples
+  </table>
+
   <h2>Credits</h2>
   <p>Map: <a href="$url/">$product</a>, with data from IGN, Copernicus (CORINE Land Cover 2018), NOAA (ETOPO1),
-  Natural Earth, IGME, INE and the Spanish Ministry of Agriculture. The mod is published under the CC BY 4.0 licence.
+  Natural Earth, IGME, INE and the Spanish Ministry of Agriculture; the fires from EFFIS (Copernicus). The mod is published under the CC BY 4.0 licence.
   Unciv is by Yair Morgenstern and its contributors (MPL 2.0).</p>
 </main>
 </body>

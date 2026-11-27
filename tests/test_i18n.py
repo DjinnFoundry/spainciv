@@ -320,7 +320,8 @@ class SpanishDataTest(unittest.TestCase):
              "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
              "locale", "currency",
-             "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
+             "map", "natural_wonders", "class"}  # unciv.json: the Unciv map, wonder and fire-season tile classes, in
+    # the game's own (English) identifiers
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
     # Toledo") and some surnames are English words ("Eva Forest").
