@@ -9,10 +9,11 @@ pipeline/sources/es/personajes.py for the categories and the fame rule).
 * **Lenses**: people per hex (log scale) and each hex's main category (the one with most people; a tie goes to the
   category first in priority order). Both name the hex's people in the tooltip, most famous first, from
   `personajes.json`, which the map loads when one of them opens (`names_from`), so lenses.json stays small.
-* **Years of life** (`life` in personajes.json, DECISIONS E84): the astronomical years in which a person may have been
-  alive, both included. A date Wikidata gives only by decade or century counts in full; someone without a death date
-  counts as alive in the year of the download if born MAX_LIFE years before it or later. The map's timeline
-  (web/js/ext/timeline) filters on it. Who cannot be placed in time is counted, by reason (`timeline`).
+* **Years of life** (`life` in personajes.json, DECISIONS E87): the astronomical years in which a person may have been
+  alive, both included. A date Wikidata gives only by decade or century counts in full (`approx`), so two century
+  dates can span 200 years; someone with no date-of-death statement at all counts as alive in the year of the
+  download if born MAX_LIFE years before it or later. The map's timeline (web/js/ext/timeline) filters on it. Who
+  cannot be placed in time is counted, by reason (`timeline`).
 """
 
 from __future__ import annotations
@@ -137,7 +138,11 @@ NOUN_EN = {
     "empresaria": "businesswoman", "emprendedor": "entrepreneur", "emprendedora": "entrepreneur",
     "comerciante": "merchant", "banquero": "banker", "banquera": "banker", "mercader": "merchant",
     "industrial": "industrialist", "armador": "shipowner", "armadora": "shipowner", "financiero": "financier",
-    "deportista": "athlete", "futbolista": "footballer", "ciclista": "cyclist", "tenista": "tennis player",
+    "deportista": "athlete", "piloto de automovilismo": "racing driver",
+    "piloto de motociclismo": "motorcycle racer", "piloto de carreras": "racing driver", "piloto de rally": "rally driver",
+    "piloto de rallies": "rally driver", "expiloto de automovilismo": "former racing driver",
+    "expiloto de motociclismo": "former motorcycle racer", "futbolista": "footballer", "ciclista": "cyclist",
+    "tenista": "tennis player",
     "baloncestista": "basketball player", "atleta": "athlete", "nadador": "swimmer", "nadadora": "swimmer",
     "jugador": "player", "jugadora": "player", "torero": "bullfighter", "boxeador": "boxer", "golfista": "golfer",
     "balonmanista": "handball player", "alpinista": "mountaineer", "esquiador": "skier", "esquiadora": "skier",
@@ -153,7 +158,8 @@ REASONS = {"abroad": tr("nacieron fuera de la España actual", "were born outsid
            "no_coordinates": tr("tienen un lugar de nacimiento sin coordenadas", "have a birthplace without coordinates")}
 # The longest verified human life: Jeanne Calment, 21 Feb 1875 – 4 Aug 1997, 122 years and 164 days (Guinness World
 # Records, https://www.guinnessworldrecords.com/world-records/oldest-person). A convention of the timeline: someone
-# without a death date born this many years or less before the data was downloaded counts as alive (lifespan).
+# whom Wikidata does not record as dead, born this many years or less before the data was downloaded, counts as alive
+# (lifespan).
 MAX_LIFE = 122
 LIFE_REASONS = ("no_birth", "no_death", "inconsistent")
 # Date words of a note: Spanish, English.
@@ -226,16 +232,17 @@ def date_text(d: dict | None, lang: str = "es") -> str | None:
     return text + (DATE_WORDS["bc"][k] if bc else "")
 
 
-def lifespan(born: dict | None, died: dict | None, until: int) -> tuple[int, int] | str:
+def lifespan(born: dict | None, died: dict | None, until: int, dead: bool = False) -> tuple[int, int] | str:
     """(from, to): the astronomical years a person may have been alive, both included, a decade or century date
-    counted in full; or why the person cannot be placed in time: "no_birth" (no usable birth date), "no_death" (a
-    death date too vague to use, or none for someone born too long ago to be alive: before until - MAX_LIFE) or
-    "inconsistent" (a death before the birth, even with the ranges). With no death date and a later birth, the person
-    counts as alive in `until`, as Wikidata implies by giving none."""
+    counted in full; or why the person cannot be placed in time: "no_birth" (no usable birth date), "no_death" (no
+    usable death date: one too vague, a death Wikidata records with no date the map can read (`dead`: "unknown value"
+    or a deprecated date), or none at all for someone born too long ago to be alive, before until - MAX_LIFE) or
+    "inconsistent" (a death before the birth, even with the ranges). Someone Wikidata does not record as dead, born
+    later, counts as alive in `until`."""
     b = span(born)
     if b is None:
         return "no_birth"
-    if died:
+    if died or dead:
         d = span(died)
         if d is None:
             return "no_death"
@@ -252,22 +259,35 @@ def approximate(born: dict | None, died: dict | None) -> bool:
     return any(d and usable(d) and d["precision"] < 9 for d in (born, died))
 
 
+def life(p: dict, until: int) -> tuple[int, int] | str:
+    """lifespan() of a placed person (born, died and, when the payload has it, dead)."""
+    return lifespan(p["born"], p["died"], until, p.get("dead", False))
+
+
+def longer(life_: tuple[int, int]) -> bool:
+    """A life that spans more years than anyone has lived: only date ranges (or a missing death date) make one."""
+    return life_[1] - life_[0] > MAX_LIFE
+
+
 def timeline_meta(people: list[dict], until: int) -> dict:
     """personajes.json's "timeline": the year the data was downloaded, MAX_LIFE, how many people have a decade or a
-    century among their dates, and how many cannot be placed in time, by reason (lifespan); `people` holds
-    the born and died dates of each placed person."""
-    lives = [(lifespan(p["born"], p["died"], until), p) for p in people]
+    century among their dates (`approximate`), how many of those placed span more than MAX_LIFE years (`longer`), and
+    how many cannot be placed in time, by reason (lifespan); `people` holds the dates of each placed person."""
+    lives = [(life(p, until), p) for p in people]
+    placed = [(l, p) for l, p in lives if not isinstance(l, str)]
     return {"until": until, "max_life": MAX_LIFE,
-            "approximate": sum(not isinstance(life, str) and approximate(p["born"], p["died"]) for life, p in lives),
-            "left_out": {r: sum(life == r for life, _ in lives) for r in LIFE_REASONS}}
+            "approximate": sum(approximate(p["born"], p["died"]) for _, p in placed),
+            "longer": sum(longer(l) for l, _ in placed),
+            "left_out": {r: sum(l == r for l, _ in lives) for r in LIFE_REASONS}}
 
 
-def years(born: dict | None, died: dict | None, lang: str = "es") -> str | None:
-    """'1881–1973', 'n. 1986' (no death date), 'm. 1550' (no birth date), or None; 'b. 1986', 'd. 1550' in English."""
+def years(born: dict | None, died: dict | None, lang: str = "es", dead: bool = False) -> str | None:
+    """'1881–1973', '1915–?' (a death Wikidata records with no usable date: `dead`, or one vaguer than a century),
+    'n. 1986' (no death), 'm. 1550' (no birth date), or None; 'b. 1986', 'd. 1550' in English."""
     k = lang == "en"
     b, d = date_text(born, lang), date_text(died, lang)
-    if b and d:
-        return f"{b}–{d}"
+    if b and (d or died or dead):
+        return f"{b}–{d or '?'}"
     if b:
         return DATE_WORDS["born"][k].format(b)
     return DATE_WORDS["died"][k].format(d) if d else None
@@ -291,7 +311,7 @@ def noun(person: dict, lang: str = "es") -> str:
 def note(person: dict) -> Text:
     """What the tooltip prints after the name: 'pintor, 1881–1973' ('painter, 1881–1973')."""
     def one(lang: str) -> str:
-        noun_, span = noun(person, lang), years(person["born"], person["died"], lang)
+        noun_, span = noun(person, lang), years(person["born"], person["died"], lang, person.get("dead", False))
         return f"{noun_}, {span}" if span else noun_
 
     return tr(one("es"), one("en"))
@@ -367,7 +387,8 @@ def great_people(world: dict, proj, grid: HexGrid, municipalities: list[dict]) -
         cell, b = where
         people.append({"name": p["name"], "note": note(p), "place": b["name"], "cell": cell, "kind": p["primary"],
                        "kinds": p["kinds"], "qid": p["qid"], "sitelinks": p["sitelinks"],
-                       "description": p["description"], "born": p["born"], "died": p["died"]})
+                       "description": p["description"], "born": p["born"], "died": p["died"],
+                       "dead": p.get("dead", False)})
     values = hex_values(owner, ((p["cell"], p["kind"]) for p in people))
     per_kind = {k.id: sum(p["kind"] == k.id for p in people) for k in KINDS}
     print(f"    {len(people)} great people placed; left out: {left_out}, {unnamed} without a name; "
@@ -375,8 +396,8 @@ def great_people(world: dict, proj, grid: HexGrid, municipalities: list[dict]) -
     print("    " + ", ".join(f"{k} {n}" for k, n in per_kind.items()))
     until = int(data["retrieved"][:4])
     timeline = timeline_meta(people, until)
-    print(f"    timeline to {until}: {timeline['approximate']} with a decade or a century; left out: "
-          f"{timeline['left_out']}")
+    print(f"    timeline to {until}: {timeline['approximate']} with a decade or a century, {timeline['longer']} "
+          f"spanning more than {MAX_LIFE} years; left out: {timeline['left_out']}")
 
     out_total = sum(left_out.values())
     thresholds = {lang: ", ".join(f"{STYLE[k.id][0][lang].lower()} {k.min_sitelinks}" for k in KINDS if k.min_sitelinks)
@@ -422,9 +443,11 @@ def great_people(world: dict, proj, grid: HexGrid, municipalities: list[dict]) -
          "values": values["great_people_kind"]},
     ]
     def entry(p: dict) -> dict:
-        life = lifespan(p["born"], p["died"], until)
+        years_ = life(p, until)
+        placed = {} if isinstance(years_, str) else {"life": list(years_)} | (
+            {"approx": True} if approximate(p["born"], p["died"]) else {})
         return ({k: p[k] for k in ("name", "note", "place", "cell")} | {"kind": KIND_IDS.index(p["kind"]), "qid": p["qid"]}
-                | ({} if isinstance(life, str) else {"life": list(life)}))
+                | placed)
 
     doc = {
         "vintage": payload["vintage"],
@@ -459,13 +482,19 @@ def check(web_dir) -> list[tuple[str, str]]:
 
 
 def check_timeline(doc: dict) -> list[tuple[str, str]]:
-    """The years of life of personajes.json: two whole years, the first not after the second nor the second after
-    the download (`timeline.until`), and the file's `timeline` counts adding up to its people. A NOTE says how many
-    are shown alive today past 100: Wikidata most likely lacks their death date."""
+    """The years of life of personajes.json: a `timeline` of the right shape (counts that are whole numbers, one per
+    reason of LIFE_REASONS), each `life` two whole years, the first not after the second nor the second after the
+    download (`timeline.until`), and the counts adding up to the people. Two NOTEs: how many are shown alive today
+    past 100 (Wikidata records no death for them), and how many lives span more than `max_life` years (date ranges
+    counted in full)."""
     meta = doc.get("timeline")
-    if not isinstance(meta, dict) or not isinstance(meta.get("until"), int):
-        return [("FAIL", f"{FILE}.json: no timeline")]
-    until, people = meta["until"], doc["people"]
+    whole = lambda v: type(v) is int and v >= 0  # noqa: E731
+    if not isinstance(meta, dict) or not all(whole(meta.get(k)) for k in ("until", "max_life", "approximate", "longer")):
+        return [("FAIL", f"{FILE}.json: no timeline, or one without until, max_life, approximate and longer")]
+    left_out = meta.get("left_out")
+    if not isinstance(left_out, dict) or set(left_out) != set(LIFE_REASONS) or not all(map(whole, left_out.values())):
+        return [("FAIL", f"{FILE}.json: timeline.left_out must count each of {', '.join(LIFE_REASONS)}")]
+    until, max_life, people = meta["until"], meta["max_life"], doc["people"]
     lives = [p["life"] for p in people if "life" in p]
     bad = [p["name"] for p in people if "life" in p and not (
         isinstance(p["life"], list) and len(p["life"]) == 2 and all(type(y) is int for y in p["life"])
@@ -473,10 +502,15 @@ def check_timeline(doc: dict) -> list[tuple[str, str]]:
     if bad:
         return [("FAIL", f"{FILE}.json: {len(bad)} people with a bad life, not two years in order up to {until} "
                          f"({', '.join(bad[:5])})")]
-    left = sum(meta["left_out"].values())
-    if left + len(lives) != len(people) or not 0 <= meta["approximate"] <= len(lives):
-        return [("FAIL", f"{FILE}.json: timeline counts ({left} left out, {meta['approximate']} approximate) do not "
-                         f"match its {len(people)} people, {len(lives)} with a life")]
+    left = sum(left_out.values())
+    approx = sum(1 for p in people if "life" in p and p.get("approx"))
+    long_ = sum(1 for start, to in lives if to - start > max_life)
+    if left + len(lives) != len(people) or (meta["approximate"], meta["longer"]) != (approx, long_):
+        return [("FAIL", f"{FILE}.json: timeline counts ({left} left out, {meta['approximate']} approximate, "
+                         f"{meta['longer']} longer than {max_life} years) do not match its {len(people)} people: "
+                         f"{len(lives)} with a life, {approx} approx, {long_} longer")]
     old = sum(to == until and until - start > 100 for start, to in lives)
     return [("PASS", f"{FILE}.json: {len(lives)} people placed in time up to {until}, {left} left out"),
-            ("NOTE", f"{FILE}.json: {old} people shown alive in {until} past 100 (no death date in Wikidata)")]
+            ("NOTE", f"{FILE}.json: {old} people shown alive in {until} past 100 (no death in Wikidata)"),
+            ("NOTE", f"{FILE}.json: {long_} people span more than {max_life} years (decade or century dates counted "
+                     f"in full, or no death in Wikidata)")]
