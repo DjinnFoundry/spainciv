@@ -38,6 +38,9 @@ lists the public data behind the map.
   and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.
+- **Wildlife**: where the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture were reported in
+  2013-2018 (MITECO's 10 km grids for the EU Habitats and Birds Directive reports), with the latest lynx and wolf
+  censuses beside them.
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,

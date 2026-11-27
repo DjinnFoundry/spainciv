@@ -12,6 +12,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
   Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
   día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
+- **Fauna**, un grupo de lentes nuevo detrás de Territorio: lince ibérico, oso pardo, lobo, águila imperial ibérica y
+  quebrantahuesos. Cada hexágono muestra qué parte cae en las cuadrículas de 10 km donde el MITECO notificó la especie
+  a la UE en 2013-2018 (lince en 272 hexágonos, oso en 419, lobo en 943, águila en 867, quebrantahuesos en 244). La
+  leyenda avisa de que una cuadrícula vacía no prueba que no esté. El lince y el lobo citan su último censo (2.269 linces
+  en 2025; 333 manadas en 2021-2024) y las comunidades a las que el mapa de 2013-2018 no llega. En castellano e inglés;
+  el mapa de EE. UU. no lo tiene (E90, F37, F38).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
