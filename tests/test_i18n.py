@@ -425,6 +425,9 @@ class EnglishDataTest(unittest.TestCase):
         # military installations and their parts as OpenStreetMap names them
         ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
         ("military.json", ".ranges[].name"),
+        # reservoirs and basins as the Boletín Hidrológico writes them ("Breña, La", "Miño - Sil")
+        ("embalses.json", ".reservoirs[].name"), ("embalses.json", ".reservoirs[].boletin_name"),
+        ("embalses.json", ".basins[].name"),
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.

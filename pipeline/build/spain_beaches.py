@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import math
 import re
-import unicodedata
+from functools import partial
 
-from ..core.geo import Shape
+from ..core import names
+from ..core.geo import Shape, lonlat_scale, spread_mean
 from ..core.hexgrid import HexGrid
 from ..core.lang import tr
 from .cities import nearest_land
@@ -41,16 +42,11 @@ SPREAD_KM = 2.0  # records of one beach lie this close to each other
 BEACH_WORDS = {"playa", "playas", "platja", "platges", "praia", "praias", "praya", "hondartza", "hondartzak", "fluvial"}
 GLUE = {"de", "del", "dels", "des", "d", "da", "do", "das", "dos", "la", "las", "los", "el", "lo", "l", "les", "els",
         "sa", "ses", "s", "es", "so", "o", "a", "os", "as", "en", "na", "y", "i", "e"}
-DROPPED = BEACH_WORDS | GLUE
+DROPPED = frozenset(BEACH_WORDS | GLUE)
 
-
-def name_key(name: str) -> str:
-    """A beach name without accents, case, punctuation, the word for beach and articles: 'Playa de la Concha',
-    'La Concha' and 'Praia da Concha' all give 'concha'; 'Platja de l'Arenal' and "L´Arenal" give 'arenal'."""
-    t = unicodedata.normalize("NFD", name.lower())
-    t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
-    words = [w for w in re.split(r"[^a-z0-9ñ]+", t) if w and w not in DROPPED]
-    return " ".join(words)
+# A beach name without accents, case, punctuation, the word for beach and articles: 'Playa de la Concha', 'La Concha'
+# and 'Praia da Concha' all give 'concha'; 'Platja de l'Arenal' and "L´Arenal" give 'arenal'.
+name_key = partial(names.name_key, dropped=DROPPED)
 
 
 def forms(name: str) -> list[str]:
@@ -79,12 +75,6 @@ def beach_towns(beach: dict, by_key: dict) -> list[str]:
     return codes
 
 
-def km(a: tuple[float, float], b: tuple[float, float]) -> float:
-    """Distance between two lon/lat points, flat-earth (fine over a few km)."""
-    dx = (a[0] - b[0]) * 111.32 * math.cos(math.radians((a[1] + b[1]) / 2))
-    return math.hypot(dx, (a[1] - b[1]) * 110.57)
-
-
 class Outline:
     """A municipality's SIANE outline: whether a point is inside, and how far outside."""
 
@@ -98,29 +88,14 @@ class Outline:
         x0, y0, x1, y1 = self.near_box
         if not (x0 <= p[0] <= x1 and y0 <= p[1] <= y1):
             return math.inf
-        if self.shape.contains(*p):
-            return 0.0
-        return min(segment_km(p, r[i - 1], r[i]) for r in self.shape.rings for i in range(len(r)))
-
-
-def segment_km(p, a, b) -> float:
-    """Distance in km from p to the segment a-b (lon/lat, projected flat around p)."""
-    f = math.cos(math.radians(p[1]))
-    ax, ay, bx, by = (a[0] - p[0]) * f, a[1] - p[1], (b[0] - p[0]) * f, b[1] - p[1]
-    dx, dy = bx - ax, by - ay
-    t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / (dx * dx + dy * dy)))
-    return math.hypot((ax + t * dx) * 111.32, (ay + t * dy) * 110.57)
+        return self.shape.distance(*p, *lonlat_scale(p[1]))  # km, flat around p
 
 
 def pick(found: list[tuple[float, dict]]) -> tuple[float, float] | None:
     """One position from the records that match (distance to the outline, record): those inside if any; their mean if
     they lie within SPREAD_KM of each other, else none (two beaches of the same name)."""
     inside = [r for d, r in found if d == 0] or [r for _, r in found]
-    points = [r["lonlat"] for r in inside]
-    if any(km(p, q) > SPREAD_KM for p in points for q in points):
-        return None
-    lon, lat = (round(sum(axis) / len(points), 5) for axis in zip(*points))
-    return lon, lat
+    return spread_mean([r["lonlat"] for r in inside], SPREAD_KM)
 
 
 def index(records: list[dict]) -> dict[str, list[dict]]:

@@ -270,6 +270,26 @@ movable feast it does not tie to a month (Semana Santa, Carnaval). The State's l
 Nacional fiesta has those of its community's entries for the same fiesta (`state_same`), their distinct texts joined by
 "; " and the union of their months, and none without such an entry.
 
+**`embalses.json`** (Spain, `pipeline/build/spain_embalses.py`; read by the reservoirs lens, `web/js/ext/embalses`, when
+it first opens): `{"vintage": "2026-11-24", "provisional": true, "dates": ["1988-01-05", …], "basins": [{"name": "Segura",
+"cells": [hex indices], "actual": [hm³ | null per date], "capacity": [hm³ | null per date]}], "reservoirs": [{"name",
+"boletin_name", "basin": index into basins, "use": "hidroelectrico" | "consuntivo", "lon", "lat", "x", "y" (map km), "cell", "placed":
+"boletin" | "wikidata" | null, "qids"?: [Wikidata ids], "first", "last" (indices into dates, or null), "capacity" (last
+reported hm³), "actual" (hm³ in its last reporting week)}]}`. `dates` are every Boletín Hidrológico Tuesday, ascending,
+a week apart (E92). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
+week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E93) has null
+`lon`, `lat`, `x`, `y`, `cell` and `placed`. `boletin_name` is the name as the Boletín writes it ("Conchas, Las",
+"Vellón,El-(Pedrezuela)"), the key of every match; `name` is that name tidied to read ("Las Conchas", "El Vellón
+(Pedrezuela)"). Spain's figure is not stored: the browser sums the basins.
+
+**`embalses_semanas.json`** (Spain, same builder; loaded the first time the week leaves the latest one or a reservoir
+is clicked): `{"vintage", "actual": [[hm³ | null per reservoir] per date], "capacity": [[[date index, hm³], …] per
+reservoir]}`, the reservoirs in the order of `embalses.json`; a capacity entry starts a run that lasts until the next.
+Both files' `.en.json` overlays are `{}`. `check(web_dir)` fails when a basin series is not the sum of the matrix, the
+Boletín map's week differs from its total by more than 0.5 hm³ or lies more than a week from the last date (a week
+off is a NOTE, compared when the dates hold it), a placed point lies more than 2 km outside its basin, the dates are
+not Tuesdays a week apart, or a reservoir's `first`/`last` disagree with its values.
+
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
 | id | group | format | values | note (legend caveat) |
@@ -860,7 +880,10 @@ only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, h
 `#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`) and `explore` (the fog of war "España por
 descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
 the groups its progress panel counts by; the explored set, its storage and the reveal radius are in
-`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`). The API:
+`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`) and
+`embalses` (the reservoirs week by week, only where the data has `embalses.json`: lens `embalses`, mode `embalses`,
+static layer `reservoirs`, hash keys `semana` and `embalse` (a reservoir's `name`), e.g.
+`#lens=embalses&semana=1995-11-07&embalse=Alcántara`; the series rules are in `ext/embalses/series.js`). The API:
 
 
 **Data.**

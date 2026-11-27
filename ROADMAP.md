@@ -45,6 +45,15 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
+- Embalses (E91–E93): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
+  embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
+  no los da). Contraste hecho con 20 notas semanales de prensa del MITECO: 26-9, 3-10, 10-10, 17-10, 24-10, 31-10, 14-11
+  y 21-11-2023; 8-10, 15-10, 22-10 y 26-11-2024; 4-11 y 18-11-2025; 24-2, 29-9, 3-11 y 17-11-2026 coinciden con la cifra
+  nacional de la lente (y con las cuencas que nombran). Difiere la del 18-8-2026: la nota dio 37.107 hm³ (66,2 %) y la
+  base da hoy 37.187 (66,4 %), por una revisión posterior, sobre todo en el Duero; la nota del 3-11-2026 da 56.043 hm³
+  de capacidad y la lente 56.049. Las posiciones de 16 grandes embalses (Alcántara, Buendía, Mequinenza, Almendra,
+  Entrepeñas, Iznájar, Cenajo, Yesa, Contreras, Alarcón, Valdecañas, Riaño, Belesar, Sau, Canelles, Ricobayo) y sus hm³
+  coinciden con `Embalses_Mapa`; las situadas con Wikidata son verosímiles. Falta contrastar 1995 con una nota de prensa.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.

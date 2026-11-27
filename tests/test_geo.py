@@ -1,4 +1,5 @@
-"""Map projections: the US Albers must not move, the Spanish LAEA and its Canary inset must invert exactly."""
+"""Map projections: the US Albers must not move, the Spanish LAEA and its Canary inset must invert exactly. Then the
+planar helpers the builders share: scanlines, distances to an outline, one place from several points, name keys."""
 
 import math
 import unittest
@@ -13,7 +14,13 @@ from pipeline.core.geo import (
     LambertAzimuthalEllipsoid,
     MapProjection,
     R_EARTH_KM,
+    Shape,
+    flat_km,
+    row_crossings,
+    segment_distance,
+    spread_mean,
 )
+from pipeline.core.names import name_key
 
 # Values from the original usaciv code (tag upstream-2026-11-26) with the shipped world's projection.
 SHIPPED = (-2350.109311515341, 1559.2228881834299, 200)
@@ -165,6 +172,41 @@ class SpainProjectionTest(unittest.TestCase):
 
     def test_hex_is_ten_km_across(self):
         self.assertAlmostEqual(math.sqrt(3) * countries.COUNTRIES["es"].hex_radius_km, 10.0, places=12)
+
+
+class PlanarTest(unittest.TestCase):
+    SQUARE_WITH_HOLE = [[(0, 0), (10, 0), (10, 10), (0, 10)], [(4, 4), (6, 4), (6, 6), (4, 6)]]
+
+    def test_row_crossings_even_odd_and_half_open(self):
+        rows = row_crossings(self.SQUARE_WITH_HOLE, 2.0)  # rows at y = 0, 2, …, 8 (y = 10 is the top edge: out)
+        self.assertEqual(sorted(rows), [0, 1, 2, 3, 4])
+        self.assertEqual(rows[1], [0, 10])
+        self.assertEqual(rows[2], [0, 4, 6, 10])  # the hole's bottom edge row: inside it, half-open like ring_contains
+        half = row_crossings(self.SQUARE_WITH_HOLE, 2.0, 0.5)  # rows at y = 1, 3, …, 9
+        self.assertEqual(sorted(half), [0, 1, 2, 3, 4])
+        self.assertEqual(half[2], [0, 4, 6, 10])
+
+    def test_shape_distance(self):
+        s = Shape(self.SQUARE_WITH_HOLE)
+        self.assertEqual(s.distance(2, 2), 0.0)
+        self.assertEqual(s.distance(5, 5), 1.0)  # in the hole: outside, 1 from its edges
+        self.assertEqual(s.distance(13, 14), 5.0)  # off a corner
+        self.assertEqual(s.distance(-2, 5), 2.0)
+        self.assertEqual(s.distance(-2, 5, kx=3.0), 6.0)  # scaled offsets
+        self.assertEqual(segment_distance((1, 1), (3, 3), (3, 3)), math.hypot(2, 2))  # a point segment
+
+    def test_flat_km_and_spread_mean(self):
+        self.assertAlmostEqual(flat_km((-4.0, 40.0), (-4.0, 40.1)), 11.057, places=3)
+        self.assertAlmostEqual(flat_km((-4.0, 40.0), (-3.9, 40.0)), 11.132 * math.cos(math.radians(40)), places=3)
+        near = [(-4.0, 40.0), (-4.0, 40.01)]  # 1.1 km apart
+        self.assertEqual(spread_mean(near, 2.0), (-4.0, 40.005))
+        self.assertIsNone(spread_mean(near + [(-4.0, 40.03)], 2.0))  # the third is 3.3 km from the first
+        self.assertIsNone(spread_mean([], 2.0))
+
+    def test_name_key(self):
+        self.assertEqual(name_key("Pantà de L'Àliga, El"), "panta de l aliga el")
+        self.assertEqual(name_key("Pantà de L'Àliga, El", {"panta", "de", "l", "el"}), "aliga")
+        self.assertEqual(name_key("Ñora"), "nora")
 
 
 if __name__ == "__main__":

@@ -259,7 +259,7 @@ kbd {
 .al-buttons { margin-top: 10px; }
 @media (max-width: 700px) { .game-dock { padding-top: 18px; } }
 
-/* ---------- a lens's panel in the left dock (app/lensPanel.js: the fiesta calendar, the sun lens) ---------- */
+/* ---------- a lens's panel in the left dock (app/lensPanel.js: the fiesta calendar, the sun lens, the reservoirs) ---------- */
 .lens-panel { padding: 12px 16px 18px; font-size: 13px; line-height: 1.4; }
 .lens-panel-head { display: flex; align-items: flex-start; gap: 8px; }
 .lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
@@ -309,6 +309,54 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 @media (min-width: 701px) { .sn-key, .sn-note { display: none; } }
 /* The minimap sits over the Canaries' inset, which the lens's text names: it gives way while the panel is open. */
 body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
+
+.em-prov { margin: 4px 0 8px; font-size: 12px; }
+.em-slider { width: 100%; margin: 4px 0; accent-color: var(--gold-bright); }
+.em-steps, .em-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
+.em-year select { font: inherit; color: var(--ink); background: rgba(0,0,0,.3); border: 1px solid rgba(201,164,92,.45); border-radius: 4px; padding: 2px 4px; }
+.em-btn {
+  font: inherit; font-size: 12px; color: var(--ink); background: rgba(0,0,0,.25); border: 1px solid rgba(201,164,92,.45);
+  border-radius: 4px; padding: 3px 8px; cursor: pointer;
+}
+.em-btn:hover, .em-btn[aria-pressed="true"] { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.em-big { margin: 10px 0 2px; }
+.em-where { margin-right: 4px; }
+.em-big b { font-family: var(--serif); font-size: 22px; color: var(--gold-bright); font-weight: normal; margin-right: 4px; }
+.em-chart { margin: 4px 0 0; }
+.em-chart svg { display: block; width: 100%; height: auto; cursor: pointer; }
+.em-chart figcaption { font-size: 11px; }
+.em-grid { stroke: rgba(201,164,92,.22); stroke-width: 1; }
+.em-axis { fill: var(--ink-dim); font-size: 9px; font-family: var(--sans); }
+.em-line { fill: none; stroke: #8ac7ea; stroke-width: 1.5; }
+.em-res-line { fill: none; stroke: var(--gold-bright); stroke-width: 1.6; }
+.em-cursor { stroke: var(--ink); stroke-width: 1; opacity: .7; }
+.em-dot { fill: #8ac7ea; stroke: #0d2a47; stroke-width: 1.5; }
+.em-count { margin: 6px 0 10px; }
+.em-h3 { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
+.em-basins { list-style: none; margin: 0; padding: 0; }
+.em-basin {
+  display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; width: 100%; padding: 4px 6px; text-align: left; background: none;
+  color: inherit; font: inherit; border: none; border-bottom: 1px solid rgba(201,164,92,.18); border-radius: 0; cursor: pointer;
+}
+.em-basin:hover, .em-basin:focus-visible { background: rgba(90,74,36,.3); }
+.em-bname { font-weight: 600; overflow-wrap: anywhere; }
+.em-bpct { font-variant-numeric: tabular-nums; }
+.em-bar { grid-column: 1 / -1; height: 4px; background: rgba(0,0,0,.35); border-radius: 2px; overflow: hidden; }
+.em-bar i { display: block; height: 100%; background: #8ac7ea; border-radius: 2px; }
+.em-bamt { grid-column: 1 / -1; font-size: 11px; }
+.em-res { margin: 8px 0 4px; padding: 2px 8px 6px; border: 1px solid rgba(236,208,142,.45); border-radius: 6px; background: rgba(90,74,36,.18); }
+.em-res p { margin: 2px 0; }
+.em-res-close { margin-left: auto; }
+.em-key { display: inline-block; width: 14px; height: 2px; margin-right: 6px; vertical-align: middle; }
+.em-key-res { background: var(--gold-bright); }
+.em-note { margin: 12px 0 0; font-size: 12px; }
+/* On a phone the dock is a sheet: the title, week and slider stay in view while the basins scroll under them. */
+@media (max-width: 700px) {
+  .em-top { position: sticky; top: -18px; z-index: 1; margin: -18px -16px 0; padding: 18px 16px 4px; border-bottom: 1px solid var(--line);
+            background: #1c2938; /* --panel-2 without its alpha: the basins scroll under it */ }
+  .em-top .lens-panel-head h2 { font-size: 16px; }
+  .em-top .em-prov { margin: 2px 0 4px; }
+}
 
 @media (max-width: 1360px) and (min-width: 701px) {
   body.dock-open #minimap-wrap { display: none; }
