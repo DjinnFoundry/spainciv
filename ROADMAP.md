@@ -22,8 +22,9 @@ decisiones que salgan van a `DECISIONS.md`.
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
 - Los ciudadanos de la City View y los desastres siguen siendo solo de EE UU. Las rutas comerciales de España son de
-  mercancías por carretera entre comunidades (A27); el comercio exterior por provincia en euros (ficheros territoriales
-  de la AEAT) está por decidir.
+  mercancías por carretera entre comunidades (A31). Falta el comercio exterior por provincia en euros, que el plan
+  saca de DataComex (Secretaría de Estado de Comercio, con los datos de Aduanas de la AEAT): David decide si entra y
+  cómo se dibuja.
 - Ejército (E67-E71): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
   `publicaciones.defensa.gob.es` no respondía el 27-11-2026) y el gasto de Defensa por provincia. Los límites son los
   de OpenStreetMap, y 165 de las 478 instalaciones no tienen rama (oficinas, residencias, institutos del Órgano

@@ -613,12 +613,13 @@ Freight "trade routes" between FAF5 zones (`faf5`), domestic flows only (`trade_
 * Values are FAF model estimates in **million current dollars** (`value_musd`) and **thousand short tons** (`tons_k`), as
   FAF publishes them; say so in the UI. Pipeline-dominated routes (crude, gas) are real and should get their own style.
 
-**Spain** (`pipeline/build/spain_trade.py`, `eptmc`; DECISIONS A27, F35) writes the same file in tonnes, about 16 kB
+**Spain** (`pipeline/build/spain_trade.py`, `eptmc`; DECISIONS A31, F39) writes the same file in tonnes, about 16 kB
 plus the `trade.en.json` overlay:
 
 ```jsonc
 {
   "version": 1, "vintage": "EPTMC 2025", "year": 2025, "sources": ["eptmc"],
+  "updated": "2026-11-16",                             // the workbook's Last-Modified: the licence asks to show it
   "measure": "tons",                                   // absent in the US file = value; render/art/improvements.js routeSize()
   "rule": "Los 30 mayores flujos de mercancías por carretera entre las 15 comunidades autónomas peninsulares …",
   "path_note": "La EPTMC da la comunidad de carga y la de descarga, no el recorrido: …",
@@ -627,11 +628,11 @@ plus the `trade.en.json` overlay:
   "commodities": {"0": "Productos agrícolas y animales vivos", "…": "…"},   // the 10 NST/R chapters of table 7.5
   "national_k": {"interregional": 402640.3, "intra": 1177887.7, "intl_sent": 46285.3, "intl_received": 35055.4},
   "zones": [{"id": "13", "name": "Comunidad de Madrid", "short": "Madrid", "kind": "community", "provinces": ["28"],
-             "significant": true,                       // false for 04, 05 and "18+19" (Ceuta y Melilla): no routes
+             "significant": true,                       // false for 04, 05 and "18+19" (Ceuta y Melilla): no routes, anchor null
              "anchor": {"cell": 9144, "x": 960.0, "y": 450.3, "city": null},
              "partners": [["08", 40642.9, "truck"]],    // top 5, both directions, communities with published flows
              "totals_k": {"within": 70692.4, "sent": 42157.9, "received": 55299.7, "intl_sent": 2050.3, "intl_received": 2731.6},
-             "goods_k": {"sent": [/* 10, null where the source has .., . or - */], "received": [/* 10 */]}}],   // sorted by id
+             "goods_k": {"sent": [/* 10 */], "received": [/* 10 */]}}],   // sorted by id
   "routes": [{"a": "08", "b": "13", "rank": 1, "tons_k": 40642.9, "ab_k": 23687.1, "ba_k": 16955.8,
               "tkm_m": 3270.6, "haul_km": 80,            // round(tkm_m × 1000 / tons_k)
               "modes": {"truck": 1.0}, "top_mode": "truck", "top_commodity": null}]   // no path: a straight line
@@ -640,7 +641,10 @@ plus the `trade.en.json` overlay:
 
 * **Zones**: the 17 communities and Ceuta y Melilla together (`18+19`), as the survey publishes them; the cells are
   those of their provinces (world `states[owner].fips`). `within` includes intramunicipal trips; `intl_*` are Spanish
-  trucks only (table 6.3).
+  trucks only (table 6.3). A zone without published flows has no anchor (`null`): nothing is drawn from it.
+* **null** in `totals_k`, `goods_k`, `partners` and the routes is a cell the workbook leaves without a figure: `..`
+  (not significant, as its footnote says), or `.` and `-`, which it does not define. None of them is read as zero, so
+  null does not tell nil from not published; the UI shows «–» and its caveat says so.
 * **Routes**: pairs of significant communities with both directions published, summed; the 30 largest by tonnes
   (an editorial cut). No `path`: the survey gives where goods are loaded and unloaded, not the road.
 
