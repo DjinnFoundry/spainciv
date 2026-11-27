@@ -16,6 +16,11 @@ decisiones que salgan van a `DECISIONS.md`.
 - Minas: la lista por mina más reciente del IGME es la de 2019; La Parrilla (wolframio, desde 2020) y Alquife (hierro,
   2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
+- Lentes de fauna (E94, F38): son las cuadrículas de 2013-2018. España mandó a la UE las de 2019-2024 en julio de 2025,
+  pero el MITECO aún no las publica (comprobado el 2026-11-27). Cuando salgan, cambiar las URL y el periodo de
+  `especies.py`: los códigos de cuadrícula son los mismos. Se ve la falta en el lobo (552 cuadrículas en el mapa;
+  la distribución de 2019-2024 del censo tiene 1.357 de presencia estable) y en el lince, que el censo de 2025 ya cuenta
+  en la Región de Murcia, Castilla y León y la Comunidad de Madrid.
 - El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E31).
 - Valor de la vivienda: la lente es provincial (E49); el valor tasado municipal (más de 25.000 habitantes) solo está en un XLS binario de un servidor que responde 503. Si vuelve, la lente puede bajar a municipio.
 - Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).

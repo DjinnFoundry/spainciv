@@ -22,6 +22,15 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   cada una y una tabla de comunidades con sus socios, las mercancías que más envían y reciben, el saldo y el tráfico
   con el extranjero. Baleares, Canarias, Ceuta y Melilla salen con sus totales y sin rutas: la encuesta no publica
   sus flujos. El pipeline lee el .xls del Ministerio con un lector BIFF8 propio (A30, F36).
+- **Fauna**, un grupo de lentes nuevo detrás de Territorio: dónde se notificaron el lince ibérico, el oso pardo, el lobo,
+  el águila imperial ibérica y el quebrantahuesos en 2013-2018. Cada hexágono muestra qué parte cae en las cuadrículas
+  de 10 km donde el MITECO notificó la especie a la UE para ese periodo (lince en 272 hexágonos, oso en 419, lobo en
+  943, águila en 867, quebrantahuesos en 244). La nota de la leyenda, también en el móvil, da la edad de las
+  cuadrículas, la última cifra del censo y que una cuadrícula vacía no prueba que no esté. El lince y el lobo citan su
+  censo (2.269 linces en 2025; 333 manadas en 2021-2024 y, para 2019-2024, 1.357 cuadrículas de presencia estable del
+  lobo) y las comunidades a las que no llegan las cuadrículas de 2013-2018. Los nombres de las lentes ya no se cortan en
+  el selector: pasan a dos líneas. En una barra estrecha, una lente sin icono propio muestra su emoji en lugar de un
+  botón vacío. En castellano e inglés; el mapa de EE. UU. no tiene estas lentes (E94, F38, F39).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a

@@ -252,6 +252,31 @@ only its own `names`, in that lens's order; the map copies the other lens's `lab
 `crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
 lens: "Nadie", nobody born there).
 
+**Value display** (optional keys, any lens; absent = as before): `decimals` fixes the decimals of a `pct` value
+(otherwise 1 under 10 %, 0 above); `unit_in_value: true` writes the `unit` after a `pct` value in the tooltip, not on
+the legend's ticks; `bounded: true` says the domain is the value's natural range, so the legend's end ticks and band
+hint carry no ≤/≥.
+
+**Wildlife lenses** (Spain, `pipeline/build/spain_fauna.py`): `lynx`, `bear`, `wolf`, `imperial_eagle` and
+`bearded_vulture`, in group `fauna` (the first of Spain's own groups, so the picker shows it after Land), with
+`"format": "pct"`, `"scale": "linear"`, `"domain": [0, 1]` (fixed, so no percentile note), `"bounded": true`,
+`"decimals": 0` and `"unit_in_value": true` (the tooltip reads "43 % del hexágono en cuadrículas con la especie"), a
+`scale_text` for the Almanac and `"source":
+"bdn_especies"`. A value is the share of the land hex inside the EEA 10 km squares where MITECO reported the species
+for 2013-2018 (84 lattice points per hex, each looked up in EPSG:3035), rounded to 0.01; 0 = no reported square there;
+null = not Spanish land. The `note` (shown on desktop and phone) gives the squares' period and directive article, the
+latest census figure for lynx and wolf, and that an empty square is not proof of absence. The lynx and wolf
+descriptions open with their census sentence: the census total, its communities (`provinces.COMMUNITY_NAMES`), and
+those the squares do not reach, each lattice point counting for the community of the SIANE municipality it falls in;
+the wolf's adds the census's 2019-2024 distribution. `check(web_dir)` fails a missing lens, a value outside 0..1, a
+lens without a note or with fewer than 50 hexes > 0.
+
+Their interim files: `bdn_especies.json` = `{"period": [2013, 2018], "grid": "EEA 10 km, ETRS89-LAEA (EPSG:3035)",
+"species": {"Lynx pardinus": {"directive": "art17", "code": "1362", "refgrid", "cells": [sorted "10kmE…N…"]}, …}}`;
+`miteco_censos_fauna.json` = `{"censuses": {"Lynx pardinus": {"period": "2025", "figure": 2269, "unit": "individuals",
+"communities": [INE community codes], "url", "page": "2"}, "Canis lupus": {…, "unit": "packs", "stable_cells": 1357,
+"cells_period": "2019-2024", "sporadic_cells": 37, "page": "4-6"}}}`.
+
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
 `great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",
 "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its

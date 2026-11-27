@@ -8,7 +8,7 @@ from unittest import mock
 
 from pipeline import countries
 from pipeline.core import store
-from pipeline.core.lang import Num, Text, join, join_texts, num, pct, split, tr
+from pipeline.core.lang import Num, Text, and_list, join, join_texts, nor_list, num, pct, split, tr
 
 LANGS = ("es", "en")
 
@@ -33,6 +33,36 @@ class TextTest(unittest.TestCase):
         self.assertEqual([num(1234), num(12345), num(2.5), num(1234.5, 1)], ["1234", "12.345", "2,5", "1234,5"])
         self.assertEqual([num(1234, lang="en"), num(2.5, lang="en"), num(1234567.25, 2, "en")], ["1,234", "2.5", "1,234,567.25"])
         self.assertEqual([pct(0.125, 1), pct(0.125, 1, "en")], ["12,5 %", "12.5%"])
+
+
+class ListTest(unittest.TestCase):
+    """and_list / nor_list: each language joins its own strings."""
+
+    MADRID, CYL = tr("Comunidad de Madrid", "Community of Madrid"), tr("Castilla y León", "Castile and León")
+
+    def test_each_language_from_its_own_names(self):
+        self.assertEqual(and_list(["Galicia", self.CYL, self.MADRID]),
+                         tr("Galicia, Castilla y León y Comunidad de Madrid",
+                            "Galicia, Castile and León and Community of Madrid"))
+
+    def test_spanish_e_before_an_i_sound(self):
+        self.assertEqual(and_list(["Andalucía", "Illes Balears"])["es"], "Andalucía e Illes Balears")
+        self.assertEqual(and_list(["Toledo", "Hinojosa"])["es"], "Toledo e Hinojosa")
+        self.assertEqual(and_list(["Toledo", "Hierro"])["es"], "Toledo y Hierro")  # "hie-" is a y- sound
+        self.assertEqual(and_list(["Andalucía", "Illes Balears"])["en"], "Andalucía and Illes Balears")
+
+    def test_after_a_negative(self):
+        self.assertEqual(nor_list([tr("Región de Murcia", "Region of Murcia"), self.CYL, self.MADRID]),
+                         tr("Región de Murcia, Castilla y León ni Comunidad de Madrid",
+                            "Region of Murcia, Castile and León or Community of Madrid"))
+        self.assertEqual(nor_list(["Toledo", "Ibiza"])["es"], "Toledo ni Ibiza")  # no "e" after a negative
+
+    def test_one_name_and_none(self):
+        self.assertEqual(and_list([self.CYL]), self.CYL)
+        self.assertEqual(nor_list(["Extremadura"]), tr("Extremadura", "Extremadura"))
+        for join_ in (and_list, nor_list):
+            with self.assertRaises(ValueError):
+                join_([])
 
 
 class SplitTest(unittest.TestCase):

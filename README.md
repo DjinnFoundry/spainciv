@@ -41,6 +41,9 @@ lists the public data behind the map.
 - **Reservoirs**: the water in each basin week by week since 1988, from the Boletín Hidrológico (MITECO), with a ring
   per reservoir, the series' lowest and highest weeks and a year-by-year play
   ([#lens=embalses](https://spainciv.djinnfoundry.com/#lens=embalses&semana=1995-11-07)).
+- **Wildlife**: where the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture were reported in
+  2013-2018 (MITECO's 10 km grids for the EU Habitats and Birds Directive reports), with the latest lynx and wolf
+  censuses beside them.
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
