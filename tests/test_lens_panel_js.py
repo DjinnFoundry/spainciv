@@ -2,7 +2,7 @@
 web/js/app/api.js, a lens state like main.js setLens, docks and elements that only record what is done to them, and a
 URL hash whose keys are applied the way createHashState applies them to a key registered after the page loaded (once,
 in a microtask). Then the two lenses that use it, the fiesta calendar and the sun lens, installed on Spain's data and
-opened from links. Run with node; skipped without it."""
+opened from links, and the reservoirs lens the same way. Run with node; skipped without it."""
 
 import json
 import shutil
@@ -215,6 +215,71 @@ class SunPanelTest(unittest.TestCase):
         today = run("out(S.isoDay(S.spainToday()));", "const S = await import('./web/js/ext/sun/solar.js');"
                     "const out = (x) => console.log(JSON.stringify(x));")
         self.assertEqual((got["mode"], got["sol"], got["dia"]), ("sun", "puesta", today))
+
+
+@unittest.skipUnless(NODE, "node is not installed")
+class ReservoirsPanelTest(unittest.TestCase):
+    """The reservoirs lens (web/js/ext/embalses) on Spain's embalses.json, opened from links: the dock keeps the
+    elements it is asked for, so what the panel writes can be read."""
+
+    def open(self, link: str, then: str = "", weeks: bool = True):
+        return run(f"""
+            setCountry({{ country: {{ ...world.country, lang: 'es', locale: 'es-ES', data: ['embalses', 'embalses_semanas'] }} }}, null);
+            globalThis.requestAnimationFrame = (f) => setTimeout(f, 0);
+            globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+            const app = spainApp({json.dumps(link)});
+            const els = new Map(), loads = [];
+            const keep = (el) => Object.assign(el, {{ querySelector: (sel) => (els.has(sel) || els.set(sel, keep(fakeEl())), els.get(sel)) }});
+            app.ui.dock = () => (app.dockEl = keep(fakeEl()));
+            Object.assign(app, {{
+              registerStaticLayer() {{}}, requestDraw() {{}}, cam: {{ scale: 1 }},
+              loadData: async (n) => (loads.push(n), n === 'embalses_semanas' && !{json.dumps(weeks)} ? null : file(n)),
+            }});
+            (await import('./web/js/ext/embalses/index.js')).install(app);
+            const lens = app.lensById.get('embalses');
+            for (let i = 0; i < 5; i++) await tick();
+            {then}
+            for (let i = 0; i < 5; i++) await tick();
+            out({{ mode: app.mode, lens: app.state.lens?.id ?? null, semana: app.keys.get('semana').get(),
+                   embalse: app.keys.get('embalse').get(), painted: lens.values.filter((v) => v != null).length, loads,
+                   count: els.get('[data-count]')?.textContent ?? null, res: els.get('[data-res]')?.innerHTML ?? null }});
+        """, PRELUDE + SPAIN)
+
+    def test_a_link_with_the_lens_and_a_week_opens_it_on_that_week(self):
+        got = self.open("#lens=embalses&semana=1995-11-09")  # between two Tuesdays: the one before
+        self.assertEqual((got["mode"], got["lens"], got["semana"]), ("embalses", "embalses", "1995-11-07"))
+        self.assertEqual(got["loads"], ["embalses", "embalses_semanas"])
+        self.assertGreater(got["painted"], 5000)
+        self.assertRegex(got["count"], r"^\d+ embalses en el Boletín esa semana")
+
+    def test_the_lens_alone_opens_the_latest_week_without_the_matrix(self):
+        got = self.open("#lens=embalses")
+        latest = json.loads((ROOT / "sites/es/data/embalses.json").read_text())["dates"][-1]
+        self.assertEqual((got["mode"], got["semana"], got["loads"]), ("embalses", latest, ["embalses"]))
+
+    def test_a_week_that_is_not_a_date_or_another_lens_opens_nothing(self):
+        for link in ("#semana=nada", "#semana=1995-02-30", "#lens=density&semana=1995-11-07", "#lens=density&embalse=Alcántara"):
+            with self.subTest(link=link):
+                got = self.open(link)
+                self.assertEqual((got["mode"], got["lens"], got["loads"]), (None, None, []))
+
+    def test_a_week_after_the_data_loaded(self):
+        got = self.open("#lens=embalses", then="app.keys.get('semana').set('nada'); app.keys.get('semana').set('2005-06-14');")
+        self.assertEqual(got["semana"], "2005-06-14")
+
+    def test_a_reservoir_in_the_link_is_picked_and_kept(self):
+        got = self.open("#lens=embalses&embalse=Alcántara")
+        self.assertEqual((got["mode"], got["embalse"]), ("embalses", "Alcántara"))
+        self.assertIn("embalses_semanas", got["loads"])
+        self.assertIn("Alcántara", got["res"])
+        self.assertIsNone(self.open("#lens=embalses&embalse=Nadie")["embalse"])
+
+    def test_a_failed_weekly_load_says_so(self):
+        got = self.open("#lens=embalses&semana=1995-11-07&embalse=Alcántara", weeks=False)
+        self.assertEqual(got["semana"], "1995-11-07")
+        self.assertEqual(got["count"], "No se ha podido cargar la serie semanal: los anillos y los embalses solo están "
+                                        "en la última semana.")
+        self.assertIn("No se ha podido cargar la serie semanal", got["res"])
 
 
 if __name__ == "__main__":

@@ -39,6 +39,11 @@ class WeekTest(unittest.TestCase):
         # exact; between two Tuesdays → the one before; the first; before the first → none; after the last → the last
         self.assertEqual(got, [1, 1, 0, None, 4, None, None, None, None, None])
 
+    def test_iso_day(self):
+        got = run("out(['1995-11-07', '2024-02-29', '2023-02-29', '1995-13-01', '7-11-1995', 'nada', '', null]"
+                  ".map(S.isoDay));")
+        self.assertEqual(got, [True, True, False, False, False, False, False, False])
+
     def test_same_week_a_year_on(self):
         got = run("out([S.sameWeekNextYear(dates, 1), S.sameWeekNextYear(dates, 3), S.sameWeekIn(dates, 1, 1996), "
                   "S.sameWeekIn(dates, 1, 1990)]);")
@@ -110,6 +115,25 @@ class RingTest(unittest.TestCase):
                   "S.capacityAt([[2, 5]], 1)]);")
         self.assertEqual(got[0], [3, 3, 6, 14])
         self.assertEqual(got[1:], [[210, 210, 203, 203], None])
+
+    def test_rings_shrink_with_the_map_and_the_small_ones_drop_out(self):
+        got = run("out([S.ringPx(14, S.RING_FULL_SCALE), S.ringPx(14, 8), S.ringPx(14, S.RING_FULL_SCALE / 2), "
+                  "S.ringPx(3, S.RING_FULL_SCALE), S.ringPx(3, S.RING_FULL_SCALE / 2), S.RING_MIN_PX]);")
+        self.assertEqual(got[:4], [14, 14, 7, 3])  # full size from RING_FULL_SCALE on, never larger
+        self.assertIsNone(got[4])  # 1.5 px: not drawn
+        self.assertEqual(got[5], 2.5)
+        # Spain's country view on a phone (≈0.3 px per km) keeps only the largest reservoirs.
+        got = run("out(spain.reservoirs.filter((r) => r.x != null && r.last === spain.dates.length - 1"
+                  " && S.ringPx(S.ringRadius(r.capacity), 0.3) != null).length);")
+        self.assertLess(got, 60)
+        self.assertGreater(got, 5)
+
+    def test_find_a_reservoir_by_name(self):
+        got = run("out([S.findReservoir(spain.reservoirs, 'Alcántara') != null, S.findReservoir(spain.reservoirs, 'La Breña'),"
+                  " S.findReservoir(spain.reservoirs, 'Breña, La'), S.findReservoir(spain.reservoirs, 'Nadie')]);")
+        self.assertTrue(got[0])
+        self.assertIsInstance(got[1], int)
+        self.assertEqual(got[2:], [None, None])  # the name the map shows, not the Boletín's
 
     def test_reporting_needs_the_matrix_off_the_latest_week(self):
         got = run("""

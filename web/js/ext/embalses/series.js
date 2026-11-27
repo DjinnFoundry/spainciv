@@ -5,11 +5,17 @@
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Is v a real calendar day written YYYY-MM-DD ("1995-11-07"; not "1995-02-30")? */
+export function isoDay(v) {
+  const s = String(v ?? "");
+  return ISO.test(s) && !Number.isNaN(Date.parse(s + "T00:00:00Z")) && new Date(s + "T00:00:00Z").toISOString().slice(0, 10) === s;
+}
+
 /** The week of a URL value ("1995-11-07"): that Boletín Tuesday, or the latest one before a date between two;
  *  null for anything that is not a date or falls before the first week. */
 export function parseWeek(v, dates) {
   const s = String(v ?? "");
-  if (!ISO.test(s) || Number.isNaN(Date.parse(s + "T00:00:00Z")) || new Date(s + "T00:00:00Z").toISOString().slice(0, 10) !== s) return null;
+  if (!isoDay(s)) return null;
   let lo = 0, hi = dates.length - 1;
   if (!dates.length || s < dates[0]) return null;
   while (lo < hi) {
@@ -90,6 +96,24 @@ export function ringArc(actual, capacity) {
 
 /** A ring's radius in css px from the reservoir's capacity (hm³): 3·√(capacity / 50), between 3 and 14. */
 export const ringRadius = (capacity) => Math.max(3, Math.min(14, 3 * Math.sqrt(Math.max(0, capacity) / 50)));
+
+/** Map scale (css px per km) from which the rings have their full ringRadius; zoomed further out they shrink with
+ *  the map, and below RING_MIN_PX they are not drawn, so the country view shows the large reservoirs and the basins
+ *  (a drawing convention). */
+export const RING_FULL_SCALE = 1;
+export const RING_MIN_PX = 2.5;
+
+/** The radius in css px of a ring of ringRadius r at map scale s, or null when it is too small to draw. */
+export function ringPx(r, s) {
+  const px = r * Math.min(1, s / RING_FULL_SCALE);
+  return px >= RING_MIN_PX ? px : null;
+}
+
+/** The index of the reservoir with this name (as embalses.json writes it), or null. */
+export function findReservoir(reservoirs, name) {
+  const k = reservoirs.findIndex((r) => r.name === name);
+  return k < 0 ? null : k;
+}
 
 /** The capacity in force in week i from a reservoir's runs [[from week, hm³], …] (null before the first). */
 export function capacityAt(runs, i) {

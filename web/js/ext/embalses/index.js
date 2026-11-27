@@ -3,26 +3,28 @@
 //   lens "embalses" in the lens picker, after the wildfires lens: each peninsular hex takes its basin's fill in the
 //     chosen week (Σ water stored ÷ Σ capacity of the reservoirs the Boletín Hidrológico reported that week)
 //   static layer "reservoirs" (z 65, only with the lens): a ring per reservoir placed that week, its arc the share
-//     of its capacity it holds, larger reservoirs drawn first so the small ones stay on top
-//   mode "embalses" (opens and closes with the lens): the left dock with the week control, Spain's line since 1988,
-//     the basins from the driest and a clicked reservoir's own line
-//   URL hash: #lens=embalses&semana=1995-11-07
+//     of its capacity it holds, larger reservoirs drawn first so the small ones stay on top; zoomed out, the rings
+//     shrink with the map and the smallest drop out (S.ringPx)
+//   mode "embalses" (app/lensPanel.js: opens and closes with the lens): the left dock with the week control, Spain's
+//     line since 1988, a clicked reservoir's own line and the basins from the driest
+//   URL hash: #lens=embalses&semana=1995-11-07&embalse=Alcántara
 // embalses.json loads the first time the lens opens; the weekly matrix (embalses_semanas.json) the first time the
 // week leaves the latest one or a reservoir is clicked. The series rules live in series.js.
 import { country } from "../../app/country.js";
 import { t } from "../../i18n.js";
 import { esc, int, pct } from "../../format.js";
+import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import * as S from "./series.js";
 
 const LENS = "embalses";
 const MODE = "embalses";
 const LAYER = "reservoirs";
-const HASH_KEY = "semana";
+const HASH_KEY = "semana", PICK_KEY = "embalse";
 const FILE = "embalses", WEEKS_FILE = "embalses_semanas";
 const PLAY_MS = 800; // a year a step while "year by year" plays
 const PAINT_GAP_MS = 120; // while the slider drags, the map repaints at most this often
 const FLY_SCALE = 1.2; // css px per km at most when a basin flies into view
-// Empty to full: dry earth to water, lightness rising all the way (DECISIONS E85).
+// Empty to full: dry earth to water, lightness rising all the way (DECISIONS E90).
 const RAMP = ["#593215", "#774e23", "#82734b", "#689693", "#6ab0ca", "#8ac7ea", "#bbe0fc"];
 const CHART = { w: 328, h: 120, top: 8, bottom: 18, left: 28, right: 6 };
 
@@ -44,10 +46,10 @@ export function install(app) {
   app.addLens(lens, { after: fires?.id });
 
   let doc = null; // embalses.json once loaded
-  let weeks = null, weeksLoad = null; // embalses_semanas.json, its load
+  let weeks = null, weeksLoad = null, weeksFailed = false; // embalses_semanas.json, its load, whether it failed
   let week = null, wanted = null; // the week shown; a week the URL asked for before the data arrived
-  let picked = null; // the clicked reservoir's index
-  let dock = null, mark = null, token = 0, leaving = false;
+  let picked = null, wantedPick = null; // the clicked reservoir's index; a reservoir the URL named before the data
+  let dock = null, mark = null, token = 0;
   let order = []; // reservoirs drawn largest first
   let rings = []; // the week's rings: [{k, x, y, r, arc}], in drawing order
   let paintTimer = 0, paintRaf = 0, lastPaint = 0, play = null;
@@ -96,7 +98,9 @@ export function install(app) {
       ctx.lineCap = "butt";
       for (const g of rings) {
         if (g.x < x0 || g.x > x1 || g.y < y0 || g.y > y1) continue;
-        const rr = g.r / s;
+        const px = S.ringPx(g.r, s);
+        if (px == null && g.k !== picked) continue;
+        const rr = (px ?? S.RING_MIN_PX) / s;
         ctx.beginPath();
         ctx.arc(g.x, g.y, rr, 0, Math.PI * 2);
         ctx.lineWidth = 3.2 / s;
@@ -129,8 +133,8 @@ export function install(app) {
     hit(x, y, Rpx) {
       const s = Rpx / app.w.grid.R;
       for (let j = rings.length - 1; j >= 0; j--) { // the small ones are on top
-        const g = rings[j];
-        if (Math.hypot(x - g.x, y - g.y) <= (g.r + 3) / s) return g;
+        const g = rings[j], px = S.ringPx(g.r, s) ?? (g.k === picked ? S.RING_MIN_PX : null);
+        if (px != null && Math.hypot(x - g.x, y - g.y) <= (px + 3) / s) return g;
       }
       return null;
     },
@@ -154,38 +158,23 @@ export function install(app) {
     return true;
   });
 
-  // --- the lens and the mode come and go together -------------------------------------------------------------
-  app.on("lens", (l) => {
-    if (l === lens) {
-      if (app.mode !== MODE) app.setMode(MODE);
-    } else if (app.mode === MODE && !leaving) app.setMode(null);
-  });
-
-  app.registerMode(MODE, {
-    enter() {
-      dock = app.ui.dock("left", { width: 360, label: t("embalses.lens.name") });
-      dock.classList.add("embalses-dock");
+  // --- the panel: opens and closes with the lens (app/lensPanel.js) --------------------------------------------
+  const panel = lensPanel(app, lens, {
+    mode: MODE, width: 360,
+    open(d) {
+      dock = d;
       dock.innerHTML = `<p class="muted">${esc(t("embalses.loading"))}</p>`;
-      if (app.state.lens !== lens) app.setLens(lens);
       open(++token);
     },
-    exit() {
-      leaving = true;
-      try {
-        token++;
-        stop();
-        clearTimeout(paintTimer);
-        cancelAnimationFrame(paintRaf);
-        if (mark && app.state.highlight === mark) app.setHighlight(null);
-        mark = null;
-        picked = null;
-        dock?.classList.remove("embalses-dock");
-        app.ui.undock("left");
-        dock = null;
-        if (app.state.lens === lens) app.setLens(null);
-      } finally {
-        leaving = false;
-      }
+    close() {
+      token++;
+      stop();
+      clearTimeout(paintTimer);
+      cancelAnimationFrame(paintRaf);
+      if (mark && app.state.highlight === mark) app.setHighlight(null);
+      mark = null;
+      picked = wanted = wantedPick = null;
+      dock = null;
     },
   });
 
@@ -205,30 +194,30 @@ export function install(app) {
     const w = wanted != null ? S.parseWeek(wanted, doc.dates) : null;
     wanted = null;
     week = w ?? week ?? latest();
-    if (week !== latest()) needWeeks();
+    if (wantedPick != null) picked = S.findReservoir(doc.reservoirs, wantedPick) ?? picked;
+    wantedPick = null;
+    if (week !== latest() || picked != null) needWeeks();
     build();
     update();
     paint();
     app.hash.update();
   }
 
-  /** Load the weekly matrix once, then repaint what needs it (rings off the latest week, a reservoir's line). */
+  /** Load the weekly matrix once, then repaint what needs it (rings off the latest week, a reservoir's line). A
+   *  failed load stays failed (app.loadData keeps its answer), and the panel says so. */
   function needWeeks() {
-    if (weeksLoad) return weeksLoad;
-    weeksLoad = app.loadData(WEEKS_FILE).then((d) => {
-      if (!d?.actual?.length) {
-        weeksLoad = null; // a later step may try again
-        return null;
-      }
-      weeks = d;
-      if (doc && app.mode === MODE) {
+    weeksLoad ??= app.loadData(WEEKS_FILE).catch(() => null).then((d) => {
+      if (d?.actual?.length) weeks = d;
+      else weeksFailed = true;
+      if (doc && panel.dock) {
         paint();
         update();
       }
-      return d;
-    }, () => (weeksLoad = null));
+      return weeks;
+    });
     return weeksLoad;
   }
+  const weeksText = () => t(weeksFailed ? "embalses.loadWeeksError" : "embalses.loadingWeeks");
 
   function setWeek(i, { final = true, keepPlay = false } = {}) {
     if (!doc || i == null || i < 0 || i >= doc.dates.length) return;
@@ -242,23 +231,42 @@ export function install(app) {
     schedulePaint(final);
   }
 
+  // A week or a reservoir in a link opens the lens, unless the link names another lens; anything invalid is
+  // ignored. Before the data arrives only the form of the value can be checked; the week itself is checked after.
+  const fromLink = () => {
+    const l = app.hash.value("lens");
+    if (l != null && l !== LENS) return false;
+    if (app.mode !== MODE) app.setMode(MODE);
+    return true;
+  };
   app.hash.register(HASH_KEY, {
-    get: () => (app.mode === MODE && doc && week != null ? doc.dates[week] : null),
+    get: () => (!panel.dock ? null : doc && week != null ? doc.dates[week] : wanted), // the link's, while loading
     set(v) {
-      if (v == null) return; // without the key the lens key decides (no lens = no reservoirs)
-      if (doc) {
-        const i = S.parseWeek(v, doc.dates);
-        if (i == null) return; // anything invalid is ignored
-        setWeek(i);
-      } else wanted = v;
-      if (app.mode !== MODE) app.setMode(MODE);
+      if (v == null || !S.isoDay(v)) return; // without the key the lens key decides (no lens = no reservoirs)
+      if (!doc) {
+        if (fromLink()) wanted = v;
+        return;
+      }
+      const i = S.parseWeek(v, doc.dates);
+      if (i != null && fromLink()) setWeek(i);
     },
   });
-  // A link with the lens and no week (#lens=embalses) opens the latest week.
-  if (app.hash.value("lens") === LENS && app.hash.value(HASH_KEY) == null) app.setLens(lens);
+  app.hash.register(PICK_KEY, {
+    get: () => (!panel.dock ? null : doc && picked != null ? doc.reservoirs[picked].name : wantedPick),
+    set(v) {
+      if (v == null || v === "") return;
+      if (!doc) {
+        if (fromLink()) wantedPick = v;
+        return;
+      }
+      const k = S.findReservoir(doc.reservoirs, v);
+      if (k != null && fromLink()) pick(k);
+    },
+  });
 
   // --- year by year ---------------------------------------------------------------------------------------------
-  // The same week of each year from 1988 to the latest, PLAY_MS a step; any input stops it, and it never starts alone.
+  // The same week of each year, PLAY_MS a step, from the week's own year to the latest (from 1988 when the week is
+  // in the last year); any input stops it where it is, and it never starts alone.
   const stopOnInput = (e) => {
     if (e.target?.closest?.("[data-play]")) return;
     stop();
@@ -266,7 +274,8 @@ export function install(app) {
   function start() {
     if (!doc) return;
     const anchor = week, first = +doc.dates[0].slice(0, 4), last = +doc.dates[latest()].slice(0, 4);
-    let year = first;
+    const here = +doc.dates[week].slice(0, 4);
+    let year = week === latest() || here >= last ? first : here; // from the week's own year, or from 1988 at the end
     const step = () => {
       let i = null;
       while (i == null && year <= last) i = S.sameWeekIn(doc.dates, anchor, year++);
@@ -308,6 +317,14 @@ export function install(app) {
     needWeeks();
     update();
     app.requestDraw();
+    app.hash.update();
+    dock?.querySelector("[data-res]")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }
+  function unpick() {
+    picked = null;
+    renderReservoir();
+    app.requestDraw();
+    app.hash.update();
   }
 
   // --- the dock --------------------------------------------------------------------------------------------------
@@ -317,8 +334,7 @@ export function install(app) {
     const years = Array.from({ length: last - first + 1 }, (_, k) => first + k)
       .map((y) => `<option value="${y}">${y}</option>`).join("");
     dock.innerHTML = `
-      <header class="em-head"><h2 data-title></h2>
-        <button type="button" class="icon-btn em-close" data-close aria-label="${esc(t("embalses.close"))}">✕</button></header>
+      <div class="em-top">${panelHead(t("embalses.title", { date: fmtDate(doc.dates[week]) }), t("embalses.close"))}
       <p class="em-prov muted">${esc(t("embalses.provisional"))}</p>
       <div class="em-time">
         <input type="range" class="em-slider" min="0" max="${latest()}" step="1" aria-label="${esc(t("embalses.slider"))}">
@@ -333,15 +349,14 @@ export function install(app) {
           <button type="button" class="em-btn" data-jump="max">${esc(t("embalses.max"))}</button>
           <button type="button" class="em-btn" data-jump="latest">${esc(t("embalses.latest"))}</button>
         </div>
-      </div>
-      <p class="em-big"><b data-pct></b> <span data-amount></span></p>
+      </div></div>
+      <p class="em-big"><span class="em-where muted">${esc(t("embalses.spain"))}</span> <b data-pct></b> <span data-amount></span></p>
       <figure class="em-chart">${chartSvg()}<figcaption class="muted">${esc(t("embalses.chart"))}</figcaption></figure>
+      <section class="em-res" data-res hidden></section>
       <p class="em-count" data-count></p>
       <h3 class="em-h3">${esc(t("embalses.basins"))}</h3>
       <ol class="em-basins" data-basins></ol>
-      <section class="em-res" data-res hidden></section>
       <p class="em-note muted" data-note></p>`;
-    dock.querySelector("[data-close]").onclick = () => app.setMode(null);
     const slider = dock.querySelector(".em-slider");
     slider.oninput = () => setWeek(+slider.value, { final: false });
     slider.onchange = () => setWeek(+slider.value);
@@ -410,10 +425,10 @@ export function install(app) {
   }
 
   function update() {
-    if (!dock || !doc || !dock.querySelector("[data-title]")) return;
+    if (!dock || !doc || !dock.querySelector("[data-basins]")) return;
     const q = (sel) => dock.querySelector(sel);
     const date = fmtDate(doc.dates[week]);
-    q("[data-title]").textContent = t("embalses.title", { date });
+    q(".lens-panel-head h2").textContent = t("embalses.title", { date });
     const slider = q(".em-slider");
     slider.value = String(week);
     slider.setAttribute("aria-valuetext", weekText(week));
@@ -430,7 +445,7 @@ export function install(app) {
     const now = S.reporting(doc.reservoirs, weeks, week, latest());
     q("[data-count]").textContent = now
       ? t("embalses.count", { n: now.length, capacity: hm3(nat.capacity) })
-      : t("embalses.loadingWeeks");
+      : weeksText();
     q("[data-basins]").innerHTML = S.basinsByDryness(doc.basins, week).map((k) => {
       const b = doc.basins[k], p = S.basinPct(b, week);
       const label = t("embalses.basin", { actual: hm3(b.actual[week]), capacity: hm3(b.capacity[week]) });
@@ -452,7 +467,8 @@ export function install(app) {
     const off = now.filter((r) => doc.reservoirs[r.k].x == null);
     const wd = now.filter((r) => doc.reservoirs[r.k].placed === "wikidata").map((r) => doc.reservoirs[r.k].name);
     el.textContent = [
-      off.length ? t("embalses.unplaced", { n: off.length, hm3: hm3(off.reduce((a, r) => a + r.actual, 0)) }) : "",
+      off.length ? t("embalses.unplaced", { n: off.length, actual: hm3(off.reduce((a, r) => a + r.actual, 0)),
+        capacity: hm3(off.reduce((a, r) => a + (r.capacity ?? 0), 0)) }) : "",
       wd.length ? t("embalses.wikidata", { n: wd.length, names: wd.join(", ") }) : "",
     ].filter(Boolean).join(" ");
   }
@@ -480,7 +496,7 @@ export function install(app) {
       }).join("");
       line.setAttribute("d", d);
     } else {
-      now = t("embalses.loadingWeeks");
+      now = weeksText();
     }
     el.innerHTML = `<h3 class="em-h3">${esc(r.name)} <span class="muted">· ${esc(doc.basins[r.basin].name)}</span>
         <button type="button" class="icon-btn em-res-close" data-unpick aria-label="${esc(t("embalses.res.close"))}">✕</button></h3>
@@ -488,10 +504,6 @@ export function install(app) {
       <p class="muted">${esc(t(`embalses.use.${r.use}`))}${r.placed === "wikidata" ? ` · ${esc(t("embalses.tip.wikidata"))}` : ""}</p>
       <p class="muted">${esc(since)}</p>
       <p class="muted em-legend"><i class="em-key em-key-res"></i>${esc(t("embalses.res.line"))}</p>`;
-    el.querySelector("[data-unpick]").onclick = () => {
-      picked = null;
-      renderReservoir();
-      app.requestDraw();
-    };
+    el.querySelector("[data-unpick]").onclick = unpick;
   }
 }
