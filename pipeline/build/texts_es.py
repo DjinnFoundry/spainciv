@@ -628,6 +628,16 @@ SOURCES = {
         "quebrantahuesos: cada hexágono muestra qué parte de su superficie cae en ellas.",
         "used_for": ["Lentes de fauna"],
     },
+    "miteco_censos_fauna": {
+        "title": "Censos nacionales del lince ibérico (2025) y del lobo (2021-2024)",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), con las comunidades "
+        "autónomas",
+        "license": _REUSE,
+        "description": "El censo de lince ibérico de 2025 (España y Portugal) y el censo de lobo de 2021-2024 (manadas y "
+        "cuadrículas de 10 km con presencia), en PDF. El mapa cita sus totales y las comunidades que nombran junto a las "
+        "cuadrículas de 2013-2018 de las lentes de fauna, que son anteriores.",
+        "used_for": ["Lentes de fauna (lince y lobo)"],
+    },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
         "publisher": "Ministerio de Industria y Turismo, Secretaría de Estado de Turismo",
