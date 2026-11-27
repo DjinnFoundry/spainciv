@@ -1,0 +1,69 @@
+{
+  "_comment": "The texts of each autonomous community as an Unciv nation, in each language: the name of its unique (a bonus on the resource it holds most of, relative to its size), the text Unciv shows when a game starts, and what the page and the README say of it (where it starts, its advantage, its start bias, a city-state's type). Terrain and technology names are Unciv's own in that language (android/assets/jsons/translations). English is the mod's own text (jsons/Nations.json) and Spanish its translation (jsons/translations/Spanish.properties). Filled in by pipeline/play.py from unciv.json's summary.",
+  "es": {
+    "unique_name": "Tierra de $resource_word",
+    "intro": "$name: $population habitantes en $municipalities municipios (INE, Padrón $year). $start En este mapa tienes $land_tiles casillas de tierra, y en tu tierra y tu costa hay $resource_tiles de las $resource_map_tiles casillas de $resource_word del mapa: tus ciudades sacan una más de comida, producción y oro de cada una que trabajen.$hidden",
+    "start": "Empiezas en $capital.",
+    "start_near": "Empiezas a $distance de $capital.",
+    "start_cell_near": "$capital (a $distance)",
+    "tiles": ["$n casilla", "$n casillas"],
+    "hidden": " Ese recurso no se ve ni da nada hasta que descubres $tech.",
+    "advantage": "$resource: $resource_tiles de las $resource_map_tiles casillas de $resource_word del mapa (+1 comida, producción y oro$hidden_short)",
+    "hidden_short": "; se ve con $tech",
+    "fallback": "; si no llega a $unique_min en ninguno, entre todos: $names",
+    "city_state": "Ciudad-estado marítima",
+    "no_bias": "ninguna",
+    "techs": {
+      "Animal Husbandry": "Ganadería",
+      "Iron Working": "Trabajo del hierro",
+      "Industrialization": "Industrialización",
+      "Biology": "Biología",
+      "Electricity": "Electricidad",
+      "Atomic Theory": "Teoría atómica"
+    },
+    "terrains": {
+      "Coast": "Costa",
+      "Hill": "Colinas",
+      "Mountain": "Montaña",
+      "Forest": "Bosque",
+      "Marsh": "Pantano",
+      "Grassland": "Pradera",
+      "Plains": "Sabana",
+      "Desert": "Desierto",
+      "Tundra": "Tundra"
+    }
+  },
+  "en": {
+    "unique_name": "Land of $resource",
+    "intro": "$name: $population people in $municipalities municipalities (INE, Padrón $year). $start On this map you have $land_tiles land tiles, and your land and coast hold $resource_tiles of the map's $resource_map_tiles $resource_word tiles: your cities get one more food, production and gold from each one they work.$hidden",
+    "start": "You start in $capital.",
+    "start_near": "You start $distance from $capital.",
+    "start_cell_near": "$capital ($distance away)",
+    "tiles": ["$n tile", "$n tiles"],
+    "hidden": " That resource stays hidden, and gives nothing, until you discover $tech.",
+    "advantage": "$resource: $resource_tiles of the map's $resource_map_tiles $resource_word tiles (+1 food, production and gold$hidden_short)",
+    "hidden_short": "; revealed by $tech",
+    "fallback": ", or among all it holds if none reaches $unique_min: $names",
+    "city_state": "Maritime city-state",
+    "no_bias": "none",
+    "techs": {
+      "Animal Husbandry": "Animal Husbandry",
+      "Iron Working": "Iron Working",
+      "Industrialization": "Industrialization",
+      "Biology": "Biology",
+      "Electricity": "Electricity",
+      "Atomic Theory": "Atomic Theory"
+    },
+    "terrains": {
+      "Coast": "Coast",
+      "Hill": "Hill",
+      "Mountain": "Mountain",
+      "Forest": "Forest",
+      "Marsh": "Marsh",
+      "Grassland": "Grassland",
+      "Plains": "Plains",
+      "Desert": "Desert",
+      "Tundra": "Tundra"
+    }
+  }
+}

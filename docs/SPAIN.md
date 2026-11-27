@@ -115,20 +115,27 @@ the rivers on tile edges and the resource placement that keeps every resource on
 the site is served or packaged, `pipeline/play.py` makes from it:
 
 - `unciv/Spainciv-Unciv.zip`: the mod, one folder `Spainciv Unciv/` with `jsons/ModOptions.json`,
-  `jsons/TileResources.json` (its own resource, the Iberian pig), `maps/España` (the map, gzip + base64 as Unciv saves
-  it, naming the mod in `mapParameters.mods` so choosing it turns the mod on), `Images/ResourceIcons/Cerdo ibérico.png`
-  with its atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
+  `jsons/TileResources.json` (its own resource, the Iberian pig), `jsons/Nations.json` (the 17 autonomous communities
+  as civilizations, Ceuta and Melilla as city-states), `jsons/translations/Spanish.properties` (their texts in
+  Spanish; English is the mod's own text), `maps/España` (the map, gzip + base64 as Unciv saves it, naming the mod in
+  `mapParameters.mods` so choosing it turns the mod on, with each community's starting location at its capital),
+  `Images/ResourceIcons/Cerdo ibérico.png`, `Images/NationPortraits/` (each nation's flag on a disc) and
+  `Images/NationIcons/` (the city-banner icon of each community; a city-state's banner uses Unciv's own icon of its
+  type), all in one atlas (`game.atlas`, `game.png`, `Atlases.json`, which Android needs), `preview.png`, a bilingual
   `README.md` and `LICENSE` (CC BY 4.0);
-- `unciv/espana`: the bare map for the game without mods (the same map without the pig), saved as `España` by the
-  page's link;
+- `unciv/espana`: the bare map for the game without mods, saved as `España` by the page's link: the same map without
+  the pig and without the communities, which only exist with the mod; Spain starts in Madrid and "Any Civ" players in
+  the largest urban areas;
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
-The page, the README and the resource names in Spanish and English are templates in `pipeline/templates/` (A17).
-The rules and the reasons are DECISIONS.md E51–E57, E60–E62, A15, A17, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the
-GitHub release, run with `java -jar`): the mod installed through "Download mod from URL", the map in the editor with
-every resource kept, and a 40-turn game with Spain in Madrid and seven AI civilizations on the other starting
-locations (`docs/images/es-unciv-editor.jpg`, `docs/images/es-unciv-partida.jpg`).
+The page, the README, the resource names and the nations' texts in Spanish and English are templates in
+`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51–E57, E60–E62, E87, E88, A15, A17,
+A28, F26, F28 and F29. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with `java -jar`): the
+mod installed through "Download mod from URL", the map in the editor with every resource kept
+(`docs/images/es-unciv-editor.jpg`), the 19 nations in the nation picker, and a 45-turn game with Galicia against the
+other 16 communities, each at its capital or beside it and Spain left without a starting location
+(`docs/images/es-unciv-partida.jpg`, the north with the capitals of Euskadi, Navarra, Cantabria and La Rioja).
 
 The mod's GitHub repository (`DjinnFoundry/Spainciv-Unciv`, topics `unciv-mod` and `unciv-mod-maps`, so it shows in
 the game's mod browser) holds the zip's folder as it is: unzip `unciv/Spainciv-Unciv.zip` from a fresh package and

@@ -320,7 +320,8 @@ class SpanishDataTest(unittest.TestCase):
              "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
              "locale", "currency",
-             "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
+             "map", "natural_wonders",  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
+             "bare", "start_bias", "resource", "seat"}  # the bare map like the map; a nation's Unciv terrain, resource, seat
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
     # Toledo") and some surnames are English words ("Eva Forest").
@@ -419,6 +420,7 @@ class EnglishDataTest(unittest.TestCase):
         *(("fiestas.json", f".fiestas[].{k}") for k in ("name", "community", "place", "declaration", "when")),
         ("unciv.json", ".summary.starts[].city"), ("unciv.json", ".summary.map_name"),
         ("unciv.json", ".summary.not_placed_designations[]"),  # denomination names; their kind is checked as a suffix
+        ("unciv.json", ".summary.nations[].name"), ("unciv.json", ".summary.nations[].cities[]"),  # communities, municipalities
         ("sources.json", "[].publisher"),  # bodies by their own names (Instituto Nacional de Estadística, ADEAC…)
         # military installations and their parts as OpenStreetMap names them
         ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
@@ -430,6 +432,7 @@ class EnglishDataTest(unittest.TestCase):
         ("cities.json", "[].full"): [re.compile(r"^.+(?= urban area$)")],
         ("resources.json", ".items[].detail"): [re.compile(r"(?<=including ).+?(?= \()"), re.compile(r"^[^;]+; [^;]+;")],
         ("military.json", ".components[].name"): [re.compile(r"\([^()]+\)$")],  # the branch's official Spanish name
+        ("unciv.json", ".summary.nations[].leader"): [re.compile(r"Junta de Comunidades")],  # Castilla-La Mancha's institution
     }
     # An id made from a name ("base-aerea-de-zaragoza-ea", military.json), never shown.
     SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
