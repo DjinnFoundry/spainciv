@@ -10,7 +10,7 @@ with the positions and basins of the Boletín's own map.
 * **DDHH** (the Boletín's basin layer): the 16 basins as polygons, named exactly as the database's ámbitos, with the
   latest week's water stored and percentage, which must equal the database's sums for that week.
 
-Cleaning (DECISIONS E86): a number must read `^\\d+(,\\d+)?$` (else the process fails); an empty one is null. Rows
+Cleaning (DECISIONS E91): a number must read `^\\d+(,\\d+)?$` (else the process fails); an empty one is null. Rows
 before the series' first week (START) are dropped and counted. A reservoir reports in a week when that week has its
 row with both numbers; otherwise it counts in neither sum. Each week keeps its own capacity, and values above
 capacity are kept as written. The use (hydroelectric or not) is the flag of the reservoir's latest row.
@@ -47,6 +47,7 @@ BASINS_FILE = "ddhh.json"
 START = date(1988, 1, 5)  # the first Tuesday of the series (the data model covers 1988 onwards)
 HM3 = re.compile(r"^\d+(,\d+)?$")
 HYDRO, CONSUMPTIVE = "hidroelectrico", "consuntivo"
+TOLERANCE_HM3 = 0.5  # the Boletín's layers and the database's sums agree to this (all values are whole hm³ today)
 
 
 def parse_hm3(text: str | None) -> int | float | None:
@@ -132,6 +133,34 @@ def basin_totals(reservoirs: list[dict], basins: list[str], n: int) -> dict[str,
     return out
 
 
+def capacity_report(reservoirs: list[dict]) -> dict:
+    """The capacity changes and the weeks above capacity in the series, for the build log and DECISIONS E91:
+    {changing: reservoirs with more than one capacity, runs: capacity runs in all, over: weekly values above that
+    week's capacity, over_reservoirs: reservoirs with any, top: the three with most, [(name, weeks)]}."""
+    over = {}
+    for r in reservoirs:
+        n = sum(1 for k, v in enumerate(r["actual"]) if v is not None and v > capacity_at(r["capacity"], k))
+        if n:
+            over[r["name"]] = n
+    return {"changing": sum(len(r["capacity"]) > 1 for r in reservoirs),
+            "runs": sum(len(r["capacity"]) for r in reservoirs), "over": sum(over.values()),
+            "over_reservoirs": len(over), "top": sorted(over.items(), key=lambda kv: (-kv[1], kv[0]))[:3]}
+
+
+def layer_week(dates: list[str], day: str, what: str) -> tuple[int | None, str | None]:
+    """Where the week of a Boletín map layer (`day`) falls in the database's `dates`: (its index, None when the
+    database lacks it; a note when it is not the database's last week). The layers and the zip are updated apart,
+    around each Tuesday, so a week's skew is noted; more than a week is an error."""
+    gap = (date.fromisoformat(day) - date.fromisoformat(dates[-1])).days
+    if abs(gap) > 7:
+        raise ValueError(f"{what} is for {day} and the database ends on {dates[-1]}: more than a week apart")
+    k = dates.index(day) if day in dates else None
+    if gap == 0:
+        return k, None
+    return k, (f"{what} is for {day} and the database ends on {dates[-1]}: "
+               + ("compared on that week" if k is not None else "not compared"))
+
+
 def check_layer(doc: dict, count: dict, what: str) -> list[dict]:
     """The features of an ArcGIS query answer, after checking it is complete: no error, no `exceededTransferLimit`,
     and as many features as the layer's returnCountOnly answer says."""
@@ -151,6 +180,23 @@ def round_ring(ring: list) -> list[list[float]]:
 def weekday_of(text: str) -> str:
     """Embalses_Mapa's Fecha_str ('24112026') as an ISO date."""
     return f"{text[4:]}-{text[2:4]}-{text[:2]}"
+
+
+def check_basins(basins: list[dict], reservoirs: list[dict], dates: list[str]) -> None:
+    """The Boletín's own basin figures (DDHH) must be the database's sums for their week, to TOLERANCE_HM3 and 0.01
+    points; a layer a week off the database is compared on its week when the database has it, and noted."""
+    totals = basin_totals(reservoirs, [b["name"] for b in basins], len(dates))
+    for day in sorted({b["date"] for b in basins}):
+        k, note = layer_week(dates, day, "DDHH")
+        if note:
+            print(f"    NOTE: {note}")
+        if k is None:
+            continue
+        for b in (b for b in basins if b["date"] == day):
+            a, c = totals[b["name"]]["actual"][k], totals[b["name"]]["capacity"][k]
+            if a is None or abs(a - b["stored"]) > TOLERANCE_HM3 or abs(100 * a / c - b["pct"]) > 0.01:
+                raise ValueError(f"DDHH {b['name']} {day}: {b['stored']} hm³ ({b['pct']:.2f} %) but the database "
+                                 f"sums {a} of {c} hm³")
 
 
 class BoletinHidrologico(Source):
@@ -224,6 +270,10 @@ class BoletinHidrologico(Source):
         dates, reservoirs = out["dates"], out["reservoirs"]
         print(f"    BD-Embalses ({tables[0]}): {len(rows)} rows, {len(reservoirs)} reservoirs, {len(dates)} weeks "
               f"{dates[0]}…{dates[-1]}; {out['dropped']} rows before {START} dropped")
+        caps = capacity_report(reservoirs)
+        print(f"    capacity: {caps['changing']} reservoirs change it ({caps['runs']} runs in all); {caps['over']} weekly "
+              f"values above it, in {caps['over_reservoirs']} reservoirs ("
+              + ", ".join(f"{n} {w}" for n, w in caps["top"]) + ")")
 
         point_feats = check_layer(json.loads((self.raw_dir / POINTS_FILE).read_text()),
                                   json.loads((self.raw_dir / POINTS_FILE.replace(".json", "_count.json")).read_text()),
@@ -246,14 +296,7 @@ class BoletinHidrologico(Source):
         if names != {r["basin"] for r in reservoirs} or len(names) != len(basins):
             raise ValueError(f"DDHH basins {sorted(names)} are not the database's ámbitos "
                              f"{sorted({r['basin'] for r in reservoirs})}")
-        totals = basin_totals(reservoirs, [b["name"] for b in basins], len(dates))
-        for b in basins:  # the Boletín's own basin figures for its week (they are the database's sums)
-            if b["date"] in dates:
-                k = dates.index(b["date"])
-                got = totals[b["name"]]
-                if got["actual"][k] != b["stored"] or abs(100 * got["actual"][k] / got["capacity"][k] - b["pct"]) > 0.01:
-                    raise ValueError(f"DDHH {b['name']} {b['date']}: {b['stored']} hm³ ({b['pct']:.2f} %) but the "
-                                     f"database sums {got['actual'][k]} of {got['capacity'][k]} hm³")
+        check_basins(basins, reservoirs, dates)
         retrieved = read_manifest(self.id)[ZIP_FILE]["retrieved"][:10]
         return {"vintage": f"BD-Embalses (Boletín Hidrológico), {dates[0]} to {dates[-1]}, provisional; retrieved "
                            f"{retrieved}",

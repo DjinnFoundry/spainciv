@@ -1,32 +1,36 @@
 """Spain's reservoirs week by week (embalses.json, embalses_semanas.json) for the reservoirs lens (web/js/ext/embalses).
 
-* **Basins** (E87): a land hex goes to the Boletín basin (DDHH polygon) that holds its centre; a peninsular one
+* **Basins** (E92): a land hex goes to the Boletín basin (DDHH polygon) that holds its centre; a peninsular one
   outside every polygon (the 1:… coast of the layer is simplified) to the nearest polygon within SNAP_KM, else to
   none. The hexes of the island provinces, Ceuta and Melilla get none, by province code: the Boletín covers the
   peninsula only.
 * **Basin figures**: per week, Σ water stored and Σ capacity of the basin's reservoirs that report that week
   (pipeline/sources/es/embalses.py), the Boletín's own formula.
-* **Positions** (E87): (1) the Boletín map's point with the identical basin and name, which every reservoir of the
+* **Positions** (E92): (1) the Boletín map's point with the identical basin and name, which every reservoir of the
   latest week must have; (2) for a reservoir it no longer reports, the Wikidata reservoirs and dams one of whose names
   normalises to the same as its own (`name_key`) and that lie inside its basin or within WIKIDATA_KM of it: their mean
-  when they all lie within WIKIDATA_KM of each other, else none. No fuzzy matching (E74's rule).
+  when they all lie within WIKIDATA_KM of each other (core.geo.spread_mean, the beaches' rule, E74); when they split,
+  the one dam item among them, else none. No fuzzy matching.
 * A point goes to the hex that holds it, or the nearest land hex when it falls off the drawn land.
+* **Names**: `name` is the Boletín's name tidied to read (`display_name`), `boletin_name` the name as BD-Embalses and
+  its map write it, the key every match uses.
 """
 
 from __future__ import annotations
 
 import json
-import math
 import re
-import unicodedata
 from bisect import bisect_right
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 
+from ..core import names
+from ..core.geo import Shape, row_crossings, spread_mean
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, write_web
 from ..countries import active
-from ..sources.es.embalses import basin_totals, capacity_at
+from ..sources.es.embalses import TOLERANCE_HM3, basin_totals, capacity_at, layer_week
 from .cities import nearest_land
 
 REQUIRES = ["_world", "boletin_hidrologico", "wikidata_presas"]
@@ -45,86 +49,34 @@ OFF_BOLETIN = frozenset({"07", "35", "38", "51", "52"})
 NAME_WORDS = frozenset(
     "embalse presa pantano embassament panta encoro urtegia lago estany ibon azud "
     "el la los las lo l de del d els les o os a as da do das dos y i".split())
+# A reservoir's name for matching: 'Breña, La' and 'Embalse de La Breña' → 'brena'; 'Malpasillo ( Jauja )' →
+# 'malpasillo jauja'.
+name_key = partial(names.name_key, dropped=NAME_WORDS)
+
+ARTICLES = ("El", "La", "Los", "Las", "Lo", "Os", "As", "O", "A", "Els", "Les", "L'")
 
 
-def name_key(name: str) -> str:
-    """A reservoir's name for matching: lowercase, no accents, punctuation or parentheses, without NAME_WORDS.
-    'Breña, La' and 'Embalse de La Breña' → 'brena'; 'Malpasillo ( Jauja )' → 'malpasillo jauja'."""
-    s = "".join(c for c in unicodedata.normalize("NFKD", name.lower()) if not unicodedata.combining(c))
-    return " ".join(w for w in re.sub(r"[^a-z0-9]+", " ", s).split() if w not in NAME_WORDS)
+def display_name(name: str) -> str:
+    """A Boletín name as it reads: spacing tidied and a trailing article first. 'Breña, La' → 'La Breña',
+    'Vellón,El-(Pedrezuela)' → 'El Vellón (Pedrezuela)', 'Loteta (La)' → 'La Loteta', 'Malpasillo ( Jauja )' →
+    'Malpasillo (Jauja)', 'Agavanzal, Nª Sª de' → 'Nª Sª de Agavanzal'. '(Lago)' and 'Jerte - Plasencia' stay."""
+    s = re.sub(r"\(\s*(.*?)\s*\)", r"(\1)", name)
+    s = re.sub(r"\s*-?\s*\(", " (", s)
+    s = re.sub(r",\s*", ", ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    if m := re.fullmatch(r"(.+?) \((%s)\)" % "|".join(ARTICLES), s):
+        return f"{m[2]} {m[1]}"
+    if m := re.fullmatch(r"([^,]+), ([^,()]+?)( \(.*\))?", s):
+        return f"{m[2]} {m[1]}{m[3] or ''}"
+    return s
 
 
-# --- polygons in map km --------------------------------------------------------------------------------------------
-
-def crossings(rings: list[list[tuple[float, float]]], y0: float, dy: float, rows: int) -> list[list[float]]:
-    """For each hex row k (centre y = y0 + k·dy), the sorted x where the rings' edges cross it: a point of that row is
-    inside (even-odd rule, holes included) when an odd number of crossings lie left of it."""
-    out: list[list[float]] = [[] for _ in range(rows)]
-    for ring in rings:
-        for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
-            if y1 == y2:
-                continue
-            lo, hi = (y1, y2) if y1 < y2 else (y2, y1)
-            for k in range(max(0, math.ceil((lo - y0) / dy)), min(rows, math.floor((hi - y0) / dy) + 1)):
-                y = y0 + k * dy
-                if lo <= y < hi:  # half-open, like ring_contains
-                    out[k].append(x1 + (y - y1) * (x2 - x1) / (y2 - y1))
-    for xs in out:
-        xs.sort()
-    return out
-
-
-def segment_km(px: float, py: float, a: tuple, b: tuple) -> float:
-    (ax, ay), (bx, by) = a, b
-    dx, dy = bx - ax, by - ay
-    t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
-    return math.hypot(px - ax - t * dx, py - ay - t * dy)
-
-
-class Edges:
-    """Polygon edges bucketed in squares of `cell` km, for the distance from a point to each polygon up to `cell`."""
-
-    def __init__(self, shapes: list[list[list[tuple[float, float]]]], cell: float):
-        self.cell = cell
-        self.buckets: dict[tuple[int, int], list[tuple[int, tuple, tuple]]] = defaultdict(list)
-        for k, rings in enumerate(shapes):
-            for ring in rings:
-                for a, b in zip(ring, ring[1:] + ring[:1]):
-                    for gx in range(int(min(a[0], b[0]) // cell), int(max(a[0], b[0]) // cell) + 1):
-                        for gy in range(int(min(a[1], b[1]) // cell), int(max(a[1], b[1]) // cell) + 1):
-                            self.buckets[(gx, gy)].append((k, a, b))
-
-    def nearest(self, x: float, y: float) -> dict[int, float]:
-        """Distance (km) from (x, y) to the edges of each polygon that has one within `cell`."""
-        gx, gy = int(x // self.cell), int(y // self.cell)
-        best: dict[int, float] = {}
-        for i in (gx - 1, gx, gx + 1):
-            for j in (gy - 1, gy, gy + 1):
-                for k, a, b in self.buckets.get((i, j), ()):
-                    d = segment_km(x, y, a, b)
-                    if d <= self.cell and d < best.get(k, math.inf):
-                        best[k] = d
-        return best
-
-
-def inside(rings, x: float, y: float) -> bool:
-    """Even-odd point in polygon over all rings (holes included)."""
-    n = 0
-    for ring in rings:
-        for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
-            if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
-                n += 1
-    return n % 2 == 1
-
-
-def basin_cells(grid: HexGrid, owner: list[int], codes: list[str], shapes: list, snap_km: float = SNAP_KM,
+def basin_cells(grid: HexGrid, owner: list[int], codes: list[str], shapes: list[Shape], snap_km: float = SNAP_KM,
                 off: frozenset = OFF_BOLETIN) -> tuple[list[int], dict]:
-    """The basin (index into `shapes`, map-km rings) of each hex, -1 for none: the polygon holding its centre; for a
-    land hex outside all of them, the nearest within `snap_km`; never for a hex of a province in `off` (`codes`: the
+    """The basin (index into `shapes`, in map km) of each hex, -1 for none: the polygon holding its centre; for a land
+    hex outside all of them, the nearest within `snap_km`; never for a hex of a province in `off` (`codes`: the
     province code of each owner index). Also counts {inside, snapped, outside, off}."""
-    dy = 1.5 * grid.radius
-    rows = [crossings(rings, 0.0, dy, grid.rows) for rings in shapes]
-    edges = Edges(shapes, snap_km)
+    rows = [row_crossings(s.rings, 1.5 * grid.radius) for s in shapes]  # hex row k has its centres at y = 1.5·R·k
     out = [-1] * grid.size
     stats = {"inside": 0, "snapped": 0, "outside": 0, "off": 0}
     for c in range(grid.size):
@@ -134,10 +86,10 @@ def basin_cells(grid: HexGrid, owner: list[int], codes: list[str], shapes: list,
             stats["off"] += 1
             continue
         col, row = grid.col_row(c)
-        x, _ = grid.center(col, row)
-        hit = next((k for k, r in enumerate(rows) if bisect_right(r[row], x) % 2), -1)
+        x, y = grid.center(col, row)
+        hit = next((k for k, r in enumerate(rows) if bisect_right(r.get(row, ()), x) % 2), -1)
         if hit < 0:
-            near = edges.nearest(*grid.center(col, row))
+            near = {k: d for k, s in enumerate(shapes) if near_box(s, x, y, snap_km) and (d := s.distance(x, y)) <= snap_km}
             hit = min(near, key=near.get) if near else -1
             stats["snapped" if hit >= 0 else "outside"] += 1
         else:
@@ -146,35 +98,67 @@ def basin_cells(grid: HexGrid, owner: list[int], codes: list[str], shapes: list,
     return out, stats
 
 
-def in_basin(rings, edges: Edges, k: int, x: float, y: float, km: float) -> bool:
-    """Is (x, y) inside polygon k or within `km` of it?"""
-    return inside(rings, x, y) or edges.nearest(x, y).get(k, math.inf) <= km
+def near_box(shape: Shape, x: float, y: float, km: float) -> bool:
+    x0, y0, x1, y1 = shape.bbox
+    return x0 - km <= x <= x1 + km and y0 - km <= y <= y1 + km
 
 
-def match_wikidata(name: str, basin: int, items: dict[str, list[tuple]], rings, edges: Edges, proj,
-                   km: float = WIKIDATA_KM) -> dict | None:
-    """The Wikidata position of a reservoir: the items with a name of the same name_key (items: key → [(qid, lon,
-    lat)]) inside its basin polygon or within `km` of it; their mean when all lie within `km` of each other, else
-    None (also None without candidates)."""
-    cands = []
-    for q, lon, lat in items.get(name_key(name), []):
-        x, y = proj(lon, lat)
-        if in_basin(rings, edges, basin, x, y, km):
-            cands.append((q, lon, lat, x, y))
-    if not cands or any(math.dist(a[3:], b[3:]) > km for a in cands for b in cands):
+def in_basin(shape: Shape, x: float, y: float, km: float = WIKIDATA_KM) -> bool:
+    """Is (x, y) inside the basin polygon or within `km` of it?"""
+    return near_box(shape, x, y, km) and shape.distance(x, y) <= km
+
+
+def match_wikidata(name: str, shape: Shape, items: dict[str, list[tuple]], proj, km: float = WIKIDATA_KM) -> dict | None:
+    """The Wikidata position of a reservoir from the items with a name of the same name_key (items: key → [(qid, lon,
+    lat, dam)]) inside its basin polygon or within `km` of it: their mean when all lie within `km` of each other;
+    when they split, the dam item's position if exactly one of them is a dam (a dam and its reservoir's lake are
+    often further apart); else None (also None without candidates)."""
+    cands = [c for c in items.get(name_key(name), []) if in_basin(shape, *proj(c[1], c[2]), km)]
+    if not cands:
         return None
-    return {"lon": round(sum(c[1] for c in cands) / len(cands), 5), "lat": round(sum(c[2] for c in cands) / len(cands), 5),
-            "qids": sorted({c[0] for c in cands}, key=lambda q: int(q[1:]))}
+    rule = "same"
+    if not (where := spread_mean([c[1:3] for c in cands], km)):
+        dams = {c[0] for c in cands if c[3]}
+        if len(dams) != 1:
+            return None
+        cands = [c for c in cands if c[0] in dams]
+        rule = "dam"
+        if not (where := spread_mean([c[1:3] for c in cands], km)):
+            return None
+    return {"lon": where[0], "lat": where[1], "qids": sorted({c[0] for c in cands}, key=lambda q: int(q[1:])),
+            "rule": rule}
 
 
 def wikidata_index(items: list[dict]) -> dict[str, list[tuple]]:
-    """name_key → [(qid, lon, lat)], one entry per item and position."""
+    """name_key → [(qid, lon, lat, dam)], one entry per item and position."""
     out: dict[str, list[tuple]] = defaultdict(list)
     for it in items:
         for key in {name_key(n) for n in it["names"]} - {""}:
             for lon, lat in it["points"]:
-                out[key].append((it["id"], lon, lat))
+                out[key].append((it["id"], lon, lat, it["dam"]))
     return out
+
+
+def unplaced_share(reservoirs: list[dict], unplaced: set[int], n: int) -> dict:
+    """The largest share of a week's capacity, and of its water stored, that the `unplaced` reservoirs (indices) hold
+    among those reporting that week: {capacity: (share, week), actual: (share, week)}."""
+    best = {"capacity": (0.0, None), "actual": (0.0, None)}
+    for i in range(n):
+        tot = {"capacity": 0, "actual": 0}
+        off = {"capacity": 0, "actual": 0}
+        for j, r in enumerate(reservoirs):
+            if (a := r["actual"][i]) is None:
+                continue
+            c = capacity_at(r["capacity"], i)
+            tot["capacity"] += c
+            tot["actual"] += a
+            if j in unplaced:
+                off["capacity"] += c
+                off["actual"] += a
+        for key in best:
+            if tot[key] and off[key] / tot[key] > best[key][0]:
+                best[key] = (off[key] / tot[key], i)
+    return best
 
 
 def build() -> None:
@@ -187,8 +171,7 @@ def build() -> None:
     dates, basins = src["dates"], src["basins"]
     last = len(dates) - 1
     order = {b["name"]: k for k, b in enumerate(basins)}
-    shapes = [[[proj(lon, lat) for lon, lat in ring] for ring in b["rings"]] for b in basins]
-    edges = Edges(shapes, WIKIDATA_KM)
+    shapes = basin_shapes(basins, proj)
 
     cell_basin, stats = basin_cells(grid, owner, codes, shapes)
     print(f"    hexes: {stats['inside']} inside a basin, {stats['snapped']} within {SNAP_KM:g} km of one, "
@@ -198,22 +181,23 @@ def build() -> None:
     by_key = wikidata_index(wd["items"])
     reservoirs = sorted(src["reservoirs"], key=lambda r: (order[r["basin"]], r["name"]))
     out, placed_wd, unplaced = [], [], []
-    for r in reservoirs:
+    for j, r in enumerate(reservoirs):
         k = order[r["basin"]]
         p, where = points.get((r["basin"], r["name"])), None
         if p:
             where = {"lon": p["lon"], "lat": p["lat"], "placed": "boletin"}
         elif r["last"] == last:
             raise ValueError(f"{r['name']} ({r['basin']}) reports in the latest week and has no Boletín map point")
-        elif m := match_wikidata(r["name"], k, by_key, shapes[k], edges, proj):
+        elif m := match_wikidata(r["name"], shapes[k], by_key, proj):
             where = {"lon": m["lon"], "lat": m["lat"], "placed": "wikidata", "qids": m["qids"]}
-            placed_wd.append(r["name"])
+            placed_wd.append(display_name(r["name"]) + (" (the dam)" if m["rule"] == "dam" else ""))
         else:
-            unplaced.append(r["name"])
+            unplaced.append(j)
         caps = r["capacity"]
-        entry = {"name": r["name"], "basin": k, "use": r["use"], "lon": None, "lat": None, "x": None, "y": None,
-                 "cell": None, "placed": None, "first": r["first"], "last": r["last"],
-                 "capacity": caps[-1][1] if caps else None, "actual": r["actual"][r["last"]] if r["last"] is not None else None}
+        entry = {"name": display_name(r["name"]), "boletin_name": r["name"], "basin": k, "use": r["use"],
+                 "lon": None, "lat": None, "x": None, "y": None, "cell": None, "placed": None, "first": r["first"],
+                 "last": r["last"], "capacity": caps[-1][1] if caps else None,
+                 "actual": r["actual"][r["last"]] if r["last"] is not None else None}
         if where:
             x, y = proj(where["lon"], where["lat"])
             cell = grid.cell_at(x, y)
@@ -223,9 +207,12 @@ def build() -> None:
             if "qids" in where:
                 entry["qids"] = where["qids"]
         out.append(entry)
+    share = unplaced_share(reservoirs, set(unplaced), len(dates))
     print(f"    {len(out)} reservoirs: {sum(e['placed'] == 'boletin' for e in out)} at the Boletín's point, "
           f"{len(placed_wd)} placed from Wikidata ({', '.join(placed_wd)}), {len(unplaced)} unplaced "
-          f"({', '.join(unplaced)})")
+          f"({', '.join(out[j]['name'] for j in unplaced)})")
+    print("    the unplaced hold at most " + ", ".join(
+        f"{100 * v:.2f} % of a week's {what} ({dates[i] if i is not None else '-'})" for what, (v, i) in share.items()))
 
     totals = basin_totals(reservoirs, [b["name"] for b in basins], len(dates))
     cells: list[list[int]] = [[] for _ in basins]
@@ -242,11 +229,16 @@ def build() -> None:
         "capacity": [r["capacity"] for r in reservoirs]})
 
 
+def basin_shapes(basins: list[dict], proj) -> list[Shape]:
+    """The Boletín's basin polygons in map km."""
+    return [Shape([[proj(lon, lat) for lon, lat in ring] for ring in b["rings"]]) for b in basins]
+
+
 def check(web_dir) -> list[tuple[str, str]]:
     """embalses.json against embalses_semanas.json and the Boletín: the basin series are the sums of the weekly matrix,
-    the latest week's total is the Boletín map's, every placed point lies in its basin (WIKIDATA_KM), the dates are
-    Tuesdays a week apart and each reservoir's first and last weeks are those its values say. Nothing to check on a
-    map without the files."""
+    the Boletín map's week (the latest, or one a week off, with a NOTE) has its total, every placed point lies in its
+    basin (WIKIDATA_KM), the dates are Tuesdays a week apart and each reservoir's first and last weeks are those its
+    values say. Nothing to check on a map without the files."""
     from datetime import date, timedelta
 
     web_dir = Path(web_dir)
@@ -288,19 +280,26 @@ def check(web_dir) -> list[tuple[str, str]]:
     if src is None:
         out.append(("NOTE", f"{FILE}.json: no boletin_hidrologico interim; the Boletín map and basins not compared"))
     else:
-        latest = [p for p in src["points"] if p["date"] == dates[-1]]
-        if latest:
-            n = len(dates) - 1
-            mine = sum(b["actual"][n] or 0 for b in basins)
-            theirs = sum(p["actual"] for p in latest)
-            if mine != theirs:
-                bad.append(f"latest week {mine} hm³, the Boletín map {theirs} hm³")
+        by_day: dict[str, list[dict]] = defaultdict(list)
+        for p in src["points"]:
+            by_day[p["date"]].append(p)
+        for day, pts in sorted(by_day.items()):
+            try:
+                k, note = layer_week(dates, day, "the Boletín map (Embalses_Mapa)")
+            except ValueError as e:
+                bad.append(str(e))
+                continue
+            if note:
+                out.append(("NOTE", f"{FILE}.json: {note}"))
+            if k is not None:
+                mine = sum(b["actual"][k] or 0 for b in basins)
+                theirs = sum(p["actual"] for p in pts)
+                if abs(mine - theirs) > TOLERANCE_HM3:
+                    bad.append(f"week {day}: {mine} hm³, the Boletín map {theirs} hm³")
         world = load_interim("_world")
         proj = active().world_projection(world)
-        shapes = [[[proj(lon, lat) for lon, lat in ring] for ring in b["rings"]] for b in src["basins"]]
-        edges = Edges(shapes, WIKIDATA_KM)
-        away = [r["name"] for r in res if r["placed"]
-                and not in_basin(shapes[r["basin"]], edges, r["basin"], *proj(r["lon"], r["lat"]), WIKIDATA_KM)]
+        shapes = basin_shapes(src["basins"], proj)
+        away = [r["name"] for r in res if r["placed"] and not in_basin(shapes[r["basin"]], *proj(r["lon"], r["lat"]))]
         if away:
             bad.append(f"{len(away)} points outside their basin ({', '.join(away[:5])})")
     if bad:
