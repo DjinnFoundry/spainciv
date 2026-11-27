@@ -403,6 +403,7 @@ body.panel-open #lens-area { right: calc(394px + var(--dock-right, 0px)); }
 @container (max-width: 560px) {
   .lens-quick .lens-btn:not(.active) span, .res-toggle span { display: none; }
 }
+.lens-quick.icons .lens-btn:not(.active) span { display: none; } /* a row that would not fit (ui/lenses.js fitQuick) */
 .lens-dock { display: flex; align-items: center; gap: 4px; padding: 5px; max-width: 100%; min-width: 0; }
 .lens-quick { display: flex; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .lens-quick::-webkit-scrollbar { display: none; }

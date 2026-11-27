@@ -18,6 +18,10 @@ function nf(opts) {
 /** x with d decimals in the country's locale: "3.5" (en-US), "3,5" (es-ES). */
 export const fixed = (x, d = 0) => (original() ? x.toFixed(d) : nf({ minimumFractionDigits: d, maximumFractionDigits: d }).format(x));
 
+/** A day of the calendar (year, month 1–12, day) written out in the country's locale: "16 de noviembre de 2026". */
+export const longDate = (y, m, d) => new Intl.DateTimeFormat(locale(), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  .format(new Date(Date.UTC(y, m - 1, d)));
+
 /** x in its shortest form: "0.03" (en-US), "0,03" (es-ES). */
 export const plain = (x) => (original() ? String(x) : nf({ maximumFractionDigits: 20 }).format(x));
 

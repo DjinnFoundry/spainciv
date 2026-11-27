@@ -424,6 +424,18 @@ SOURCES = {
         "red de AENA en 2025. Cada uno se sitúa con OurAirports, emparejado por las palabras de su nombre.",
         "used_for": ["Aeropuertos del mapa"],
     },
+    "eptmc": {
+        "title": "Encuesta Permanente de Transporte de Mercancías por Carretera (EPTMC 2025): toneladas por comunidad "
+        "autónoma de carga y de descarga",
+        "license": "Reutilización comercial o no con las condiciones del Ministerio (Ley 37/2007, "
+        "transportes.gob.es/aviso-legal): citar la fuente («Origen de los datos: Ministerio de Transportes y Movilidad "
+        "Sostenible») y la fecha de la última actualización",
+        "description": "Las tablas anuales de la EPTMC 2025, una encuesta semanal por muestreo a los vehículos pesados "
+        "de mercancías matriculados en España (más de 3,5 t): toneladas y toneladas-kilómetro por comunidad de carga y "
+        "de descarga (tablas 6.7 y 6.8), toneladas por tipo de desplazamiento (6.3) y por capítulo de mercancía NST/R "
+        "(7.5). Los flujos con Baleares, Canarias, Ceuta y Melilla no son significativos y no se publican.",
+        "used_for": ["Rutas comerciales", "Maestre del Comercio"],
+    },
     "puertos_estado": {
         "title": "Tráfico de mercancías por Autoridad Portuaria (2025) y zonas de servicio de los puertos",
         "publisher": "Puertos del Estado",

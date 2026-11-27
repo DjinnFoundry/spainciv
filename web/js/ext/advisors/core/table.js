@@ -5,7 +5,8 @@
 //   columns: [{key, label, value(row) → sortable value, text(row) → string, html?(row), align: "l"|"r",
 //              width ("1.4fr", "72px"), bar?: {max, color}, title?, tip?(row) → cell tooltip,
 //              hideBelow?: px (drop the column while the table is narrower)}]
-//   short: header html (may hold &shy; so a long word breaks with a hyphen); the header wraps to two lines.
+//   short: header html (may hold &shy; so a long word breaks with a hyphen); the header wraps to two lines, and the
+//   sort arrow may go to the next line (a zero-width space before it) rather than cut a word that fills the column.
 //   Left-aligned cells get a tooltip with their full text (for a name column: "name, sub" with row.full).
 //   rows, rowKey(row) = row.key, sort: {key, dir: "asc"|"desc"}, maxHeight = 340, rowH = 28,
 //   search: placeholder text (adds a name filter), searchText(row) = row.name, rank (show the position)
@@ -50,7 +51,7 @@ export function createTable(host, opts) {
     head.innerHTML = `${opts.rank ? `<span class="th r" role="columnheader">#</span>` : ""}${cols.map((c) => {
       const s = sort?.key === c.key ? sort.dir : null;
       return `<span class="th ${c.align === "l" ? "l" : "r"}" role="columnheader" aria-sort="${s === "asc" ? "ascending" : s === "desc" ? "descending" : "none"}">
-        <button type="button" data-sort="${esc(c.key)}" title="${esc(c.title || t("adv.table.sortBy", { label: c.label }))}">${c.short ? c.short : esc(c.label)}${s ? `<span class="arr" aria-hidden="true">${s === "asc" ? "▲" : "▼"}</span>` : ""}</button></span>`;
+        <button type="button" data-sort="${esc(c.key)}" title="${esc(c.title || t("adv.table.sortBy", { label: c.label }))}">${c.short ? c.short : esc(c.label)}${s ? `&#8203;<span class="arr" aria-hidden="true">${s === "asc" ? "▲" : "▼"}</span>` : ""}</button></span>`;
     }).join("")}`;
   }
 

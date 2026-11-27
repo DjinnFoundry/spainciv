@@ -26,7 +26,7 @@ export default {
   // map layers and their tooltips
   "layers.hubs.title": "Main ports and airports",
   "layers.military.title": "Military installations as forts, and the largest training areas",
-  "layers.trade.title": "The largest freight flows between regions",
+  "layers.trade.title": "The largest road freight flows between autonomous communities (EPTMC)",
   "tip.port.note": "Total freight of the Port Authority (Puertos del Estado), placed at its largest port.",
   "tip.port.foreign": "International {foreign} · domestic {domestic}",
   "tip.port.rank": "#{rank} by tonnage · <b>{tons}</b> t ({year})",

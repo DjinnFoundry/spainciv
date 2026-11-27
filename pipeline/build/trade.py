@@ -30,6 +30,7 @@ from pathlib import Path
 
 from ..core.hexgrid import HexGrid
 from ..core.store import load_interim, load_interim_payload, load_web, write_web
+from ..countries import active
 
 REQUIRES = ["_world", "faf5", "census_boundaries", "cities.json", "infrastructure.json"]
 PRODUCES = ["trade.json"]
@@ -54,6 +55,18 @@ PATH_NOTE = ("FAF gives a shipment's start and end zones, not its route: any lin
 
 
 # ------------------------------------------------------------------ zones
+
+
+def middle_anchor(grid: HexGrid, cells: list[int]) -> dict | None:
+    """The anchor of a zone without a city: its cell nearest the mean of its cells' centres (a cell of the zone, so a
+    C-shaped zone is still anchored inside itself); None for a zone with no cells."""
+    if not cells:
+        return None
+    pts = [grid.center(*grid.col_row(i)) for i in cells]
+    mx, my = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
+    cell = min(cells, key=lambda i: math.dist(grid.center(*grid.col_row(i)), (mx, my)))
+    x, y = grid.center(*grid.col_row(cell))
+    return {"cell": cell, "x": round(x, 1), "y": round(y, 1), "city": None}
 
 
 def build_zones(faf: dict, world: dict, cities: list[dict], abbr_of: dict) -> tuple[dict, dict]:
@@ -118,15 +131,7 @@ def build_zones(faf: dict, world: dict, cities: list[dict], abbr_of: dict) -> tu
             c = by_id[z["cities"][0]]
             z["anchor"] = {"cell": c["cell"], "x": c["x"], "y": c["y"], "city": c["id"]}
         else:
-            cells = cells_of.get(zid) or []
-            if cells:
-                pts = [grid.center(*grid.col_row(i)) for i in cells]
-                mx, my = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-                cell = min(cells, key=lambda i: math.dist(grid.center(*grid.col_row(i)), (mx, my)))
-                x, y = grid.center(*grid.col_row(cell))
-                z["anchor"] = {"cell": cell, "x": round(x, 1), "y": round(y, 1), "city": None}
-            else:
-                z["anchor"] = None
+            z["anchor"] = middle_anchor(grid, cells_of.get(zid) or [])
         shorts = [s for s in z.pop("_shorts") if s]
         if z["kind"] == "metro":
             z["short"] = (by_id[z["cities"][0]]["name"] if z["cities"] else None) or (shorts[0] if shorts else None)
@@ -322,23 +327,74 @@ def build() -> None:
 # ------------------------------------------------------------------ check
 
 
-def check(web_dir: Path) -> list[tuple[str, str]]:
+def load_doc(web_dir: Path, required: tuple[str, ...], builder: str):
+    """(path, trade.json, out): out holds a NOTE when the file is not built or a FAIL per missing key; the doc is None
+    then. Shared by this check and spain_trade's."""
     path = Path(web_dir) / "trade.json"
     if not path.exists():
-        return [("NOTE", "trade.json not built (optional; run: build trade --deps)")]
-    out = []
+        return path, None, [("NOTE", f"trade.json not built (optional; run: build {builder} --deps)")]
     doc = json.loads(path.read_text())
-    for k in ("version", "vintage", "year", "sources", "rule", "modes", "commodities", "zones", "routes"):
-        if k not in doc:
-            out.append(("FAIL", f"trade.json lacks '{k}'"))
+    out = [("FAIL", f"trade.json lacks '{k}'") for k in required if k not in doc]
     if out:
-        return out
+        return path, None, out
     if doc["version"] != 1:
         out.append(("FAIL", f"trade.json version {doc['version']!r} (expected 1)"))
+    return path, doc, out
+
+
+def load_grid(web_dir: Path) -> tuple[HexGrid | None, list]:
+    """The map's grid and cell owners from world.json (None and [] without it)."""
     wpath = Path(web_dir) / "world.json"
     world = json.loads(wpath.read_text()) if wpath.exists() else None
     grid = HexGrid(world["grid"]["radius"], world["grid"]["cols"], world["grid"]["rows"]) if world and "grid" in world else None
-    owner = (world or {}).get("owner") or []
+    return grid, (world or {}).get("owner") or []
+
+
+def anchor_problem(z: dict, grid: HexGrid | None, owner: list, land: str) -> str | None:
+    """A zone's anchor off the map's land, as a problem line."""
+    a = z.get("anchor")
+    if a is not None and grid is not None:
+        c = a.get("cell")
+        if not isinstance(c, int) or not 0 <= c < grid.size or (owner and owner[c] < 0):
+            return f"zone {z.get('id')} anchor cell {c!r} is not {land}"
+    return None
+
+
+def route_problems(routes: list, zones: dict, size_key: str, size_word: str, each) -> list[str]:
+    """The checks every route list shares: known zones, ranks 1..N in order, sorted by `size_key`, no pair twice.
+    `each(r, a, b)` adds a builder's own problems for one route between known zones."""
+    probs, ranks, pairs = [], [], set()
+    for r in routes:
+        a, b = zones.get(r.get("a")), zones.get(r.get("b"))
+        if a is None or b is None:
+            probs.append(f"route {r.get('rank')}: unknown zone")
+            continue
+        pairs.add(tuple(sorted((r["a"], r["b"]))))
+        ranks.append(r.get("rank"))
+        probs += each(r, a, b)
+    if ranks != list(range(1, len(ranks) + 1)):
+        probs.append("ranks are not 1..N in order")
+    vals = [r[size_key] for r in routes if isinstance(r.get(size_key), (int, float))]
+    if vals != sorted(vals, reverse=True):
+        probs.append(f"routes are not sorted by {size_word}")
+    if len(pairs) != len(routes):
+        probs.append("duplicate zone pairs")
+    return probs
+
+
+def size_warning(path: Path) -> list[tuple[str, str]]:
+    size = path.stat().st_size
+    return [("WARN", f"trade.json is {size / 1e3:.0f} kB (eager files should stay under ~300 kB)")] if size > 300_000 else []
+
+
+def check(web_dir: Path) -> list[tuple[str, str]]:
+    if active().id not in COUNTRIES:  # the other country's trade.json has its own check
+        return []
+    path, doc, out = load_doc(web_dir, ("version", "vintage", "year", "sources", "rule", "modes", "commodities", "zones",
+                                        "routes"), "trade")
+    if doc is None:
+        return out
+    grid, owner = load_grid(web_dir)
     cpath = Path(web_dir) / "cities.json"
     city_ids = {c["id"] for c in json.loads(cpath.read_text())} if cpath.exists() else None
 
@@ -351,11 +407,8 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
         zones[z.get("id")] = z
         if z.get("kind") not in ("metro", "rest_of_state"):
             probs.append(f"zone {z.get('id')} kind {z.get('kind')!r}")
-        a = z.get("anchor")
-        if a is not None and grid is not None:
-            c = a.get("cell")
-            if not isinstance(c, int) or not 0 <= c < grid.size or (owner and owner[c] < 0):
-                probs.append(f"zone {z.get('id')} anchor cell {c!r} is not US land")
+        if (p := anchor_problem(z, grid, owner, "US land")) is not None:
+            probs.append(p)
         if city_ids is not None and any(c not in city_ids for c in z.get("cities") or []):
             probs.append(f"zone {z.get('id')} lists unknown cities")
     if len(zones) != len(doc["zones"]):
@@ -366,14 +419,9 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
         out.append(("PASS", f"trade.json zones: {len(zones)} zones, {sum(1 for z in zones.values() if z['anchor'])} anchored"))
 
     mode_ids = {m["id"] for m in doc["modes"]}
-    probs, ranks, pairs = [], [], set()
-    for r in doc["routes"]:
-        a, b = zones.get(r.get("a")), zones.get(r.get("b"))
-        if a is None or b is None:
-            probs.append(f"route {r.get('rank')}: unknown zone")
-            continue
-        pairs.add(tuple(sorted((r["a"], r["b"]))))
-        ranks.append(r.get("rank"))
+
+    def each(r, a, b):
+        probs = []
         for k in ("value_musd", "tons_k", "dist_km"):
             if not isinstance(r.get(k), (int, float)) or r[k] < 0:
                 probs.append(f"route {r['rank']}: {k} {r.get(k)!r}")
@@ -392,13 +440,10 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
                 probs.append(f"route {r['rank']}: path does not join the anchors")
             elif any(v not in grid.neighbours(u) for u, v in zip(p, p[1:])):
                 probs.append(f"route {r['rank']}: path steps are not neighbours")
-    if ranks != list(range(1, len(ranks) + 1)):
-        probs.append("ranks are not 1..N in order")
+        return probs
+
+    probs = route_problems(doc["routes"], zones, "value_musd", "value", each)
     vals = [r["value_musd"] for r in doc["routes"] if isinstance(r.get("value_musd"), (int, float))]
-    if vals != sorted(vals, reverse=True):
-        probs.append("routes are not sorted by value")
-    if len(pairs) != len(doc["routes"]):
-        probs.append("duplicate zone pairs")
     if probs:
         out.append(("FAIL", f"trade.json routes: {len(probs)} problems, e.g. {probs[:3]}"))
     elif doc["routes"]:
@@ -407,7 +452,4 @@ def check(web_dir: Path) -> list[tuple[str, str]]:
                             f"#1 {zones[top['a']]['short']} – {zones[top['b']]['short']} ${top['value_musd'] / 1e3:,.1f}B"))
     else:
         out.append(("WARN", "trade.json has no routes"))
-    size = path.stat().st_size
-    if size > 300_000:
-        out.append(("WARN", f"trade.json is {size / 1e3:.0f} kB (eager files should stay under ~300 kB)"))
-    return out
+    return out + size_warning(path)

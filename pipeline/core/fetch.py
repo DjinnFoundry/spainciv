@@ -1,7 +1,8 @@
 """Cached downloads with provenance.
 
 Every file a source downloads lands in data/raw/<source_id>/ and is recorded in
-that folder's manifest.json (url, sha256, size, retrieval time). The manifest
+that folder's manifest.json (url, sha256, size, retrieval time, and the server's
+Last-Modified when it sends one, for a licence that asks for the update date). The manifest
 feeds the in-app "Almanac", so every number on screen can be traced back to
 an exact file.
 
@@ -99,8 +100,10 @@ def _context(cafile: Path | None) -> ssl.SSLContext | None:
     return ctx
 
 
-def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_binary: bool, cafile: Path | None = None) -> tuple[str, int]:
-    """One download attempt into `tmp`. Returns (sha256 hex, size).
+def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_binary: bool, cafile: Path | None = None,
+              meta: dict | None = None) -> tuple[str, int]:
+    """One download attempt into `tmp`. Returns (sha256 hex, size). `meta` gets the response's Last-Modified
+    (`last_modified`, as the server writes it) when the server sends one.
 
     A body shorter than the declared Content-Length (connection cut mid-transfer)
     raises ConnectionError, so the attempt is retried instead of cached.
@@ -111,6 +114,10 @@ def _fetch_to(url: str, tmp: Path, timeout: int, headers: dict | None, expect_bi
         ctype = (resp.headers.get("Content-Type") or "").lower()
         length = resp.headers.get("Content-Length")
         identity = not resp.headers.get("Content-Encoding")
+        if meta is not None:
+            meta.pop("last_modified", None)
+            if modified := resp.headers.get("Last-Modified"):
+                meta["last_modified"] = modified
         if expect_binary and ctype.startswith("text/html"):
             raise UnexpectedContentError(f"{url} returned an HTML page (Content-Type {ctype!r}), not a data file")
         with open(tmp, "wb") as out:
@@ -184,8 +191,10 @@ def download(
     response is an error (some publishers answer missing files with a 200 page).
     `cafile` is an extra root certificate to trust for this download.
     """
+    extra: dict = {}
     return _download_with(
-        source_id, url, rel_path, lambda tmp: _fetch_to(url, tmp, timeout, headers, expect_binary, cafile), force=force
+        source_id, url, rel_path, lambda tmp: _fetch_to(url, tmp, timeout, headers, expect_binary, cafile, extra),
+        force=force, extra=extra,
     )
 
 

@@ -13,6 +13,14 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 176 días); Ceuta y
   Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
   día 1, el 256). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
+- **Rutas comerciales de España**: el interruptor «Rutas comerciales» del menú Mapa dibuja las 30 mayores corrientes
+  de mercancías por carretera entre las 15 comunidades peninsulares en 2025 (Encuesta Permanente de Transporte de
+  Mercancías por Carretera, Ministerio de Transportes), en línea recta entre comunidades y con el grosor según las
+  toneladas. La primera es Castilla-La Mancha ⇄ Madrid, 40,6 millones de toneladas. El tooltip da cada sentido y el
+  recorrido medio. El Maestre del Comercio gana las toneladas entre comunidades, la lista de rutas, el detalle de
+  cada una y una tabla de comunidades con sus socios, las mercancías que más envían y reciben, el saldo y el tráfico
+  con el extranjero. Baleares, Canarias, Ceuta y Melilla salen con sus totales y sin rutas: la encuesta no publica
+  sus flujos. El pipeline lee el .xls del Ministerio con un lector BIFF8 propio (A30, F36).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
@@ -107,6 +115,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Panel del Maestre del Comercio: los puertos de España se partían con «…» («Bahía de Algecira…») y sus barras
+  salían vacías; ahora el nombre baja de línea y la barra es el total. Con un panel abierto al lado, los botones de
+  lentes de abajo se quedan en el icono en vez de cortar el último («Estudios superior»). La flecha de orden de una
+  tabla pasa a la línea de abajo cuando no cabe junto a la cabecera.
 - Adivina el hexágono: las pistas ya no muestran «…» donde iba un topónimo. El nombre se lee sin él («El Cascamorras»), y los que eran casi todo topónimo («Miel de …», «Montes de …») ya no salen. El día 1 sigue siendo Guadix.
 - Tras cada despliegue, quien ya había visitado el mapa seguía hasta 4 horas con los scripts viejos y los datos nuevos (Cloudflare Pages guarda JS y CSS 4 horas). El paquete de España lleva ahora un `_headers` que los hace revalidar en cada visita, como la página y los datos.
 - Grandes personajes, descargados de nuevo: Tenesor Semidán entra como guanarteme de Gran Canaria (con el cargo que se le añadió en Wikidata) y Francesco Redi sale del mapa (nació en Arezzo; Wikidata lo situaba en Lugo). El título propio de los reyes guanches gana a la palabra de la descripción.
