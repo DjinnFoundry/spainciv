@@ -9,5 +9,6 @@ import sun from "./es/sun.js";
 import explore from "./es/explore.js";
 import clima from "./es/clima.js";
 import embalses from "./es/embalses.js";
+import transit from "./es/transit.js";
 
-export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore, ...clima, ...embalses };
+export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore, ...clima, ...embalses, ...transit };

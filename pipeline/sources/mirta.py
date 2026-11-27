@@ -55,7 +55,7 @@ def polygon_area_km2(geom: dict | None) -> float | None:
     return total if polys else None
 
 
-def _dp(pts, tol):
+def simplify_line(pts, tol):
     """Douglas-Peucker (iterative) on a list of (x, y)."""
     if len(pts) < 3:
         return pts
@@ -90,7 +90,7 @@ def simplify_rings(geom: dict | None, tol: float = SIMPLIFY_DEG) -> list[list[li
     for poly in polys:
         for ring in poly:
             pts = [(float(p[0]), float(p[1])) for p in ring]
-            s = _dp(pts, tol)
+            s = simplify_line(pts, tol)
             if len(s) >= 4:
                 out.append([[round(x, 4), round(y, 4)] for x, y in s])
     return out

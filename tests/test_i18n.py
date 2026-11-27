@@ -342,6 +342,7 @@ class SpanishDataTest(unittest.TestCase):
         "National Centers for Environmental Information",  # the NOAA office that publishes ETOPO
         "Institute for the Study of the Ancient World",  # Pleiades' publisher (NYU)
         "power=plant",  # the OpenStreetMap tag
+        "Powered by MITRAMS",  # the credit the NAP's licence asks for, word for word
         "Alma Mater Museum",  # the museum of the Archdiocese of Zaragoza is called so
         # Museums that Wikidata names only in English (or in English before Catalan, Galician or Basque, the label
         # order of pipeline/sources/es/wikidata.py). A new label order needs a fresh fetch of the Wikidata queries.
@@ -432,6 +433,10 @@ class EnglishDataTest(unittest.TestCase):
         ("embalses.json", ".reservoirs[].name"), ("embalses.json", ".reservoirs[].boletin_name"),
         ("embalses.json", ".basins[].name"),
         ("clima.json", ".stations[].name"),  # AEMET's weather stations as AEMET (or the WMO header) names them
+        # stations and train lines as the timetables write them; the stop pairs check() lists by those names
+        ("transit.json", ".stations[].name"), ("transit.json", ".stations[].best.to"),
+        ("transit.json", ".stations[].best.legs[][]"), ("transit.json", ".matching.unmatched_pairs[][]"),
+        *(("transit.json", f".cuts[].{k}") for k in ("route", "from", "to")),  # a line cut that day, by its ends
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.

@@ -101,6 +101,10 @@ class RenderTest(unittest.TestCase):
         def groups(p):  # the fog of war's groups of regions (Page.explore) in that page's language
             return {"groups": [{"name": name, "regions": list(regions)} for name, regions in p.explore]}
 
+        # The NAP's licence: "Powered by MITRAMS", linked to the ministry, in both languages.
+        mitrams = '<a href="https://www.transportes.gob.es/" target="_blank" rel="noopener">Powered by MITRAMS</a>'
+        self.assertIn(mitrams, html)
+        self.assertIn(mitrams, site.credits_inner(es, "en"))
         english = {"data_credit": en.data_credit, "notices": list(en.notices), "explore": groups(en), "play": "play.html",
                    "description": en.description, "credits": site.credits_inner(es, "en")}
         self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
@@ -264,7 +268,7 @@ class CountryJsTest(unittest.TestCase):
         world = {"country": {"id": "es", "site_url": "spainciv", "product": "spainciv"}}
         c = self.country(world, json.dumps(site.page_config(es)))
         self.assertEqual(c["site_url"], "spainciv.djinnfoundry.com")
-        self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", "Powered by MITRAMS"])
         self.assertEqual(c["data_credit"], es.page.in_lang("es").data_credit)
         self.assertEqual(c["product"], "spainciv")
 

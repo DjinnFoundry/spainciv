@@ -59,6 +59,14 @@ decisiones que salgan van a `DECISIONS.md`.
   de capacidad y la lente 56.049. Las posiciones de 16 grandes embalses (Alcántara, Buendía, Mequinenza, Almendra,
   Entrepeñas, Iznájar, Cenajo, Yesa, Contreras, Alarcón, Valdecañas, Riaño, Belesar, Sau, Canelles, Ricobayo) y sus hm³
   coinciden con `Embalses_Mapa`; las situadas con Wikidata son verosímiles. Falta contrastar 1995 con una nota de prensa.
+- Tren a Madrid (E101–E104): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
+  cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026
+  (`check` lo avisa), y el fichero propio de Renfe Feve no entra: cuentan los trenes de Feve del fichero AV/LD de
+  Renfe, pero la vía métrica sin tren en ese fichero no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y tranvías.
+  16 pares de paradas no casan con las vías de OpenStreetMap y su vía no se dibuja (Granada–Guadix, Murcia–Alhama–
+  Totana–Lorca, Antequera AV–Málaga, entre otros); hay que compararlos con la declaración sobre la red de Adif antes
+  de publicar. Ese día la R3 solo tiene trenes de La Garriga al norte y desde 56 estaciones con tren no se llega a
+  Madrid; la nota lo dice, sin la causa, que el horario no da.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
@@ -93,4 +101,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 - Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
   fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E89).
+- Tren a Madrid (F42): abrir una cuenta en el NAP para la clave (`NAP_API_KEY`), que trae Ouigo oficial y Renfe Feve;
+  si vale el fichero no oficial de Iryo; y si se acepta la cláusula «siempre actualizada» de la licencia del MITRAMS
+  con un horario de un día fijo (hoy la fecha sale en la lente y en el Almanaque).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.

@@ -44,6 +44,9 @@ lists the public data behind the map.
 - **Wildlife**: where the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture were reported in
   2013-2018 (MITECO's 10 km grids for the EU Habitats and Birds Directive reports), with the latest lynx and wolf
   censuses beside them.
+- **Hours to Madrid by train**: the shortest timetabled journey to Madrid from every hex on one stated weekday, from
+  the Renfe, Ouigo and Iryo timetables, with the day's stations, the track with trains and the Adif track without
+  passenger trains ([spainciv.djinnfoundry.com/#lens=rail_madrid](https://spainciv.djinnfoundry.com/#lens=rail_madrid)).
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
@@ -76,6 +79,11 @@ uv run --locked python -m pipeline serve               # original United States 
 uv run --locked python -m pipeline all --country es    # rebuild Spain, downloads ~730 MB of source data
 uv run --locked python -m unittest discover -s tests   # Python tests and browser-module checks via Node
 ```
+
+The Ouigo and Renfe Feve timetables come from the Ministry of Transport's NAP, which wants a free account's key:
+set `NAP_API_KEY` before `fetch horarios_tren --country es`. Without it Ouigo comes from a public copy and Renfe
+Feve's own file is left out: the Feve trains in Renfe's AV/LD file still count, but metre-gauge track with no train in
+that file is not drawn. The key is read at fetch time only and never written to the repo.
 
 `pipeline/countries/` holds what makes a map one country or the other (projection, hex size, administrative levels,
 currency); Spain's sources are in `pipeline/sources/es/` and its builders in `pipeline/build/spain*.py`. How the

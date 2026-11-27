@@ -32,6 +32,9 @@ class Page:
     data_credit: str  # the data sources, on the map and on share images
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
     based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
+    # (text, url): the credit line links the first place each text appears in the credit or the notices, for a licence
+    # that asks for a linked credit (MITRAMS: "Powered by MITRAMS" to transportes.gob.es)
+    links: tuple[tuple[str, str], ...] = ()
     game: bool = False  # the daily game "Adivina el hexágono" (web/js/ext/game) in the top bar
     sunset: bool = False  # the sun lens "Sol y reloj" (web/js/ext/sun): the country's clocks are in web/js/ext/sun/solar.js
     # The fog of war "España por descubrir" (web/js/ext/explore) in the map layers menu, and the groups of regions its

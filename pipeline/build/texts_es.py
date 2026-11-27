@@ -172,7 +172,7 @@ _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
 _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
                   (" (final)", " (datos definitivos)"), ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
                   (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)"),
-                  ("(AEMET CSVs of ", "(CSV de AEMET del ")]
+                  ("(AEMET CSVs of ", "(CSV de AEMET del "), ("Timetable of ", "Horario del "), ("; files of ", "; ficheros del ")]
 
 
 # The few vintages a Spanish source writes in Spanish, and their English.
@@ -787,6 +787,30 @@ SOURCES = {
         "de una subclase, con coordenadas, con sus etiquetas y alias en castellano, catalán, gallego y euskera. Solo "
         "sirve para los embalses que el Boletín Hidrológico dejó de dar, que su mapa no sitúa; lo editan voluntarios.",
         "used_for": ["Lente de embalses: la posición de los embalses que ya no están en el Boletín"],
+    },
+    "horarios_tren": {
+        "title": "Horarios de tren de un día en España: Renfe, Ouigo e Iryo (GTFS)",
+        "publisher": "Renfe Operadora (data.renfe.com); Ouigo España a través del NAP del Ministerio de Transportes; "
+                     "Clément Desouche (Iryo, no oficial)",
+        "license": "Renfe: CC BY 4.0, «Origen de los datos: Renfe Operadora» (Ley 37/2007); Ouigo: licencia de datos "
+                   "abiertos del MITRAMS, «Powered by MITRAMS»; Iryo: CC BY 4.0 (recopilación no oficial de iryo.eu)",
+        "description": "Todos los trenes de viajeros con horario en un día laborable en los ficheros GTFS de Renfe (alta "
+        "velocidad, larga y media distancia; Cercanías y Rodalies), Ouigo e Iryo, con las horas de cada parada y si en "
+        "ella se puede subir o bajar. El día es el primer martes, miércoles o jueves en que cada operador y cada núcleo "
+        "de Cercanías lleva al menos el 90 % de sus trenes habituales de ese día de la semana. Iryo no publica un "
+        "horario abierto propio: su fichero es una recopilación no oficial de los horarios de iryo.eu. Los autobuses "
+        "no se cuentan. «Origen de los datos: Renfe Operadora». «Powered by MITRAMS».",
+        "used_for": ["Lente de horas a Madrid en tren", "Estaciones y vías con tren mientras esa lente está abierta"],
+    },
+    "osm_ferrocarril": {
+        "title": "Vías de tren de España (OpenStreetMap, railway=rail y narrow_gauge)",
+        "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
+        "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
+        "description": "Todas las vías de OpenStreetMap en España con railway=rail o railway=narrow_gauge que no son "
+        "apartaderos, playas de vías ni ramales (sin etiqueta service), con su trazado simplificado a unos 50 m y sus "
+        "etiquetas de ancho, uso, operador, alta velocidad y número de línea, de una sola consulta guardada. Lo mapean voluntarios: el operador es el "
+        "que ponen ellos.",
+        "used_for": ["Lente de horas a Madrid en tren: vías con tren y vías sin trenes de viajeros"],
     },
     "wikidata_playas": {
         "title": "Wikidata: playas de España con coordenadas, nombres y municipio",

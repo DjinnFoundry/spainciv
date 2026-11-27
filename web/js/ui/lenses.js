@@ -41,6 +41,12 @@ export function formatLensValue(lens, v) {
   return (v < 10 ? fixed(v, 1) : compact(v)) + (perKm2(lens) ? t("core.lens.perKm2") : "");
 }
 
+// A legend tick of a duration lens: whole and half hours ("2 h", "2,5 h"), minutes under an hour. Only when the five
+// ticks lie an hour or more apart (the train's 45 min to 7 h): rounding to the half hour would merge closer ones (the
+// sun lens's day length, which spans about an hour across Spain), so those keep their minutes.
+const hourTicks = (lens) => lens.domain[1] - lens.domain[0] >= 4 * 60;
+const durationTick = (v) => (v < 60 ? formatDuration(v) : t("core.lens.hours", { n: plain(Math.round(v / 30) / 2) }));
+
 // A lens with `names_from` names its hexes from that data file, loaded the first time the lens opens (main.js):
 // {people: [{name, note?, cell}]}, most famous first. names[k] = "name (note)"; labels[cell] = the people born there.
 export function namesFrom(doc, n) {
@@ -65,7 +71,7 @@ export function formatLensTick(lens, t, k = -1) {
   const v = lens.format === "int" && Number.isFinite(raw) ? Math.round(raw) : raw; // a count never reads "4.5"
   const short = ((lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
     && !(lens.format === "int" && perKm2(lens))) || lens.unit_in_value ? { ...lens, unit: null } : lens;
-  let s = formatLensValue(short, v);
+  let s = lens.format === "duration" && Number.isFinite(v) && hourTicks(lens) ? durationTick(v) : formatLensValue(short, v);
   const zero = Number.isFinite(v) && Math.abs(v) < 1e-9;
   if (zero) s = s.replace(/^(\$?)0[.,]0+(?!\d)/, (_, d) => d + "0");
   if (lens.bounded) return s; // the domain is the value's natural range (a share from 0 to 1): nothing lies beyond
