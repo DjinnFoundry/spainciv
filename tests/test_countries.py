@@ -1,5 +1,7 @@
 """Country configurations, per-country registries and the Spanish reference data."""
 
+import contextlib
+import io
 import json
 import unittest
 from pathlib import Path
@@ -1654,6 +1656,231 @@ class SpainCrimeTest(unittest.TestCase):
         self.assertIn("Por eso quedan sin color: Menorca.", standout["description"]["es"])
         self.assertIn("Left uncoloured for that reason: Menorca.", standout["description"]["en"])
         self.assertIn("1,25 veces la tasa de España y la unidad tiene 20.000 habitantes", standout["description"]["es"])
+
+
+class SpainFaunaTest(unittest.TestCase):
+    """The wildlife lenses: the 10 km squares of especies.py, the census figures of censos_fauna.py and spain_fauna.py,
+    on a row of four of Spain's hexes (10 km across, the last at sea) with a stand-in EPSG:3035 whose squares are 40 km
+    of map across, one edge running through the centre of hex 1."""
+
+    FIELDS = [("code", "C", 15, 0), ("maptype", "C", 15, 0), ("refgrid", "C", 25, 0), ("sensitive", "C", 15, 0),
+              ("CellCode10", "C", 15, 0)]
+
+    @classmethod
+    def report(cls, name_field: str, rows: list[tuple]) -> bytes:
+        """A zipped art. 17 / art. 12 report: rows of (species, cell, sensitive, maptype)."""
+        import zipfile
+
+        from test_geo import make_dbf
+
+        dbf = make_dbf(cls.FIELDS + [(name_field, "C", 40, 0)],
+                       [["X", maptype, "EEA-10km GRID", sensitive, cell, name] for name, cell, sensitive, maptype in rows])
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("ES_Report.cpg", "UTF-8")
+            zf.writestr("ES_Report.dbf", dbf)
+            zf.writestr("ES_Report.shp", b"")  # the geometry is never read
+        return buf.getvalue()
+
+    @staticmethod
+    def row(name, cell="10kmE316N182", sensitive="Non sensitive", maptype="Distribution"):
+        return (name, cell, sensitive, maptype)
+
+    def cells_of(self, rows):
+        import zipfile
+
+        from pipeline.sources.es.especies import species_cells
+
+        with zipfile.ZipFile(io.BytesIO(self.report("Especie", rows))) as zf:
+            return species_cells(zf, "Especie", {r[0] for r in rows if r[0] != "Capra pyrenaica"})
+
+    def test_process_keeps_only_the_listed_species(self):
+        import tempfile
+        from unittest import mock
+
+        from pipeline.sources.es import especies
+
+        art17 = [self.row(n, c) for n in ("Lynx pardinus", "Ursus arctos", "Canis lupus")
+                 for c in ("10kmE316N182", "10kmE281N173")] + [self.row("Capra pyrenaica")]
+        art12 = [self.row("Aquila adalberti"), self.row("Gypaetus barbatus", "10kmE310N236"), self.row("Otis tarda")]
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, especies.file("art17")).write_bytes(self.report("Especie", art17))
+            Path(d, especies.file("art12")).write_bytes(self.report("Nombre", art12))
+            with mock.patch.object(especies.Especies, "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                out = especies.Especies().process()
+        self.assertEqual(list(out["species"]), list(especies.SPECIES))
+        self.assertEqual(out["species"]["Lynx pardinus"],
+                         {"directive": "art17", "code": "X", "refgrid": "EEA-10km GRID",
+                          "cells": ["10kmE281N173", "10kmE316N182"]})
+        self.assertEqual(out["species"]["Gypaetus barbatus"]["cells"], ["10kmE310N236"])
+        self.assertEqual((out["period"], len(out["_files"])), ([2013, 2018], 2))
+
+    def test_process_refuses_sensitive_records_and_odd_cell_codes(self):
+        self.assertEqual(self.cells_of([self.row("Lynx pardinus")])["Lynx pardinus"]["cells"], ["10kmE316N182"])
+        for bad in (self.row("Lynx pardinus", sensitive="Sensitive"), self.row("Lynx pardinus", cell="1kmE3160N1820"),
+                    self.row("Lynx pardinus", maptype="Range")):
+            with self.assertRaises(RuntimeError, msg=bad):
+                self.cells_of([self.row("Lynx pardinus", "10kmE1N1"), bad])
+
+    def test_census_pdf_replaced_in_place_fails(self):
+        import tempfile
+        from unittest import mock
+
+        from pipeline.sources.es import censos_fauna as cf
+
+        with tempfile.TemporaryDirectory() as d:
+            for c in cf.CENSUSES.values():
+                Path(d, cf.file(c["url"])).write_bytes(b"%PDF-1.7 another edition")
+            with mock.patch.object(cf.CensosFauna, "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                with self.assertRaisesRegex(RuntimeError, "re-read the PDF"):
+                    cf.CensosFauna().process()
+
+    # --- the lenses on a toy map ------------------------------------------------------------------------------
+    OWNER = [0, 0, 0, -1]  # three land hexes of province 41 (Sevilla, Andalucía) and the sea
+    STATES = ["41"]
+
+    class Identity:
+        """Map km are lon/lat (the stand-in LAEA below does the rest)."""
+        def __call__(self, lon, lat):
+            return lon, lat
+
+        def inverse(self, x, y):
+            return x, y
+
+    @staticmethod
+    def laea(lon, lat):
+        """Squares 40 km of map across, an edge at x = 10 km (the centre of hex 1): metres = (km - 10) × 250 + 30,000,
+        so hex 0 lies in E2N2, hex 1 is half E2N2 and half E3N2, hex 2 lies in E3N2."""
+        return (lon - 10) * 250 + 30000, (lat + 100) * 250
+
+    def setUp(self):
+        from pipeline.core.hexgrid import HexGrid
+
+        self.grid = HexGrid(radius=countries.COUNTRIES["es"].hex_radius_km, cols=4, rows=1)
+
+    def shares(self, cells):
+        from pipeline.build import spain_fauna as sf
+
+        codes, points = sf.cell_codes(self.OWNER, self.Identity(), self.grid, self.laea)
+        return sf.shares(codes, points, set(cells), len(self.OWNER)), points
+
+    def test_share_of_each_hex_in_the_reported_squares(self):
+        values, points = self.shares({"10kmE2N2"})
+        self.assertEqual(points, 84)
+        self.assertEqual(values[0], 1.0)  # inside a reported square
+        self.assertAlmostEqual(values[1], 0.5, delta=1 / 84)  # split half and half
+        self.assertEqual(values[2], 0)  # in a square with no report
+        self.assertIsNone(values[3])  # at sea
+        self.assertEqual(self.shares(set())[0], [0, 0, 0, None])
+
+    def census(self, name):
+        from pipeline.sources.es.censos_fauna import CENSUSES
+
+        return {k: v for k, v in CENSUSES[name].items() if k != "sha256"}
+
+    def test_census_names_the_communities_the_map_does_not_reach(self):
+        from pipeline.build.spain_fauna import census_text
+
+        lynx = census_text(self.census("Lynx pardinus"), [1.0, 0.5, 0, None], self.OWNER, self.STATES, [2013, 2018])
+        self.assertTrue(lynx["es"].startswith("El censo de 2025 cuenta 2269 ejemplares en Andalucía, "))
+        self.assertTrue(lynx["es"].endswith("el mapa de 2013-2018 no llega a Castilla-La Mancha, Extremadura, Murcia, "
+                                            "Castilla y León y Madrid."), lynx["es"])
+        self.assertTrue(lynx["en"].startswith("The 2025 census counts 2,269 individuals in Andalucía, "))
+        self.assertTrue(lynx["en"].endswith("the 2013-2018 map does not reach Castilla-La Mancha, Extremadura, Murcia, "
+                                            "Castilla y León and Madrid."), lynx["en"])
+        only = {**self.census("Lynx pardinus"), "communities": ["01"]}
+        self.assertIn("el mapa de 2013-2018 llega a todas.", census_text(only, [1.0, 0, 0, None], self.OWNER,
+                                                                         self.STATES, [2013, 2018])["es"])
+        self.assertIn("no llega a Andalucía", census_text(only, [0, 0, 0, None], self.OWNER, self.STATES,
+                                                          [2013, 2018])["es"])
+        wolf = census_text({**self.census("Canis lupus"), "map_cells": 552}, [1.0, 0, 0, None], self.OWNER,
+                           self.STATES, [2013, 2018])
+        self.assertIn("El mapa oficial de 2013-2018 tiene 552 cuadrículas; el censo 2021-2024 da 1357 de presencia "
+                      "estable y 37 esporádica", wolf["es"])
+        self.assertIn("the 2021-2024 census gives 1,357 of stable presence and 37 of sporadic presence", wolf["en"])
+
+    def interim(self, cells: dict[str, list[str]]):
+        from pipeline.sources.es.censos_fauna import CENSUSES
+        from pipeline.sources.es.especies import SPECIES
+
+        data = {"period": [2013, 2018], "species": {
+            n: {"directive": a, "code": "X", "refgrid": "G", "cells": cells.get(n, ["10kmE2N2"])} for n, a in SPECIES.items()}}
+        censuses = {"censuses": {n: self.census(n) for n in CENSUSES}}
+        return lambda source: {"bdn_especies": data, "miteco_censos_fauna": censuses}[source]
+
+    def test_lenses(self):
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        world = {"owner": self.OWNER, "states": self.STATES}
+        with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Ursus arctos": ["10kmE3N2"]})), \
+                contextlib.redirect_stdout(io.StringIO()):
+            out = sf.lenses(world, self.Identity(), self.grid, self.laea)
+        self.assertEqual([l["id"] for l in out], ["lynx", "bear", "wolf", "imperial_eagle", "bearded_vulture"])
+        lynx, bear, wolf = out[:3]
+        self.assertEqual((lynx["group"], lynx["format"], lynx["domain"], lynx["source"]),
+                         ("fauna", "pct", [0, 1], "bdn_especies"))
+        self.assertEqual(lynx["values"][0], 1.0)
+        self.assertEqual(bear["values"][0], 0)
+        self.assertEqual(lynx["note"]["es"], "Cuadrículas de 10 km con la especie en 2013-2018; una vacía no prueba que "
+                                              "no esté.")
+        self.assertIn("El censo de 2025 cuenta 2269 ejemplares", lynx["description"]["es"])
+        self.assertIn("The 2021-2024 census counts 333 packs", wolf["description"]["en"])
+        self.assertNotIn("censo", bear["description"]["es"])
+        self.assertIn("área de cría", out[3]["description"]["es"])
+        self.assertIn("Lince ibérico (Lynx pardinus)", lynx["description"]["es"])
+        self.assertIn("Iberian lynx (Lynx pardinus)", lynx["description"]["en"])
+
+    def test_squares_off_the_map_beyond_the_limit_fail(self):
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        world = {"owner": self.OWNER, "states": self.STATES}
+        far = ["10kmE2N2"] + [f"10kmE9{i}N9" for i in range(3)]  # 3 of 4 squares on no land hex
+        with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Canis lupus": far})):
+            with self.assertRaisesRegex(RuntimeError, "Canis lupus: 3 of 4 squares touch no land hex"), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                sf.lenses(world, self.Identity(), self.grid, self.laea)
+
+    def test_lenses_and_species_lists_must_agree(self):
+        from pipeline.build.spain_fauna import LENSES, same_species
+        from pipeline.sources.es.especies import SPECIES
+
+        same_species(LENSES, SPECIES)
+        with self.assertRaisesRegex(RuntimeError, "Otis tarda"):
+            same_species(LENSES, {**SPECIES, "Otis tarda": "art12"})
+        with self.assertRaises(RuntimeError):
+            same_species({k: v for k, v in LENSES.items() if k != "Canis lupus"}, SPECIES)
+
+    def test_check(self):
+        import tempfile
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        def lens(meta, values):
+            return {"id": meta["id"], "group": "fauna", "format": "pct", "note": "n", "values": values}
+
+        full = [0.5] * sf.MIN_HEXES + [0, None]
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sf, "active", return_value=SimpleNamespace(id="es")):
+            def check(lenses):
+                Path(d, "lenses.json").write_text(json.dumps({"lenses": lenses}))
+                return sf.check(d)
+
+            good = [lens(m, full) for m in sf.LENSES.values()]
+            self.assertEqual(check(good)[0][0], "PASS")
+            self.assertEqual(check(good[1:]), [("FAIL", "wildlife lenses: lens lynx missing")])
+            self.assertEqual(check([lens(sf.LENSES["Lynx pardinus"], full + [1.5])] + good[1:]),
+                             [("FAIL", "wildlife lenses: lens lynx: values outside 0..1")])
+            self.assertEqual(check([lens(sf.LENSES["Lynx pardinus"], [0.5, 0])] + good[1:]),
+                             [("FAIL", "wildlife lenses: lens lynx: only 1 hexes > 0")])
+            self.assertEqual(check([{**good[0], "note": None}] + good[1:])[0][0], "FAIL")
+        with mock.patch.object(sf, "active", return_value=SimpleNamespace(id="us")):
+            self.assertEqual(sf.check("/nonexistent"), [])  # the US map has no wildlife lenses
+
 
 class SpainFiestasTest(unittest.TestCase):
     PAGE = ('<dl class="accordion"><dt id="dt1" class="close">Andalucía</dt><dd style="display: none;"><ul>'

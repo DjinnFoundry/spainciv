@@ -215,5 +215,20 @@ class DbfTest(unittest.TestCase):
             list(records(io.BytesIO(self.table().getvalue()[:-20])))
 
 
+class EeaGridTest(unittest.TestCase):
+    """The EEA 10 km square of a point, through the EPSG:3035 projection (checked against PROJ 9 via pyproj 3.7.1:
+    (3159401.70, 2027957.63) and (2857207.98, 1705377.10) m)."""
+
+    def test_points_fall_in_their_squares(self):
+        from pipeline.build.spain_fauna import cell_code
+
+        laea = LambertAzimuthalEllipsoid()
+        self.assertEqual(cell_code(*laea(-3.70, 40.40)), "10kmE315N202")  # Madrid
+        self.assertEqual(cell_code(*laea(-6.45, 37.00)), "10kmE285N170")  # Doñana
+        x, y = laea(-3.70, 40.40)
+        self.assertAlmostEqual(x, 3159401.70, places=1)
+        self.assertAlmostEqual(y, 2027957.63, places=1)
+
+
 if __name__ == "__main__":
     unittest.main()

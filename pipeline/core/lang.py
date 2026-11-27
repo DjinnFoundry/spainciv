@@ -110,6 +110,17 @@ def join_texts(parts: list, sep: str = ", ") -> Any:
     return Text(**{lang: sep.join(pick(p, lang) for p in parts) for lang in langs})
 
 
+def and_list(names: list[str]) -> "Text":
+    """Names joined as a list in each language: "A, B y C" / "A, B and C" (Spanish "e" before an i- sound)."""
+    if not names:
+        raise ValueError("and_list of no names")
+    if len(names) == 1:
+        return tr(names[0], names[0])
+    head, last = ", ".join(names[:-1]), names[-1]
+    y = "e" if re.match(r"(?i)h?i(?![aeiouáéíóú])", last) else "y"
+    return tr(f"{head} {y} {last}", f"{head} and {last}")
+
+
 def split(data: Any, langs: tuple[str, ...]) -> tuple[Any, dict[str, Any]]:
     """(data with every Text in langs[0], {other lang: overlay of the texts that differ}). A Text must have exactly the
     country's languages."""
