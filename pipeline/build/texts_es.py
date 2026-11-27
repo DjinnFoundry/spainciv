@@ -626,6 +626,15 @@ SOURCES = {
         "de sus estaciones a una rejilla y la promedia en cada región.",
         "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, Ceuta y Melilla)"],
     },
+    "omm_normales_es": {
+        "title": "Normales climatológicas estándar de la OMM 1991-2020, España (AEMET, vía la NCEI, accession 0253808 "
+        "v6.6)",
+        "license": _AEMET + " (la NCEI no indica licencia en los ficheros)",
+        "description": "Las normales mensuales 1991-2020 que AEMET envió a la OMM para 83 estaciones: temperatura media, "
+        "máxima y mínima, precipitación, días con la mínima por debajo de 0 °C y horas de sol (76 estaciones). El nombre "
+        "y la posición de cada estación salen de su página de AEMET.",
+        "used_for": ["Clima del mes (estaciones, horas de sol)"],
+    },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
         "publisher": "Ministerio de Industria y Turismo, Secretaría de Estado de Turismo",
