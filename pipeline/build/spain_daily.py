@@ -27,6 +27,7 @@ from ..core.geo import ring_area, ring_centroid
 from ..core.hexgrid import HexGrid
 from ..core.lang import Text, pct, tr
 from ..core.store import load_interim
+from ..sources.es.ine_daily import province_of
 from .lenses import AMENITIES_RAMP, COUNTY_LENSES, DISASTERS_RAMP, FAITH_RAMP, _spread
 
 SOURCES = [
@@ -55,10 +56,12 @@ def by_municipality(geoids: list[str], value) -> list:
     return [value(g) for g in geoids]
 
 
-def listed_or_rest(data: dict, rate: Callable[[dict], float | None]) -> Callable[[str], float | None]:
-    """A municipality's rate: its own counts if INE lists it, else the rest of its province's."""
+def listed_or_rest(data: dict, rate: Callable[[dict], float | None],
+                   unit_of: Callable[[str], str] = province_of) -> Callable[[str], float | None]:
+    """A municipality's rate: its own counts if its source lists it, else the rest of its province's (of its unit's,
+    with `unit_of`, keyed so in data["rest_of_province"])."""
     def value(code: str):
-        counts = data["municipalities"].get(code) or data["rest_of_province"].get(code[:2])
+        counts = data["municipalities"].get(code) or data["rest_of_province"].get(unit_of(code))
         return rate(counts) if counts else None
     return value
 
