@@ -6,7 +6,7 @@ feeds the in-app "Almanac", so every number on screen can be traced back to
 an exact file.
 
 Downloads are retried (RETRIES attempts, exponential backoff) on network errors,
-timeouts and HTTP 5xx; a failed attempt never leaves a partial file behind.
+timeouts, HTTP 5xx and HTTP 429 (waiting at least the server's Retry-After, up to MAX_WAIT); a failed attempt never leaves a partial file behind.
 download_prefix() is the same for big sorted text files of which only one block
 of lines is needed; discard() forgets a cached file that turned out to be bad.
 
@@ -36,6 +36,7 @@ USER_AGENT = "civ-usa-visualizer/0.1 (open data pipeline)"
 OFFLINE = False  # set by the CLI's --offline flag
 RETRIES = 3  # total attempts per download
 BACKOFF = 2.0  # seconds before the 2nd attempt; doubles each time
+MAX_WAIT = 300.0  # seconds: the longest Retry-After a 429 is waited for
 
 
 class OfflineError(RuntimeError):
@@ -51,10 +52,17 @@ def _request(url: str, method: str = "GET", headers: dict | None = None) -> urll
 
 
 def _retryable(exc: BaseException) -> bool:
-    """True for transient failures: HTTP 5xx, connection problems and timeouts (not 4xx)."""
+    """True for transient failures: HTTP 5xx and 429 (too many requests), connection problems and timeouts (not other
+    4xx)."""
     if isinstance(exc, urllib.error.HTTPError):
-        return exc.code >= 500
+        return exc.code >= 500 or exc.code == 429
     return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException))
+
+
+def retry_after(exc: urllib.error.HTTPError) -> float:
+    """The seconds a 429 asks to wait (Retry-After in seconds), capped at MAX_WAIT; 0 when it doesn't say."""
+    value = exc.headers.get("Retry-After", "") if exc.code == 429 and exc.headers else ""
+    return min(float(value), MAX_WAIT) if value.strip().isdigit() else 0.0
 
 
 def url_exists(url: str, timeout: int = 30) -> bool:
@@ -138,9 +146,10 @@ def _download_with(
             tmp.unlink(missing_ok=True)
             if n == RETRIES or not _retryable(exc):
                 raise
-            if isinstance(exc, urllib.error.HTTPError):
-                exc.close()
             wait = BACKOFF * 2 ** (n - 1)
+            if isinstance(exc, urllib.error.HTTPError):
+                wait = max(wait, retry_after(exc))
+                exc.close()
             print(f"      attempt {n} failed ({exc}); retrying in {wait:g}s")
             time.sleep(wait)
     tmp.replace(dest)

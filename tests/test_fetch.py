@@ -40,6 +40,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send(200, BODY)
         if path == "/flaky":  # fails twice, then works
             return self._send(503) if n <= 2 else self._send(200, BODY)
+        if path == "/busy":  # too many requests once, asking for a 1-second wait
+            if n == 1:
+                self.send_response(429)
+                self.send_header("Retry-After", "1")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            return self._send(200, BODY)
         if path == "/down":
             return self._send(500)
         if path == "/missing":
@@ -139,6 +147,13 @@ class FetchTest(unittest.TestCase):
         dest = self._dl("/flaky")
         self.assertEqual(dest.read_bytes(), BODY)
         self.assertEqual(Handler.hits["/flaky"], 3)
+
+    def test_retries_429_after_retry_after(self):
+        with mock.patch.object(fetch.time, "sleep") as sleep:
+            dest = self._dl("/busy")
+        self.assertEqual(dest.read_bytes(), BODY)
+        self.assertEqual(Handler.hits["/busy"], 2)
+        sleep.assert_called_once_with(1.0)
 
     def test_gives_up_after_retries_and_cleans_up(self):
         with self.assertRaises(urllib.error.HTTPError):
