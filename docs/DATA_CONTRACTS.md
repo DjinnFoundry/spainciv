@@ -804,7 +804,8 @@ saved by `download_prefix()` has a `partial` note in the manifest, and its `sha2
 Extensions live in `web/js/ext/<name>/index.js` and export `install(app)`; `ext/index.js` loads `cityView`, `advisors`,
 `layers` (roads, rail, forts, ports, airports, wonders and trade routes), `lang` (the language switch of a country in
 several languages, with the `lang` hash key) and `game` (the daily game "Adivina el hexágono", mode `game`, hash key
-`juego`, only where the page settings say `game: true`; its rules and clues are in `ext/game/puzzle.js`) and `fiestas`
+`juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
+also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
 
