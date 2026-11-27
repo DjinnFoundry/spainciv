@@ -319,13 +319,16 @@ class SpanishDataTest(unittest.TestCase):
              "source", "sources", "file", "files", "sha256", "url", "cbsa", "county", "state", "naics", "via", "basis",
              "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
-             "locale", "currency",
+             "locale", "currency", "measure",  # trade.json: "tons"
              "map", "natural_wonders",  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers
              "bare", "start_bias", "resource", "seat"}  # the bare map like the map; a nation's Unciv terrain, resource, seat
+    # (file, key) whose values are codes in that file only: unciv.json's fire-season tile classes, Unciv's filters.
+    FILE_CODES = {("unciv.json", "class")}
     CODE_VALUES = {"workers", "usd", "eur"}  # nation.json yields[].unit
     # (file, key) whose values are people's names as Wikidata writes them: some have only an English label ("Mark of
     # Toledo") and some surnames are English words ("Eva Forest").
     PEOPLE = {("personajes.json", "name")}
+    SKIP = FILE_CODES | PEOPLE  # (file, key) left out of the check
     ENGLISH = set("""the of and with from for by is are was not this that its which who people residents workers jobs
         county counties state states share median average farm wind plant plants power station airport airports
         students visitors island islands short tons pounds lb million billion year years unknown phase landmark
@@ -339,6 +342,7 @@ class SpanishDataTest(unittest.TestCase):
         "National Centers for Environmental Information",  # the NOAA office that publishes ETOPO
         "Institute for the Study of the Ancient World",  # Pleiades' publisher (NYU)
         "power=plant",  # the OpenStreetMap tag
+        "Powered by MITRAMS",  # the credit the NAP's licence asks for, word for word
         "Alma Mater Museum",  # the museum of the Archdiocese of Zaragoza is called so
         # Museums that Wikidata names only in English (or in English before Catalan, Galician or Basque, the label
         # order of pipeline/sources/es/wikidata.py). A new label order needs a fresh fetch of the Wikidata queries.
@@ -360,7 +364,7 @@ class SpanishDataTest(unittest.TestCase):
         def walk(x, path):
             if isinstance(x, dict):
                 for k, v in x.items():
-                    if k not in self.CODES and (name, k) not in self.PEOPLE:
+                    if k not in self.CODES and (name, k) not in self.SKIP:
                         walk(v, f"{path}.{k}")
             elif isinstance(x, list):
                 for i, v in enumerate(x):
@@ -425,6 +429,14 @@ class EnglishDataTest(unittest.TestCase):
         # military installations and their parts as OpenStreetMap names them
         ("military.json", ".installations[].name"), ("military.json", ".installations[].parts[]"),
         ("military.json", ".ranges[].name"),
+        # reservoirs and basins as the Boletín Hidrológico writes them ("Breña, La", "Miño - Sil")
+        ("embalses.json", ".reservoirs[].name"), ("embalses.json", ".reservoirs[].boletin_name"),
+        ("embalses.json", ".basins[].name"),
+        ("clima.json", ".stations[].name"),  # AEMET's weather stations as AEMET (or the WMO header) names them
+        # stations and train lines as the timetables write them; the stop pairs check() lists by those names
+        ("transit.json", ".stations[].name"), ("transit.json", ".stations[].best.to"),
+        ("transit.json", ".stations[].best.legs[][]"), ("transit.json", ".matching.unmatched_pairs[][]"),
+        *(("transit.json", f".cuts[].{k}") for k in ("route", "from", "to")),  # a line cut that day, by its ends
     }
     # (file, path) → the parts of its strings that are names: an urban area's AUDES name before "urban area"; in a
     # resource's detail, the plant it names ("including … (") and the company and municipality of a mine.
@@ -468,6 +480,8 @@ class EnglishDataTest(unittest.TestCase):
                    r"Calidad diferenciada|Estadística de Matrimonios|Balance de Criminalidad|Sistema Estadístico de Criminalidad|"
                    r"Portal Estadístico de Criminalidad|Policía (?:Nacional|Foral de Navarra)|Convenio de Cooperación para la Defensa|"
                    r"Sistema Estatal de Referencia del Precio del Alquiler de Vivienda|datos\.gob\.es|Sierra de Guadarrama|"
+                   r"Banco de Datos de la Naturaleza|Inventario Español del Patrimonio Natural y de la Biodiversidad|"
+                   r"Inventario Español de Especies Terrestres|"
                    # the two names the Ministry maps that the EU register no longer has (DECISIONS E64)
                    r"Aceite de la Comunitat Valenciana|Carne Morucha de Salamanca)\b",
                    re.I),
@@ -512,7 +526,7 @@ class EnglishDataTest(unittest.TestCase):
             if isinstance(x, dict):
                 lens = x.get("id", lens) if path.endswith("lenses[]") else lens
                 for k, v in x.items():
-                    if k not in self.CODES and (name, k) not in SpanishDataTest.PEOPLE:
+                    if k not in self.CODES and (name, k) not in SpanishDataTest.SKIP:
                         walk(v, f"{path}.{k}", lens)
             elif isinstance(x, list):
                 for v in x:

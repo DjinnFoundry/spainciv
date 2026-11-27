@@ -10,6 +10,7 @@ export default {
   "fiestas.title.now": "¿Dónde hay fiesta este mes?",
   "fiestas.close": "Cerrar el calendario (Esc)",
   "fiestas.months": "Mes",
+  "fiestas.link": "Fiestas de {month}",
   "fiestas.month": { one: "{month}: {n} fiesta", other: "{month}: {n} fiestas" },
   "fiestas.summary": { one: "{n} fiesta con fecha en {month}. Púlsala para verla en el mapa.", other: "{n} fiestas con fecha en {month}. Pulsa una para verla en el mapa." },
   "fiestas.undated": { one: "{n} fiesta no tiene mes en su fuente (no da fecha, o la fiesta es móvil, como la Semana Santa o el Carnaval) y no sale en ningún mes.", other: "{n} fiestas no tienen mes en su fuente (no da fecha, o la fiesta es móvil, como la Semana Santa o el Carnaval) y no salen en ningún mes." },

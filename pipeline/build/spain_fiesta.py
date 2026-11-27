@@ -39,7 +39,7 @@ FIESTA_FILE = "fiestas"  # the calendar: every fiesta with its dates (fiestas.js
 PER = 1000  # per 1,000 inhabitants
 CATEGORY = {"internacional": tr("Internacional", "International"), "nacional": tr("Nacional", "National"),
             "autonomica": tr("Autonómica", "Regional")}
-# Points in the party index: each step down the ladder halves, so a community's fiesta adds half a Nacional (E78).
+# Points in the party index: each step down the ladder halves, so a community's fiesta adds half a Nacional (E45).
 FIESTA_WEIGHT = {"internacional": 2, "nacional": 1, "autonomica": 0.5}
 PARTY_PRIOR = 1000  # residents: the weight of Spain's rate in a hex's bars and tourist dwellings for the party index
 

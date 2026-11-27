@@ -4,8 +4,8 @@ export default {
   "adv.economy.blurb": "Who makes what: jobs by industry, the provinces' GDP and the urban areas that stand out.",
   "adv.knowledge.blurb": "R&D personnel and where it is concentrated.",
   "adv.military.blurb": "Bases, barracks and training areas, by province and by city.",
-  "adv.commerce.blurb": "The busiest ports and airports, and the road and rail network.",
-  "adv.councilSources": "All figures are public data: INE's Padrón and Annual Population Census, its Regional Accounts and its Household Income Distribution Atlas, CORINE land cover, IGN boundaries, the Ministry of Housing's urban areas, OAPN's National Parks and Wikidata. Each dashboard lists its sources and caveats at the bottom.",
+  "adv.commerce.blurb": "The road freight routes between communities, the busiest ports and airports, and the road and rail network.",
+  "adv.councilSources": "All figures are public data: INE's Padrón and Annual Population Census, its Regional Accounts and its Household Income Distribution Atlas, CORINE land cover, IGN boundaries, the Ministry of Housing's urban areas, the Ministry of Transport's road freight survey, OAPN's National Parks and Wikidata. Each dashboard lists its sources and caveats at the bottom.",
 
   // fields
   "adv.f.population.desc": "Residents ({vintage}).",
@@ -148,6 +148,9 @@ export default {
   "adv.com.boardings": "{id}: passengers in {year}",
   "adv.com.airTip": "{hub} · <b>{n}</b> passengers",
   "adv.com.routesOnly": "None",
+  // trade routes between communities
+  "adv.com.zoneFilter": {"one": "Community: <b>{name}</b> · {n} route", "other": "Community: <b>{name}</b> · {n} routes"},
+  "adv.com.clearZone": "Clear the community filter",
   "adv.com.c.ne": "Natural Earth roads and rail lines are map art, not statistics: an older, simplified alignment that holds only the main lines.",
   "adv.cult.wondersSub": "{parks} natural sites · {unis} universities · {landmarks} monuments",
   "adv.cult.note": "Hover a wonder to find it on the map; click to fly there. Each list follows the order its rule gives.",

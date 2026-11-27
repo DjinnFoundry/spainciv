@@ -15,7 +15,10 @@ Conquistadors count whatever their fame.
 The answers are cached like any download, in three steps that keep every query small enough for the endpoint's
 60-second limit: the people born in Spain (split by sitelink count) with their occupations and their positions,
 awards and canonization status; the class trees; and the labels, descriptions, dates and birthplaces of the people
-the rules keep, in batches.
+the rules keep, in batches, with a second small query per batch for who has any date-of-death statement at all.
+
+The payload carries the download date (`retrieved`, that of the first answer, which also names the vintage): the
+builder takes its year as today for the people without a death date (pipeline/build/spain_personajes.py lifespan).
 """
 
 from __future__ import annotations
@@ -178,6 +181,9 @@ DETAILS = """SELECT ?p ?pLabel ?pDescription ?g ?born ?bp ?br ?died ?dp ?dr
                         OPTIONAL { ?up wdt:P31 ?ut. } } }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "%s". }
 }"""
+# Who of a batch has a date-of-death statement (P570) of any kind: a date, "unknown value" or a deprecated one, which
+# DETAILS leaves out because it reads only usable dates. Such a person died, even with no date the map can use.
+DEATHS = "SELECT DISTINCT ?p WHERE { VALUES ?p { %s } ?p p:P570 ?s. }"
 
 
 def tree_file(cls: str) -> str:
@@ -243,7 +249,8 @@ WORDS = {
     "financiero",
     "athletes": "deportista futbolista ciclista tenista baloncestista atleta nadador nadadora jugador jugadora "
     "torero boxeador golfista balonmanista alpinista esquiador esquiadora regatista waterpolista piragüista "
-    "entrenador",
+    "entrenador|piloto de automovilismo|piloto de motociclismo|piloto de carreras|piloto de rally|piloto de rallies"
+    "|expiloto de automovilismo|expiloto de motociclismo",
 }
 TERMS = {tuple(t.split()): k for k, spec in WORDS.items()
          for t in spec.split("|")[0].split() + spec.split("|")[1:]}  # words, then the phrases after a |
@@ -342,8 +349,11 @@ class WikidataPersonajes(Source):
         self._query("conquistadors_unborn.json", UNBORN, force)
         for cls in DEEP:
             self._query(tree_file(cls), TREE % cls, force)
-        for rel, chunk in batches(list(self._candidates()), "details").items():
+        candidates = list(self._candidates())
+        for rel, chunk in batches(candidates, "details").items():
             self._query(rel, DETAILS % (_items(chunk), LANGUAGES), force)
+        for rel, chunk in batches(candidates, "deaths").items():
+            self._query(rel, DEATHS % _items(chunk), force)
 
     def _query(self, rel: str, sparql: str, force: bool) -> None:
         """Download one SPARQL answer. The endpoint can cut an answer short at its time limit and still send 200, so
@@ -387,6 +397,8 @@ class WikidataPersonajes(Source):
     def process(self):
         people = self._candidates()
         detail_files = list(batches(list(people), "details"))
+        death_files = list(batches(list(people), "deaths"))
+        dead = {qid(b["p"]["value"]) for rel in death_files for b in self._rows(rel)}
         details: dict[str, dict] = {}
         places: dict[str, dict] = {}
         for rel in detail_files:
@@ -409,14 +421,17 @@ class WikidataPersonajes(Source):
             d = details[p]
             out.append({
                 "qid": p, "name": d["name"], "description": d["description"], "female": d["female"],
-                "born": best_date(d["born"]), "died": best_date(d["died"]), **primary(c, d["description"]),
+                "born": best_date(d["born"]), "died": best_date(d["died"]), "dead": p in dead,
+                **primary(c, d["description"]),
                 "birthplaces": [birthplace(places[b]) for b in sorted(d["places"], key=qid_number)],
             })
         out.sort(key=lambda r: (-r["sitelinks"], qid_number(r["qid"])))
         files = [f"{k}/{n}.json" for n in SHARDS for k in ("occupations", "honours")] + ["conquistadors_unborn.json"]
-        files += [tree_file(cls) for cls in DEEP] + detail_files
+        files += [tree_file(cls) for cls in DEEP] + detail_files + death_files
+        retrieved = read_manifest(self.id)["occupations/spain_15.json"]["retrieved"][:10]
         return {
-            "vintage": f"Wikidata, {read_manifest(self.id)['occupations/spain_15.json']['retrieved'][:10]}",
+            "vintage": f"Wikidata, {retrieved}",
+            "retrieved": retrieved,
             "_files": files,
             "kinds": KIND_IDS,
             "conquistadors_without_birthplace": unborn,

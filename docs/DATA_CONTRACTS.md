@@ -86,11 +86,13 @@ Per-cell arrays have length `grid.cols * grid.rows`, with index `row * cols + co
 }
 ```
 
+`version` stays 2 with `country`: the block is additive, so the original data stay valid.
 `country.projection` is the projection the pipeline used (`pipeline/core/geo.py` `to_web()` + `MapProjection.to_dict()`);
 `web/js/geo.js` inverts it. Map km → projection plane: `X = x + min_x - margin`, `Y = max_y + margin - y` (y up). An
 inset shifts the points inside its lon/lat window by `(dx, dy)` in that plane; `box` is the shifted window's extent, so
 a point inside `box` is shifted back before inverting. For other countries `states` holds the regions (provinces:
-`fips` = INE province code, `abbr` = ISO 3166-2 code) and `counties` the units (municipalities: `geoid` = INE code).
+`fips` = INE province code, `abbr` = ISO 3166-2 code) and `counties` the units (municipalities: `geoid` = INE code):
+the US keys, with ids in the same format.
 
 Cover ids (fixed): 0 none · 1 forest_deciduous · 2 forest_evergreen · 3 forest_mixed · 4 scrub (scrub & desert) ·
 5 grassland · 6 pasture · 7 cropland · 8 wetland · 9 urban · 10 barren · 11 ice.
@@ -227,7 +229,7 @@ Produced by `pipeline/build/lenses.py`.
              {"id": "life", "name": "Daily life"}, {"id": "land", "name": "Land"}],
   "lenses": [{
     "id": "density", "group": "people", "name": "Population", "icon": "l-people", "emoji": "👥",
-    "unit": "people / km²", "format": "int|usd|pct|float|minutes|years",   // pct values are 0..1 fractions
+    "unit": "people / km²", "format": "int|usd|pct|float|minutes|years|duration",   // pct: 0..1; duration: minutes, shown "2 h 36 min"
     "scale": "log|linear", "domain": [1, 2000],   // 2nd-98th percentile of the hex values, computed at build time "ramp": ["#..", "..."], "higher_is": "good|bad|neutral",
     "source": "acs_5yr", "description": "...",
     "values": [number|null],       // per cell; null on non-US cells
@@ -251,7 +253,33 @@ naming from the same file shares them, and the search box adds its people (by na
 focused. A lens that lists the same places per hex as another lens says `"labels_from": "<lens id>"` and carries
 only its own `names`, in that lens's order; the map copies the other lens's `labels` when it loads (Spain's
 `crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
-lens: "Nadie", nobody born there).
+lens: "Nadie", nobody born there). `hide_empty` (optional, categorical lenses) leaves out of the legend the categories no
+hex has (the timeline's trades of a year).
+
+**Value display** (optional keys, any lens; absent = as before): `decimals` fixes the decimals of a `pct` value
+(otherwise 1 under 10 %, 0 above); `unit_in_value: true` writes the `unit` after a `pct` value in the tooltip, not on
+the legend's ticks; `bounded: true` says the domain is the value's natural range, so the legend's end ticks and band
+hint carry no ≤/≥.
+
+**Wildlife lenses** (Spain, `pipeline/build/spain_fauna.py`): `lynx`, `bear`, `wolf`, `imperial_eagle` and
+`bearded_vulture`, in group `fauna` (the first of Spain's own groups, so the picker shows it after Land), with
+`"format": "pct"`, `"scale": "linear"`, `"domain": [0, 1]` (fixed, so no percentile note), `"bounded": true`,
+`"decimals": 0` and `"unit_in_value": true` (the tooltip reads "43 % del hexágono en cuadrículas con la especie"), a
+`scale_text` for the Almanac and `"source":
+"bdn_especies"`. A value is the share of the land hex inside the EEA 10 km squares where MITECO reported the species
+for 2013-2018 (84 lattice points per hex, each looked up in EPSG:3035), rounded to 0.01; 0 = no reported square there;
+null = not Spanish land. The `note` (shown on desktop and phone) gives the squares' period and directive article, the
+latest census figure for lynx and wolf, and that an empty square is not proof of absence. The lynx and wolf
+descriptions open with their census sentence: the census total, its communities (`provinces.COMMUNITY_NAMES`), and
+those the squares do not reach, each lattice point counting for the community of the SIANE municipality it falls in;
+the wolf's adds the census's 2019-2024 distribution. `check(web_dir)` fails a missing lens, a value outside 0..1, a
+lens without a note or with fewer than 50 hexes > 0.
+
+Their interim files: `bdn_especies.json` = `{"period": [2013, 2018], "grid": "EEA 10 km, ETRS89-LAEA (EPSG:3035)",
+"species": {"Lynx pardinus": {"directive": "art17", "code": "1362", "refgrid", "cells": [sorted "10kmE…N…"]}, …}}`;
+`miteco_censos_fauna.json` = `{"censuses": {"Lynx pardinus": {"period": "2025", "figure": 2269, "unit": "individuals",
+"communities": [INE community codes], "url", "page": "2"}, "Canis lupus": {…, "unit": "packs", "stable_cells": 1357,
+"cells_period": "2019-2024", "sporadic_cells": 37, "page": "4-6"}}}`.
 
 **Spain's longevity lenses** (group `longevity`, right after `life`; `pipeline/build/spain_longevity.py`, DECISIONS
 E107–E108). The census counts (`ine_censo_edad`, INE table 65034) are pooled per hex before dividing: each municipality
@@ -269,9 +297,20 @@ adds its count × the share of its census residents the hex holds. Life expectan
 Icons `l-oldest-old`, `l-centenarians`, `l-life-65` and `l-longevity` fall back to their emoji (👵 💯 ⌛ 🌿).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
-`great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",
-"note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
-`check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
+`great_people_kind`, and the timeline's people): `{"vintage", "categories": [{id, name, color}] (the categorical lens's),
+"timeline": {"until": 2026, "max_life": 122, "approximate": 113, "longer": 31, "left_out": {"no_birth", "no_death",
+"inconsistent"}}, "people": [{"name", "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into
+categories, "qid", "life": [1881, 1973], "approx": true}]}`, most famous first. `life` = the years in which the person may have been alive, both
+included, as integer astronomical years (0 = 1 BC, -669 = 670 BC); absent for someone who cannot be placed in time
+(counted in `timeline.left_out` by reason). A birth or death given only as a decade or a century counts in full
+(`approx: true` on the person; `approximate` counts them, `longer` counts the lives that then span more than
+`max_life` years); someone Wikidata does not record as dead (no date-of-death statement of any kind), born in
+`until - max_life` or later, is alive up to `until`, the year of the Wikidata download (DECISIONS E105). A death
+recorded without a usable date leaves the person out (`no_death`) and prints as "1915–?" in the note. `personajes.en.json` carries only the English notes and
+places: the numbers stay in the Spanish file. Its `check(web_dir)` fails a person off Spanish land, a lens whose counts
+or main categories differ from the file, a `timeline` of the wrong shape (`until`, `max_life`, `approximate`, `longer` whole numbers, `left_out` one whole
+number per reason), a `life` that is not two integers in order up to `until`, and `timeline` counts that do not
+match the people; NOTEs count those shown alive today past 100 and the lives longer than `max_life`.
 
 **`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; read by the fiesta calendar, `web/js/ext/fiestas`, when it first
 opens): `{"vintage",
@@ -285,6 +324,70 @@ source's text (a rule such as "el 12 de septiembre de cada año", or one year's 
 movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates: an Internacional or
 Nacional fiesta has those of its community's entries for the same fiesta (`state_same`), their distinct texts joined by
 "; " and the union of their months, and none without such an entry.
+
+**`embalses.json`** (Spain, `pipeline/build/spain_embalses.py`; read by the reservoirs lens, `web/js/ext/embalses`, when
+it first opens): `{"vintage": "2026-11-24", "provisional": true, "dates": ["1988-01-05", …], "basins": [{"name": "Segura",
+"cells": [hex indices], "actual": [hm³ | null per date], "capacity": [hm³ | null per date]}], "reservoirs": [{"name",
+"boletin_name", "basin": index into basins, "use": "hidroelectrico" | "consuntivo", "lon", "lat", "x", "y" (map km), "cell", "placed":
+"boletin" | "wikidata" | null, "qids"?: [Wikidata ids], "first", "last" (indices into dates, or null), "capacity" (last
+reported hm³), "actual" (hm³ in its last reporting week)}]}`. `dates` are every Boletín Hidrológico Tuesday, ascending,
+a week apart (E91). A basin's `actual` and `capacity` are the sums over the reservoirs that report that week, null in a
+week with none; basins are in the Boletín's order (`Embalses_Mapa` `ambito_id`). An unplaced reservoir (E91) has null
+`lon`, `lat`, `x`, `y`, `cell` and `placed`. `boletin_name` is the name as the Boletín writes it ("Conchas, Las",
+"Vellón,El-(Pedrezuela)"), the key of every match; `name` is that name tidied to read ("Las Conchas", "El Vellón
+(Pedrezuela)"). Spain's figure is not stored: the browser sums the basins.
+
+**`embalses_semanas.json`** (Spain, same builder; loaded the first time the week leaves the latest one or a reservoir
+is clicked): `{"vintage", "actual": [[hm³ | null per reservoir] per date], "capacity": [[[date index, hm³], …] per
+reservoir]}`, the reservoirs in the order of `embalses.json`; a capacity entry starts a run that lasts until the next.
+Both files' `.en.json` overlays are `{}`. `check(web_dir)` fails when a basin series is not the sum of the matrix, the
+Boletín map's week differs from its total by more than 0.5 hm³ or lies more than a week from the last date (a week
+off is a NOTE, compared when the dates hold it), a placed point lies more than 2 km outside its basin, the dates are
+not Tuesdays a week apart, or a reservoir's `first`/`last` disagree with its values.
+
+**`hides_layers`** (optional, a lens built in the browser): the ids of the static layers that hide while the lens is open
+(`["rail"]` for the train lens, which draws its own network). No US lens sets it.
+
+**`transit.json`** (Spain, `pipeline/build/spain_transit.py`; loaded by `web/js/ext/transit` the first time the lens
+`rail_madrid` opens; 744 kB, 86 kB gzipped, on the timetable of 9 December 2026):
+
+```jsonc
+{"version": 1, "vintage": "Horarios de Renfe, Ouigo e Iryo del miércoles 9 de diciembre de 2026",
+ "sources": ["horarios_tren", "osm_ferrocarril", "siane"],
+ "date": "2026-12-09", "week": ["2026-12-07", "2026-12-13"],   // the day (DECISIONS E101) and its Monday to Sunday
+ "feeds": [{"id": "renfe_av_ld", "name": "…", "trains": 1382, "window": ["2026-11-26", "2027-09-29"],
+            "file_date": "2026-11-27", "unofficial": false}],
+ "params": {"change_min": 10, "walk_km": 1.5, "walk_kmh": 4.5, "access_km": 30, "access_kmh": 40},
+ "rules": {"day": "…", "router": "…", "access": "…", "trains": "…", "ghost": "…"},
+ "kinds": [{"id": "ld", "name": "…"}, {"id": "md", "name": "…"}, {"id": "cer", "name": "…"}],
+ "lens": {"format": "duration", "scale": "linear", "domain": [45, 420], "ramp": ["#…"], "higher_is": "bad",
+          "unit": "…", "description": "…", "note": "…", "null_label": "…",
+          "values": [minutes | null],          // per cell: land hexes within 30 km of a station with a train to Madrid
+          "station": [station index | null]},  // per cell: the station the value counts from
+ "stations": [{"name": "Sevilla-Santa Justa", "x": 759.8, "y": 796.0, "cell": 16084, "stops": ["51003"],
+               "trains": [35, 50, 130],        // distinct trains one can board there that day, by kind (ld, md, cer)
+               "madrid": true,                  // only on a station inside the municipality of Madrid (best is null)
+               "best": null | {"min": 156, "dep": "15:33", "arr": "18:09", "to": "Madrid-Puerta de Atocha-Almudena Grandes",
+                               "changes": 0,   // changes of train (a walk is not one)
+                               "legs": [["AVE 02151", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha-Almudena Grandes"]]}}],
+                               // a leg: [train label | null, from, to]; null is a walk ("a pie a …"), also a first one
+ "links": [[a, b, trains]],   // hex links (a < b, neighbours) with passenger trains that day, each train once
+ "ghost": [[a, b]],            // Adif track with none (E101)
+ "matching": {"pairs": 1985, "abroad": 16, "unmatched": 16, "unmatched_pairs": [["Antequera AV", "Málaga María Zambrano"]],
+              "ghost_runs": 8, "near_unmatched": 13, "short_runs": 38, "hs_ghost": 0},
+ "cuts": [{"route": "R3", "from": "La Garriga", "to": "La Tor de Querol-Enveig"}]}  // lines with no journey to Madrid that day
+```
+
+Stations are sorted by trains, most first, and their names, `to` and `legs` are written as the feeds write them (E72);
+a leg's label is the route and number, or the operator for Ouigo and Iryo ("Ouigo 6540", "Iryo 06083"). A station is in
+Spain when its stop lies inside a SIANE municipality or within 500 m of one; one where no train can be boarded is left
+out, except in Madrid.
+The lens texts, rules, kinds and feed names are `Text` (overlay `transit.en.json`). `check` fails a link that is not
+between neighbours or has a foreign end, a link both served and ghost, a station off land, a negative minute, a `values`
+or `station` array of another length than the grid, a cell whose station and value disagree, and a journey faster than
+the straight line at 350 km/h, a station with no train to board outside Madrid, and any `hs_ghost` (a high-speed ghost
+link beside served high-speed track of the same line); it notes the coverage, the unmatched stop pairs, a feed whose
+file ends less than 7 days after the day, and the file size.
 
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
@@ -406,7 +509,7 @@ a `check(web_dir)` (see Pipeline conventions). Shared rules:
 * Rules that pick things (districts, wonders, routes) are published inside the file as text (`rule` / `rules`) so the UI
   and the Almanac can quote them.
 * **Loading** (browser): `infrastructure`, `military`, `wonders`, `trade` load eagerly right after the first frame (keep
-  each **under ~300 kB**); `citizens`, `districts`, `disasters` load on demand with `app.loadData(name)`.
+  each **under ~300 kB**); `citizens`, `districts`, `disasters` (and Spain's `fiestas`, `clima`) load on demand with `app.loadData(name)`.
 
 ### citizens.json (lazy)
 
@@ -629,6 +732,41 @@ Freight "trade routes" between FAF5 zones (`faf5`), domestic flows only (`trade_
 * Values are FAF model estimates in **million current dollars** (`value_musd`) and **thousand short tons** (`tons_k`), as
   FAF publishes them; say so in the UI. Pipeline-dominated routes (crude, gas) are real and should get their own style.
 
+**Spain** (`pipeline/build/spain_trade.py`, `eptmc`; DECISIONS A30, F36) writes the same file in tonnes, about 16 kB
+plus the `trade.en.json` overlay:
+
+```jsonc
+{
+  "version": 1, "vintage": "EPTMC 2025", "year": 2025, "sources": ["eptmc"],
+  "updated": "2026-11-16",                             // the workbook's Last-Modified: the licence asks to show it
+  "measure": "tons",                                   // absent in the US file = value; render/art/improvements.js routeSize()
+  "rule": "Los 30 mayores flujos de mercancías por carretera entre las 15 comunidades autónomas peninsulares …",
+  "path_note": "La EPTMC da la comunidad de carga y la de descarga, no el recorrido: …",
+  "units": {"tons_k": "miles de toneladas", "tkm_m": "millones de toneladas-kilómetro"},
+  "modes": [{"id": "truck", "name": "Carretera"}],     // one mode: the advisor hides the mode bar
+  "commodities": {"0": "Productos agrícolas y animales vivos", "…": "…"},   // the 10 NST/R chapters of table 7.5
+  "national_k": {"interregional": 402640.3, "intra": 1177887.7, "intl_sent": 46285.3, "intl_received": 35055.4},
+  "zones": [{"id": "13", "name": "Comunidad de Madrid", "short": "Madrid", "kind": "community", "provinces": ["28"],
+             "significant": true,                       // false for 04, 05 and "18+19" (Ceuta y Melilla): no routes, anchor null
+             "anchor": {"cell": 9144, "x": 960.0, "y": 450.3, "city": null},
+             "partners": [["08", 40642.9, "truck"]],    // top 5, both directions, communities with published flows
+             "totals_k": {"within": 70692.4, "sent": 42157.9, "received": 55299.7, "intl_sent": 2050.3, "intl_received": 2731.6},
+             "goods_k": {"sent": [/* 10 */], "received": [/* 10 */]}}],   // sorted by id
+  "routes": [{"a": "08", "b": "13", "rank": 1, "tons_k": 40642.9, "ab_k": 23687.1, "ba_k": 16955.8,
+              "tkm_m": 3270.6, "haul_km": 80,            // round(tkm_m × 1000 / tons_k)
+              "modes": {"truck": 1.0}, "top_mode": "truck", "top_commodity": null}]   // no path: a straight line
+}
+```
+
+* **Zones**: the 17 communities and Ceuta y Melilla together (`18+19`), as the survey publishes them; the cells are
+  those of their provinces (world `states[owner].fips`). `within` includes intramunicipal trips; `intl_*` are Spanish
+  trucks only (table 6.3). A zone without published flows has no anchor (`null`): nothing is drawn from it.
+* **null** in `totals_k`, `goods_k`, `partners` and the routes is a cell the workbook leaves without a figure: `..`
+  (not significant, as its footnote says), or `.` and `-`, which it does not define. None of them is read as zero, so
+  null does not tell nil from not published; the UI shows «–» and its caveat says so.
+* **Routes**: pairs of significant communities with both directions published, summed; the 30 largest by tonnes
+  (an editorial cut). No `path`: the survey gives where goods are loaded and unloaded, not the road.
+
 ### military.json (eager)
 
 Built by `pipeline/build/military.py` from `mirta` (`sources/mirta.py`), `dmdc_personnel` (`sources/dmdc.py`),
@@ -798,6 +936,69 @@ NOAA events span many states: never add state costs together into a national fig
 helper `disasters.county_declarations(fema_interim, geoids)` gives the per-county counts used by the `disasters` lens,
 the counties.json column and this file, so the three always agree.
 
+### clima.json (lazy, Spain)
+
+Built by `pipeline/build/spain_clima.py` (`COUNTRIES = ("es",)`) from `aemet_rocio` (AEMET's ROCIO daily grid, averaged
+over 1991-2020 by spainciv), `omm_normales_es` (the WMO 1991-2020 normals of AEMET's 83 stations) and
+`aemet_normales_provincias` (AEMET's official 1991-2020 province normals). Loaded by the climate of the month
+(`web/js/ext/clima`) when its panel first opens. About 1.4 MB.
+
+```jsonc
+{
+  "version": 1, "vintage": "1991-2020",  // the ROCIO grid's period
+  "provinces_period": "1991-2020",        // the province normals' period (aemet_normales_provincias): the diagram's
+  "sources": ["aemet_rocio", "omm_normales_es", "aemet_normales_provincias"],
+  "rules": {"grid": Text, "province": Text, "station": Text, "frost": Text, "sun": Text, "rain": Text},  // quoted by the panel
+  "cells": [int],                  // land hexes with a grid value, ascending
+  "points": [int],                 // per cells[k]: grid points averaged (0 = the nearest point within one grid spacing)
+  "grid": {"tmax": [[number|null × len(cells)] × 12], "tmin": …, "prec": …, "frost": …},  // °C, mm, days; 1 decimal
+  "provinces": {"09": {"tmed": [12], "tmax": [12], "tmin": [12], "prec": [12]}, …},   // AEMET, 52 INE codes
+  "peninsular": {"tmed": [12], "prec": [12]},  // AEMET's "ESPAÑA PENINSULAR": the month strip's bars
+  "stations": [{"wmo": "08075", "aemet": "2331" | null, "name": "Burgos Aeropuerto", "province": "09", "lon", "lat",
+                "alt", "coords": "aemet" | "wmo", "cell", "tmed": [12], "tmax": [12], "tmin": [12], "prec": [12],
+                "frost": [12], "sun": [12] | null}],
+  "domains": {"temp": [lo, hi], "prec": [lo, hi], "frost": [lo, hi], "sun": [lo, hi]}
+}
+```
+
+* The mean temperature of a hex is (tmax + tmin) / 2, worked out in the browser (`ext/clima/season.js`), as AEMET derives
+  its own 1991-2020 mean-temperature maps. A grid point-month with a missing day in any year is null.
+* A land hex not in `cells`, or null for a month, takes its province's AEMET normal for temperature and rain; frost has no
+  province figure. A hex's province is world.json `owner` → states.json `fips`.
+* Frost on the grid is days with a minimum ≤ 0 °C; the stations' `frost` counts days < 0 °C (the WMO's rule).
+* `sun` exists only for the 76 stations that measure it; it is never spread to other hexes.
+* `domains`: the 0.2nd-99.8th percentile of the hex values over all 12 months (temperature rounded outward to whole
+  degrees), and the lowest to the highest station value for sunshine, so the twelve months share one colour scale. Under
+  2 % of any month's land hexes fall beyond the ends (tests/test_clima.py), and those are drawn in the end colours.
+* `rules` are bilingual (`tr`; the English overlay is `clima.en.json`). Station names are those of AEMET's station
+  pages without a leading "Estación de"; a station without a page takes the `nombre` of
+  `pipeline/sources/es/data/aemet_estaciones_omm.csv` (Rota, Base Naval).
+* `check` fails on a station off its province or over 15 km from its hex, warns on a province whose grid means are off
+  AEMET's normal, and lists the five largest station-vs-hex gaps in mean temperature (on the Canaries a hex runs up the
+  slopes, up to 4 °C colder than the coastal station).
+## unciv.json (Spain)
+
+Not loaded by the map: `pipeline/play.py` makes the Unciv downloads and pages from it (docs/SPAIN.md, "Unciv").
+`{summary, map}`: `map` is the Unciv `TileMap` JSON, `summary` what is on it (`grid`, `terrain`, `resources`,
+`starts`…). Written with `write_web`, so its texts go in Spanish and `unciv.en.json` holds the English.
+
+`summary.fire_season` (`pipeline/build/spain_unciv_fire.py`, DECISIONS E95):
+
+```
+{"threshold_ha": 500, "years": [2016, 2025], "great_fires": 311,   // EFFIS fires of threshold_ha or more
+ "per_season": [24, 52, …],          // great fires by season, years[0] to years[1]
+ "on_spanish_tiles": 304.0,          // their shares that fall on Spain's land tiles
+ "summer_share": 0.763,              // share of all EFFIS burnt area in fires that started June to September
+ "seasons": 10, "fires_per_season": 30.4,
+ "classes": [{"class": "Mountain", "tiles": 68, "per_tile_season": 0.0694, "weight": 228}, …],  // Mountain, Hill, Land
+ "unit": 100000,                     // Spain's tiles add up to about unit: Σ weight × tiles
+ "texts": {"name", "event", "pay", "burn", "pedia"}}   // Texts; English is the Events.json text and translation key
+```
+
+`classes` count each Spanish land tile once, as Unciv's filters do: `Mountain` (base terrain), `Hill` (feature, wooded
+or not), `Land` (any other). The bands, brigade costs and the penalty are not stored: the module's constants and the
+weights give them when the mod is packaged. The numbers above are those of the current cache.
+
 ## sources.json
 
 A list of `{id, title, publisher, homepage, license, description, used_for, vintage, files: [{file, url, retrieved, sha256, bytes}]}`.
@@ -834,14 +1035,33 @@ index) and every one has `community`.
 The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
 streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
 sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
-E89)) and `fiestas`
+E82)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
+`#lens=fiestas_mes&mes=8`, or `#mes=8` alone; the fiesta rules are in `ext/fiestas/calendar.js`), `sun` (the sun lens "Sol y reloj",
 only where the page settings say `sunset: true`: lens `atardecer`, mode `sun`, hash keys `dia` and `sol`, e.g.
-`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`) and `explore` (the fog of war "España por
+`#lens=atardecer&dia=2026-06-21&sol=puesta`; the sun and Spain's clocks are in `ext/sun/solar.js`), `explore` (the fog of war "España por
 descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
 the groups its progress panel counts by; the explored set, its storage and the reveal radius are in
-`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`). The API:
+`ext/explore/model.js`, the clouds in `ext/explore/fog.js`; the minimap shows them through `app.minimap.setCover`),
+`embalses` (the reservoirs week by week, only where the data has `embalses.json`: lens `embalses`, mode `embalses`,
+static layer `reservoirs`, hash keys `semana` and `embalse` (a reservoir's `name`), e.g.
+`#lens=embalses&semana=1995-11-07&embalse=Alcántara`; the series rules are in `ext/embalses/series.js`),
+`clima` (the climate of the month, only where the data has `clima.json`: lenses `clima_temp`, `clima_lluvia`,
+`clima_heladas`, `clima_sol`, mode `clima`, e.g. `#lens=clima_temp&mes=1`; the values are in `ext/clima/season.js`, the
+Walter-Lieth diagram in `ext/clima/walter.js`) and `transit` (hours to Madrid by train, only where the data has
+`transit.json`: lens `rail_madrid` with `hides_layers: ["rail"]`, static layers `transit-lines` (z 56) and
+`transit-stations` (z 69, above the landmark layers so its dots win the hit), both with a `click` that shows the
+tooltip on a touch or pen tap, e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`) and `timeline` (great people
+through time, only where the data has `personajes.json` and both great people lenses: lenses `great_people_year` and
+`great_people_year_kind`, overlay `timeline-dots`, mode `timeline`, hash key `anio` with the year as people write it,
+a minus for BC and no year 0, e.g. `#lens=great_people_year&anio=1000` or `anio=-201` (201 BC); no `anio`, or one
+that is not a year, opens at `timeline.until`; the year rules are in `ext/timeline/lifespan.js`).
+`ext/flyToCells.js` is the dock helper the fiesta calendar and the timeline use: highlight some hexes and fit them in
+the view.
+The calendar and the climate share one month (`ext/month.js`, hash key
+`mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. Moving between the
+two keeps the month; closing the last one open puts it back to this month, so a page opened again shows what the URL,
+which has lost `mes`, would open. The API:
 
 
 **Data.**
@@ -943,11 +1163,19 @@ when renaming a field in those files.
 Such a lens can hold minutes: `format: "clock"` shows them as a time of day ("22:01") and `format: "duration"` as hours
 and minutes ("15 h 24 min"), in the tooltip, the legend's ticks and the Almanac; `note` is a line under the legend's
 title. Optional for such a lens: `heading`, the name of what it shows now, for the legend's title and the tooltip
-(`name` stays in the picker); `tip(cell)`, a line of plain text the tooltip asks for the hex under the pointer, instead
-of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
-the user's choices. Its `source` is an id of sources.json, and the legend never gives it the lenses.json `vintage`.
+(`name` stays in the picker); `tip(cell)`, a line of plain text (or a list of lines) the tooltip asks for the hex under
+the pointer, instead of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
+the user's choices; `decimals`, for `format: "float"`, writes every value with that many decimals ("23,0 °C" next to
+"23,1 °C"; without it a value of 10 or more drops them); `click_hint`, the tooltip's last line in place of "Click to open
+<province>" when the lens's panel takes the click; `domain: null` while its values are not in yet (the legend shows its
+name and description only, and the map paints its land as no data). Its `source` is an id of sources.json, and the
+legend never gives it the lenses.json `vintage`.
 A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
 {mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
+Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the climate's four): moving between them
+keeps it open, and `pick()` names the lens it opens on. On a phone the dock is a bottom sheet that covers the legend:
+`panelKey()` in the panel's HTML and `updatePanelKey(dock, lens, label)` give it the lens's ramp and three ticks, shown on
+phones only (the sun lens and the climate).
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).

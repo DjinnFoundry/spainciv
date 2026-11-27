@@ -13,6 +13,10 @@ import { visibleSites, siteSize, hitSites } from "./model.js";
 import { esc } from "../../format.js";
 import { t } from "../../i18n.js";
 
+/** Is static layer `id` hidden by the open lens? A lens lists in `hides_layers` the layers it replaces (the train lens
+ * hides the rail layer while it draws its own network). */
+export const hiddenByLens = (app, id) => !!app?.state?.lens?.hides_layers?.includes(id);
+
 const inVp = (it, vp, padKm) => it.x > vp.x0 - padKm && it.x < vp.x1 + padKm && it.y > vp.y0 - padKm && it.y < vp.y1 + padKm;
 
 /** Draw a list of sites with their painter (world transform, sizes from css px). */
@@ -53,7 +57,7 @@ export function makeLayers(model, on, { tips = {}, app = null } = {}) {
   };
   const rail = {
     id: "rail", z: 56, minRpx: ROAD_MIN_RPX,
-    visible: () => !!on.rail && !!m.net,
+    visible: () => !!on.rail && !!m.net && !hiddenByLens(app, "rail"),
     sig: ver,
     draw(ctx, vp, w, o) {
       ctx.globalAlpha = lensAlpha(o);

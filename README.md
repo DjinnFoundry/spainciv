@@ -37,12 +37,25 @@ lists the public data behind the map.
   value per m² (by province), religious weddings (Spain has no religion census) and burnt area (EFFIS); longevity: life
   expectancy at birth and at 65, the oldest old (85+ among 65+), centenarians and longevity zones; heritage, museums, castles
   and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
+  famous people by birthplace (Wikidata), with a year control that shows who was alive;
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.
+- **Reservoirs**: the water in each basin week by week since 1988, from the Boletín Hidrológico (MITECO), with a ring
+  per reservoir, the series' lowest and highest weeks and a year-by-year play
+  ([#lens=embalses](https://spainciv.djinnfoundry.com/#lens=embalses&semana=1995-11-07)).
+- **Wildlife**: where the Iberian lynx, brown bear, wolf, Spanish imperial eagle and bearded vulture were reported in
+  2013-2018 (MITECO's 10 km grids for the EU Habitats and Birds Directive reports), with the latest lynx and wolf
+  censuses beside them.
+- **Hours to Madrid by train**: the shortest timetabled journey to Madrid from every hex on one stated weekday, from
+  the Renfe, Ouigo and Iryo timetables, with the day's stations, the track with trains and the Adif track without
+  passenger trains ([spainciv.djinnfoundry.com/#lens=rail_madrid](https://spainciv.djinnfoundry.com/#lens=rail_madrid)).
 - **Wonders**: the 16 National Parks.
 - **Play it**: the same Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source Civilization V
   (desktop and Android), with its real coast, relief, rivers and resources (wine where the wine denominations are,
-  salt, marble and iron where the IGME lists workings). How to install it:
+  salt, marble and iron where the IGME lists workings) and a fire season: every 5 turns a great fire can break out on
+  a civilization's land, more often in hills and mountains, with the odds per tile from the fires EFFIS mapped in
+  Spain; how many there are (one a season for all of Spain, against about 30 in EFFIS) is a game convention. How to
+  install it:
   [spainciv.djinnfoundry.com/play.html](https://spainciv.djinnfoundry.com/play.html).
 - **Guess the hex**: a daily game on the map. Six clues from the map's data describe one 10 km hex; click where you
   think it is, with six tries, distance and direction after each, and a spoiler-free result to share; each win colours
@@ -68,6 +81,11 @@ uv run --locked python -m pipeline serve               # original United States 
 uv run --locked python -m pipeline all --country es    # rebuild Spain, downloads ~730 MB of source data
 uv run --locked python -m unittest discover -s tests   # Python tests and browser-module checks via Node
 ```
+
+The Ouigo and Renfe Feve timetables come from the Ministry of Transport's NAP, which wants a free account's key:
+set `NAP_API_KEY` before `fetch horarios_tren --country es`. Without it Ouigo comes from a public copy and Renfe
+Feve's own file is left out: the Feve trains in Renfe's AV/LD file still count, but metre-gauge track with no train in
+that file is not drawn. The key is read at fetch time only and never written to the repo.
 
 `pipeline/countries/` holds what makes a map one country or the other (projection, hex size, administrative levels,
 currency); Spain's sources are in `pipeline/sources/es/` and its builders in `pipeline/build/spain*.py`. How the

@@ -22,6 +22,7 @@ import json
 import math
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Iterator
 
 from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
@@ -159,6 +160,19 @@ def links_of(grid: HexGrid, run: list[int]) -> list[tuple[int, int]]:
 # ------------------------------------------------------------------ roads and rail
 
 
+def line_links(grid: HexGrid, proj, owner: list[int], lines: list, keep=None) -> Iterator[tuple[int, int]]:
+    """The hex links (a < b) of lon/lat lines, in order and with repeats: each line projected, sampled every SAMPLE_KM
+    (`keep(x, y)` False drops a sample, see sample_cells) and snapped to links between neighbouring cells. A link with
+    no end on the country's land (owner < 0 at both ends) or with an end in a foreign country (owner -2) is left out."""
+    for line in lines:
+        pts = [proj(lon, lat) for lon, lat in line]
+        for run in sample_cells(grid, pts, keep):
+            for a, b in links_of(grid, run):
+                if owner[a] == -2 or owner[b] == -2 or (owner[a] < 0 and owner[b] < 0):
+                    continue
+                yield a, b
+
+
 def _route_name(level: str | None, name: str | None) -> str | None:
     if not name:
         return None
@@ -193,19 +207,12 @@ def build_roads(grid, proj, owner, ne, classify=us_road_class):
         if c is None:
             continue
         cls, name = c
-        for line in f["lines"]:
-            pts = [proj(lon, lat) for lon, lat in line]
-            for run in sample_cells(grid, pts):
-                for a, b in links_of(grid, run):
-                    if owner[a] < 0 and owner[b] < 0:
-                        continue
-                    if owner[a] == -2 or owner[b] == -2:
-                        continue  # into Canada or Mexico
-                    if cls < cls_of[(a, b)]:
-                        cls_of[(a, b)] = cls
-                        names[(a, b)].clear()
-                    if cls == cls_of[(a, b)] and name:
-                        names[(a, b)][name] += 1
+        for a, b in line_links(grid, proj, owner, f["lines"]):
+            if cls < cls_of[(a, b)]:
+                cls_of[(a, b)] = cls
+                names[(a, b)].clear()
+            if cls == cls_of[(a, b)] and name:
+                names[(a, b)][name] += 1
     roads = []
     for (a, b), cls in sorted(cls_of.items()):
         nm = min(names[(a, b)], key=_route_key) if names[(a, b)] else None
@@ -224,13 +231,8 @@ def build_rail(grid, proj, owner, ne, foreign_idx):
         if sr > RAIL_MAX_SCALERANK:
             continue
         tier = 0 if sr <= RAIL_MAIN_SCALERANK else 1
-        for line in f["lines"]:
-            pts = [proj(lon, lat) for lon, lat in line]
-            for run in sample_cells(grid, pts, keep):
-                for a, b in links_of(grid, run):
-                    if owner[a] == -2 or owner[b] == -2 or (owner[a] < 0 and owner[b] < 0):
-                        continue
-                    tier_of[(a, b)] = min(tier, tier_of.get((a, b), 9))
+        for a, b in line_links(grid, proj, owner, f["lines"], keep):
+            tier_of[(a, b)] = min(tier, tier_of.get((a, b), 9))
     return [[a, b, t] for (a, b), t in sorted(tier_of.items())]
 
 

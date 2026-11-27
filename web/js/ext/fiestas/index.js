@@ -5,24 +5,25 @@
 //     its highest category, its fiestas and their dates (as the source writes them) in the tooltip
 //   mode "fiestas" (opens and closes with the lens): the left dock with the month, the month's fiestas by category
 //     and name (a click flies to its hexes) and how many have no month
-//   URL hash: #lens=fiestas_mes&mes=8
+//   URL hash: #lens=fiestas_mes&mes=8; #mes=8 alone opens it too (ext/month.js, shared with the climate of the month)
 // fiestas.json is loaded the first time the calendar opens; the month rules live in calendar.js.
 import { country } from "../../app/country.js";
 import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
+import { flyToCells } from "../flyToCells.js";
 import * as C from "./calendar.js";
+import { currentMonth, monthLinks, monthName as nameOf, monthState, monthStrip } from "../month.js";
 
 const LENS = "fiestas_mes";
 const MODE = "fiestas";
-const HASH_KEY = "mes";
 const FLY_SCALE = 2.4; // css px per km at most when a fiesta's hexes fly into view
 
 export function install(app) {
   const fiestasLens = app.lensById.get("fiestas");
   if (!country().data?.includes("fiestas") || !fiestasLens) return;
   const n = app.w.grid.size;
-  const monthName = (m, month = "long") => new Intl.DateTimeFormat(country().locale, { month }).format(new Date(2026, m - 1, 1));
+  const monthName = (m) => nameOf(m, country().locale);
   const catName = (c) => t(`fiestas.cat.${c}`);
 
   const lens = {
@@ -35,16 +36,16 @@ export function install(app) {
   };
   app.addLens(lens, { after: fiestasLens.id });
 
-  let month = C.currentMonth();
+  const ms = monthState(app);
   let doc = null; // fiestas.json once loaded
   let list = []; // the month's fiestas, in order
   let mark = null, token = 0;
 
   // --- the lens --------------------------------------------------------------------------------------------------
   function paint() {
-    list = C.monthFiestas(doc.fiestas, month, country().locale);
+    list = C.monthFiestas(doc.fiestas, ms.month, country().locale);
     const layer = C.monthLayer(list, n, (f) => t("fiestas.tip", { name: f.name, category: catName(f.category), when: f.when }));
-    Object.assign(lens, layer, { null_label: t("fiestas.lens.none", { month: monthName(month) }) });
+    Object.assign(lens, layer, { null_label: t("fiestas.lens.none", { month: monthName(ms.month) }) });
     if (app.state.lens === lens) app.refreshLens();
   }
 
@@ -74,85 +75,64 @@ export function install(app) {
     render();
   }
 
-  function setMonth(m) {
-    if (m === month) return;
-    month = m;
-    if (mark && app.state.highlight === mark) app.setHighlight(null);
-    mark = null;
-    if (doc) {
-      paint();
-      render();
-    }
-    app.hash.update();
-  }
-
-  app.hash.register(HASH_KEY, {
-    get: () => (app.mode === MODE ? String(month) : null),
-    set(v) {
-      const m = C.parseMonth(v);
-      if (m == null) return; // without the key the lens key decides (#lens=fiestas_mes: this month's calendar)
-      setMonth(m);
-      if (app.mode !== MODE) app.setMode(MODE);
+  // A new month: drawn at once while the calendar is open, else when it opens.
+  ms.page({
+    id: MODE, lensIds: [LENS], fallback: true, active: () => app.mode === MODE, open: () => app.setMode(MODE),
+    linkLabel: (m) => t("fiestas.link", { month: monthName(m) }),
+    onMonth() {
+      if (mark && app.state.highlight === mark) app.setHighlight(null);
+      mark = null;
+      if (doc && panel.dock) {
+        paint();
+        render();
+      }
     },
   });
 
   // --- a fiesta on the map ---------------------------------------------------------------------------------------
   function show(f) {
     const { dock } = panel;
-    mark = { cells: new Set(f.cells) };
-    app.setHighlight(mark);
-    const b = app.highlightBounds(mark);
-    if (b) app.fitBounds(b.x0, b.y0, b.x1, b.y1, { maxScale: Math.max(app.cam.scale, FLY_SCALE) });
-    dock?.querySelectorAll(".fc-item[aria-current]").forEach((el) => el.removeAttribute("aria-current"));
-    dock?.querySelector(`.fc-item[data-k="${list.indexOf(f)}"]`)?.setAttribute("aria-current", "true");
+    mark = flyToCells(app, f.cells, FLY_SCALE);
+    dock?.querySelectorAll(".dk-item[aria-current]").forEach((el) => el.removeAttribute("aria-current"));
+    dock?.querySelector(`.dk-item[data-k="${list.indexOf(f)}"]`)?.setAttribute("aria-current", "true");
   }
 
   // --- the dock --------------------------------------------------------------------------------------------------
   function render() {
     const { dock } = panel;
     if (!dock || !doc) return;
+    const { month } = ms;
     const per = C.perMonth(doc.fiestas);
     const top = Math.max(1, ...per);
-    const months = per.map((count, k) => {
-      const m = k + 1, on = m === month;
-      return `<button type="button" class="fc-month${on ? " on" : ""}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}"
-        data-m="${m}" aria-label="${esc(t("fiestas.month", { month: monthName(m), n: count }))}" title="${esc(t("fiestas.month", { month: monthName(m), n: count }))}">
-        <i style="height:${Math.round((count / top) * 100)}%"></i><span>${esc(monthName(m, "short").replace(/\.$/, ""))}</span></button>`;
-    }).join("");
     const groups = C.CATEGORIES.map((c) => {
       const items = list.map((f, k) => [f, k]).filter(([f]) => f.category === c);
       if (!items.length) return "";
       return `<section class="fc-group"><h3><i style="background:${C.COLORS[c]}"></i>${esc(catName(c))} <span class="muted">${int(items.length)}</span></h3>
-        <ol class="fc-list">${items.map(([f, k]) => item(f, k)).join("")}</ol></section>`;
+        <ol class="dk-list">${items.map(([f, k]) => item(f, k)).join("")}</ol></section>`;
     }).join("");
-    const title = month === C.currentMonth() ? t("fiestas.title.now") : t("fiestas.title", { month: monthName(month) });
+    const title = month === currentMonth() ? t("fiestas.title.now") : t("fiestas.title", { month: monthName(month) });
     dock.innerHTML = `
       ${panelHead(title, t("fiestas.close"))}
-      <div class="fc-months" role="radiogroup" aria-label="${esc(t("fiestas.months"))}">${months}</div>
+      <div class="ms-strip" aria-label="${esc(t("fiestas.months"))}"></div>
       <p class="fc-sum">${esc(t("fiestas.summary", { n: list.length, month: monthName(month) }))}</p>
       ${groups}
-      <p class="fc-undated muted">${esc(t("fiestas.undated", { n: C.undated(doc.fiestas) }))}</p>`;
-    const strip = dock.querySelector(".fc-months");
-    strip.onclick = (e) => {
-      const b = e.target.closest("[data-m]");
-      if (b) setMonth(+b.dataset.m);
-    };
-    strip.onkeydown = (e) => {
-      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-      if (!step) return;
-      e.preventDefault();
-      setMonth(((month - 1 + step + 12) % 12) + 1);
-      dock?.querySelector(".fc-month.on")?.focus();
-    };
-    dock.querySelectorAll("button.fc-item").forEach((b) => (b.onclick = () => show(list[+b.dataset.k])));
+      <p class="fc-undated muted">${esc(t("fiestas.undated", { n: C.undated(doc.fiestas) }))}</p>
+      ${monthLinks(ms, MODE)}`;
+    monthStrip(dock.querySelector(".ms-strip"), {
+      month, locale: country().locale, label: (m) => t("fiestas.month", { month: monthName(m), n: per[m - 1] }),
+      bar: (m) => per[m - 1] / top, onPick: (m) => ms.set(m),
+    });
+    const links = dock.querySelector(".ms-links");
+    if (links) links.onclick = ms.follow;
+    dock.querySelectorAll("button.dk-item").forEach((b) => (b.onclick = () => show(list[+b.dataset.k])));
   }
 
   function item(f, k) {
     const where = [f.place, f.community].filter(Boolean).join(" · ");
-    const body = `<b class="fc-name">${esc(f.name)}</b>${where ? `<span class="fc-where">${esc(where)}</span>` : ""}
-      <span class="fc-when">${esc(f.when)}</span>`;
+    const body = `<b class="dk-name">${esc(f.name)}</b>${where ? `<span class="dk-where">${esc(where)}</span>` : ""}
+      <span class="dk-when">${esc(f.when)}</span>`;
     return f.cells.length
-      ? `<li><button type="button" class="fc-item" data-k="${k}" title="${esc(t("fiestas.show"))}">${body}</button></li>`
-      : `<li><div class="fc-item">${body}<span class="fc-where muted">${esc(t("fiestas.nowhere"))}</span></div></li>`;
+      ? `<li><button type="button" class="dk-item" data-k="${k}" title="${esc(t("fiestas.show"))}">${body}</button></li>`
+      : `<li><div class="dk-item">${body}<span class="dk-where muted">${esc(t("fiestas.nowhere"))}</span></div></li>`;
   }
 }

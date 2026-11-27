@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 
 from ..core.lang import Text, num, pct, tr  # noqa: F401  (num and pct re-exported for the builders: Spanish by default)
+from ..sources.es.censos_fauna import WOLF_PAGE
+from ..sources.es.especies import ART12_PAGE
 
 # Spain's site is in Spanish and English (core/lang.py): every text here is a Text, the English written for Spain.
 YIELD_LABELS = {"food": tr("Comida", "Food"), "production": tr("Producción", "Production"), "gold": tr("Oro", "Gold"),
@@ -170,7 +172,8 @@ _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
 _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
                   (" (final)", " (datos definitivos)"), (" (provisional)", " (datos provisionales)"),
                   ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
-                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
+                  (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)"),
+                  ("(AEMET CSVs of ", "(CSV de AEMET del "), ("Timetable of ", "Horario del "), ("; files of ", "; ficheros del ")]
 
 
 # The few vintages a Spanish source writes in Spanish, and their English.
@@ -201,6 +204,8 @@ def vintage(text: str | None) -> Text | str | None:
 _INE_LICENCE = ("CC BY 4.0 (aviso legal del INE): reutilización comercial y no comercial citando la fuente como "
                 "«Elaboración propia con datos del INE»; el INE no avala este mapa")
 _REUSE = "Información del sector público, reutilizable citando la fuente (Ley 37/2007)"
+_AEMET = ("Nota legal de AEMET: reutilización permitida citando a AEMET como autora (Ley 37/2007, modificada por la "
+          "Ley 18/2015); AEMET no avala este mapa")
 _PINNED = "Los ficheros están fijados en la versión v5.1.2 de natural-earth-vector."
 # The Almanac entry of each Spanish source (sources.json): the fields in Spanish, by source id.
 SOURCES = {
@@ -211,6 +216,22 @@ SOURCES = {
         "como las define el ministerio. Son las ciudades del mapa, como las áreas metropolitanas del mapa de EE. UU.: la "
         "población, el empleo y la huella de una ciudad suman los de sus municipios.",
         "used_for": ["Ciudades (áreas urbanas) y sus municipios"],
+    },
+    "boletin_hidrologico": {
+        "title": "Boletín Hidrológico: reserva de los embalses semana a semana desde 1988 (BD-Embalses), con los puntos "
+        "de los embalses y las cuencas del mapa del Boletín",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), Boletín Hidrológico",
+        "license": "Información del sector público, reutilizable citando la fuente y conservando la fecha de "
+        "actualización (Ley 37/2007, RD 1495/2011 art. 7; aviso legal del MITECO); el MITECO no avala este mapa",
+        "description": "La base de datos histórica del Boletín Hidrológico semanal (BD-Embalses, «sin validación»): de "
+        "cada embalse que sigue, cada martes desde 1988, su cuenca, su capacidad y el agua que guarda en hm³, y si es "
+        "hidroeléctrico. El modelo de datos (Modelo de datos BD-Embalses 1988-2022) describe una tabla con la cuenca "
+        "(AMBITO_NOMBRE), el embalse (EMBALSE_NOMBRE), la fecha (FECHA), la capacidad (AGUA_TOTAL), el agua embalsada "
+        "(AGUA_ACTUAL) y la marca de uso hidroeléctrico (ELECTRICO_FLAG); las cifras validadas solo están en el Anuario "
+        "de Aforos. La posición de los embalses de la última semana y el contorno de las 16 cuencas salen de las dos "
+        "capas del mapa del propio Boletín (ArcGIS Online, cuenta BolHidro_miteco), que usan los nombres de la base de "
+        "datos.",
+        "used_for": ["Lente de embalses: agua embalsada por cuenca y por embalse, semana a semana desde 1988"],
     },
     "corine": {
         "title": "CORINE Land Cover 2018 (a través del WMS de ocupación del suelo de la IDEE)",
@@ -438,6 +459,18 @@ SOURCES = {
         "red de AENA en 2025. Cada uno se sitúa con OurAirports, emparejado por las palabras de su nombre.",
         "used_for": ["Aeropuertos del mapa"],
     },
+    "eptmc": {
+        "title": "Encuesta Permanente de Transporte de Mercancías por Carretera (EPTMC 2025): toneladas por comunidad "
+        "autónoma de carga y de descarga",
+        "license": "Reutilización comercial o no con las condiciones del Ministerio (Ley 37/2007, "
+        "transportes.gob.es/aviso-legal): citar la fuente («Origen de los datos: Ministerio de Transportes y Movilidad "
+        "Sostenible») y la fecha de la última actualización",
+        "description": "Las tablas anuales de la EPTMC 2025, una encuesta semanal por muestreo a los vehículos pesados "
+        "de mercancías matriculados en España (más de 3,5 t): toneladas y toneladas-kilómetro por comunidad de carga y "
+        "de descarga (tablas 6.7 y 6.8), toneladas por tipo de desplazamiento (6.3) y por capítulo de mercancía NST/R "
+        "(7.5). Los flujos con Baleares, Canarias, Ceuta y Melilla no son significativos y no se publican.",
+        "used_for": ["Rutas comerciales", "Maestre del Comercio"],
+    },
     "puertos_estado": {
         "title": "Tráfico de mercancías por Autoridad Portuaria (2025) y zonas de servicio de los puertos",
         "publisher": "Puertos del Estado",
@@ -618,7 +651,7 @@ SOURCES = {
         "últimas temporadas completas en cada hexágono: la superficie de cada incendio se reparte entre los hexágonos "
         "que cubre su perímetro. La estadística oficial española (EGIF, del Ministerio para la Transición Ecológica) "
         "cuenta todos los incendios, también los pequeños, pero no tiene descarga por municipio.",
-        "used_for": ["Lente de incendios"],
+        "used_for": ["Lente de incendios", "Temporada de incendios en Unciv"],
     },
     "balance_criminalidad": {
         "title": "Balance de Criminalidad, cuarto trimestre (enero a diciembre): infracciones penales conocidas por "
@@ -633,6 +666,59 @@ SOURCES = {
         "provincia o isla es la provincia o la isla menos sus municipios de la lista.",
         "used_for": ["Lente de criminalidad (infracciones penales conocidas por 1.000 habitantes)",
                      "Lente del delito que más destaca sobre la tasa de España"],
+    },
+    "bdn_especies": {
+        "title": "Distribución de especies y de aves reproductoras en España, 2013-2018 (informes del artículo 17 de la "
+        "Directiva de Hábitats y del artículo 12 de la Directiva de Aves, cuadrícula de 10 km)",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO): Banco de Datos de la "
+        "Naturaleza, Inventario Español del Patrimonio Natural y de la Biodiversidad",
+        "license": _REUSE,
+        "description": "Las cuadrículas de 10 km de la red de referencia europea (ETRS89-LAEA) donde España notificó cada "
+        "especie de la Directiva de Hábitats y cada ave reproductora de la Directiva de Aves en sus informes sexenales a "
+        "la UE. El mapa lee las del lince ibérico, el oso pardo, el lobo, el águila imperial ibérica y el "
+        "quebrantahuesos: cada hexágono muestra qué parte de su superficie cae en ellas. El zip del artículo 17 se "
+        f"enlaza desde la página de arriba; el del artículo 12, desde {ART12_PAGE}.",
+        "used_for": ["Lentes de fauna"],
+    },
+    "miteco_censos_fauna": {
+        "title": "Censos nacionales del lince ibérico (2025) y del lobo (2021-2024)",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), con las comunidades "
+        "autónomas",
+        "license": _REUSE,
+        "description": "El censo de lince ibérico de 2025 (España y Portugal) y el censo de lobo de 2021-2024 (manadas, y "
+        "cuadrículas de 10 km con presencia en 2019-2024), en PDF, enlazados desde la página de mamíferos del "
+        f"Inventario Español de Especies Terrestres; los resultados del lobo tienen además su propia página ({WOLF_PAGE}). "
+        "El mapa cita sus totales y las comunidades que nombran junto a las "
+        "cuadrículas de 2013-2018 de las lentes de fauna, que son anteriores.",
+        "used_for": ["Lentes de fauna (lince y lobo)"],
+    },
+    "aemet_normales_provincias": {
+        "title": "Valores normales 1991-2020 por provincia (AEMET, Estadística de Vigilancia del Clima)",
+        "license": _AEMET,
+        "description": "Las normales mensuales 1991-2020 de AEMET de temperatura media, media de las máximas, media de "
+        "las mínimas y precipitación de cada provincia, Ceuta, Melilla y la España peninsular: AEMET interpola los datos "
+        "de sus estaciones a una rejilla y la promedia en cada región.",
+        "used_for": ["Clima del mes (diagrama de la provincia, barras de los meses, hexágonos sin rejilla)"],
+    },
+    "aemet_rocio": {
+        "title": "Rejilla diaria ROCIO de temperatura y precipitación (AEMET), medias 1991-2020",
+        "license": _AEMET,
+        "description": "Las rejillas diarias de AEMET de temperatura máxima y mínima (ROCIO_IBEB v1) y precipitación "
+        "(v2), cada 0,05° en la península y Baleares, y ROCIO+_CAN cada 0,025° en Canarias, promediadas por spainciv en "
+        "cada punto y mes de 1991 a 2020: media de las máximas y de las mínimas, lluvia media del mes y días de media con "
+        "la mínima a 0 °C o menos. Método: Nota técnica 24 de AEMET (Peral, Navascués y Ramos, 2017) y Amblar y otros "
+        "(2020).",
+        "used_for": ["Clima del mes (temperatura, lluvia, días de helada)"],
+    },
+    "omm_normales_es": {
+        "title": "Normales climatológicas estándar de la OMM 1991-2020, España (AEMET, vía la NCEI, accession 0253808 "
+        "v6.6)",
+        "publisher": "Agencia Estatal de Meteorología (AEMET); archivo de la NCEI (NOAA) para la OMM",
+        "license": _AEMET + " (la NCEI no indica licencia en los ficheros)",
+        "description": "Las normales mensuales 1991-2020 que AEMET envió a la OMM para 83 estaciones: temperatura media, "
+        "máxima y mínima, precipitación, días con la mínima por debajo de 0 °C y horas de sol (76 estaciones). El nombre "
+        "y la posición de cada estación salen de su página de AEMET.",
+        "used_for": ["Clima del mes (estaciones, horas de sol)"],
     },
     "fiestas_interes_turistico": {
         "title": "Fiestas de Interés Turístico Internacional y Nacional (Secretaría de Estado de Turismo)",
@@ -710,6 +796,39 @@ SOURCES = {
         "histórica. Sirve para enlazar las instalaciones de OpenStreetMap con su elemento y para dar la rama que OSM "
         "no trae.",
         "used_for": ["Consejero militar: enlaces a Wikidata y rama de las instalaciones"],
+    },
+    "wikidata_presas": {
+        "title": "Wikidata: embalses y presas de España con coordenadas y nombres",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (dominio público)",
+        "description": "Todos los elementos de Wikidata en España que son un embalse (Q131681) o una presa (Q12323), o "
+        "de una subclase, con coordenadas, con sus etiquetas y alias en castellano, catalán, gallego y euskera. Solo "
+        "sirve para los embalses que el Boletín Hidrológico dejó de dar, que su mapa no sitúa; lo editan voluntarios.",
+        "used_for": ["Lente de embalses: la posición de los embalses que ya no están en el Boletín"],
+    },
+    "horarios_tren": {
+        "title": "Horarios de tren de un día en España: Renfe, Ouigo e Iryo (GTFS)",
+        "publisher": "Renfe Operadora (data.renfe.com); Ouigo España a través del NAP del Ministerio de Transportes; "
+                     "Clément Desouche (Iryo, no oficial)",
+        "license": "Renfe: CC BY 4.0, «Origen de los datos: Renfe Operadora» (Ley 37/2007); Ouigo: licencia de datos "
+                   "abiertos del MITRAMS, «Powered by MITRAMS»; Iryo: CC BY 4.0 (recopilación no oficial de iryo.eu)",
+        "description": "Todos los trenes de viajeros con horario en un día laborable en los ficheros GTFS de Renfe (alta "
+        "velocidad, larga y media distancia; Cercanías y Rodalies), Ouigo e Iryo, con las horas de cada parada y si en "
+        "ella se puede subir o bajar. El día es el primer martes, miércoles o jueves en que cada operador y cada núcleo "
+        "de Cercanías lleva al menos el 90 % de sus trenes habituales de ese día de la semana. Iryo no publica un "
+        "horario abierto propio: su fichero es una recopilación no oficial de los horarios de iryo.eu. Los autobuses "
+        "no se cuentan. «Origen de los datos: Renfe Operadora». «Powered by MITRAMS».",
+        "used_for": ["Lente de horas a Madrid en tren", "Estaciones y vías con tren mientras esa lente está abierta"],
+    },
+    "osm_ferrocarril": {
+        "title": "Vías de tren de España (OpenStreetMap, railway=rail y narrow_gauge)",
+        "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
+        "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
+        "description": "Todas las vías de OpenStreetMap en España con railway=rail o railway=narrow_gauge que no son "
+        "apartaderos, playas de vías ni ramales (sin etiqueta service), con su trazado simplificado a unos 50 m y sus "
+        "etiquetas de ancho, uso, operador, alta velocidad y número de línea, de una sola consulta guardada. Lo mapean voluntarios: el operador es el "
+        "que ponen ellos.",
+        "used_for": ["Lente de horas a Madrid en tren: vías con tren y vías sin trenes de viajeros"],
     },
     "wikidata_playas": {
         "title": "Wikidata: playas de España con coordenadas, nombres y municipio",

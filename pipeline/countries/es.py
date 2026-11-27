@@ -35,7 +35,7 @@ COUNTRY = Country(
     site_url="spainciv.djinnfoundry.com",
     base_projection=projection,
     hex_radius_km=10 / math.sqrt(3),  # 10 km across the flats (pointy-top hexes: width = √3·radius)
-    margin_km=80.0,
+    margin_km=80.0,  # the US's 200 km is for a country four times as wide
     region=Level(tr("Provincia", "Province"), tr("Provincias", "Provinces")),
     unit=Level(tr("Municipio", "Municipality"), tr("Municipios", "Municipalities")),
     metro=Level(tr("Área urbana", "Urban area"), tr("Áreas urbanas", "Urban areas")),
@@ -64,11 +64,16 @@ COUNTRY = Country(
         ),
         image_alt=tr("Mapa de hexágonos de España con los rótulos de sus ciudades, al estilo de un juego de estrategia",
                      "Hex map of Spain with its cities labelled, in the style of a strategy game"),
-        data_credit=tr("Datos: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap",
-                       "Data: INE, IGN, MITECO, MAPA, Vivienda, AENA, Puertos del Estado, IGME, Wikidata, OpenStreetMap"),
+        data_credit=tr("Datos: INE, IGN, MITECO, MAPA, Vivienda, Transportes, AENA, Puertos del Estado, IGME, AEMET, Renfe, "
+                       "Wikidata, OpenStreetMap",
+                       "Data: INE, IGN, MITECO, MAPA, Vivienda, Transportes, AENA, Puertos del Estado, IGME, AEMET, Renfe, "
+                       "Wikidata, OpenStreetMap"),
         # SIANE boundaries are CC BY 4.0: the attribution the IGN asks for stays visible on the map (docs/SPAIN.md).
+        # The NAP's licence (Ouigo's timetable, horarios_tren) asks for "Powered by MITRAMS" linked to the ministry.
         notices=(tr("Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es",
-                    "Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"),),
+                    "Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"),
+                 "Powered by MITRAMS"),
+        links=(("Powered by MITRAMS", "https://www.transportes.gob.es/"),),
         based_on=tr("Basado en {usaciv}, de Andrej Karpathy (MIT)", "Based on {usaciv} by Andrej Karpathy (MIT)"),
         game=True,
         sunset=True,

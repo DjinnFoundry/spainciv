@@ -138,6 +138,12 @@ export default {
   "layers.wonders.title": "Most-visited parks, top research universities and curated landmarks",
   "layers.trade": "Trade routes",
   "layers.trade.title": "The 40 largest freight flows between states (FAF5 estimates)",
+  // a trade route in tonnes (Spain's EPTMC); the US route tooltip is written in ext/layers/tips.js
+  "trade.tip.rank": "route no.\u00a0{rank}",
+  "trade.tip.tons": "<b>{tons}</b> by road in {year} (EPTMC)",
+  "trade.tip.dirs": "{a} → {b} {ab} · {b} → {a} {ba}",
+  "trade.tip.haul": "Average haul: {km} km (tonne-km ÷ tonnes, both from the survey)",
+  "trade.tip.note": "Both directions summed. A straight line between the centres of the two communities: the survey says where goods are loaded and unloaded, not which road the truck takes.",
   "layers.moved": "Drawn on the next hex so it stays visible; its true location falls in {where}.",
   "layers.moved.city": "{name}'s city hex",
   "layers.moved.anyCity": "a city hex",

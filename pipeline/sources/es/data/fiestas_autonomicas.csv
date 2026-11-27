@@ -1,7 +1,7 @@
 # Fiestas each autonomous community declares of tourist interest at its own level, transcribed from its official list (name, place and dates as the source
 # writes them; `source` = the official documents of the row) and placed by hand in INE municipalities (the place's municipality; a village, its municipality;
 # a comarca or route, the municipalities its declaration names; empty = declared for the whole community). state_same: the entry of
-# fiestas_interes_turistico.csv the State later declared it as. Rules: DECISIONS.md E74-E76 and F33.
+# fiestas_interes_turistico.csv the State later declared it as. Rules: DECISIONS.md E45, E81 and F34.
 community,name,place,municipalities,when,state_same,source
 andalucia,Romería de Nuestra Señora de los Ángeles,Alajar (Huelva),21001,,,https://www.juntadeandalucia.es/datosabiertos/portal/dataset/9c1437e9-98bd-41e5-84cf-6bf678037b1b/resource/827cb3e2-fe05-4c37-92d3-ed31f2935f35/download/dataset_interes_turistico_07072026.csv
 andalucia,Real Feria y Fiestas de la Vendimia,La Palma del Condado (Huelva),21054,,,https://www.juntadeandalucia.es/datosabiertos/portal/dataset/9c1437e9-98bd-41e5-84cf-6bf678037b1b/resource/827cb3e2-fe05-4c37-92d3-ed31f2935f35/download/dataset_interes_turistico_07072026.csv

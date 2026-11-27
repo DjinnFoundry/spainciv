@@ -54,6 +54,11 @@ COMMUNITY_NAMES = {
     "16": tr("País Vasco", "Basque Country"), "17": tr("La Rioja", "La Rioja"), "18": tr("Ceuta", "Ceuta"),
     "19": tr("Melilla", "Melilla"),
 }
+# The name a label uses where the full one doesn't fit, the full one where it already does.
+COMMUNITY_SHORT_NAMES = {
+    **COMMUNITY_NAMES, "04": tr("Baleares", "Balearics"), "05": tr("Canarias", "Canaries"),
+    "10": tr("C. Valenciana", "Valencia region"), "13": tr("Madrid", "Madrid"), "14": tr("Murcia", "Murcia"),
+}
 
 
 def display_name(name: str) -> str:

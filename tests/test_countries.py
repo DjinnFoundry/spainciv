@@ -1,5 +1,7 @@
 """Country configurations, per-country registries and the Spanish reference data."""
 
+import contextlib
+import io
 import json
 import unittest
 from pathlib import Path
@@ -1473,12 +1475,21 @@ class SpainDailyLensesTest(unittest.TestCase):
 
         sq = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
         poly = {"type": "Polygon", "coordinates": sq}
-        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "40", "PROVINCE": "Ourense"}, "geometry": poly},
-                 {"properties": {"COUNTRY": "ES", "AREA_HA": "9"}, "geometry": {"type": "GeometryCollection", "geometries": [
-                     poly, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}]}},
+        date = "2025-08-11 13:40:00"
+        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "40", "PROVINCE": "Ourense", "FIREDATE": date}, "geometry": poly},
+                 {"properties": {"COUNTRY": "ES", "AREA_HA": "9", "FIREDATE": date}, "geometry": {
+                     "type": "GeometryCollection", "geometries": [poly, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}]}},
                  {"properties": {"COUNTRY": "PT", "AREA_HA": "500"}, "geometry": poly},
                  {"properties": {"COUNTRY": "ES", "AREA_HA": "0"}, "geometry": poly}]
         self.assertEqual([(f["area_ha"], len(f["rings"])) for f in fires(feats, 2025)], [(40.0, 1), (9.0, 1)])
+
+    def test_effis_keeps_the_start_month(self):
+        from pipeline.sources.es.effis import fires
+
+        poly = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+        feats = [{"properties": {"COUNTRY": "ES", "AREA_HA": "600", "FIREDATE": d}, "geometry": poly}
+                 for d in ("2022-07-17 00:00:00", "2022-12-01 09:05:00", "2021-04-01 11:32:03.9")]  # 2020 on: fractions
+        self.assertEqual([f["month"] for f in fires(feats, 2022)], [7, 12, 4])
 
     def test_burnt_area_is_shared_by_the_hexes_a_fire_covers(self):
         from pipeline.build.spain_daily import burnt_cells
@@ -1822,6 +1833,289 @@ class SpainCrimeTest(unittest.TestCase):
         self.assertIn("Left uncoloured for that reason: Menorca.", standout["description"]["en"])
         self.assertIn("1,25 veces la tasa de España y la unidad tiene 20.000 habitantes", standout["description"]["es"])
 
+
+class SpainFaunaTest(unittest.TestCase):
+    """The wildlife lenses: the 10 km squares of especies.py, the census figures of censos_fauna.py and spain_fauna.py,
+    on a row of four of Spain's hexes (10 km across, the last at sea) with a stand-in EPSG:3035 whose squares are 40 km
+    of map across, one edge running through the centre of hex 1."""
+
+    FIELDS = [("code", "C", 15, 0), ("maptype", "C", 15, 0), ("refgrid", "C", 25, 0), ("sensitive", "C", 15, 0),
+              ("CellCode10", "C", 15, 0)]
+
+    @classmethod
+    def report(cls, name_field: str, rows: list[tuple]) -> bytes:
+        """A zipped art. 17 / art. 12 report: rows of (species, cell, sensitive, maptype)."""
+        import zipfile
+
+        from test_dbf import make_dbf
+
+        dbf = make_dbf(cls.FIELDS + [(name_field, "C", 40, 0)],
+                       [["X", maptype, "EEA-10km GRID", sensitive, cell, name] for name, cell, sensitive, maptype in rows])
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("ES_Report.cpg", "UTF-8")
+            zf.writestr("ES_Report.dbf", dbf)
+            zf.writestr("ES_Report.shp", b"")  # the geometry is never read
+        return buf.getvalue()
+
+    @staticmethod
+    def row(name, cell="10kmE316N182", sensitive="Non sensitive", maptype="Distribution"):
+        return (name, cell, sensitive, maptype)
+
+    def cells_of(self, rows):
+        import zipfile
+
+        from pipeline.sources.es.especies import species_cells
+
+        with zipfile.ZipFile(io.BytesIO(self.report("Especie", rows))) as zf:
+            return species_cells(zf, "Especie", {r[0] for r in rows if r[0] != "Capra pyrenaica"})
+
+    def test_process_keeps_only_the_listed_species(self):
+        import tempfile
+        from unittest import mock
+
+        from pipeline.sources.es import especies
+
+        art17 = [self.row(n, c) for n in ("Lynx pardinus", "Ursus arctos", "Canis lupus")
+                 for c in ("10kmE316N182", "10kmE281N173")] + [self.row("Capra pyrenaica")]
+        art12 = [self.row("Aquila adalberti"), self.row("Gypaetus barbatus", "10kmE310N236"), self.row("Otis tarda")]
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, especies.file("art17")).write_bytes(self.report("Especie", art17))
+            Path(d, especies.file("art12")).write_bytes(self.report("Nombre", art12))
+            with mock.patch.object(especies.Especies, "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                out = especies.Especies().process()
+        self.assertEqual(list(out["species"]), list(especies.SPECIES))
+        self.assertEqual(out["species"]["Lynx pardinus"],
+                         {"directive": "art17", "code": "X", "refgrid": "EEA-10km GRID",
+                          "cells": ["10kmE281N173", "10kmE316N182"]})
+        self.assertEqual(out["species"]["Gypaetus barbatus"]["cells"], ["10kmE310N236"])
+        self.assertEqual((out["period"], len(out["_files"])), ([2013, 2018], 2))
+
+    def test_process_refuses_sensitive_records_and_odd_cell_codes(self):
+        self.assertEqual(self.cells_of([self.row("Lynx pardinus")])["Lynx pardinus"]["cells"], ["10kmE316N182"])
+        for bad in (self.row("Lynx pardinus", sensitive="Sensitive"), self.row("Lynx pardinus", cell="1kmE3160N1820"),
+                    self.row("Lynx pardinus", maptype="Range")):
+            with self.assertRaises(RuntimeError, msg=bad):
+                self.cells_of([self.row("Lynx pardinus", "10kmE1N1"), bad])
+
+    def test_census_pdf_replaced_in_place_fails(self):
+        import tempfile
+        from unittest import mock
+
+        from pipeline.sources.es import censos_fauna as cf
+
+        with tempfile.TemporaryDirectory() as d:
+            for c in cf.CENSUSES.values():
+                Path(d, cf.file(c["url"])).write_bytes(b"%PDF-1.7 another edition")
+            with mock.patch.object(cf.CensosFauna, "raw_dir", new_callable=mock.PropertyMock, return_value=Path(d)):
+                with self.assertRaisesRegex(RuntimeError, "re-read the PDF"):
+                    cf.CensosFauna().process()
+
+    # --- the lenses on a toy map ------------------------------------------------------------------------------
+    OWNER = [0, 0, 0, -1]  # three land hexes of province 41 (Sevilla, Andalucía) and the sea
+    STATES = ["41"]
+
+    class Identity:
+        """Map km are lon/lat (the stand-in LAEA below does the rest)."""
+        def __call__(self, lon, lat):
+            return lon, lat
+
+        def inverse(self, x, y):
+            return x, y
+
+    @staticmethod
+    def laea(lon, lat):
+        """Squares 40 km of map across, an edge at x = 10 km (the centre of hex 1): metres = (km - 10) × 250 + 30,000,
+        so hex 0 lies in E2N2, hex 1 is half E2N2 and half E3N2, hex 2 lies in E3N2."""
+        return (lon - 10) * 250 + 30000, (lat + 100) * 250
+
+    def setUp(self):
+        from pipeline.core.hexgrid import HexGrid
+
+        self.grid = HexGrid(radius=countries.COUNTRIES["es"].hex_radius_km, cols=4, rows=1)
+        self.split_x = self.grid.center(1, 0)[0]  # the square edge through the centre of hex 1
+        self.munis = [self.muni("41", -100, 200)]  # one municipality of Sevilla under all four hexes
+
+    @staticmethod
+    def muni(province, x0, x1):
+        """A rectangular municipality of `province` from x0 to x1 km of map (lon/lat under the Identity projection)."""
+        return {"state_fips": province, "rings": [[[x0, -100], [x1, -100], [x1, 100], [x0, 100]]]}
+
+    def codes(self, munis=None):
+        from pipeline.build import spain_fauna as sf
+
+        return sf.cell_codes(self.OWNER, self.Identity(), self.grid, munis or self.munis, self.laea)
+
+    def shares(self, cells):
+        from pipeline.build import spain_fauna as sf
+
+        codes, points = self.codes()
+        return sf.shares(codes, points, set(cells), len(self.OWNER)), points
+
+    def test_share_of_each_hex_in_the_reported_squares(self):
+        values, points = self.shares({"10kmE2N2"})
+        self.assertEqual(points, 84)
+        self.assertEqual(values[0], 1.0)  # inside a reported square
+        self.assertAlmostEqual(values[1], 0.5, delta=1 / 84)  # split half and half
+        self.assertEqual(values[2], 0)  # in a square with no report
+        self.assertIsNone(values[3])  # at sea
+        self.assertEqual(self.shares(set())[0], [0, 0, 0, None])
+
+    def test_a_square_reaches_the_community_its_points_are_in(self):
+        # Every land hex belongs to Sevilla by majority, but from the middle of hex 1 eastward the ground is Ávila
+        # (Castilla y León): the square E3N2 there reaches Castilla y León, not Andalucía.
+        from pipeline.build.spain_fauna import reached
+
+        codes, _ = self.codes([self.muni("41", -100, self.split_x), self.muni("05", self.split_x, 200)])
+        self.assertEqual(reached(codes, {"10kmE3N2"}), {"07"})
+        self.assertEqual(reached(codes, {"10kmE2N2"}), {"01"})
+        self.assertEqual(reached(codes, set()), set())
+        # A point in no Spanish municipality (abroad, or a gap of the generalised boundaries) reaches no community.
+        codes, _ = self.codes([self.muni("41", -100, self.split_x)])
+        self.assertEqual(reached(codes, {"10kmE3N2"}), set())
+
+    def census(self, name):
+        from pipeline.sources.es.censos_fauna import CENSUSES
+
+        return {k: v for k, v in CENSUSES[name].items() if k != "sha256"}
+
+    def test_census_names_the_communities_the_map_does_not_reach(self):
+        from pipeline.build.spain_fauna import census_text
+
+        lynx = census_text(self.census("Lynx pardinus"), {"01"}, [2013, 2018])
+        # what the squares miss comes before the list, so the legend's three lines show it
+        self.assertEqual(lynx["es"], "El censo de 2025 cuenta 2269 ejemplares en 6 comunidades; las cuadrículas de "
+                                     "2013-2018 no llegan a Castilla-La Mancha, Extremadura, Región de Murcia, Castilla "
+                                     "y León ni Comunidad de Madrid. Son Andalucía, Castilla-La Mancha, Extremadura, "
+                                     "Región de Murcia, Castilla y León y Comunidad de Madrid.")
+        self.assertEqual(lynx["en"], "The 2025 census counts 2,269 individuals in 6 communities; the 2013-2018 squares "
+                                     "do not reach Castilla–La Mancha, Extremadura, Region of Murcia, Castile and León or "
+                                     "Community of Madrid. They are Andalusia, Castilla–La Mancha, Extremadura, Region "
+                                     "of Murcia, Castile and León and Community of Madrid.")
+        only = {**self.census("Lynx pardinus"), "communities": ["01"]}
+        self.assertIn("las cuadrículas de 2013-2018 llegan a todas.", census_text(only, {"01"}, [2013, 2018])["es"])
+        self.assertIn("no llegan a Andalucía.", census_text(only, set(), [2013, 2018])["es"])
+        wolf = census_text({**self.census("Canis lupus"), "map_cells": 552}, {"12", "07"}, [2013, 2018])
+        self.assertIn("La distribución de 2019-2024 del censo tiene 1357 cuadrículas de presencia estable y 37 de "
+                      "presencia esporádica; su mapa (Figura 1) es solo una imagen. Esas cuadrículas y las 552 de "
+                      "2013-2018 salen de dos trabajos distintos", wolf["es"])
+        self.assertIn("The census's 2019-2024 distribution has 1,357 squares of stable presence and 37 of sporadic "
+                      "presence", wolf["en"])
+        self.assertIn("El censo de 2021-2024 cuenta 333 manadas en 9 comunidades", wolf["es"])
+        self.assertIn("Son Galicia, Castilla y León", wolf["es"])
+        self.assertIn("Basque Country", wolf["en"])
+        self.assertNotIn("País Vasco", wolf["en"])
+
+    def test_note_gives_the_article_and_the_latest_census(self):
+        from pipeline.build.spain_fauna import note
+        from pipeline.core.lang import tr
+
+        period = [2013, 2018]
+        self.assertEqual(note({"directive": "art17"}, self.census("Lynx pardinus"), period),
+                         tr("Cuadrículas de 10 km notificadas a la UE para 2013-2018 (art. 17 de la Directiva de "
+                            "Hábitats). El censo de 2025 cuenta 2269 ejemplares. Una cuadrícula vacía no prueba que la "
+                            "especie no esté.",
+                            "10 km squares reported to the EU for 2013-2018 (Habitats Directive, Art. 17). The 2025 "
+                            "census counts 2,269 individuals. An empty square does not prove the species is absent."))
+        self.assertIn("Para 2019-2024, el censo da 1357 cuadrículas de presencia estable.",
+                      note({"directive": "art17"}, self.census("Canis lupus"), period)["es"])
+        self.assertEqual(note({"directive": "art12"}, None, period)["es"],
+                         "Cuadrículas de 10 km notificadas a la UE para 2013-2018 (art. 12 de la Directiva de Aves, "
+                         "área de cría). Una cuadrícula vacía no prueba que la especie no esté.")
+
+    def interim(self, cells: dict[str, list[str]]):
+        from pipeline.sources.es.censos_fauna import CENSUSES
+        from pipeline.sources.es.especies import SPECIES
+
+        data = {"period": [2013, 2018], "species": {
+            n: {"directive": a, "code": "X", "refgrid": "G", "cells": cells.get(n, ["10kmE2N2"])} for n, a in SPECIES.items()}}
+        censuses = {"censuses": {n: self.census(n) for n in CENSUSES}}
+        return lambda source: {"bdn_especies": data, "miteco_censos_fauna": censuses}[source]
+
+    def test_lenses(self):
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        world = {"owner": self.OWNER, "states": self.STATES}
+        with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Ursus arctos": ["10kmE3N2"]})), \
+                contextlib.redirect_stdout(io.StringIO()):
+            out = sf.lenses(world, self.Identity(), self.grid, self.munis, self.laea)
+        self.assertEqual([l["id"] for l in out], ["lynx", "bear", "wolf", "imperial_eagle", "bearded_vulture"])
+        lynx, bear, wolf = out[:3]
+        self.assertEqual((lynx["group"], lynx["format"], lynx["domain"], lynx["source"]),
+                         ("fauna", "pct", [0, 1], "bdn_especies"))
+        # a share on its natural range, in whole percent, the tooltip saying of what
+        self.assertEqual((lynx["bounded"], lynx["decimals"], lynx["unit_in_value"]), (True, 0, True))
+        self.assertEqual(lynx["scale_text"]["es"], "Escala fija de 0 a 100 %")
+        self.assertEqual(lynx["values"][0], 1.0)
+        self.assertEqual(bear["values"][0], 0)
+        self.assertIn("El censo de 2025 cuenta 2269 ejemplares.", lynx["note"]["es"])
+        self.assertIn("(Habitats Directive, Art. 17)", bear["note"]["en"])
+        self.assertNotIn("censo", bear["note"]["es"])
+        # the description opens with the census, before the method; the title already names the species
+        self.assertTrue(lynx["description"]["es"].startswith("El censo de 2025 cuenta 2269 ejemplares en 6 "
+                                                             "comunidades;"), lynx["description"]["es"])
+        self.assertTrue(lynx["description"]["en"].startswith("The 2025 census counts"))
+        self.assertIn("donde España notificó el lince ibérico (Lynx pardinus) a la Unión Europea",
+                      lynx["description"]["es"])
+        self.assertIn("where Spain reported the Iberian lynx (Lynx pardinus) to the European Union",
+                      lynx["description"]["en"])
+        self.assertIn("The 2021-2024 census counts 333 packs", wolf["description"]["en"])
+        self.assertTrue(bear["description"]["es"].startswith("Cada hexágono muestra"))
+        self.assertIn("área de cría", out[3]["description"]["es"])
+        self.assertNotIn("Canarias", " ".join(l["description"]["es"] for l in out))
+
+    def test_squares_off_the_map_beyond_the_limit_fail(self):
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        world = {"owner": self.OWNER, "states": self.STATES}
+        far = ["10kmE2N2"] + [f"10kmE9{i}N9" for i in range(3)]  # 3 of 4 squares on no land hex
+        with mock.patch.object(sf, "load_interim", side_effect=self.interim({"Canis lupus": far})):
+            with self.assertRaisesRegex(RuntimeError, "Canis lupus: 3 of 4 squares touch no land hex"), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                sf.lenses(world, self.Identity(), self.grid, self.munis, self.laea)
+
+    def test_lenses_and_species_lists_must_agree(self):
+        from pipeline.build.spain_fauna import LENSES, same_species
+        from pipeline.sources.es.especies import SPECIES
+
+        same_species(LENSES, SPECIES)
+        with self.assertRaisesRegex(RuntimeError, "Otis tarda"):
+            same_species(LENSES, {**SPECIES, "Otis tarda": "art12"})
+        with self.assertRaises(RuntimeError):
+            same_species({k: v for k, v in LENSES.items() if k != "Canis lupus"}, SPECIES)
+
+    def test_check(self):
+        import tempfile
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from pipeline.build import spain_fauna as sf
+
+        def lens(meta, values):
+            return {"id": meta["id"], "group": "fauna", "format": "pct", "note": "n", "values": values}
+
+        full = [0.5] * sf.MIN_HEXES + [0, None]
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sf, "active", return_value=SimpleNamespace(id="es")):
+            def check(lenses):
+                Path(d, "lenses.json").write_text(json.dumps({"lenses": lenses}))
+                return sf.check(d)
+
+            good = [lens(m, full) for m in sf.LENSES.values()]
+            self.assertEqual(check(good)[0][0], "PASS")
+            self.assertEqual(check(good[1:]), [("FAIL", "wildlife lenses: lens lynx missing")])
+            self.assertEqual(check([lens(sf.LENSES["Lynx pardinus"], full + [1.5])] + good[1:]),
+                             [("FAIL", "wildlife lenses: lens lynx: values outside 0..1")])
+            self.assertEqual(check([lens(sf.LENSES["Lynx pardinus"], [0.5, 0])] + good[1:]),
+                             [("FAIL", "wildlife lenses: lens lynx: only 1 hexes > 0")])
+            self.assertEqual(check([{**good[0], "note": None}] + good[1:])[0][0], "FAIL")
+        with mock.patch.object(sf, "active", return_value=SimpleNamespace(id="us")):
+            self.assertEqual(sf.check("/nonexistent"), [])  # the US map has no wildlife lenses
+
+
 class SpainFiestasTest(unittest.TestCase):
     PAGE = ('<dl class="accordion"><dt id="dt1" class="close">Andalucía</dt><dd style="display: none;"><ul>'
             "<li>Semana Santa de Baena, Córdoba (2026)</li><li>Romería del Rocío de Almonte (1980)</li></ul></dd>"
@@ -2153,6 +2447,13 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
                          [("musicians", "director de orquesta"), ("musicians", "compositor")])
         self.assertEqual(described("cineasta y escritor hispanomexicano", ["writers"]), [("writers", "escritor")])
         self.assertEqual(described(None, ["writers"]), [])
+        # Fernando Alonso (Q10514): an actor (a voice in a film) and a Formula One driver; the description says which.
+        self.assertEqual(described("piloto de automovilismo español", ["film", "athletes"]),
+                         [("athletes", "piloto de automovilismo")])
+        self.assertEqual(described("piloto de motociclismo español", ["athletes"]),
+                         [("athletes", "piloto de motociclismo")])
+        self.assertEqual(described("ingeniero aeronáutico y piloto español", ["engineers", "athletes"]),
+                         [("engineers", "ingeniero")])  # a pilot alone is not a racing driver
 
     def test_dates_years_before_christ_precision_and_rank(self):
         from pipeline.build.spain_personajes import date_text, years
@@ -2178,6 +2479,104 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
                          ["16th century", "11th century", "12th century", "3rd century", "4th century"])
         self.assertEqual(years({"year": 1986, "precision": 11}, None, "en"), "b. 1986")
         self.assertEqual(years(None, {"year": 1550, "precision": 9}, "en"), "d. 1550")
+        # Dead with no usable date: an "unknown value" (dead) or a date vaguer than a century.
+        self.assertEqual(years({"year": 1915, "precision": 11}, None, dead=True), "1915–?")
+        self.assertEqual(years({"year": 1915, "precision": 11}, {"year": 1000, "precision": 6}, "en"), "1915–?")
+
+    def test_span_is_every_year_a_date_can_mean(self):
+        from pipeline.build.spain_personajes import span
+
+        def d(y, p):
+            return {"year": y, "precision": p}
+
+        self.assertEqual([span(d(1550, p)) for p in (11, 10, 9)], [(1550, 1550)] * 3)
+        self.assertEqual(span(d(1550, 8)), (1550, 1559))
+        self.assertEqual(span(d(-669, 8)), (-678, -669))  # the 670s BC: 679–670 BC
+        self.assertEqual([span(d(y, 7)) for y in (1401, 1450, 1500)], [(1401, 1500)] * 3)
+        self.assertEqual(span(d(1501, 7)), (1501, 1600))
+        self.assertEqual([span(d(y, 7)) for y in (-99, 0)], [(-99, 0)] * 2)  # the 1st century BC
+        self.assertEqual(span(d(-100, 7)), (-199, -100))  # the 2nd
+        self.assertIsNone(span(d(1000, 6)))
+        self.assertIsNone(span(d(1000, None)))
+        self.assertIsNone(span(None))
+
+    def test_lifespan_counts_ranges_in_full_and_the_living_up_to_the_download(self):
+        from pipeline.build.spain_personajes import MAX_LIFE, lifespan
+
+        def d(y, p=11):
+            return {"year": y, "precision": p}
+
+        self.assertEqual(MAX_LIFE, 122)
+        self.assertEqual(lifespan(d(1881), d(1973), 2026), (1881, 1973))  # Picasso
+        self.assertEqual(lifespan(d(800, 7), d(783, 9), 2026), (701, 783))  # Silo: 8th century, died 783
+        self.assertEqual(lifespan(d(1986), None, 2026), (1986, 2026))
+        self.assertEqual(lifespan(d(1904), None, 2026), (1904, 2026))  # 2026 - 122
+        self.assertEqual(lifespan(d(1903), None, 2026), "no_death")
+        self.assertEqual(lifespan(d(1950, 7), None, 2026), (1901, 2026))
+        self.assertEqual(lifespan(d(1900), d(2020, 7), 2026), (1900, 2026))  # a death range never passes the download
+        self.assertEqual(lifespan(d(1980), d(1000, 6), 2026), "no_death")  # a death date too vague to use
+        self.assertEqual(lifespan(None, d(1550), 2026), "no_birth")
+        self.assertEqual(lifespan(d(1000, 6), d(1050), 2026), "no_birth")
+        self.assertEqual(lifespan(d(1400), d(1370), 2026), "inconsistent")
+        # Wikidata records a death but no date the map can read ("unknown value", a deprecated date): not alive today.
+        self.assertEqual(lifespan(d(1915), None, 2026, dead=True), "no_death")  # Tomás Fernández, Q2058569
+        self.assertEqual(lifespan(d(1912), None, 2026, dead=False), (1912, 2026))
+        self.assertEqual(lifespan(d(1881), d(1973), 2026, dead=True), (1881, 1973))
+
+    def test_timeline_meta_counts_ranges_and_who_is_left_out(self):
+        from pipeline.build.spain_personajes import timeline_meta
+
+        def d(y, p=11):
+            return {"year": y, "precision": p}
+
+        people = [{"born": d(1881), "died": d(1973)}, {"born": d(800, 7), "died": d(783)},
+                  {"born": d(1550, 8), "died": None}, {"born": None, "died": d(1550)},
+                  {"born": d(1400), "died": d(1370)}, {"born": d(1990), "died": None},
+                  {"born": d(1914), "died": None, "dead": True}, {"born": d(1450, 7), "died": d(1550, 7)}]
+        # Spans: 1881–1973, 701–783, 1990–2026 and 1401–1600, the last longer than anyone has lived.
+        self.assertEqual(timeline_meta(people, 2026), {"until": 2026, "max_life": 122, "approximate": 2, "longer": 1,
+                                                       "left_out": {"no_birth": 1, "no_death": 2, "inconsistent": 1}})
+
+    def test_the_download_date_names_the_vintage_and_the_timelines_today(self):
+        from unittest import mock
+
+        from pipeline.sources.es.personajes import WikidataPersonajes
+
+        src = WikidataPersonajes()
+        manifest = {"occupations/spain_15.json": {"retrieved": "2026-11-27T09:12:00+00:00"}}
+        with mock.patch.object(src, "_candidates", return_value={}), \
+                mock.patch.object(src, "_rows", return_value=[{"n": {"value": "3"}}]), \
+                mock.patch("pipeline.sources.es.personajes.read_manifest", return_value=manifest):
+            out = src.process()
+        self.assertEqual((out["vintage"], out["retrieved"]), ("Wikidata, 2026-11-27", "2026-11-27"))
+
+    def test_a_death_statement_without_a_usable_date_still_marks_the_person_dead(self):
+        from unittest import mock
+
+        from pipeline.sources.es.personajes import WikidataPersonajes
+
+        src = WikidataPersonajes()
+        c = {"kept": ["writers"], "decisive": [], "counts": {"writers": 1}, "kinds": ["writers"],
+             "roles": {"writers": "Q36180"}, "sitelinks": 9}
+        uri = "http://www.wikidata.org/entity/"
+        detail = lambda q, born: {"p": {"value": uri + q}, "pLabel": {"value": q}, "born": {"value": born},  # noqa: E731
+                                  "bp": {"value": "9"}, "br": {"value": "http://wikiba.se/ontology#NormalRank"}}
+
+        def rows(rel):
+            if rel.startswith("details/"):
+                return [detail("Q2058569", "1915-01-01T00:00:00Z"), detail("Q7", "1990-01-01T00:00:00Z")]
+            if rel.startswith("deaths/"):
+                return [{"p": {"value": uri + "Q2058569"}}]  # P570 = unknown value: no date in DETAILS
+            return [{"n": {"value": "0"}}]
+
+        manifest = {"occupations/spain_15.json": {"retrieved": "2026-11-27T09:12:00+00:00"}}
+        with mock.patch.object(src, "_candidates", return_value={"Q2058569": c, "Q7": c}), \
+                mock.patch.object(src, "_rows", side_effect=rows), \
+                mock.patch("pipeline.sources.es.personajes.read_manifest", return_value=manifest):
+            out = src.process()
+        self.assertEqual({p["qid"]: (p["died"], p["dead"]) for p in out["people"]},
+                         {"Q2058569": (None, True), "Q7": (None, False)})
+        self.assertTrue(any(f.startswith("deaths/") for f in out["_files"]))
 
     def test_noun_is_the_descriptions_word_a_nobels_trade_or_the_roles_noun_in_the_persons_gender(self):
         from pipeline.build.spain_personajes import noun, note
@@ -2253,7 +2652,8 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
                   at(1, name="Escritor", born={"year": 1547, "precision": 11}),
                   at(1, name="Pintor B", primary="artists", role="Q1028181"),
                   at(2, name="Escritora", female=True), at(4, name="Francés"), person(name="Sin lugar")]
-        payload = {"vintage": "Wikidata, 2026-11-26", "data": {"people": people, "conquistadors_without_birthplace": 2}}
+        payload = {"vintage": "Wikidata, 2026-11-26",
+                   "data": {"people": people, "conquistadors_without_birthplace": 2, "retrieved": "2026-11-26"}}
         with mock.patch.object(sp, "load_interim_payload", return_value=payload):
             (count, kind), doc = sp.great_people({"owner": self.owner}, lambda lon, lat: (lon, lat), self.grid,
                                                  [self.MUNI])
@@ -2269,6 +2669,10 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
         self.assertIn("Fuera quedan 2: 1 nacieron fuera de la España actual", count["description"]["es"])
         self.assertIn("Left out: 2, of whom 1 were born outside today's Spain", count["description"]["en"])
         self.assertEqual(doc["people"][1]["note"]["en"], "writer, b. 1547")
+        # Years of life: only the writer born in 1547 has a date, too old to be alive without a death date.
+        self.assertEqual([p.get("life") for p in doc["people"]], [None] * 4)
+        self.assertEqual(doc["timeline"], {"until": 2026, "max_life": 122, "approximate": 0, "longer": 0,
+                                           "left_out": {"no_birth": 3, "no_death": 1, "inconsistent": 0}})
 
     def test_check_matches_the_lenses_against_the_people_file(self):
         import tempfile
@@ -2277,16 +2681,45 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
         from pipeline.sources.es.personajes import KIND_IDS
 
         people = {"categories": [{"id": k} for k in KIND_IDS],
-                  "people": [{"name": "A", "cell": 1, "kind": KIND_IDS.index("writers")}]}
+                  "timeline": {"until": 2026, "max_life": 122, "approximate": 0, "longer": 0,
+                               "left_out": {"no_birth": 0, "no_death": 0, "inconsistent": 0}},
+                  "people": [{"name": "A", "cell": 1, "kind": KIND_IDS.index("writers"), "life": [1881, 1973]}]}
         lenses = {"lenses": [{"id": "great_people", "names_from": sp.FILE, "values": [None, 1, 0, 0, None, None]},
                              {"id": "great_people_kind", "names_from": sp.FILE,
                               "values": [None, KIND_IDS.index("writers"), None, None, None, None]}]}
         with tempfile.TemporaryDirectory() as d:
             for name, doc in (("lenses", lenses), ("world", {"owner": self.owner}), (sp.FILE, people)):
                 Path(d, f"{name}.json").write_text(json.dumps(doc))
-            self.assertEqual(sp.check(d)[0][0], "PASS")
+            self.assertEqual([level for level, _ in sp.check(d)], ["PASS", "PASS", "NOTE", "NOTE"])
             lenses["lenses"][0]["values"][2] = 5
             Path(d, "lenses.json").write_text(json.dumps(lenses))
-            self.assertEqual(sp.check(d), [("FAIL", "lens great_people: values differ from personajes.json")])
+            self.assertEqual(sp.check(d)[0], ("FAIL", "lens great_people: values differ from personajes.json"))
             Path(d, "lenses.json").write_text(json.dumps({"lenses": [{"id": "density", "values": []}]}))
             self.assertEqual(sp.check(d), [])  # a map without people lenses (the US)
+
+    def test_check_the_years_of_life(self):
+        from pipeline.build import spain_personajes as sp
+
+        meta = {"until": 2026, "max_life": 122, "approximate": 1, "longer": 1,
+                "left_out": {"no_birth": 1, "no_death": 0, "inconsistent": 0}}
+        good = {"timeline": meta, "people": [{"name": "A", "life": [1881, 1973]}, {"name": "B", "life": [1910, 2026]},
+                                             {"name": "D", "life": [1401, 1600], "approx": True}, {"name": "C"}]}
+        self.assertEqual(sp.check_timeline(good), [
+            ("PASS", "personajes.json: 3 people placed in time up to 2026, 1 left out"),
+            ("NOTE", "personajes.json: 1 people shown alive in 2026 past 100 (no death in Wikidata)"),
+            ("NOTE", "personajes.json: 1 people span more than 122 years (decade or century dates counted in full, or "
+                     "no death in Wikidata)")])
+        for life in ([1973, 1881], [1881, 2030], [1881.5, 1973], [1881], "1881–1973"):
+            bad = {**good, "people": [{"name": "A", "life": life}, *good["people"][1:]]}
+            self.assertEqual(sp.check_timeline(bad)[0][0], "FAIL", life)
+        # Counts that do not add up, or a timeline of the wrong shape: a FAIL, never an exception.
+        reasons = {"no_birth": 1, "no_death": 0, "inconsistent": 0}
+        for change in ({"left_out": {**reasons, "no_birth": 2}}, {"approximate": 3}, {"longer": 0},
+                       {"left_out": {"no_birth": 1}}, {"left_out": {**reasons, "other": 0}},
+                       {"left_out": {**reasons, "no_birth": -1, "no_death": 2}}, {"left_out": {**reasons, "no_birth": 1.0}},
+                       {"left_out": None}, {"approximate": None}, {"max_life": "122"}, {"longer": None}):
+            self.assertEqual(sp.check_timeline({**good, "timeline": {**meta, **change}})[0][0], "FAIL", change)
+        for missing in ("left_out", "approximate", "max_life", "longer"):
+            meta_ = {k: v for k, v in meta.items() if k != missing}
+            self.assertEqual(sp.check_timeline({**good, "timeline": meta_})[0][0], "FAIL", missing)
+        self.assertEqual(sp.check_timeline({"people": []})[0][0], "FAIL")

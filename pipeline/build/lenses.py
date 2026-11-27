@@ -62,12 +62,13 @@ def set_domains(lenses: list[dict], note: str | None = None) -> None:
         lens["description"] += DOMAIN_NOTE if note is None else note
 
 
-def percentile_domain(values: list, log: bool) -> list[float] | None:
-    """[2nd, 98th] percentile of the non-null hex values, rounded outward; positive values only on a log scale."""
+def percentile_domain(values: list, log: bool, tail: float = 0.02) -> list[float] | None:
+    """[tail, 1 - tail] percentile (2nd-98th by default) of the non-null hex values, rounded outward; positive values
+    only on a log scale."""
     vals = sorted(v for v in values if v is not None and (v > 0 or not log))
     if not vals:
         return None
-    lo, hi = vals[int(0.02 * (len(vals) - 1))], vals[int(0.98 * (len(vals) - 1))]
+    lo, hi = vals[int(tail * (len(vals) - 1))], vals[int((1 - tail) * (len(vals) - 1))]
     lo, hi = nice(lo, False), nice(hi, True)
     return [lo, hi] if hi > lo else [lo, nice(vals[-1], True)]
 

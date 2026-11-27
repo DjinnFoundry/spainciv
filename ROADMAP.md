@@ -9,20 +9,28 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Huecos conocidos
 
-- Lentes diarias (E33–E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
+- Lentes diarias (E32, E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
   los demás llevan el resto de su provincia (o la provincia, en la esperanza de vida). Incendios: faltan los
   menores de unas 30 ha que no ve el EFFIS, y no hay lente de inundaciones (sin conjunto oficial abierto por municipio).
   La banda ancha es cobertura, no contratación.
 - Minas: la lista por mina más reciente del IGME es la de 2019; La Parrilla (wolframio, desde 2020) y Alquife (hierro,
   2021) no salen. Cuatro de las 25 están en el centro de su municipio (sin yacimiento del BDMIN que case).
 - Cada fuente nueva de España necesita su ficha en `texts_es.SOURCES`, o sale en inglés en el Almanaque.
-- El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E31).
+- Lentes de fauna (E94, F38): son las cuadrículas de 2013-2018. España mandó a la UE las de 2019-2024 en julio de 2025,
+  pero el MITECO aún no las publica (comprobado el 2026-11-27). Cuando salgan, cambiar las URL y el periodo de
+  `especies.py`: los códigos de cuadrícula son los mismos. Se ve la falta en el lobo (552 cuadrículas en el mapa;
+  la distribución de 2019-2024 del censo tiene 1.357 de presencia estable) y en el lince, que el censo de 2025 ya cuenta
+  en la Región de Murcia, Castilla y León y la Comunidad de Madrid.
+- El oro de las ciudades queda vacío: no hay PIB municipal oficial, y la renta o las bases del IRPF no lo sustituyen (E9).
 - Valor de la vivienda: la lente es provincial (E49); el valor tasado municipal (más de 25.000 habitantes) solo está en un XLS binario de un servidor que responde 503. Si vuelve, la lente puede bajar a municipio.
-- Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).
+- Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E39) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E39).
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
-- Los ciudadanos de la City View, el comercio y los desastres siguen siendo solo de EE UU.
-- Ejército (E67-E71): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
+- Los ciudadanos de la City View y los desastres siguen siendo solo de EE UU. Las rutas comerciales de España son de
+  mercancías por carretera entre comunidades (A30). Falta el comercio exterior por provincia en euros, que el plan
+  saca de DataComex (Secretaría de Estado de Comercio, con los datos de Aduanas de la AEAT): David decide si entra y
+  cómo se dibuja.
+- Ejército (E67): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
   `publicaciones.defensa.gob.es` no respondía el 27-11-2026) y el gasto de Defensa por provincia. Los límites son los
   de OpenStreetMap, y 165 de las 478 instalaciones no tienen rama (oficinas, residencias, institutos del Órgano
   Central y sitios cuyo nombre no la dice).
@@ -42,6 +50,23 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
+- Embalses (E91): los datos son los provisionales del Boletín; los validados del Anuario de Aforos no entran. 15
+  embalses retirados no tienen posición abierta. No hay aguas subterráneas ni datos de Baleares y Canarias (el Boletín
+  no los da). Contraste hecho con 20 notas semanales de prensa del MITECO: 26-9, 3-10, 10-10, 17-10, 24-10, 31-10, 14-11
+  y 21-11-2023; 8-10, 15-10, 22-10 y 26-11-2024; 4-11 y 18-11-2025; 24-2, 29-9, 3-11 y 17-11-2026 coinciden con la cifra
+  nacional de la lente (y con las cuencas que nombran). Difiere la del 18-8-2026: la nota dio 37.107 hm³ (66,2 %) y la
+  base da hoy 37.187 (66,4 %), por una revisión posterior, sobre todo en el Duero; la nota del 3-11-2026 da 56.043 hm³
+  de capacidad y la lente 56.049. Las posiciones de 16 grandes embalses (Alcántara, Buendía, Mequinenza, Almendra,
+  Entrepeñas, Iznájar, Cenajo, Yesa, Contreras, Alarcón, Valdecañas, Riaño, Belesar, Sau, Canelles, Ricobayo) y sus hm³
+  coinciden con `Embalses_Mapa`; las situadas con Wikidata son verosímiles. Falta contrastar 1995 con una nota de prensa.
+- Tren a Madrid (E101): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
+  cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026
+  (`check` lo avisa), y el fichero propio de Renfe Feve no entra: cuentan los trenes de Feve del fichero AV/LD de
+  Renfe, pero la vía métrica sin tren en ese fichero no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y tranvías.
+  16 pares de paradas no casan con las vías de OpenStreetMap y su vía no se dibuja (Granada–Guadix, Murcia–Alhama–
+  Totana–Lorca, Antequera AV–Málaga, entre otros); hay que compararlos con la declaración sobre la red de Adif antes
+  de publicar. Ese día la R3 solo tiene trenes de La Garriga al norte y desde 56 estaciones con tren no se llega a
+  Madrid; la nota lo dice, sin la causa, que el horario no da.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
@@ -50,12 +75,10 @@ decisiones que salgan van a `DECISIONS.md`.
   nueva), y el margen que se pinta en tiempo libre puede retrasar una rueda que llegue justo entonces. Quedan el
   worker con OffscreenCanvas (sprites, mundo y capas registradas en otro hilo) o un relieve desde 8 px, que cambia la
   imagen; repintar por bandas se probó y se descartó (A18).
-- La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
-  sigue con los de Karpathy (D6).
 
 ## Más adelante
 
-- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E89). Los datos están:
+- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E82). Los datos están:
   `wonders.json` tiene los 16 parques con sus límites del OAPN y sus hexágonos, y un mod puede añadir terrenos
   `"type": "NaturalWonder"` en `jsons/Terrains.json` (`TileNormalizer` conserva el `naturalWonder` de una casilla si
   el ruleset lo tiene). Lo que cuesta, visto en el código de Unciv 5.0.1: el tileset por defecto es HexaRealm, con
@@ -75,5 +98,8 @@ decisiones que salgan van a `DECISIONS.md`.
 ## Por decidir (David)
 
 - Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
-  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E89).
+  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E82).
+- Tren a Madrid (F42): abrir una cuenta en el NAP para la clave (`NAP_API_KEY`), que trae Ouigo oficial y Renfe Feve;
+  si vale el fichero no oficial de Iryo; y si se acepta la cláusula «siempre actualizada» de la licencia del MITRAMS
+  con un horario de un día fijo (hoy la fecha sale en la lente y en el Almanaque).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.

@@ -101,6 +101,10 @@ class RenderTest(unittest.TestCase):
         def groups(p):  # the fog of war's groups of regions (Page.explore) in that page's language
             return {"groups": [{"name": name, "regions": list(regions)} for name, regions in p.explore]}
 
+        # The NAP's licence: "Powered by MITRAMS", linked to the ministry, in both languages.
+        mitrams = '<a href="https://www.transportes.gob.es/" target="_blank" rel="noopener">Powered by MITRAMS</a>'
+        self.assertIn(mitrams, html)
+        self.assertIn(mitrams, site.credits_inner(es, "en"))
         english = {"data_credit": en.data_credit, "notices": list(en.notices), "explore": groups(en), "play": "play.html",
                    "description": en.description, "credits": site.credits_inner(es, "en")}
         self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
@@ -109,7 +113,8 @@ class RenderTest(unittest.TestCase):
                                     "game": True, "sunset": True})
         self.assertIn("lenses", h.config["data"])
         self.assertNotIn("lenses.en", h.config["data"])
-        self.assertNotIn("trade", h.config["data"])  # a US-only file Spain does not have
+        self.assertIn("trade", h.config["data"])  # Spain's trade routes (EPTMC), so the Map menu offers them
+        self.assertTrue({"embalses", "embalses_semanas"} <= set(h.config["data"]))  # the reservoirs lens, loaded lazily
         self.assertIn("Based on <a href=", english["credits"])
         self.assertIn("Boundaries: Atlas Nacional de España (ANE)", english["credits"])
         # The credits come before the lens dock: the CSS lifts the dock with `.map-credits ~ #lens-area`.
@@ -263,7 +268,7 @@ class CountryJsTest(unittest.TestCase):
         world = {"country": {"id": "es", "site_url": "spainciv", "product": "spainciv"}}
         c = self.country(world, json.dumps(site.page_config(es)))
         self.assertEqual(c["site_url"], "spainciv.djinnfoundry.com")
-        self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", "Powered by MITRAMS"])
         self.assertEqual(c["data_credit"], es.page.in_lang("es").data_credit)
         self.assertEqual(c["product"], "spainciv")
 
@@ -271,7 +276,8 @@ class CountryJsTest(unittest.TestCase):
         es = countries.COUNTRIES["es"]
         c = self.country({"country": {"id": "es"}}, json.dumps(site.page_config(es)), browser=["en-GB"])
         self.assertEqual((c["lang"], c["locale"]), ("en", dict(es.locales)["en"]))
-        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        # The train lens's "Powered by MITRAMS" (the NAP's licence) is the same text in both languages.
+        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es", "Powered by MITRAMS"])
         self.assertEqual(c["data_credit"], es.page.in_lang("en").data_credit)
 
     def test_us_without_page_settings(self):

@@ -8,14 +8,18 @@
 //     with a road is shifted to one side so the two read as parallel lines.
 //   * Ports and airports are small painted glyphs (sprites, sized in css px by zoom and by rank / hub class).
 //   * Trade routes are dashed caravan arcs between the two anchor cities (the ends of trade.json `path`), weighted by
-//     value and coloured by the dominant mode, with a cart / boat / barrel marker at the middle. Static: no animation.
+//     value (tonnes for a file with `measure: "tons"`) and coloured by the dominant mode, with a cart / boat / barrel
+//     marker at the middle. A route without a `path` is a straight line between its zones' anchors. Static: no animation.
 //
 // Exports
 //   prepareNetwork(w, infra) → net                     once per data load
+//   buildPieces(w, links, classes, offsetOf) → tiles, visibleTiles(tiles, vp, pad), strokeAll(ctx, tiles, cls)
+//                                                       the link pieces themselves, for another network (ext/transit)
 //   drawRoads(ctx, net, vp, o) / drawRail(ctx, net, vp, o)   world transform (km), o = the static-layer options
 //   ROAD_MIN_RPX, MAJOR_MIN_RPX, RAIL2_MIN_RPX           zoom thresholds (hex radius in css px)
 //   portTier(port), drawPort(ctx, x, y, sizeKm, opts), drawAirport(ctx, x, y, sizeKm, opts)   (any transform)
 //   prepareRoutes(w, trade) → routes; drawTradeRoutes(ctx, routes, vp, o); hitRoute(routes, x, y, Rpx, s)
+//   routeSize(trade, route)                             a route's size: tonnes or value, by the file's `measure`
 //   MODE_STYLE                                          per FAF mode: colour, dash, marker kind, label
 //   routeArc(grid, cellA, cellB, bow) → arc               the trade-route arc geometry (for advisors drawing the same)
 //   drawTradeMarker(ctx, kind, x, y, sizePx)              the medallion marker (screen units)
@@ -45,7 +49,7 @@ function dirTo(grid, a, b) {
  * offsetOf(a, b) → km to shift the link sideways (0 = on the centre line). The shift goes to one fixed physical side
  * of the line (below it, leaning right), so it is the same seen from either end and a run of links never swaps sides.
  */
-function buildPieces(w, links, classes, offsetOf = null) {
+export function buildPieces(w, links, classes, offsetOf = null) {
   const { grid } = w;
   const R = grid.R;
   const byCell = new Map(); // cell → [{d, cls, vx, vy}]
@@ -112,7 +116,8 @@ export function prepareNetwork(w, infra) {
   };
 }
 
-function visibleTiles(tiles, vp, pad) {
+/** The tiles of pieces that reach into the view (world km) grown by `pad` km. */
+export function visibleTiles(tiles, vp, pad) {
   const out = [];
   for (const t of tiles) {
     if (t.x1 < vp.x0 - pad || t.x0 > vp.x1 + pad || t.y1 < vp.y0 - pad || t.y0 > vp.y1 + pad) continue;
@@ -121,7 +126,8 @@ function visibleTiles(tiles, vp, pad) {
   return out;
 }
 
-function strokeAll(ctx, tiles, cls) {
+/** Stroke the pieces of class `cls` of the tiles with the context's current style. */
+export function strokeAll(ctx, tiles, cls) {
   for (const t of tiles) if (t.paths[cls]) ctx.stroke(t.paths[cls]);
 }
 
@@ -524,18 +530,24 @@ export function routeArc(grid, ca, cb, bow = 0.16) {
   return { pts, path, ends: [ax, ay, bx, by], len, bbox: [x0, y0, x1, y1] };
 }
 
+/** What a route's size is in this trade.json: thousand tonnes where `measure` is "tons" (Spain), million dollars
+ * otherwise (the US file has no `measure`). The one source for ordering and weighting routes. */
+export const routeSize = (trade, r) => (trade?.measure === "tons" ? r.tons_k : r.value_musd) || 0;
+
 /**
  * trade.json → [{route, a, b, pts: Float64Array [x,y,…] (a sampled arc), path, ends, len, bbox, weight, top, bow, style}],
  * biggest first. Each route is drawn as a gentle arc between its two anchor cities (the ends of trade.json `path`),
  * like a caravan route on a strategy map: arcs keep the 40 routes legible where a road-following drawing would bundle
  * them along the same Interstates. Routes that share an anchor fan out (alternating sides, growing bow by rank) so
- * they leave it as a spray rather than a single wedge. Neither form is data: FAF assigns no route.
+ * they leave it as a spray rather than a single wedge. Neither form is data: FAF assigns no route. A route without a
+ * `path` (Spain's: the EPTMC gives communities, not roads) is a straight line (bow 0) between its zones' anchors.
  */
 export function prepareRoutes(w, trade) {
   const { grid } = w;
   const zones = new Map((trade?.zones || []).map((z) => [z.id, z]));
-  const list = [...(trade?.routes || [])].sort((p, q) => (q.value_musd || 0) - (p.value_musd || 0));
-  const vmax = Math.max(1, ...list.map((r) => r.value_musd || 0));
+  const size = (r) => routeSize(trade, r);
+  const list = [...(trade?.routes || [])].sort((p, q) => size(q) - size(p));
+  const vmax = Math.max(1, ...list.map(size));
   const seen = new Map(); // anchor cell → routes so far
   const routes = [];
   for (const r of list) {
@@ -547,11 +559,11 @@ export function prepareRoutes(w, trade) {
     seen.set(ca, ia + 1);
     seen.set(cb, ib + 1);
     const idx = Math.max(ia, ib);
-    const bow = (idx % 2 ? -1 : 1) * Math.min(0.42, 0.12 + 0.08 * Math.ceil(idx / 2));
+    const bow = !Array.isArray(r.path) ? 0 : (idx % 2 ? -1 : 1) * Math.min(0.42, 0.12 + 0.08 * Math.ceil(idx / 2));
     const arc = routeArc(grid, ca, cb, bow);
     routes.push({
       route: r, a: za || null, b: zb || null, ...arc, bow,
-      weight: Math.sqrt((r.value_musd || 0) / vmax), top: routes.length < TOP_ROUTES,
+      weight: Math.sqrt(size(r) / vmax), top: routes.length < TOP_ROUTES,
       style: MODE_STYLE[r.top_mode] || MODE_STYLE.other,
     });
   }

@@ -38,6 +38,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         Handler.seen_headers[path] = dict(self.headers)
         if path == "/ok":
             return self._send(200, BODY)
+        if path == "/dated":
+            self.send_response(200)
+            self.send_header("Last-Modified", "Mon, 16 Nov 2026 11:05:08 GMT")
+            self.send_header("Content-Length", str(len(BODY)))
+            self.end_headers()
+            self.wfile.write(BODY)
+            return
         if path == "/flaky":  # fails twice, then works
             return self._send(503) if n <= 2 else self._send(200, BODY)
         if path == "/busy":  # too many requests once, asking for a 1-second wait
@@ -135,6 +142,12 @@ class FetchTest(unittest.TestCase):
         self.assertEqual(m["bytes"], len(BODY))
         self.assertEqual(m["url"], self.base + "/ok")
         self.assertEqual(self._leftovers(), [])
+
+    def test_manifest_keeps_last_modified(self):
+        self._dl("/dated")
+        self.assertEqual(fetch.read_manifest("src")["f.csv"]["last_modified"], "Mon, 16 Nov 2026 11:05:08 GMT")
+        self._dl("/ok", rel="g.csv")
+        self.assertNotIn("last_modified", fetch.read_manifest("src")["g.csv"])  # no header, no field
 
     def test_cached_file_is_not_refetched(self):
         self._dl("/ok")

@@ -1,4 +1,5 @@
-// The fiestas of a month, from fiestas.json (docs/DATA_CONTRACTS.md): which ones, in what order and on which hexes.
+// The fiestas of a month, from fiestas.json (docs/DATA_CONTRACTS.md): which ones, in what order and on which hexes
+// (the month itself, its name and the URL key are ext/month.js).
 // No DOM, so tests/test_fiestas_js.py runs it in node. A fiesta is in a month when its `months` (the months its
 // source's date text names) has it; one with no months is counted apart, never placed in a month.
 
@@ -8,12 +9,6 @@ export const CATEGORIES = ["internacional", "nacional", "autonomica"];
 export const COLORS = { internacional: "#ffd34a", nacional: "#f0703c", autonomica: "#c255a6" };
 
 const rank = (f) => CATEGORIES.indexOf(f.category);
-
-/** The month (1–12) of a local date. */
-export const currentMonth = (date = new Date()) => date.getMonth() + 1;
-
-/** A month from the URL ("8") or null. */
-export const parseMonth = (v) => (/^(?:[1-9]|1[0-2])$/.test(String(v)) ? Number(v) : null);
 
 /** How many fiestas each month has (index 0 = January). */
 export function perMonth(fiestas) {

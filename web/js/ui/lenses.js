@@ -28,17 +28,24 @@ export function formatLensValue(lens, v) {
   switch (lens.format) {
     case "category": return lens.categories?.[Math.round(v)]?.name ?? t("core.lens.noData");
     case "usd": case "eur": return money(v);
-    case "pct": return pct(v, v < 0.1 ? 1 : 0);
+    case "pct": return pct(v, lens.decimals ?? (v < 0.1 ? 1 : 0)) + (lens.unit_in_value && lens.unit ? " " + lens.unit : "");
     case "int": return intish(v) + (perKm2(lens) ? t("core.lens.perKm2") : lens.unit ? " " + lens.unit : "");
     case "minutes": return t("core.lens.minutes", { n: fixed(v, 0) });
     case "clock": return clock(v);
     case "duration": return formatDuration(v);
     case "years": return t("core.lens.years", { n: fixed(v, 1) });
-    case "float": return (v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
+    // A lens with `decimals` writes every value with that many (the climate's "23,0 °C" next to "23,1 °C").
+    case "float": return (lens.decimals != null ? fixed(v, lens.decimals) : v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
   }
   if (lens.unit?.includes("$") || lens.unit?.includes("€")) return money(v);
   return (v < 10 ? fixed(v, 1) : compact(v)) + (perKm2(lens) ? t("core.lens.perKm2") : "");
 }
+
+// A legend tick of a duration lens: whole and half hours ("2 h", "2,5 h"), minutes under an hour. Only when the five
+// ticks lie an hour or more apart (the train's 45 min to 7 h): rounding to the half hour would merge closer ones (the
+// sun lens's day length, which spans about an hour across Spain), so those keep their minutes.
+const hourTicks = (lens) => lens.domain[1] - lens.domain[0] >= 4 * 60;
+const durationTick = (v) => (v < 60 ? formatDuration(v) : t("core.lens.hours", { n: plain(Math.round(v / 30) / 2) }));
 
 // A lens with `names_from` names its hexes from that data file, loaded the first time the lens opens (main.js):
 // {people: [{name, note?, cell}]}, most famous first. names[k] = "name (note)"; labels[cell] = the people born there.
@@ -62,11 +69,12 @@ const perKm2 = (lens) => /\/\s*km²$/.test(lens.unit || "");
 export function formatLensTick(lens, t, k = -1) {
   const raw = lensValueAt(lens, t);
   const v = lens.format === "int" && Number.isFinite(raw) ? Math.round(raw) : raw; // a count never reads "4.5"
-  const short = (lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
-    && !(lens.format === "int" && perKm2(lens)) ? { ...lens, unit: null } : lens;
-  let s = formatLensValue(short, v);
+  const short = ((lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
+    && !(lens.format === "int" && perKm2(lens))) || lens.unit_in_value ? { ...lens, unit: null } : lens;
+  let s = lens.format === "duration" && Number.isFinite(v) && hourTicks(lens) ? durationTick(v) : formatLensValue(short, v);
   const zero = Number.isFinite(v) && Math.abs(v) < 1e-9;
   if (zero) s = s.replace(/^(\$?)0[.,]0+(?!\d)/, (_, d) => d + "0");
+  if (lens.bounded) return s; // the domain is the value's natural range (a share from 0 to 1): nothing lies beyond
   if (k === 0 && !zero) s = "≤ " + s;
   else if (k === 4) s = "≥ " + s;
   return s;
@@ -149,7 +157,17 @@ export function initLensDock(opts) {
     moreBtn.innerHTML = `${icon("layers", "▤", { size: 15 })}<span>${inRow ? t("core.lens.lenses") : esc(active.name)}</span><span class="caret" aria-hidden="true">▾</span>`;
     moreBtn.title = t("core.lens.allTitle");
     moreBtn.hidden = !lenses.length;
+    fitQuick();
   }
+
+  // When the quick row does not fit its dock (a panel open beside it), the lenses that are not active show their
+  // icon only, instead of the last button being cut off. Measured with the labels shown; nothing changes when it fits.
+  function fitQuick() {
+    quick.classList.remove("icons");
+    quick.classList.toggle("icons", quick.scrollWidth > quick.clientWidth + 1);
+  }
+  const area = document.getElementById("lens-area");
+  if (area && typeof ResizeObserver === "function") new ResizeObserver(() => fitQuick()).observe(area);
 
   function renderPicker() {
     const groups = [...(lensFile?.groups || [])];
@@ -251,7 +269,8 @@ export function initLensDock(opts) {
 
   // Categorical lenses (format "category"): values are indices into lens.categories, whose colours are the ramp
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
-  // one shows only that category (the same band mechanism as the histogram).
+  // one shows only that category (the same band mechanism as the histogram). A lens with `hide_empty` leaves out
+  // the swatches of categories no hex has (the timeline's trades of a year).
   const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
   const catBand = (l, k) => {
     const n = l.categories.length;
@@ -276,9 +295,23 @@ export function initLensDock(opts) {
         <button class="icon-btn lg-more" aria-expanded="${legendExpanded}" aria-label="${t("core.lens.showFull")}" title="${t("core.lens.details")}">${legendExpanded ? "−" : "+"}</button>
         <button class="icon-btn lg-close" aria-label="${t("core.lens.off")}" title="${t("core.lens.backToTerrain")}">${icon("close", "✕", { size: 11 })}</button></div>`;
 
+  // A lens built in the browser whose values are not in yet (domain null): its name and description, no scale.
+  function renderPendingLegend(l) {
+    legend.hidden = false;
+    legend.innerHTML = `
+      ${legendHead(l)}
+      <div class="desc">${esc(l.description || l.unit || "")}</div>
+      ${noteHtml(l)}`;
+    legend.querySelector(".lg-close").onclick = () => opts.onPick(null);
+    legend.querySelector(".lg-more").onclick = () => {
+      legendExpanded = !legendExpanded;
+      renderLegend();
+    };
+  }
+
   function renderCategoricalLegend(l) {
     const counts = catCounts(l);
-    const sw = l.categories.map((c, k) => `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
+    const sw = l.categories.map((c, k) => l.hide_empty && !counts[k] ? "" : `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
         title="${esc(c.description || c.name)} (${t("core.hexes", { n: counts[k] })})"><i style="background:${esc(c.color || l.ramp[k] || "#888")}"></i><span>${esc(c.name)}</span></button>`).join("");
     legend.hidden = false;
     legend.innerHTML = `
@@ -328,6 +361,7 @@ export function initLensDock(opts) {
     }
     const l = active;
     if (isCategorical(l)) return renderCategoricalLegend(l);
+    if (!l.domain) return renderPendingLegend(l);
     const ticks = [0, 0.25, 0.5, 0.75, 1]
       .map((t, k) => `<span style="left:${t * 100}%;transform:translateX(-${t * 100}%)">${esc(formatLensTick(l, t, k))}</span>`)
       .join("");
@@ -401,8 +435,8 @@ export function initLensDock(opts) {
       mark.hidden = false;
       mark.style.left = a * 100 + "%";
       mark.style.width = Math.max(0.5, (b - a) * 100) + "%";
-      const lo = band[0] <= 0 ? "≤ " + formatLensValue(active, lensValueAt(active, b)) : null;
-      const hi = band[1] >= 1 ? "≥ " + formatLensValue(active, lensValueAt(active, a)) : null;
+      const lo = band[0] <= 0 && !active.bounded ? "≤ " + formatLensValue(active, lensValueAt(active, b)) : null;
+      const hi = band[1] >= 1 && !active.bounded ? "≥ " + formatLensValue(active, lensValueAt(active, a)) : null;
       const txt = band[0] <= 0 && band[1] >= 1 ? t("core.lens.allValues")
         : lo || hi || `${formatLensValue(active, lensValueAt(active, a))} – ${formatLensValue(active, lensValueAt(active, b))}`;
       hint.textContent = t("core.lens.showingOnly", { what: txt });
