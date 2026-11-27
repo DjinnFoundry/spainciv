@@ -33,8 +33,9 @@ lists the public data behind the map.
 - **Districts and city types** come from each city's industry specialisation against the national share: Castelló is a
   Ceramics city, Vigo and Valladolid are Motor cities.
 - **Lenses**: population density, income, poverty and mean age (INE household income atlas), born abroad and higher
-  education (INE Annual Population Census), homeowners (2021 Census), land cover, broadband coverage, commuting, life
-  expectancy, home value per m² (by province), religious weddings (Spain has no religion census) and burnt area (EFFIS); heritage, museums, castles
+  education (INE Annual Population Census), homeowners (2021 Census), land cover, broadband coverage, commuting, home
+  value per m² (by province), religious weddings (Spain has no religion census) and burnt area (EFFIS); longevity: life
+  expectancy at birth and at 65, the oldest old (85+ among 65+), centenarians and longevity zones; heritage, museums, castles
   and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.

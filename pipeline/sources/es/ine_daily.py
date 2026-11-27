@@ -1,5 +1,6 @@
-"""INE tables behind the daily-life lenses: where the employed work (Annual Population Census), life expectancy at
-birth (Indicadores Demográficos Básicos) and how marriages are celebrated (Movimiento Natural de la Población).
+"""INE tables behind the daily-life and longevity lenses: where the employed work (Annual Population Census), life
+expectancy at birth and at 65 (Indicadores Demográficos Básicos) and how marriages are celebrated (Movimiento
+Natural de la Población).
 
 INE publishes each of them for Spain and every province, and for municipalities only for a list of large ones (the
 provincial capitals and main cities). Counts (workers, marriages) also give the rest of each province, the province
@@ -12,6 +13,7 @@ from collections.abc import Callable
 
 from ...core.source import Source, SourceInfo
 from .ine import CSV, LICENSE, PROVINCES, number, read_rows, split_geo
+from .provinces import COMMUNITIES
 
 
 class IneTables(Source):
@@ -115,39 +117,73 @@ class IneLugarTrabajo(IneTables):
         }
 
 
+SEXES = {"Ambos sexos": "both", "Hombres": "men", "Mujeres": "women"}
+
+
 class IneEsperanzaVida(IneTables):
     info = SourceInfo(
         id="ine_esperanza_vida",
-        title="Life expectancy at birth by province and by municipality (Indicadores Demográficos Básicos, tables 1485 "
-        "and 30687)",
+        title="Life expectancy at birth and at 65 by province, municipality and autonomous community (Indicadores "
+        "Demográficos Básicos, tables 1485, 30687, 1486, 30688, 1415 and 1449)",
         publisher="Instituto Nacional de Estadística (INE)",
-        homepage="https://www.ine.es/jaxiT3/Tabla.htm?t=30687",
+        homepage="https://www.ine.es/jaxiT3/Tabla.htm?t=30688",
         license=LICENSE,
         description="Life expectancy at birth, both sexes, for every province (table 1485) and for the municipalities "
-        "INE computes it for (about 150 large ones, table 30687), from deaths (Movimiento Natural de la Población) and "
-        "population. The map takes the latest year both tables have.",
-        used_for=["Life expectancy lens"],
+        "INE computes it for (about 150 large ones, table 30687); life expectancy at 65, both sexes, men and women, for "
+        "every province (table 1486), the same municipalities (table 30688), Spain (table 1415) and the autonomous "
+        "communities (table 1449). INE works them out from deaths (Movimiento Natural de la Población) and "
+        "population. The map takes the latest year the provincial and municipal tables share; the communities, their "
+        "latest year.",
+        used_for=["Life expectancy lens", "Life expectancy at 65 lens", "Longevity zones", "Unciv: the longevity trait"],
     )
-    TABLES = {"provinces": 1485, "municipalities": 30687}
+    TABLES = {"provinces": 1485, "municipalities": 30687, "provinces_65": 1486, "municipalities_65": 30688,
+              "nation_65": 1415, "communities_65": 1449}
+
+    def by_year(self, key: str, size: int | None, geo_col: int = 0, sex_col: int = 1) -> dict[str, dict[str, dict]]:
+        """year → code → {"both", "men", "women"} of a table: places whose INE code has `size` digits (None: the
+        national row, keyed "nation")."""
+        out: dict[str, dict[str, dict]] = {}
+        for r in (r for r in self.rows(key) if len(r) >= 4):
+            sex, year, v = SEXES.get(r[sex_col].strip()), r[2].strip(), number(r[3])
+            code = split_geo(r[geo_col])[0] if size else ("nation" if r[geo_col].strip() == "Total Nacional" else None)
+            if sex and v is not None and code and (size is None or len(code) == size):
+                out.setdefault(year, {}).setdefault(code, {})[sex] = v
+        return out
+
+    def at65(self) -> dict:
+        prov, muni = self.by_year("provinces_65", 2), self.by_year("municipalities_65", 5)
+        nation, comms = self.by_year("nation_65", None), self.by_year("communities_65", 2, geo_col=1, sex_col=0)
+        years = [y for y in sorted(set(prov) & set(muni) & set(nation)) if set(PROVINCES) <= set(prov[y])]
+        comm_years = [y for y in sorted(comms) if set(COMMUNITIES) <= set(comms[y])]
+        if not years or not comm_years:
+            raise RuntimeError(f"{self.id}: no year with every province in table 1486, municipalities in table 30688 "
+                               "and Spain in table 1415, or none with every community in table 1449")
+        year, comm_year = years[-1], comm_years[-1]
+        return {"year": int(year), "nation": nation[year]["nation"], "provinces": dict(sorted(prov[year].items())),
+                "municipalities": dict(sorted(muni[year].items())), "communities_year": int(comm_year),
+                "communities": dict(sorted(comms[comm_year].items()))}
 
     def process(self):
         levels: dict[str, dict[str, dict[str, float]]] = {"provinces": {}, "municipalities": {}}
         for level, size in (("provinces", 2), ("municipalities", 5)):
-            for geo, sex, year, value in (r[:4] for r in self.rows(level) if len(r) >= 4):
-                code, v = split_geo(geo)[0], number(value)
-                if sex.strip() == "Ambos sexos" and code and len(code) == size and v is not None:
-                    levels[level].setdefault(year.strip(), {})[code] = v
+            for year, geos in self.by_year(level, size).items():
+                levels[level][year] = {code: v["both"] for code, v in geos.items() if "both" in v}
         prov, muni = levels["provinces"], levels["municipalities"]
         years = [y for y in sorted(set(prov) & set(muni)) if set(PROVINCES) <= set(prov[y])]
         if not years:
             raise RuntimeError(f"{self.id}: no year with every province in table 1485 and municipalities in table 30687")
         year = years[-1]
+        at65 = self.at65()
+        if at65["year"] != int(year):
+            raise RuntimeError(f"{self.id}: life expectancy at birth is of {year} and at 65 of {at65['year']}; the "
+                               "vintage names one year")
         return {
             "vintage": f"INE Indicadores Demográficos Básicos, {year}",
             "_files": self.files(),
             "year": int(year),
             "provinces": dict(sorted(prov[year].items())),
             "municipalities": dict(sorted(muni[year].items())),
+            "at65": at65,
         }
 
 

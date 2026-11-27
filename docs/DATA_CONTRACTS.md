@@ -231,7 +231,8 @@ Produced by `pipeline/build/lenses.py`.
     "scale": "log|linear", "domain": [1, 2000],   // 2nd-98th percentile of the hex values, computed at build time "ramp": ["#..", "..."], "higher_is": "good|bad|neutral",
     "source": "acs_5yr", "description": "...",
     "values": [number|null],       // per cell; null on non-US cells
-    "note": "..."                  // optional: a short caveat the legend always shows (e.g. what a count does not measure)
+    "note": "...",                 // optional: a short caveat the legend always shows (e.g. what a count does not measure)
+    "national": 3.66               // optional: the country's value of the measure (Spain's centenarians per 10,000)
   }]
 }
 ```
@@ -251,6 +252,21 @@ focused. A lens that lists the same places per hex as another lens says `"labels
 only its own `names`, in that lens's order; the map copies the other lens's `labels` when it loads (Spain's
 `crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
 lens: "Nadie", nobody born there).
+
+**Spain's longevity lenses** (group `longevity`, right after `life`; `pipeline/build/spain_longevity.py`, DECISIONS
+E96–E97). The census counts (`ine_censo_edad`, INE table 65034) are pooled per hex before dividing: each municipality
+adds its count × the share of its census residents the hex holds. Life expectancy is the municipality's own for INE's
+155, else its province's, as a population-weighted mean. Every text is bilingual.
+
+| id | format | unit | higher_is | notes |
+|---|---|---|---|---|
+| `life_expectancy` | `years` | years at birth | `good` | `AMENITIES_RAMP`; moved here from `life` with the same values |
+| `oldest_old` | `pct` | aged 85+ among those 65+ | `neutral` | unsmoothed; `note`: counted where people live (care homes raise their municipality's), depopulation moves it less than the share over 65 |
+| `centenarians` | `float` | per 10,000 inhabitants | `neutral` | (c + 10,000 × Spain) ÷ (r + 10,000); `national` = Spain's rate; `names`/`labels`: each municipality with centenarians, whole count and raw rate; `note`: the smoothing |
+| `life_expectancy_65` | `years` | more years at 65 | `good` | `AMENITIES_RAMP`; `names`/`labels`: each unit (municipality or province) with both sexes, men and women |
+| `longevity_zones` | `category` | | `neutral` | 4 categories (none, one, two, all three), domain `[0, 3]`; `thresholds` `{oldest_old, centenarians, life_expectancy_65}` (the population-weighted 75th percentiles); `names` = the zones ("Zona de Zamora: 71 hexágonos, 136.620 residentes"), `labels` = the zone of a zone hex, else null; `check` fails a zone hex under a threshold |
+
+Icons `l-oldest-old`, `l-centenarians`, `l-life-65` and `l-longevity` fall back to their emoji (👵 💯 ⌛ 🌿).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
 `great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",

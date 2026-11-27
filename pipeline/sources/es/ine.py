@@ -210,12 +210,16 @@ class CensoSecciones(IneTable):
     the census sections, so they are read in a stream."""
 
     CATEGORIES: dict[str, str]  # the breakdown's label → key
-    TOTAL: str | None = "total"  # the key of the breakdown's "Total" row, or None to leave it out
+    TOTAL: str | None = "total"  # the key of the breakdown's total row, or None to leave it out
+    TOTAL_LABEL = "Total"  # the label of that row ("Todas las edades" in the age table)
     TOPIC = ""  # the table's subject in the vintage: "INE Censo anual de población (<TOPIC>), 1 January <year>"
+    # Years INE publishes by census section as provisional at first (the tables' note: the 2026 census is final with
+    # the first results of the Censo de Viviendas, May 2027). Check the note when the tables are fetched again.
+    PROVISIONAL = {"2026"}
 
     def process(self):
         by_year: dict[str, dict[str, dict[str, int]]] = {}  # year → geo → key → people
-        keys = {**({"Total": self.TOTAL} if self.TOTAL else {}), **self.CATEGORIES}
+        keys = {**({self.TOTAL_LABEL: self.TOTAL} if self.TOTAL else {}), **self.CATEGORIES}
         for row in stream_rows(self.raw_dir / self._file()):
             if len(row) < 8 or row[3].strip() or row[4].strip() != "Total":
                 continue  # census sections, or one sex
@@ -235,8 +239,9 @@ class CensoSecciones(IneTable):
         if "nation" not in geos or missing:
             raise RuntimeError(f"table {self.TABLE} {year}: no national row or no provinces {missing}")
         topic = f" ({self.TOPIC})" if self.TOPIC else ""
+        provisional = " (provisional)" if year in self.PROVISIONAL else ""
         return {
-            "vintage": f"INE Censo anual de población{topic}, 1 January {year}",
+            "vintage": f"INE Censo anual de población{topic}, 1 January {year}{provisional}",
             "_files": [self._file()],
             "year": int(year),
             "nation": geos["nation"],

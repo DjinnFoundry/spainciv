@@ -1416,9 +1416,43 @@ class SpainDailyLensesTest(unittest.TestCase):
         prov = "﻿Provincias;Sexo;Periodo;Total\n" + "".join(
             f"{code} P;Ambos sexos;{y};8{y % 10},5\n" for code in PROVINCES for y in (2024, 2025))
         muni = "﻿Municipios;Sexo;Periodo;Total\n28079 Madrid;Ambos sexos;2024;85,3\n28079 Madrid;Mujeres;2024;87,9\n"
-        out = self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni})
+        out = self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files()})
         self.assertEqual(out["year"], 2024, "2025 has provinces but no municipalities")
         self.assertEqual((out["provinces"]["28"], out["municipalities"]), (84.5, {"28079": 85.3}))
+
+    @staticmethod
+    def at65_files(drop: str | None = None) -> dict[str, str]:
+        """Tables 1486, 30688, 1415 and 1449 with 2024 complete; 2025 has provinces, Spain and communities but no
+        municipality. `drop` leaves one province out of 2024."""
+        from pipeline.sources.es.provinces import COMMUNITIES
+
+        sexes = (("Ambos sexos", "21,5"), ("Hombres", "19,5"), ("Mujeres", "23,5"))
+        prov = "﻿Provincias;Sexo;Periodo;Total\n" + "".join(
+            f"{code} P;{sex};{y};{v}\n" for code in PROVINCES for y in (2024, 2025) for sex, v in sexes
+            if not (code == drop and y == 2024))
+        muni = ("﻿Municipios;Sexo;Periodo;Total\n28079 Madrid;Ambos sexos;2024;22,78\n28079 Madrid;Hombres;2024;20,73\n"
+                "28079 Madrid;Mujeres;2024;24,31\n")
+        nation = "﻿Totales Territoriales;Sexo;Periodo;Total\n" + "".join(
+            f"Total Nacional;{sex};{y};{v}\n" for y in (2024, 2025) for sex, v in sexes)
+        comms = "﻿Sexo;Comunidades y Ciudades Autónomas;Periodo;Total\n" + "".join(
+            f"{sex};{code} C;{y};{v}\n" for code in COMMUNITIES for y in (2024, 2025) for sex, v in sexes)
+        return {"1486.csv": prov, "30688.csv": muni, "1415.csv": nation, "1449.csv": comms}
+
+    def test_life_expectancy_at_65_takes_the_latest_shared_year_with_its_sexes(self):
+        from pipeline.sources.es.ine_daily import IneEsperanzaVida
+
+        prov = "﻿Provincias;Sexo;Periodo;Total\n" + "".join(f"{code} P;Ambos sexos;2024;83,5\n" for code in PROVINCES)
+        muni = "﻿Municipios;Sexo;Periodo;Total\n28079 Madrid;Ambos sexos;2024;85,3\n"
+        out = self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files()})
+        at65 = out["at65"]
+        self.assertEqual(at65["year"], 2024, "2025 has no municipality in table 30688")
+        self.assertEqual(at65["communities_year"], 2025, "the communities take their own latest year")
+        self.assertEqual(at65["municipalities"], {"28079": {"both": 22.78, "men": 20.73, "women": 24.31}})
+        self.assertEqual(at65["provinces"]["49"], {"both": 21.5, "men": 19.5, "women": 23.5})
+        self.assertEqual(at65["nation"], {"both": 21.5, "men": 19.5, "women": 23.5})
+        self.assertEqual(len(at65["communities"]), 19)
+        with self.assertRaises(RuntimeError):  # 2024 lacks a province and 2025 a municipality: no shared year
+            self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files(drop="49")})
 
     def test_broadband_reads_the_newest_100_mbps_column(self):
         from pipeline.sources.es import broadband
@@ -1474,8 +1508,6 @@ class SpainDailyLensesTest(unittest.TestCase):
                 "rest_of_province": {"28": {"same": 20, "province": 70, "community": 0, "other_community": 10}}}
         # (0.25 × 300 + 0.8 × 100) ÷ 400; Barcelona has no figure
         self.assertEqual(spain_daily.commuters_lens(work, geoids, weights)["values"], [0.3875, None, None])
-        life = {"year": 2024, "municipalities": {"28079": 85.0}, "provinces": {"28": 84.0, "08": 83.5}}
-        self.assertEqual(spain_daily.life_expectancy_lens(life, geoids, weights)["values"], [84.75, 83.5, None])
         weddings = {"year": 2025, "nation": {"total": 10, "religious": 2}, "municipalities": {},
                     "rest_of_province": {"28": {"total": 10, "religious": 1}, "08": {"total": 0, "religious": 0}}}
         self.assertEqual(spain_daily.weddings_lens(weddings, geoids, weights)["values"], [0.1, None, None])
@@ -1484,6 +1516,141 @@ class SpainDailyLensesTest(unittest.TestCase):
         self.assertEqual((bb["id"], bb["group"], bb["values"]), ("broadband", "knowledge", [0.9, None, None]))
         self.assertIn("98,0 %", bb["description"]["es"])
         self.assertIn("Spain: 98.0%", bb["description"]["en"])
+
+
+class SpainLongevityTest(unittest.TestCase):
+    """The census by age (ine_people.IneCensoEdad) and the longevity lenses (build/spain_longevity.py)."""
+
+    HEAD = "﻿Total Nacional;Provincias;Municipios;Secciones;Sexo;Edad;Periodo;Total\n"
+
+    @staticmethod
+    def ages(total: int, groups: dict[str, int]) -> list[tuple[str, int]]:
+        labels = {**{str(a): f"De {a} a {a + 4} años" for a in range(65, 100, 5)}, "100": "100 y más años"}
+        return [("Todas las edades", total)] + [(labels[k], v) for k, v in groups.items()]
+
+    def census(self, check_85: str = "7,20") -> dict[str, str]:
+        """Table 65034 with Spain, every province (1,000 residents, 72 aged 85+, 1 aged 100+), Zamora's capital, one
+        section and one-sex rows; table 1488 with the provinces' shares."""
+        prov = self.ages(1000, {"65": 100, "85": 50, "90": 21, "100": 1})
+        rows = [f"Total Nacional;;;;Total;{label};2026;{v}" for label, v in
+                self.ages(49618622, {"65": 2941882, "85": 932303, "100": 18164})]
+        rows += [f"Total Nacional;;;;Total;Todas las edades;2025;1", "Total Nacional;;;;Mujeres;Todas las edades;2026;2"]
+        for code in PROVINCES:
+            rows += [f"Total Nacional;{code} P;;;Total;{label};2026;{v}" for label, v in prov]
+        rows += [f"Total Nacional;49 Zamora;49275 Zamora;;Total;{label};2026;{v}" for label, v in
+                 self.ages(59000, {"65": 3000, "100": 10})]
+        rows += ["Total Nacional;49 Zamora;49275 Zamora;;Mujeres;100 y más años;2026;8",
+                 "Total Nacional;49 Zamora;49275 Zamora;4927501001 Zamora sección 01001;Total;100 y más años;2026;3",
+                 "Total Nacional;49 Zamora;49275 Zamora;;Total;De 0 a 4 años;2026;2000"]
+        check = "﻿Provincias;Edad;Periodo;Total\n" + "".join(
+            f"{code} P;{age};{y};{v}\n" for code in PROVINCES for y, (age, v) in
+            [("2026", ("85 y más años", check_85 if code == "49" else "7,20")), ("2026", ("100 y más años", "0,10")),
+             ("2025", ("85 y más años", "1,00"))])
+        return {"65034.csv": self.HEAD + "\n".join(rows) + "\n", "1488.csv": check}
+
+    def test_census_by_age_reads_every_age_and_the_ages_from_65(self):
+        from pipeline.sources.es.ine_people import IneCensoEdad
+
+        out = SpainPeopleTest._process(IneCensoEdad(), self.census())
+        self.assertEqual(out["year"], 2026)
+        self.assertIn("1 January 2026 (provisional)", out["vintage"])
+        self.assertEqual(out["nation"], {"total": 49618622, "65": 2941882, "85": 932303, "100": 18164})
+        self.assertEqual(out["municipalities"], {"49275": {"total": 59000, "65": 3000, "100": 10}})  # no section, no sex
+        self.assertEqual(out["provinces"]["49"], {"total": 1000, "65": 100, "85": 50, "90": 21, "100": 1})
+        self.assertEqual(sorted(out["_files"]), ["1488.csv", "65034.csv"])
+
+    def test_census_by_age_fails_when_table_1488_disagrees(self):
+        from pipeline.sources.es.ine_people import IneCensoEdad
+
+        with self.assertRaisesRegex(RuntimeError, "province 49"):
+            SpainPeopleTest._process(IneCensoEdad(), self.census(check_85="7,30"))
+
+    def test_a_hex_pools_its_municipalities_before_dividing(self):
+        from pipeline.build import spain_longevity as sl
+
+        ages = {"municipalities": {"A": {"total": 1000, "65": 90, "85": 10},  # 10 % of its old are 85+
+                                   "B": {"total": 1000, "65": 10, "85": 10}}}  # half of its old are 85+
+        geoids, weights = ["A", "B"], [[(0, 1000.0), (1, 1000.0)], [(1, 500.0)], []]
+        old, oldest = (sl.census_totals(ages, geoids, g, weights) for g in (sl.OLD, sl.OLDEST))
+        # (10 + 10) ÷ (100 + 20), not the mean of 10 % and 50 %; half of B: 5 ÷ 10
+        self.assertEqual(sl.share(oldest, old), [round(20 / 120, 4), 0.5, None])
+
+    def test_a_hamlet_with_one_centenarian_does_not_beat_a_town_with_twenty(self):
+        from pipeline.build import spain_longevity as sl
+        from pipeline.build.spain_fiesta import shrunk_rate
+
+        spain = 18164 / 49618622
+        hamlet, town = (1.0, 30.0), (20.0, 20000.0)  # 333 and 10 per 10,000 raw
+        smoothed = shrunk_rate([hamlet, town], sl.CENTENARIAN_PRIOR, spain)
+        self.assertLess(smoothed[0], smoothed[1])
+        self.assertGreater(smoothed[1], spain)
+
+    def test_times_spain_is_the_shrunk_rate_over_spain(self):
+        from pipeline.build.spain_fiesta import pooled_rate, shrunk_rate, times_spain
+
+        totals = [(2.0, 100.0), (0.0, 900.0), None]
+        spain = pooled_rate(totals)
+        self.assertAlmostEqual(spain, 0.002)
+        self.assertEqual(times_spain(totals, 1000), [r / spain if r is not None else None
+                                                     for r in shrunk_rate(totals, 1000, spain)])
+        self.assertAlmostEqual(times_spain(totals, 1000)[0], (2 + 1000 * 0.002) / 1100 / 0.002)
+
+    def test_zone_thresholds_are_population_weighted(self):
+        from pipeline.build import spain_longevity as sl
+
+        self.assertEqual(sl.weighted_percentile([(1, 10), (2, 10), (3, 70), (4, 10)], 0.75), 3)
+        # four empty hexes with high values and one city: the weighted cut is the city's, not the hexes'
+        measures = [[0.3, 0.3, 0.3, 0.3, 0.2, None]] * 3
+        cuts, counts = sl.zone_counts(measures, [1, 1, 1, 1, 1000, 0])
+        self.assertEqual(cuts, [0.2, 0.2, 0.2])
+        self.assertEqual(counts, [3, 3, 3, 3, 3, None])
+
+    def test_zones_are_touching_hexes_named_after_their_most_populous_municipality(self):
+        from pipeline.build import spain_longevity as sl
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=1.0, cols=4, rows=1)  # 0 1 2 3 in a row
+        counts = [3, 3, 2, 3]
+        weights = [[(0, 100.0)], [(0, 50.0), (1, 400.0)], [(1, 10.0)], [(2, 5.0)]]
+        residents = [sum(w for _, w in p) for p in weights]
+        found = sl.zones(counts, grid, weights, ["A", "B", "C"], {"A": "Alba", "B": "Bembibre", "C": "Cea"}, residents)
+        self.assertEqual([(z["name"], z["cells"], z["residents"]) for z in found],
+                         [("Bembibre", [0, 1], 550), ("Cea", [3], 5)])
+        self.assertEqual(sl.zone_label(found[0])["es"], "Zona de Bembibre: 2 hexágonos, 550 residentes")
+
+    def test_life_expectancy_lenses_take_a_listed_municipality_or_its_province(self):
+        from pipeline.build import spain_longevity as sl
+
+        geoids = ["28079", "28065", "08019"]
+        weights = [[(0, 300.0), (1, 100.0)], [(2, 10.0)], []]
+        life = {"year": 2024, "municipalities": {"28079": 85.0}, "provinces": {"28": 84.0, "08": 83.5},
+                "at65": {"year": 2024, "nation": {"both": 21.87, "men": 19.87, "women": 23.64},
+                         "municipalities": {"28079": {"both": 23.0, "men": 21.0, "women": 24.5}},
+                         "provinces": {"28": {"both": 22.0, "men": 20.0, "women": 23.5},
+                                       "08": {"both": 21.0, "men": 19.0, "women": 23.0}}}}
+        names = {"28079": "Madrid"}
+        birth = sl.life_lens("birth", life, geoids, weights, names)
+        self.assertEqual((birth["id"], birth["group"], birth["values"]), ("life_expectancy", "longevity", [84.75, 83.5, None]))
+        at65 = sl.life_lens("65", life, geoids, weights, names)
+        self.assertEqual(at65["values"], [22.75, 21.0, None])
+        self.assertEqual([[at65["names"][k]["es"] for k in at65["labels"][c]] for c in (0, 1)],
+                         [["Madrid: 23,00 (hombres 21,00, mujeres 24,50)",
+                           "Provincia de Madrid: 22,00 (hombres 20,00, mujeres 23,50)"],
+                          ["Provincia de Barcelona: 21,00 (hombres 19,00, mujeres 23,00)"]])
+        self.assertIsNone(at65["labels"][2])
+        self.assertIn("21.87", at65["description"]["en"])
+
+    def test_the_longevity_group_follows_daily_life_and_holds_its_lenses(self):
+        doc = json.loads((ROOT / "sites" / "es" / "data" / "lenses.json").read_text(encoding="utf-8"))
+        groups = [g["id"] for g in doc["groups"]]
+        self.assertEqual(groups[groups.index("life") + 1], "longevity")
+        self.assertEqual([l["id"] for l in doc["lenses"] if l["group"] == "longevity"],
+                         ["life_expectancy", "oldest_old", "centenarians", "life_expectancy_65", "longevity_zones"])
+        cent = next(l for l in doc["lenses"] if l["id"] == "centenarians")
+        self.assertAlmostEqual(cent["national"], 3.66, places=2)
+        zones = next(l for l in doc["lenses"] if l["id"] == "longevity_zones")
+        self.assertTrue(any("Madrid" in n for n in zones["names"]))  # the weighted rule keeps the capital
+        self.assertTrue(zones["names"][0].startswith("Zona de Zamora"))
 
 
 class SpainCrimeTest(unittest.TestCase):

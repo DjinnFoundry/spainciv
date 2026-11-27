@@ -168,7 +168,8 @@ _EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "A
               "November", "December"]
 _DATE = re.compile(r"\b(\d{1,2}) (" + "|".join(_EN_MONTHS) + r") (\d{4})\b")
 _VINTAGE_WORDS = [("(population ", "(población "), ("1 arc-minute", "1 minuto de arco"), (", edition ", ", edición "),
-                  (" (final)", " (datos definitivos)"), ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
+                  (" (final)", " (datos definitivos)"), (" (provisional)", " (datos provisionales)"),
+                  ("(2017 areas)", "(zonas de 2017)"), ("; visitors ", "; visitantes "),
                   (", students ", ", matriculados "), ("(Canary Islands)", "(Canarias)")]
 
 
@@ -287,6 +288,19 @@ SOURCES = {
         "otros registros. Es el lugar de nacimiento, no la nacionalidad: cuentan los españoles nacidos fuera y no los "
         "extranjeros nacidos en España.",
         "used_for": ["Lente de nacidos en el extranjero"],
+    },
+    "ine_censo_edad": {
+        "title": "Censo anual de población: población por sexo y edad (grupos quinquenales), tabla 65034, contrastada "
+        "con la tabla 1488",
+        "license": _INE_LICENCE,
+        "description": "Residentes de cada grupo de edad desde los 65 (65–69, 70–74 … 95–99, 100 y más) y todos los "
+        "residentes de España, cada provincia y cada municipio (y sus secciones censales, que aquí no se usan), del "
+        "Censo anual de población, que el INE elabora con el Padrón y otros registros. Cuenta dónde vive la gente, no "
+        "dónde nació: quien vive en una residencia cuenta en el municipio de la residencia. El INE publica todos los "
+        "municipios, sin ninguna casilla oculta. La proporción de residentes de 85 años o más y de 100 o más de cada "
+        "provincia se contrasta con la del propio INE (Indicadores Demográficos Básicos, tabla 1488).",
+        "used_for": ["Lente de sobreenvejecimiento", "Lente de centenarios", "Zonas de longevidad",
+                     "Unciv: el rasgo de longevidad"],
     },
     "ine_censo_formacion": {
         "title": "Censo anual de población: población de 15 años o más por sexo y nivel de estudios (agrupado), tabla 66592",
@@ -572,13 +586,17 @@ SOURCES = {
         "used_for": ["Lente de los que trabajan fuera de su municipio"],
     },
     "ine_esperanza_vida": {
-        "title": "Esperanza de vida al nacer por provincia y por municipio (Indicadores Demográficos Básicos, tablas 1485 "
-        "y 30687)",
+        "title": "Esperanza de vida al nacer y a los 65 años por provincia, municipio y comunidad autónoma "
+        "(Indicadores Demográficos Básicos, tablas 1485, 30687, 1486, 30688, 1415 y 1449)",
         "license": _INE_LICENCE,
         "description": "Esperanza de vida al nacer, ambos sexos, de cada provincia (tabla 1485) y de los municipios para "
-        "los que el INE la calcula (unos 150 grandes, tabla 30687), a partir de las defunciones (Movimiento Natural de "
-        "la Población) y la población. El mapa toma el último año que tienen las dos tablas.",
-        "used_for": ["Lente de esperanza de vida"],
+        "los que el INE la calcula (unos 150 grandes, tabla 30687); esperanza de vida a los 65 años, ambos sexos, "
+        "hombres y mujeres, de cada provincia (tabla 1486), de esos mismos municipios (tabla 30688), de España (tabla "
+        "1415) y de las comunidades autónomas (tabla 1449). El INE las calcula a partir de las defunciones (Movimiento "
+        "Natural de la Población) y la población. El mapa toma el último año que comparten las tablas de provincias y "
+        "de municipios; las comunidades, su último año.",
+        "used_for": ["Lente de esperanza de vida", "Lente de esperanza de vida a los 65", "Zonas de longevidad",
+                     "Unciv: el rasgo de longevidad"],
     },
     "ine_matrimonios": {
         "title": "Matrimonios por provincia y principales municipios de residencia y forma de celebración (MNP, tablas "
