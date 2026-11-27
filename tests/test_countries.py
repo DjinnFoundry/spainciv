@@ -729,6 +729,22 @@ class UrbanAreasTest(unittest.TestCase):
         (b,) = urban_areas([self.area(["Las Palmas de Gran Canaria"], 380_000)], self.muni, self.centre)
         self.assertEqual(b["members"], ["35016"])
 
+    def test_area_names_are_written_as_names(self):
+        """Each word of a hyphenated or co-official name keeps its capital, the AUDES misprint is corrected, and an
+        article after the preposition goes to lower case in Spanish only."""
+        from pipeline.build.spain import area_name
+
+        for label, es, en in [
+            ("ÁREA URBANA DE TARRAGONA-REUS", "Área urbana de Tarragona-Reus", "Tarragona-Reus urban area"),
+            ("ÁREA URBANA DE ALCOY/ALCOI", "Área urbana de Alcoy/Alcoi", "Alcoy/Alcoi urban area"),
+            ("ÁREA URBANA DE SALTA CRUZ DE TENERIFE - LA LAGUNA", "Área urbana de Santa Cruz de Tenerife - La Laguna",
+             "Santa Cruz de Tenerife - La Laguna urban area"),
+            ("ÁREA URBANA DE LA BAHÍA DE CÁDIZ", "Área urbana de la Bahía de Cádiz", "La Bahía de Cádiz urban area"),
+            ("ÁREA URBANA DEL VALLE DE LA OROTAVA", "Área urbana del Valle de la Orotava", "Valle de la Orotava urban area"),
+            ("ÁREA URBANADE SEGOVIA", "Área urbana de Segovia", "Segovia urban area"),
+        ]:
+            self.assertEqual(area_name(label), {"es": es, "en": en}, label)
+
     def test_mismatches_fail_loudly(self):
         from pipeline.build.spain import urban_areas
 

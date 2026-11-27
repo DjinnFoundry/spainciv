@@ -39,9 +39,10 @@ import unicodedata
 
 from ..core.geo import Shape, geojson_rings
 from ..core.hexgrid import HexGrid
-from ..core.lang import tr
+from ..core.lang import Text, tr
 from ..core.store import load_interim, load_interim_payload, write_web
 from ..countries import active
+from ..sources.es.names import title_es
 from ..sources.es.provinces import COMMUNITIES, COMMUNITY_OF
 from .cities import add_ranks, footprints, free_cell, nearest_land
 from .growth import BASELINE_YEAR, rate
@@ -264,6 +265,21 @@ def name_keys(name: str) -> set[str]:
     return out
 
 
+# AUDES labels it misprints: AUDES 2025 → the label its own member municipalities give (Santa Cruz de Tenerife and San
+# Cristóbal de La Laguna).
+AUDES_MISPRINTS = {"SALTA CRUZ DE TENERIFE - LA LAGUNA": "SANTA CRUZ DE TENERIFE - LA LAGUNA"}
+
+
+def area_name(label: str) -> Text:
+    """An AUDES label ('ÁREA URBANA DE TARRAGONA-REUS') as the map names the area: the place written as names are
+    (names.title_es: 'Tarragona-Reus', 'Alcoy/Alcoi', 'Santander - Torrelavega'), after 'Área urbana de' in Spanish and
+    before 'urban area' in English ('Área urbana de la Bahía de Cádiz', 'La Bahía de Cádiz urban area')."""
+    m = re.match(r"ÁREA URBANA\s*(?:(DEL?)\s+)?(.+)$", label, flags=re.I)  # AUDES writes "ÁREA URBANADE SEGOVIA"
+    prep, place = m.group(1), title_es(AUDES_MISPRINTS.get(m.group(2), m.group(2)))
+    es = re.sub(r"^(La|Las|Los|El) ", lambda x: x.group(1).lower() + " ", place) if prep else place
+    return tr(f"Área urbana {prep.lower() + ' ' if prep else ''}{es}", f"{place} urban area")
+
+
 def urban_areas(areas: list[dict], muni: dict, centre: dict) -> list[dict]:
     """AUDES areas with their members as INE codes: [{id (the core, first-listed member), full, members}].
 
@@ -298,12 +314,7 @@ def urban_areas(areas: list[dict], muni: dict, centre: dict) -> list[dict]:
             problems.append(f"{a['name']}: {len(set(members))} of {a['municipalities']} municipalities, population "
                             f"{total:,} vs {a['population']:,}")
             continue
-        rest = re.sub(r"^ÁREA URBANA\s*", "", a["label"], flags=re.I)
-        words = [w.lower() if w.lower() in ("de", "del", "la", "las", "los", "el", "y") else w.capitalize() for w in rest.split()]
-        rest = " ".join(words)  # 'de Murcia', 'del Valle de la Orotava', 'Zaragoza'
-        name = re.sub(r"^del? ", "", rest)
-        out.append({"id": members[0], "full": tr(f"Área urbana {rest}", f"{name[:1].upper()}{name[1:]} urban area"),
-                    "members": members})
+        out.append({"id": members[0], "full": area_name(a["label"]), "members": members})
     if problems:
         raise RuntimeError("AUDES areas that don't match the Padrón:\n  " + "\n  ".join(problems))
     return out
