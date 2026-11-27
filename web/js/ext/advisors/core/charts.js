@@ -50,13 +50,14 @@ const markHot = (root, key, cls = "hot") => {
 
 /**
  * rows: [{key, label, sub, value, text, color, icon (html), tone: "good"|"bad"}]
- * opts: {diverging, max, onHover(row), onClick(row), selected (key), rank (show 1., 2., …), compact}
+ * opts: {diverging, max, onHover(row), onClick(row), selected (key), rank (show 1., 2., …), compact,
+ *        wrap (the label wraps and the sub gets its own line, for subs too long to cut)}
  */
 export function barList(host, opts) {
   const rows = opts.rows || [];
   const max = opts.max ?? Math.max(1e-12, ...rows.map((r) => Math.abs(r.value) || 0));
   const root = document.createElement("div");
-  root.className = `adv-bars${opts.diverging ? " div" : ""}${opts.compact ? " compact" : ""}`;
+  root.className = `adv-bars${opts.diverging ? " div" : ""}${opts.compact ? " compact" : ""}${opts.wrap ? " wrap" : ""}`;
   root.setAttribute("role", "list");
   if (opts.ariaLabel) root.setAttribute("aria-label", opts.ariaLabel);
   root.innerHTML = rows.length ? rows.map((r, i) => {

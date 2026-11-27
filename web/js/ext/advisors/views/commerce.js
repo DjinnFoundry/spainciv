@@ -32,6 +32,7 @@ export async function mount(ctx) {
   const tons = trade?.measure === "tons";
   const size = (r) => routeSize(trade, r);
   const fmt = tons ? (kt) => (fin(kt) ? t("adv.tons", { v: compact(kt * 1e3) }) : "–") : (musd) => money(musd * MUSD);
+  const nb = (s) => s.replace(/ /g, "\u00a0"); // an amount never breaks between number and unit ("9,5 M t")
   // A community's cells: those of its provinces (zone.provinces, the world's state fips).
   const fips = (app.w.raw.states || []).map((st) => st.fips);
   const zoneOfProvince = new Map((trade?.zones || []).flatMap((z) => (z.provinces || []).map((p) => [p, z.id])));
@@ -118,10 +119,10 @@ export async function mount(ctx) {
       const vis = visibleRoutes();
       rHost.innerHTML = "";
       routeBars = barList(rHost, {
-        rank: !st.mode && !st.zone, ariaLabel: t("adv.com.routesAria"), max: vMax,
+        rank: !st.mode && !st.zone, wrap: tons, ariaLabel: t("adv.com.routesAria"), max: vMax,
         rows: vis.map((r) => ({
           key: r.key, label: r.label, value: size(r), text: fmt(size(r)), color: MODE_COLOR[r.top_mode],
-          sub: tons ? t("trade.tip.dirs", { a: zName(r.a), b: zName(r.b), ab: fmt(r.ab_k), ba: fmt(r.ba_k) }) // barList escapes it
+          sub: tons ? t("adv.com.dirs", { a: zName(r.a), b: zName(r.b), ab: nb(fmt(r.ab_k)), ba: nb(fmt(r.ba_k)) }) // barList escapes it
             : `${modeName.get(r.top_mode) || r.top_mode} · ${comm[r.top_commodity] || "–"}`,
           full: `#${r.rank} ${zoneById.get(r.a)?.name || r.a} ⇄ ${zoneById.get(r.b)?.name || r.b}`,
         })),
@@ -175,8 +176,9 @@ export async function mount(ctx) {
       rDetail.innerHTML = tons ? `<div class="adv-card-detail">${head}
         ${tiles([
           { label: t("adv.com.route.tons"), value: fmt(r.tons_k), sub: t("adv.com.route.both") },
-          { label: t("adv.com.route.ab", { a: esc(zName(r.a)), b: esc(zName(r.b)) }), value: fmt(r.ab_k) },
-          { label: t("adv.com.route.ab", { a: esc(zName(r.b)), b: esc(zName(r.a)) }), value: fmt(r.ba_k) },
+          // a long "A → B" label would be cut in a tile: the destination goes in the label, the origin below
+          { label: t("adv.com.route.to", { b: zName(r.b) }), value: fmt(r.ab_k), sub: t("adv.com.route.from", { a: zName(r.a) }) },
+          { label: t("adv.com.route.to", { b: zName(r.a) }), value: fmt(r.ba_k), sub: t("adv.com.route.from", { a: zName(r.b) }) },
           { label: t("adv.com.route.haul"), value: fin(r.haul_km) ? `${int(r.haul_km)} km` : "–", sub: t("adv.com.route.haulSub") },
         ])}
         ${close}</div>` : `<div class="adv-card-detail">
@@ -204,17 +206,20 @@ export async function mount(ctx) {
       note: "FAF splits the country into metro areas and the rest of each state. Value of freight that starts or ends in each zone (domestic), plus its trade with other countries. Hover to outline a zone's cities; click to see its routes and partners.",
     });
     const tk = (z, k) => z.totals_k?.[k];
-    const tkCol = (key, k, extra = {}) => ({ key, value: (z) => tk(z, k), text: (z) => fmt(tk(z, k)), ...extra });
+    // table cells take three significant digits ("932 mil t", not "931,7 mil t"), so a narrow column never cuts them
+    const cell = (kt) => (fin(kt) ? t("adv.tons", { v: count3(kt * 1e3) }) : "–");
+    const tkCol = (key, k, extra = {}) => ({ key, value: (z) => tk(z, k), text: (z) => cell(tk(z, k)), ...extra });
     const intl = (z) => (fin(tk(z, "intl_sent")) || fin(tk(z, "intl_received")) ? (tk(z, "intl_sent") || 0) + (tk(z, "intl_received") || 0) : null);
     zTable = createTable(zBody, tons ? {
       caption: t("adv.com.zones"), rank: true, maxHeight: 320, search: t("adv.com.zoneSearch"),
       searchText: (z) => z.name,
       columns: [
-        { key: "name", label: t("adv.com.col.zone"), align: "l", width: "minmax(0,1.6fr)", value: (z) => z.short || z.name, html: (z) => esc(z.short || z.name), tip: (z) => z.name },
+        // 124px keeps "Castilla-La Mancha" whole
+        { key: "name", label: t("adv.com.col.zone"), align: "l", width: "minmax(124px,2fr)", value: (z) => z.short || z.name, html: (z) => esc(z.short || z.name), tip: (z) => z.name },
         tkCol("within", "within", { label: t("adv.com.col.within"), title: t("adv.com.col.withinTitle") }),
         tkCol("sent", "sent", { label: t("adv.com.col.sent"), bar: { max: Math.max(...zones.map((z) => tk(z, "sent") || 0), 1), color: "rgba(217,164,87,.35)" } }),
         tkCol("received", "received", { label: t("adv.com.col.received") }),
-        { key: "intl", label: t("adv.com.col.intl"), title: t("adv.com.col.intlTitle"), value: intl, text: (z) => fmt(intl(z)), hideBelow: 380 },
+        { key: "intl", label: t("adv.com.col.intl"), title: t("adv.com.col.intlTitle"), value: intl, text: (z) => cell(intl(z)), hideBelow: 380 },
       ],
       rows: zones, sort: { key: "sent", dir: "desc" },
       onHover: (z) => link.hover(z ? zoneHighlight(z) : null),

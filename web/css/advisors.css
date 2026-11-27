@@ -162,6 +162,8 @@
 .adv-bar .tr i.good { background: linear-gradient(90deg, #2e9c8a, #7dc2b0); }
 .adv-bar .tr i.bad { background: linear-gradient(270deg, #c2463d, #e08a6a); }
 .adv-bars.compact .adv-bar { padding: 1px 6px 2px; }
+.adv-bars.wrap .adv-bar .lb { white-space: normal; overflow-wrap: break-word; }
+.adv-bars.wrap .adv-bar .sub { display: block; }
 
 /* ---------- stacked bars ---------- */
 .adv-stack { display: flex; flex-direction: column; gap: 1px; }
