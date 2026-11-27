@@ -1194,28 +1194,104 @@ class SpainVintageTest(unittest.TestCase):
 
 
 class SpainBeachesTest(unittest.TestCase):
-    def test_beach_town(self):
-        from pipeline.build.spain import beach_town
+    """Blue Flag beaches: municipality, name matching against Wikidata and OSM, and placement (spain_beaches)."""
 
-        by_key = {("29", "marbella"): "29069", ("30", "san javier"): "30035"}
-        self.assertEqual(beach_town({"province": "29", "municipality": "Marbella"}, by_key), "29069")
-        self.assertEqual(beach_town({"province": "30", "municipality": "San Javier/Cartagena"}, by_key), "30035")
-        self.assertEqual(beach_town({"province": "07", "municipality": "Palma de Mallorca"}, by_key), "07040")
+    def test_beach_towns(self):
+        from pipeline.build.spain_beaches import beach_towns
+
+        by_key = {("29", "marbella"): "29069", ("30", "san javier"): "30035", ("30", "cartagena"): "30016"}
+        self.assertEqual(beach_towns({"province": "29", "municipality": "Marbella"}, by_key), ["29069"])
+        self.assertEqual(beach_towns({"province": "30", "municipality": "San Javier/Cartagena"}, by_key),
+                         ["30035", "30016"])
+        self.assertEqual(beach_towns({"province": "07", "municipality": "Palma de Mallorca"}, by_key), ["07040"])
         with self.assertRaises(RuntimeError):
-            beach_town({"province": "29", "municipality": "Atlántida"}, by_key)
+            beach_towns({"province": "29", "municipality": "Atlántida"}, by_key)
 
-    def test_beaches_take_coastal_hexes_in_turn(self):
-        from pipeline.build.spain import beaches_lens
+    def test_name_key_drops_accents_articles_and_the_word_for_beach(self):
+        from pipeline.build.spain_beaches import name_key
+
+        for a, b in [("Playa de la Concha", "La Concha"), ("Praia da Rapadoira", "A Rapadoira"),
+                     ("Platja de l'Arenal", "L´Arenal"), ("Platja de Sa Conca", "Sa Conca"),
+                     ("Playa de Nagüeles", "Nagueles"), ("Hondartza de Laida", "Laida"),
+                     ("Playa fluvial A Calzada", "A Calzada")]:
+            self.assertEqual(name_key(a), name_key(b), (a, b))
+        self.assertNotEqual(name_key("Playa de Levante"), name_key("Playa de Poniente"))
+        self.assertEqual(name_key("Playa de Levante"), "levante")
+
+    def test_forms_try_the_whole_name_first_then_its_parts(self):
+        from pipeline.build.spain_beaches import forms
+
+        self.assertEqual(forms("Venus-Bajadilla"), ["venus bajadilla", "venus", "bajadilla"])
+        self.assertEqual(forms("Sant Francesc (Cala Bona)"), ["sant francesc cala bona", "sant francesc", "cala bona"])
+        self.assertEqual(forms("Punta Umbría (Tramo El Albergue)")[:2], ["punta umbria tramo albergue", "punta umbria"])
+        self.assertEqual(forms("Arenal y Bol"), ["arenal bol", "arenal", "bol"])
+
+    @staticmethod
+    def _town():
+        """A square municipality 29069 of about 11 × 11 km (0.1° side) and its outline."""
+        from pipeline.build.spain_beaches import Outline
+
+        rings = [[(-4.9, 36.5), (-4.8, 36.5), (-4.8, 36.6), (-4.9, 36.6)]]
+        return rings, {"29069": Outline(rings)}
+
+    def test_match_prefers_wikidata_by_ine_code_then_osm_near_the_outline(self):
+        from pipeline.build.spain_beaches import forms, index, match
+
+        _, outlines = self._town()
+        wd = index([{"id": "Q1", "names": ["Playa de Venus"], "ine": ["29069"], "lonlat": [-4.85, 36.55]},
+                    {"id": "Q2", "names": ["Playa de Cabopino"], "ine": ["29051"], "lonlat": [-4.86, 36.55]}])
+        osm = index([{"id": "way/1", "names": ["Playa de Venus"], "lonlat": [-4.84, 36.54]},
+                     {"id": "way/2", "names": ["Playa de Cabopino"], "lonlat": [-4.795, 36.55]},  # 0.45 km offshore
+                     {"id": "way/3", "names": ["Playa del Faro"], "lonlat": [-4.7, 36.55]}])  # 9 km away
+        self.assertEqual(match(forms("Venus"), ["29069"], outlines, wd, osm), ("wikidata_playas", "Q1", (-4.85, 36.55)))
+        # Q2 gives another municipality's code: the OSM beach just off the outline answers.
+        self.assertEqual(match(forms("Cabopino"), ["29069"], outlines, wd, osm), ("osm_playas", "way/2", (-4.795, 36.55)))
+        self.assertIsNone(match(forms("El Faro"), ["29069"], outlines, wd, osm))
+        self.assertEqual(match(forms("Venus-Bajadilla"), ["29069"], outlines, wd, osm)[1], "Q1")  # by its first part
+
+    def test_match_joins_the_pieces_of_one_beach_and_refuses_two_beaches_of_one_name(self):
+        from pipeline.build.spain_beaches import forms, index, match
+
+        _, outlines = self._town()
+        pieces = index([{"id": "way/1", "names": ["Playa de Levante"], "lonlat": [-4.85, 36.55]},
+                        {"id": "way/2", "names": ["Playa de Levante"], "lonlat": [-4.84, 36.55]}])
+        self.assertEqual(match(forms("Levante"), ["29069"], outlines, {}, pieces),
+                         ("osm_playas", "way/1+way/2", (-4.845, 36.55)))
+        apart = index([{"id": "way/1", "names": ["Playa de Levante"], "lonlat": [-4.89, 36.51]},
+                       {"id": "way/2", "names": ["Playa de Levante"], "lonlat": [-4.81, 36.59]}])
+        self.assertIsNone(match(forms("Levante"), ["29069"], outlines, {}, apart))
+        inside_first = index([{"id": "way/1", "names": ["Playa de Levante"], "lonlat": [-4.85, 36.55]},
+                              {"id": "way/2", "names": ["Playa de Levante"], "lonlat": [-4.79, 36.59]}])
+        self.assertEqual(match(forms("Levante"), ["29069"], outlines, {}, inside_first)[2], (-4.85, 36.55))
+
+    def _lens(self, osm):
+        from pipeline.build.spain_beaches import beaches_lens, place
         from pipeline.core.hexgrid import HexGrid
 
+        rings, _ = self._town()
         grid = HexGrid(radius=10.0, cols=5, rows=1)
         owner = [0, 0, 0, -1, -1]  # three land hexes, the third on the sea
         world = {"owner": owner, "county": [0, 0, 0, -1, -1], "counties": ["29069"]}
-        munis = [{"geoid": "29069", "name": "Marbella", "state_fips": "29", "centre": list(grid.center(0, 0))}]
+        munis = [{"geoid": "29069", "name": "Marbella", "state_fips": "29", "centre": list(grid.center(0, 0)),
+                  "rings": rings}]
         beaches = [{"beach": b, "municipality": "Marbella", "province": "29"} for b in ("Cabopino", "Venus")]
-        lens = beaches_lens(beaches, munis, world, grid, lambda lon, lat: (lon, lat))
+        placed = place(beaches, munis, [], osm)
+        proj = lambda lon, lat: grid.center(0, 0) if lon < -4.85 else grid.center(1, 0)  # west half → hex 0, east → 1
+        return placed, beaches_lens(placed, munis, world, grid, proj)
+
+    def test_unmatched_beaches_take_coastal_hexes_in_turn(self):
+        placed, lens = self._lens([])
+        self.assertTrue(all("lonlat" not in b for b in placed))
         self.assertEqual(lens["values"][:3], [0, 0, 2])  # both on the only coastal hex
         self.assertEqual([lens["names"][k] for k in lens["labels"][2]], ["Cabopino (Marbella)", "Venus (Marbella)"])
+        self.assertIn("0 están en su sitio", lens["description"]["es"])
+
+    def test_matched_beaches_sit_at_their_point(self):
+        placed, lens = self._lens([{"id": "way/9", "names": ["Platja de Venus"], "lonlat": [-4.82, 36.55]}])
+        self.assertEqual(placed[1]["record"], "way/9")
+        self.assertEqual(lens["values"][:3], [0, 1, 1])  # Venus at its point (hex 1), Cabopino on the coast
+        self.assertEqual([lens["names"][k] for k in lens["labels"][1]], ["Venus (Marbella)"])
+        self.assertIn("1 are in place", lens["description"]["en"])
 
 
 class SpainDishesTest(unittest.TestCase):
