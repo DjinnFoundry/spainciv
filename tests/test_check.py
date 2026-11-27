@@ -172,6 +172,12 @@ class CheckTest(unittest.TestCase):
             "pct lens as percent": lambda w: w["lenses.json"]["lenses"].append(
                 {**w["lenses.json"]["lenses"][0], "id": "share", "format": "pct", "scale": "linear",
                  "values": [50.0, 20.0, None, 10.0, 5.0, None]}),
+            "labels_from an unknown lens": lambda w: w["lenses.json"]["lenses"].append(
+                {**w["lenses.json"]["lenses"][0], "id": "named", "names": ["A"], "labels_from": "nowhere"}),
+            "labels_from with fewer names": lambda w: (
+                w["lenses.json"]["lenses"][0].update(names=["A", "B"], labels=[[0], [1], None, None, None, None]),
+                w["lenses.json"]["lenses"].append(
+                    {**w["lenses.json"]["lenses"][0], "id": "named", "names": ["A"], "labels_from": "density"})),
             "city in unknown state": lambda w: w["cities.json"][0].__setitem__("states", ["ZZ"]),
             "metro not a bool": lambda w: w["cities.json"][0].__setitem__("metro", "yes"),
             "capital not a bool": lambda w: w["cities.json"][1].__setitem__("capital", 0),

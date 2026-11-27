@@ -872,6 +872,24 @@ const RAW = {
       D('M6.2 11.2h11', 1),
     ],
   },
+  'l-crime': {
+    bg: '#5a4a6a',
+    paths: [
+      // a police badge: a shield with a star cut out
+      F('M12 1.8 20.4 5v6.2c0 5.2-3.6 9.2-8.4 11-4.8-1.8-8.4-5.8-8.4-11V5Z' + star(12, 11.6, 4.6, 0.45)),
+      D('M12 4.2 18 6.6v4.6c0 3.9-2.6 7-6 8.4', 1),
+    ],
+  },
+  'l-crime-type': {
+    bg: '#5a4a6a',
+    paths: [
+      // a magnifying glass over an exclamation mark: the offence that stands out
+      T(circle(10, 10, 5.6)),
+      S(circle(10, 10, 6.6), 2.2),
+      S('M15 15 21 21', 3.2),
+      F(rrect(9, 5.8, 2, 5.4, 1) + circle(10, 13.6, 1.1)),
+    ],
+  },
   'l-veterans': {
     bg: '#3a4a6a',
     paths: [

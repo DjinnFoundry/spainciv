@@ -242,7 +242,9 @@ the tooltip list what a hex holds, up to 8 (Spain's museums, castles, fiestas). 
 lenses.json says `"names_from": "<file>"` instead: the map loads `data/<file>.json` the first time such a lens opens and
 builds `names`/`labels` from its `people: [{name, note?, cell}]`, in file order (names read "name (note)"); every lens
 naming from the same file shares them, and the search box adds its people (by name and by `place`) once it is first
-focused. `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
+focused. A lens that lists the same places per hex as another lens says `"labels_from": "<lens id>"` and carries
+only its own `names`, in that lens's order; the map copies the other lens's `labels` when it loads (Spain's
+`crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
 lens: "Nadie", nobody born there).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
