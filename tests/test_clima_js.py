@@ -109,7 +109,7 @@ class SeasonTest(unittest.TestCase):
                   f2: L.facts(2).nearest });
         """)
         self.assertEqual(got["values"], [None, None, 106, None, None, 250])
-        self.assertEqual(got["f1"], {"name": "Burgos Aeropuerto", "annual": sum(100 + m for m in range(1, 13))})
+        self.assertEqual(got["f1"], {"name": "Burgos Aeropuerto", "value": 106, "annual": sum(100 + m for m in range(1, 13))})
         self.assertEqual(got["f4"]["name"], "Burgos Aeropuerto")  # Melilla's station has no sunshine
         self.assertIsNone(got["f5"])
         self.assertIsNone(got["f2"])
@@ -127,6 +127,34 @@ class SeasonTest(unittest.TestCase):
         self.assertEqual(prec[0], 1)
         self.assertIsNone(frost)
         self.assertIsNone(sun)
+
+    def test_the_tooltip_lines_say_where_the_value_comes_from(self):
+        got = run("""
+            const say = (k, p = {}) => k + JSON.stringify(p);
+            const value = { temp: (x) => x.toFixed(1), int: String, lens: (x) => `${x} u` };
+            out({ temp: S.tipLines(S.layer(model, 'temp', 1).facts(2), { say, value }),
+                  frost: S.tipLines(S.layer(model, 'frost', 1).facts(2), { say, value, frost: true }),
+                  noSun: S.tipLines(S.layer(model, 'sun', 6).facts(4), { say, value, month: 'junio' }),
+                  near: S.tipLines(S.layer(model, 'sun', 6).facts(1), { say, value, month: 'junio' }),
+                  sea: S.tipLines(null, { say, value }) });
+        """)
+        self.assertEqual(got["temp"], ['clima.tip.range{"max":"9.0","min":"-5.0"} · clima.tip.grid{}',
+                                       'clima.tip.station{"name":"Burgos Aeropuerto","alt":"891","value":"4 u"}'])
+        self.assertEqual(got["frost"], ["clima.tip.grid{}",
+                                        'clima.tip.station.frost{"name":"Burgos Aeropuerto","alt":"891","value":"16.6 u"}'])
+        self.assertEqual(got["noSun"][-2], 'clima.tip.station.none{"name":"Melilla","alt":"47","value":""}')
+        self.assertEqual(got["noSun"][-1], 'clima.tip.nearest{"name":"Burgos Aeropuerto","value":"106 u","month":"junio","hours":"1278"}')
+        self.assertEqual(got["near"], ['clima.tip.nearest{"name":"Burgos Aeropuerto","value":"106 u","month":"junio","hours":"1278"}'])
+        self.assertEqual(got["sea"], [])
+
+    def test_the_stations_with_the_most_and_least_frost_and_sunshine(self):
+        got = run("out([S.stationExtremes(fake, 'sun', 6), S.stationExtremes(fake, 'frost', 1), "
+                  "S.stationExtremes(fake, 'frost', 7), S.stationExtremes(fake, 'temp', 1)]);")
+        self.assertEqual(got[0], {"top": {"name": "Lanzarote Aeropuerto", "value": 250},
+                                  "bottom": {"name": "Burgos Aeropuerto", "value": 106}})
+        self.assertEqual(got[1]["top"], {"name": "Burgos Aeropuerto", "value": 16.6})
+        self.assertIsNone(got[2])  # no station has frost in July
+        self.assertIsNone(got[3])
 
     def test_an_unknown_variable_fails(self):
         with self.assertRaises(AssertionError):

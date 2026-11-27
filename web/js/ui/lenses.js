@@ -34,7 +34,8 @@ export function formatLensValue(lens, v) {
     case "clock": return clock(v);
     case "duration": return formatDuration(v);
     case "years": return t("core.lens.years", { n: fixed(v, 1) });
-    case "float": return (v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
+    // A lens with `decimals` writes every value with that many (the climate's "23,0 °C" next to "23,1 °C").
+    case "float": return (lens.decimals != null ? fixed(v, lens.decimals) : v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
   }
   if (lens.unit?.includes("$") || lens.unit?.includes("€")) return money(v);
   return (v < 10 ? fixed(v, 1) : compact(v)) + (perKm2(lens) ? t("core.lens.perKm2") : "");
@@ -276,6 +277,20 @@ export function initLensDock(opts) {
         <button class="icon-btn lg-more" aria-expanded="${legendExpanded}" aria-label="${t("core.lens.showFull")}" title="${t("core.lens.details")}">${legendExpanded ? "−" : "+"}</button>
         <button class="icon-btn lg-close" aria-label="${t("core.lens.off")}" title="${t("core.lens.backToTerrain")}">${icon("close", "✕", { size: 11 })}</button></div>`;
 
+  // A lens built in the browser whose values are not in yet (domain null): its name and description, no scale.
+  function renderPendingLegend(l) {
+    legend.hidden = false;
+    legend.innerHTML = `
+      ${legendHead(l)}
+      <div class="desc">${esc(l.description || l.unit || "")}</div>
+      ${noteHtml(l)}`;
+    legend.querySelector(".lg-close").onclick = () => opts.onPick(null);
+    legend.querySelector(".lg-more").onclick = () => {
+      legendExpanded = !legendExpanded;
+      renderLegend();
+    };
+  }
+
   function renderCategoricalLegend(l) {
     const counts = catCounts(l);
     const sw = l.categories.map((c, k) => `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
@@ -328,6 +343,7 @@ export function initLensDock(opts) {
     }
     const l = active;
     if (isCategorical(l)) return renderCategoricalLegend(l);
+    if (!l.domain) return renderPendingLegend(l);
     const ticks = [0, 0.25, 0.5, 0.75, 1]
       .map((t, k) => `<span style="left:${t * 100}%;transform:translateX(-${t * 100}%)">${esc(formatLensTick(l, t, k))}</span>`)
       .join("");

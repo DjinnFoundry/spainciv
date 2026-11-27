@@ -70,7 +70,8 @@ export const annualSun = (s) => (s.sun ? s.sun.reduce((a, b) => a + b, 0) : null
  * One month (1–12) of a variable: values[i] for every hex (null off land or without data), domain (the same for the
  * twelve months, clima.json `domains`) and facts(i), what the tooltip says of hex i:
  *   {source: "grid" | "province" | null, max, min (temperature only), stations: [{name, alt, value}],
- *    nearest: the nearest station with sunshine, for a sunshine hex without one (else null)}
+ *    nearest: the nearest station with sunshine, {name, value: its month, annual}, for a sunshine hex without one
+ *    (else null)}
  */
 export function layer(model, variable, month) {
   if (!VARIABLES.includes(variable)) throw new Error(`clima: no variable ${variable}`);
@@ -116,12 +117,48 @@ export function layer(model, variable, month) {
     out.stations = (onCell.get(i) || []).map((s) => ({ name: s.name, alt: s.alt, value: s[STATION_VAR[variable]]?.[m] ?? null }));
     if (variable === "sun" && values[i] == null) {
       const s = model.nearestSun(i);
-      out.nearest = s && { name: s.name, annual: annualSun(s) };
+      out.nearest = s && { name: s.name, value: s.sun[m], annual: annualSun(s) };
     }
     return out;
   }
 
   return { values, domain: doc.domains[variable], facts };
+}
+
+/**
+ * What the tooltip says under a hex's value (facts from layer()): where the value comes from, the stations on the
+ * hex and, for sunshine, the nearest station. say(key, params) is i18n's t; value(v) formats a value of the lens;
+ * frost: the frost lens, whose stations count days below 0 °C (the grid counts days at 0 °C or less).
+ */
+export function tipLines(f, { say, value, frost = false, month = "" }) {
+  if (!f) return [];
+  const lines = [];
+  const from = f.source && say(`clima.tip.${f.source}`);
+  if (f.max != null && f.min != null) lines.push([say("clima.tip.range", { max: value.temp(f.max), min: value.temp(f.min) }), from].join(" · "));
+  else if (from) lines.push(from);
+  for (const s of f.stations) {
+    const key = s.value == null ? "clima.tip.station.none" : frost ? "clima.tip.station.frost" : "clima.tip.station";
+    lines.push(say(key, { name: s.name, alt: value.int(s.alt), value: s.value == null ? "" : value.lens(s.value) }));
+  }
+  if (f.nearest) {
+    lines.push(say("clima.tip.nearest", { name: f.nearest.name, value: value.lens(f.nearest.value), month, hours: value.int(f.nearest.annual) }));
+  }
+  return lines;
+}
+
+/**
+ * The stations with the most and the least of a month's frost or sunshine ({name, value}), from their WMO normals:
+ * the panel's summary for the two variables that have no figure for peninsular Spain. null for temperature and rain,
+ * and for frost in a month when no station has any.
+ */
+export function stationExtremes(doc, variable, month) {
+  const key = { frost: "frost", sun: "sun" }[variable];
+  if (!key) return null;
+  const vals = doc.stations.filter((s) => s[key]).map((s) => ({ name: s.name, value: s[key][month - 1] }));
+  if (!vals.length) return null;
+  const top = vals.reduce((a, b) => (b.value > a.value ? b : a));
+  if (!(top.value > 0)) return null;
+  return { top, bottom: vals.reduce((a, b) => (b.value < a.value ? b : a)) };
 }
 
 /** The month strip's bars: AEMET's normal for "España peninsular", 0..1 of the year's highest, for temperature and

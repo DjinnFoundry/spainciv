@@ -12,7 +12,9 @@
 //
 // The `mes` key is written while one of the pages is open. A link with `mes` opens the page whose lenses include the
 // link's lens (#lens=clima_temp&mes=1), else the fallback page (#mes=8 alone is the fiesta calendar, as it always was);
-// a link with a page's lens and no month opens that page on this month (lensPanel does that).
+// a link with a page's lens and no month opens that page on this month (lensPanel does that). When the last open page
+// closes, the month goes back to this month: the URL has lost `mes` by then, and a page opened again shows what that
+// URL would open.
 
 import { esc } from "../format.js";
 
@@ -60,6 +62,14 @@ export function monthState(app) {
     },
   };
   states.set(app, ms);
+
+  // Moving from one page to another (the links) keeps the month; closing the last one forgets it.
+  let open = false;
+  app.on?.("mode", () => {
+    const now = pages.some((p) => p.active());
+    if (open && !now) month = currentMonth();
+    open = now;
+  });
 
   // The link's lens may belong to a page whose extension is not installed yet: the page is chosen once they all are.
   const whenInstalled = (fn) => {

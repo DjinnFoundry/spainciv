@@ -23,17 +23,27 @@ const out = (x) => console.log(JSON.stringify(x));
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 // An element that takes anything; querySelector gives the same child for the same selector, so a test can read what a
-// panel wrote there.
-const fakeEl = () => {
+// panel wrote there. A dock (strict) has no child of a class its HTML does not name, as a real one would not: a panel
+// that reads its parts before writing them fails as it does in the browser.
+const fakeEl = (strict = false) => {
   const classes = new Set(), listeners = [], kids = new Map();
-  return {
+  const el = {
     classes, listeners, innerHTML: '', value: '', textContent: '', style: { setProperty() {} },
     classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), toggle() {}, contains: (c) => classes.has(c) },
-    setAttribute() {}, removeAttribute() {}, focus() {},
+    setAttribute() {}, removeAttribute() {}, focus() {}, scrolled: 0, scrollIntoView() { el.scrolled++; },
     addEventListener: (type, fn) => listeners.push(fn), removeEventListener: (type, fn) => listeners.splice(listeners.indexOf(fn), 1),
-    querySelector: (sel) => (kids.has(sel) ? kids.get(sel) : kids.set(sel, fakeEl()).get(sel)), querySelectorAll: () => [],
+    querySelector(sel) {
+      const cls = /^\\.([\\w-]+)/.exec(sel)?.[1];
+      if (strict && cls && !el.innerHTML.split(/class="([^"]*)"/).some((c, k) => k % 2 && c.split(' ').includes(cls))) return null;
+      return kids.has(sel) ? kids.get(sel) : kids.set(sel, fakeEl()).get(sel);
+    },
+    querySelectorAll: () => [],
   };
+  return el;
 };
+// What the app's emitter reports when a handler throws (createEmitter logs and carries on).
+const errors = [];
+console.error = (...a) => { const m = a.map(String).join(" "); if (m.includes("handler failed")) errors.push(m); };
 globalThis.document = { body: fakeEl() };
 
 function makeApp(link = '', extra = {}) {
@@ -47,7 +57,7 @@ function makeApp(link = '', extra = {}) {
     refreshLens() { app.refreshed++; },
     dockEl: null, undocks: 0,
     ui: {
-      dock: (side, o) => { app.log.push(`dock ${side} ${o.width}`); return (app.dockEl = fakeEl()); },
+      dock: (side, o) => { app.log.push(`dock ${side} ${o.width}`); return (app.dockEl = fakeEl(true)); },
       undock: (side) => { app.undocks++; app.log.push(`undock ${side}`); },
     },
     keys: new Map(),
@@ -78,6 +88,7 @@ function spainApp(link) {
     addLens(l) { lensById.set(l.id, l); },
     loadData: async (n) => file(n),
     fitBounds() {}, setHighlight() {}, highlightBounds: () => null,
+    layers: new Map(), registerStaticLayer(l) { this.layers.set(l.id, l); }, phone: false, isMobile() { return this.phone; },
   });
 }
 """
@@ -244,7 +255,73 @@ class ClimatePanelTest(unittest.TestCase):
         self.assertLessEqual(got["painted"], got["stations"])
         self.assertGreater(got["painted"], 60)
         self.assertEqual(got["label"], "Sin estación con horas de sol")
-        self.assertRegex(got["nosun"][-1], r"^Estación más cercana: .+ \(\d+ h al año\)$")
+        self.assertRegex(got["nosun"][-1], r"^Estación más cercana: .+, \d+,\d h en julio \(\d[\d.]* h al año\)$")
+
+    def test_closing_and_reopening_on_another_variable_throws_nothing(self):
+        # Esc, then the lens picker on another of the four: the dock holds the loading line when the lens event comes.
+        got = self.open("#lens=clima_temp&mes=3", then="""
+            app.escape();
+            const closed = [app.mode, app.keys.get('mes').get()];
+            app.setLens(app.lensById.get('clima_lluvia'));
+            const loading = app.dockEl.innerHTML.includes('Cargando');
+            await tick(); await tick();
+        """, extra="closed, loading, errors, tabs: app.dockEl.innerHTML.includes('cl-tabs'), "
+                   "now: M.currentMonth(), month: M.monthState(app).month")
+        self.assertEqual(got["errors"], [])
+        self.assertEqual(got["closed"], [None, None])
+        self.assertTrue(got["loading"] and got["tabs"])
+        self.assertEqual((got["mode"], got["lens"]), ("clima", "clima_lluvia"))
+        self.assertEqual(got["month"], got["now"])  # closed, the month went back to this one, as the URL says
+        self.assertEqual(got["mes"], str(got["now"]))
+
+    def test_before_the_data_the_lenses_have_no_scale_and_say_they_are_loading(self):
+        got = run("""
+            const app = spainApp('');
+            (await import('./web/js/ext/clima/index.js')).install(app);
+            const l = app.lensById.get('clima_temp');
+            out([l.domain, l.heading, l.click_hint, l.decimals]);
+        """, PRELUDE + SPAIN)
+        self.assertEqual(got, [None, "Cargando el clima…", "Haz clic para fijar su diagrama de Walter-Lieth", 1])
+
+    def test_grid_lenses_and_the_sunshine_lens_name_their_own_source(self):
+        got = self.open("#lens=clima_lluvia&mes=11", then="const rain = lens().note; app.setLens(app.lensById.get('clima_sol'));",
+                        extra="rain, sun: lens().note, sum: app.dockEl.querySelector('.cl-sum').textContent")
+        self.assertEqual(got["rain"], "Media 1991-2020 de noviembre, calculada por spainciv con la rejilla ROCIO de AEMET.")
+        self.assertEqual(got["sun"], "Normal OMM 1991-2020 de noviembre. Fuente: AEMET.")
+        self.assertRegex(got["sum"], r"^Más sol en noviembre: .+, \d+,\d h; menos: .+, \d+,\d h \(normales OMM 1991-2020\)\.$")
+
+    def test_the_sunshine_stations_are_discs_with_their_own_tooltip(self):
+        got = self.open("#lens=clima_temp&mes=7", then="""
+            const layer = app.layers.get('clima-sun');
+            const izana = clima.stations.find((s) => s.name === 'Izaña');
+            const before = layer.visible();
+            app.setLens(app.lensById.get('clima_sol'));
+            const x = w.grid.cx(izana.cell), y = w.grid.cy(izana.cell);
+            const hit = layer.hit(x + 2 * w.grid.R, y, 2); // 2 px hexes: the disc reaches beyond the hex
+            const miss = layer.hit(x + 2 * w.grid.R, y, 40);
+        """, extra="before, after: layer.visible(), hit: hit?.name, miss, tip: layer.tooltip(hit), sig: layer.sig()")
+        self.assertFalse(got["before"])
+        self.assertTrue(got["after"])
+        self.assertEqual((got["hit"], got["miss"], got["sig"]), ("Izaña", None, "7"))
+        self.assertIn("Estación Izaña", got["tip"])
+        self.assertIn("Horas de sol en julio: <b>402,4 h</b>", got["tip"])
+
+    def test_on_a_phone_the_panel_has_the_colour_key_the_touch_hints_and_brings_a_pinned_diagram_up(self):
+        got = self.open("#lens=clima_temp&mes=1", then="""
+            app.phone = true;
+            app.emit('lens', lens()); // nothing changes: the same variable
+            const hint = app.dockEl.querySelector('.cl-chart').innerHTML;
+            app.emit('mapclick', { cell: burgos.cell, city: null });
+            const chart = app.dockEl.querySelector('.cl-chart');
+        """, extra="hint, pinned: chart.innerHTML, scrolled: chart.scrolled, "
+                   "key: app.dockEl.querySelector('.pk-key').querySelector('.pk-ticks').innerHTML, "
+                   "ramp: app.dockEl.querySelector('.pk-key').querySelector('.pk-ramp').style.background")
+        self.assertIn("Pasa el puntero", got["hint"])  # built on the desktop
+        self.assertIn("Toca otra provincia para cambiarla.", got["pinned"])
+        self.assertEqual(got["scrolled"], 1)
+        self.assertEqual(got["key"], "<span>0 °C</span><span>14,0 °C</span><span>≥ 28,0 °C</span>")
+        self.assertTrue(got["ramp"].startswith("linear-gradient(90deg, #2b3f8f"))
+        self.assertIn("normales de AEMET 1991-2020", got["pinned"])
 
     def test_the_link_to_the_fiestas_keeps_the_month_and_back(self):
         got = self.open("#lens=clima_heladas&mes=2", then="""

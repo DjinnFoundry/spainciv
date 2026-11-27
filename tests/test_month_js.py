@@ -152,6 +152,25 @@ class MonthStateTest(unittest.TestCase):
         self.assertNotIn('data-month-page="a"', got["html"])
         self.assertEqual((got["b"], got["a"]), (1, 0))
 
+    def test_moving_between_pages_keeps_the_month_and_closing_the_last_one_forgets_it(self):
+        got = run("""
+            const app = makeApp('');
+            const ms = M.monthState(app);
+            const a = page(ms, 'a', ['la']), b = page(ms, 'b', ['lb']);
+            const other = ms.month % 12 + 1;
+            const mode = () => app.emit('mode', {});
+            a.on = true; mode();
+            ms.set(other);
+            a.on = false; b.on = true; mode(); // a link from a to b
+            const moved = ms.month;
+            app.emit('mode', {}); // another mode event with b still open
+            const still = ms.month;
+            b.on = false; mode(); // Esc
+            out({ other, moved, still, after: ms.month, now: M.currentMonth(), key: app.keys.get('mes').get() });
+        """)
+        self.assertEqual((got["moved"], got["still"]), (got["other"], got["other"]))
+        self.assertEqual((got["after"], got["key"]), (got["now"], None))
+
 
 if __name__ == "__main__":
     unittest.main()

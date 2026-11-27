@@ -14,11 +14,11 @@
 // Nothing is worked out until the panel first opens. The sun and the clocks live in solar.js; each hex is its centre's
 // longitude and latitude (geo.js mapProjection).
 import { country } from "../../app/country.js";
-import { lensPanel, panelHead } from "../../app/lensPanel.js";
+import { lensPanel, panelHead, panelKey, updatePanelKey } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { clock, esc } from "../../format.js";
 import { mapProjection } from "../../geo.js";
-import { formatDuration, formatLensTick } from "../../ui/lenses.js";
+import { formatDuration } from "../../ui/lenses.js";
 import * as S from "./solar.js";
 
 const LENS = "atardecer";
@@ -29,7 +29,6 @@ const GROUP = "land";
 const SOURCE = "noaa_solar";
 const RAMP = ["#22285a", "#553a8a", "#a8467e", "#e5704f", "#ffcf6e"]; // night blue to evening gold, earliest to latest
 const TIP_ORDER = ["sunrise", "noon", "sunset", "day"]; // the tooltip's day, in the order it happens
-const KEY_TICKS = [[0, 0], [0.5, 2], [1, 4]]; // [position on the ramp, legend tick index] of the phone key's labels
 
 export function install(app) {
   if (!country().sunset) return;
@@ -141,7 +140,7 @@ export function install(app) {
       <div class="sn-modes" role="radiogroup" aria-label="${esc(t("sun.modes"))}">${modes}</div>
       <label class="sn-day">${esc(t("sun.day"))} <input type="date" min="${S.FIRST_YEAR}-01-01" max="${S.LAST_YEAR}-12-31" required></label>
       <div class="chips" role="group" aria-label="${esc(t("sun.picks"))}">${quick}</div>
-      <div class="sn-key" role="img"><i class="sn-ramp" style="background:linear-gradient(90deg, ${RAMP.join(",")})"></i><div class="sn-ticks"></div></div>
+      ${panelKey()}
       <p class="sn-note"></p>
       <p class="muted">${esc(t("sun.why"))}</p>`;
     const strip = dock.querySelector(".sn-modes");
@@ -189,9 +188,7 @@ export function install(app) {
     });
     const input = dock.querySelector(".sn-day input");
     if (input.value !== S.isoDay(day)) input.value = S.isoDay(day);
-    const ticks = KEY_TICKS.map(([p, k]) => formatLensTick(lens, p, k));
-    dock.querySelector(".sn-ticks").innerHTML = ticks.map((s) => `<span>${esc(s)}</span>`).join("");
-    dock.querySelector(".sn-key").setAttribute("aria-label", `${t("sun.key")}: ${ticks.join(", ")}`);
+    updatePanelKey(dock, lens, t("sun.key"));
     dock.querySelector(".sn-note").textContent = lens.note;
   }
 }

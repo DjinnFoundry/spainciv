@@ -54,7 +54,8 @@ export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
     if (res.length > 4) lines.push(`<span class="muted">${t("core.tip.more", { n: res.length - 4 })}</span>`);
   }
   if (city) lines.push(`<span class="muted">${t("core.tip.openCity")}</span>`);
-  else if (o >= 0) lines.push(`<span class="muted">${t("core.tip.openState", { name: esc(raw.states[o].name) })}</span>`);
+  // A lens whose panel takes the click on a hex says what the click does instead (lens.click_hint, plain text).
+  else if (o >= 0) lines.push(`<span class="muted">${lens?.click_hint ? esc(lens.click_hint) : t("core.tip.openState", { name: esc(raw.states[o].name) })}</span>`);
   show(mx, my, lines.join("<br>"));
 }
 

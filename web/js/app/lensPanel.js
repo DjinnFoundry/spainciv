@@ -10,14 +10,30 @@
 //     pick()        the lens the panel opens on when none of its lenses is active (the first by default)
 //   panel.dock      the dock element while open, else null
 //   panelHead(title, closeLabel)   the panel's title row, with the close button
+//   panelKey()                     a colour key for the panel, shown on phones only: there the dock is a bottom
+//                                  sheet that covers the lens legend
+//   updatePanelKey(dock, lens, label)   draw the lens's ramp and three of its legend ticks into that key
 // A link that names one of the lenses (#lens=<id>) opens it: the hash's lens key was read before the extension added
 // the lens. `leaving` keeps the mode's own lens change from re-entering it.
 import { esc } from "../format.js";
+import { formatLensTick } from "../ui/lenses.js";
 
 const CLASS = "lens-panel";
+const KEY_TICKS = [[0, 0], [0.5, 2], [1, 4]]; // [position on the ramp, legend tick index] of the key's labels
 
 export const panelHead = (title, closeLabel) => `<header class="${CLASS}-head"><h2>${esc(title)}</h2>
   <button type="button" class="icon-btn" data-close aria-label="${esc(closeLabel)}" title="${esc(closeLabel)}">✕</button></header>`;
+
+export const panelKey = () => `<div class="pk-key" role="img"><i class="pk-ramp"></i><div class="pk-ticks"></div></div>`;
+
+export function updatePanelKey(dock, lens, label) {
+  const key = dock.querySelector(".pk-key");
+  if (!key || !lens.domain) return;
+  const ticks = KEY_TICKS.map(([p, k]) => formatLensTick(lens, p, k));
+  key.querySelector(".pk-ramp").style.background = `linear-gradient(90deg, ${lens.ramp.join(",")})`;
+  key.querySelector(".pk-ticks").innerHTML = ticks.map((s) => `<span>${esc(s)}</span>`).join("");
+  key.setAttribute("aria-label", `${label}: ${ticks.join(", ")}`);
+}
 
 export function lensPanel(app, lensOrLenses, { mode, width = 360, label, open, close, pick }) {
   const lenses = [].concat(lensOrLenses);

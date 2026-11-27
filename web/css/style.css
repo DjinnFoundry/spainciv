@@ -297,6 +297,12 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .fc-where { color: var(--ink-dim); }
 .fc-undated { margin: 14px 0 0; font-size: 12px; }
 
+/* ---------- a lens panel's colour key (app/lensPanel.js panelKey): phones only, where the sheet covers the legend ---------- */
+.pk-key { margin: 12px 0 0; }
+.pk-ramp { display: block; height: 10px; border-radius: 2px; }
+.pk-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
+@media (min-width: 701px) { .pk-key { display: none; } }
+
 /* ---------- the climate of the month (ext/clima) ---------- */
 .cl-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 0 10px; }
 .cl-tab {
@@ -331,11 +337,8 @@ button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
 .sn-day input { flex: 1; min-width: 0; padding: 4px 6px; background: rgba(0,0,0,.3); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: inherit; color-scheme: dark; }
 .lens-panel .chip.on { background: rgba(201,164,92,.35); }
 .sn-note { margin: 12px 0 8px; color: var(--gold-bright); }
-/* The colour key and the spread are the legend's; they show in the panel only on phones, where the sheet covers it. */
-.sn-key { margin: 12px 0 0; }
-.sn-ramp { display: block; height: 10px; border-radius: 2px; }
-.sn-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
-@media (min-width: 701px) { .sn-key, .sn-note { display: none; } }
+/* The spread is the legend's; it shows in the panel only on phones, where the sheet covers the legend (.pk-key). */
+@media (min-width: 701px) { .sn-note { display: none; } }
 /* The minimap sits over the Canaries' inset, which the lens's text names: it gives way while the panel is open. */
 body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
 
