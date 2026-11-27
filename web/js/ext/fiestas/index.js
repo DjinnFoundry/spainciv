@@ -10,6 +10,7 @@
 import { country } from "../../app/country.js";
 import { t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
+import { flyToCells } from "../flyToCells.js";
 import * as C from "./calendar.js";
 
 const LENS = "fiestas_mes";
@@ -57,7 +58,7 @@ export function install(app) {
   app.registerMode(MODE, {
     enter() {
       dock = app.ui.dock("left", { width: 360, label: t("fiestas.lens.name") });
-      dock.classList.add("fiestas-dock");
+      dock.classList.add("ext-dock");
       dock.innerHTML = `<p class="muted">${esc(t("fiestas.loading"))}</p>`;
       if (app.state.lens !== lens) app.setLens(lens);
       open(++token);
@@ -68,7 +69,7 @@ export function install(app) {
         token++;
         if (mark && app.state.highlight === mark) app.setHighlight(null);
         mark = null;
-        dock?.classList.remove("fiestas-dock");
+        dock?.classList.remove("ext-dock");
         app.ui.undock("left");
         dock = null;
         if (app.state.lens === lens) app.setLens(null);
@@ -116,12 +117,9 @@ export function install(app) {
 
   // --- a fiesta on the map ---------------------------------------------------------------------------------------
   function show(f) {
-    mark = { cells: new Set(f.cells) };
-    app.setHighlight(mark);
-    const b = app.highlightBounds(mark);
-    if (b) app.fitBounds(b.x0, b.y0, b.x1, b.y1, { maxScale: Math.max(app.cam.scale, FLY_SCALE) });
-    dock?.querySelectorAll(".fc-item[aria-current]").forEach((el) => el.removeAttribute("aria-current"));
-    dock?.querySelector(`.fc-item[data-k="${list.indexOf(f)}"]`)?.setAttribute("aria-current", "true");
+    mark = flyToCells(app, f.cells, FLY_SCALE);
+    dock?.querySelectorAll(".dk-item[aria-current]").forEach((el) => el.removeAttribute("aria-current"));
+    dock?.querySelector(`.dk-item[data-k="${list.indexOf(f)}"]`)?.setAttribute("aria-current", "true");
   }
 
   // --- the dock --------------------------------------------------------------------------------------------------
@@ -139,12 +137,12 @@ export function install(app) {
       const items = list.map((f, k) => [f, k]).filter(([f]) => f.category === c);
       if (!items.length) return "";
       return `<section class="fc-group"><h3><i style="background:${C.COLORS[c]}"></i>${esc(catName(c))} <span class="muted">${int(items.length)}</span></h3>
-        <ol class="fc-list">${items.map(([f, k]) => item(f, k)).join("")}</ol></section>`;
+        <ol class="dk-list">${items.map(([f, k]) => item(f, k)).join("")}</ol></section>`;
     }).join("");
     const title = month === C.currentMonth() ? t("fiestas.title.now") : t("fiestas.title", { month: monthName(month) });
     dock.innerHTML = `
-      <header class="fc-head"><h2>${esc(title)}</h2>
-        <button type="button" class="icon-btn fc-close" data-close aria-label="${esc(t("fiestas.close"))}">✕</button></header>
+      <header class="dk-head"><h2>${esc(title)}</h2>
+        <button type="button" class="icon-btn dk-close" data-close aria-label="${esc(t("fiestas.close"))}">✕</button></header>
       <div class="fc-months" role="radiogroup" aria-label="${esc(t("fiestas.months"))}">${months}</div>
       <p class="fc-sum">${esc(t("fiestas.summary", { n: list.length, month: monthName(month) }))}</p>
       ${groups}
@@ -162,15 +160,15 @@ export function install(app) {
       setMonth(((month - 1 + step + 12) % 12) + 1);
       dock?.querySelector(".fc-month.on")?.focus();
     };
-    dock.querySelectorAll("button.fc-item").forEach((b) => (b.onclick = () => show(list[+b.dataset.k])));
+    dock.querySelectorAll("button.dk-item").forEach((b) => (b.onclick = () => show(list[+b.dataset.k])));
   }
 
   function item(f, k) {
     const where = [f.place, f.community].filter(Boolean).join(" · ");
-    const body = `<b class="fc-name">${esc(f.name)}</b>${where ? `<span class="fc-where">${esc(where)}</span>` : ""}
-      <span class="fc-when">${esc(f.when)}</span>`;
+    const body = `<b class="dk-name">${esc(f.name)}</b>${where ? `<span class="dk-where">${esc(where)}</span>` : ""}
+      <span class="dk-when">${esc(f.when)}</span>`;
     return f.cells.length
-      ? `<li><button type="button" class="fc-item" data-k="${k}" title="${esc(t("fiestas.show"))}">${body}</button></li>`
-      : `<li><div class="fc-item">${body}<span class="fc-where muted">${esc(t("fiestas.nowhere"))}</span></div></li>`;
+      ? `<li><button type="button" class="dk-item" data-k="${k}" title="${esc(t("fiestas.show"))}">${body}</button></li>`
+      : `<li><div class="dk-item">${body}<span class="dk-where muted">${esc(t("fiestas.nowhere"))}</span></div></li>`;
   }
 }
