@@ -43,6 +43,26 @@ class ShiftRegionsTest(unittest.TestCase):
         """], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_margin_regions_tile_the_margin(self):
+        """A view-first render paints the inner rectangle; marginRegions must cover the rest exactly once."""
+        result = subprocess.run(["node", "--input-type=module", "-e", r"""
+            import assert from 'node:assert/strict';
+            import { marginRegions } from './web/js/render/map.js';
+
+            for (const [W, H, m] of [[37, 23, 5], [10, 10, 4], [9, 30, 4], [8, 8, 4], [12, 7, 0]]) {
+                const regions = marginRegions(W, H, m);
+                const inner = 2 * m < W && 2 * m < H;
+                for (let y = 0; y < H; y++) {
+                    for (let x = 0; x < W; x++) {
+                        const n = regions.filter((r) => x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1).length;
+                        const inside = inner && x >= m && x < W - m && y >= m && y < H - m;
+                        assert.equal(n, inside ? 0 : 1, `pixel ${x},${y} of ${W}x${H} inset ${m}`);
+                    }
+                }
+            }
+        """], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

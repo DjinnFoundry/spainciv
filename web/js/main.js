@@ -15,7 +15,7 @@ import { icon } from "./ui/icon.js";
 import { initSearch } from "./app/search.js";
 import { createEmitter, createHashState, createModes, createUi, createMapToggles } from "./app/api.js";
 import { drawHighlight, drawOverlays, invalidateHighlight, highlightBounds } from "./render/overlays.js";
-import { resourceFilterSig, layerActive, layerError, regionPad, shiftRegions, Z as LAYER_Z } from "./render/map.js";
+import { resourceFilterSig, layerActive, layerError, marginRegions, regionPad, shiftRegions, Z as LAYER_Z } from "./render/map.js";
 import { installExtensions } from "./ext/index.js";
 import { initShare } from "./app/share.js";
 import { setCountry, applyCountryChrome, country } from "./app/country.js";
@@ -114,9 +114,13 @@ async function main() {
   // names, layers from Z.RESOURCES up). The other steps are local, so a pan that runs off the cache copies the base
   // shifted by whole device pixels, paints only the strip that came into view (drawStatic region) and draws the top
   // steps again: the pixels of a full render for a fraction of its cost.
+  // A full render once the view has settled (after a zoom, a lens change) paints the base of the visible part only,
+  // then the top steps; the margin (`rest`) is painted into the base in idle time and the top steps drawn again, or
+  // right away when the view reaches past it first. At 1440×900 the view is 60% of the cache, so the frame that
+  // brings the sharp map is that much shorter.
   const cache = {
     cv: document.createElement("canvas"), base: document.createElement("canvas"), baseOk: false,
-    key: null, vp: null, hits: { resources: [] },
+    key: null, vp: null, hits: { resources: [] }, rest: null, restView: null, restHandle: 0,
   };
   const cctx = cache.cv.getContext("2d");
   const bctx = cache.base.getContext("2d");
@@ -140,7 +144,8 @@ async function main() {
   // the other way, same size), so a steady pan re-renders less often.
   // zoom: the cache's scale as a share of the camera's (< 1 while a zoom-out runs: the cache covers the view grown
   // about its centre, so the next frames of the zoom blit it instead of each re-rendering the whole map).
-  function renderStatic(lead = null, zoom = 1) {
+  // viewFirst: a full render may leave the margin to idle time (the view has settled).
+  function renderStatic(lead = null, zoom = 1, viewFirst = false) {
     const t0 = performance.now();
     const s = cam.scale * zoom;
     const v = cam.view();
@@ -161,28 +166,67 @@ async function main() {
     const c = cache.vp, k = s * dpr;
     // A pan at the same zoom: the new cache starts a whole number of device pixels from the old one.
     const pan = cache.baseOk && cache.key === key && c.s === s;
+    if (pan && cache.rest) paintRest(); // the pan copies the base: complete it first
+    else dropRest();
     const dx = pan ? Math.round((vp.x0 - c.x0) * k) : 0, dy = pan ? Math.round((vp.y0 - c.y0) * k) : 0;
     const regions = pan && shiftRegions(W, H, dx, dy, Math.ceil(regionPad(w.grid, s) * k));
-    const o = {
-      lens: state.lens, showResources: state.showResources, resourceFilter: state.resourceFilter, selectedCity: state.selectedCity,
-      layers: staticLayers, app,
-    };
+    const o = staticOpts();
     if (regions) {
       vp.x0 = c.x0 + dx / k; vp.x1 = c.x1 + dx / k;
       vp.y0 = c.y0 + dy / k; vp.y1 = c.y1 + dy / k;
       blit(cctx, cache.base, -dx, -dy);
       for (const region of regions) drawStatic(cctx, vp, w, { ...o, pass: "base", region });
+    } else if (viewFirst && !lead && zoom === 1) {
+      // The view is the cache less CACHE_MARGIN on each side (whole device px, rounded outwards).
+      const m = Math.floor(CACHE_MARGIN * dpr);
+      const view = { x0: m, y0: m, x1: W - m, y1: H - m };
+      drawStatic(cctx, vp, w, { ...o, pass: "base", region: view });
+      cache.rest = marginRegions(W, H, m);
+      cache.restView = cam.view();
+      cache.restHandle = idle(paintRest);
     } else {
       drawStatic(cctx, vp, w, { ...o, pass: "base" });
     }
     blit(bctx, cache.cv, 0, 0);
-    const hitsOut = {};
-    drawStatic(cctx, vp, w, { ...o, pass: "top", hits: hitsOut });
-    cache.hits = { resources: hitsOut.resources || [] };
     cache.vp = vp;
     cache.key = key;
     cache.baseOk = true;
+    drawTop();
     record(perf.static, performance.now() - t0);
+  }
+  const staticOpts = () => ({
+    lens: state.lens, showResources: state.showResources, resourceFilter: state.resourceFilter, selectedCity: state.selectedCity,
+    layers: staticLayers, app,
+  });
+  // The top steps over the base copy (they declutter against the whole cache, so they are always drawn whole).
+  function drawTop() {
+    const hitsOut = {};
+    drawStatic(cctx, cache.vp, w, { ...staticOpts(), pass: "top", hits: hitsOut });
+    cache.hits = { resources: hitsOut.resources || [] };
+  }
+  // Paint the margin left by a view-first render into the base, a region per idle slot while time remains (all of it
+  // when `deadline` is null), then the top steps over it.
+  function paintRest(deadline = null) {
+    if (cache.restHandle) cancelIdle(cache.restHandle);
+    cache.restHandle = 0;
+    if (!cache.rest) return;
+    const t0 = performance.now();
+    const o = staticOpts();
+    do drawStatic(bctx, cache.vp, w, { ...o, pass: "base", region: cache.rest.shift() });
+    while (cache.rest.length && (!deadline || deadline.timeRemaining() > 6));
+    if (cache.rest.length) {
+      cache.restHandle = idle(paintRest);
+    } else {
+      cache.rest = null;
+      blit(cctx, cache.base, 0, 0);
+      drawTop();
+    }
+    record(perf.static, performance.now() - t0);
+  }
+  function dropRest() {
+    if (cache.restHandle) cancelIdle(cache.restHandle);
+    cache.rest = null;
+    cache.restHandle = 0;
   }
   // Copy a canvas onto another, pixel for pixel, at a whole device-pixel offset.
   function blit(dst, src, x, y) {
@@ -203,7 +247,7 @@ async function main() {
     ? (fn) => requestIdleCallback(fn, { timeout: 2000 })
     : (fn) => setTimeout(() => fn({ timeRemaining: () => 12, didTimeout: false }), 250);
   const cancelIdle = typeof cancelIdleCallback === "function" ? cancelIdleCallback : clearTimeout;
-  const warmSig = () => `${cam.x},${cam.y},${cam.scale}|${cacheKey()}`;
+  const warmSig = () => `${camSig()}|${cacheKey()}`;
   function scheduleWarm() {
     if (typeof mapRender.warmSprites !== "function") return;
     if (warm.handle) cancelIdle(warm.handle);
@@ -245,6 +289,7 @@ async function main() {
     if (warm.jobs.length) warm.handle = idle(runWarm);
   }
 
+  const camSig = () => `${cam.x},${cam.y},${cam.scale}`;
   function record(list, ms) {
     list.push(ms);
     if (list.length > 60) list.shift();
@@ -267,8 +312,13 @@ async function main() {
       // A zoom-out (wheel, pinch or flight) that ran off the cache: render further out than the camera, blitted a
       // little soft until the zoom settles and renders at the true scale. Without the lead every frame re-rendered.
       const zoomOut = settling && sameKey && !covers && ratio < 1;
-      renderStatic(pan, zoomOut ? ZOOM_LEAD : 1);
+      renderStatic(pan, zoomOut ? ZOOM_LEAD : 1, !settling);
       if (!settling) scheduleWarm();
+    } else if (cache.rest) {
+      // The view reaches past what a view-first render painted (a pan, a zoom-out) before its margin was: paint
+      // the margin now. A zoom-in stays inside and leaves it to idle time.
+      const rv = cache.restView;
+      if (v.x0 < rv.x0 || v.y0 < rv.y0 || v.x1 > rv.x1 || v.y1 > rv.y1) paintRest();
     }
 
     const vp = cache.vp;
@@ -303,15 +353,15 @@ async function main() {
     const moving = cam.step(dt);
     draw(moving);
     lastFrame = moving ? now : 0;
-    const camSig = `${cam.x},${cam.y},${cam.scale}`;
-    if (camSig !== lastCamSig) {
-      lastCamSig = camSig;
+    const sig = camSig();
+    if (sig !== lastCamSig) {
+      lastCamSig = sig;
       emitCamera();
     }
     // The link follows a flight's destination (written right away), and otherwise the camera itself, debounced so
     // it catches up once a pan or zoom settles. Re-scheduling on every flight frame would hold it back until landing.
     const f = cam.flight;
-    const urlCamSig = f ? `f${f.x1},${f.y1},${f.s1}` : camSig;
+    const urlCamSig = f ? `f${f.x1},${f.y1},${f.s1}` : sig;
     if (urlCamSig !== lastUrlCamSig) {
       lastUrlCamSig = urlCamSig;
       url.schedule();
