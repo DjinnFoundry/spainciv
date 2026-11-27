@@ -23,6 +23,18 @@ Android. Everything below was read in its source at the release the map is teste
 * A starting location names a nation, or "Spectator", which the map editor shows as "Any Civ": a player whose nation
   has no location of its own takes one of those (core/src/com/unciv/logic/GameStarter.kt, getCivStartingLocation).
   The `Human` usage marks the nation the new-game screen offers the human player ("Use nations from map").
+* A nation (core/src/com/unciv/models/ruleset/nation/Nation.kt) is a Nations.json entry: `name`, `leaderName`,
+  `outerColor` and `innerColor` (RGB), `startBias`, `uniqueName` and `uniques`, `cities` (names in the order its cities
+  take them, the first its capital: CityFounder.generateNewCityName), `startIntroPart1`, and for a city-state its
+  `cityStateType`. An extension mod's nations join the base ruleset's. A starting location naming a nation is that
+  nation's (GameStarter.getCivStartingLocation, ahead of any distance rule), and the new-game screen fills its random
+  players with the nations that have one before any other (GameStarter.chooseCivilizations: presetRandomNationsPool);
+  "Select players from starting locations" makes one player of each major nation with a "Player" or "Human" location,
+  and one of the "Human" ones, at random, the human (MapFileSelectTable.onUseNationsFromMap).
+* A nation's emblem (Portrait.kt: PortraitNation) is the image NationPortraits/<name> drawn as it is, at three
+  quarters of a disc of its outerColor ringed in its innerColor; city banners show NationIcons/<name> tinted with its
+  innerColor (CityTable.addCivIcon). The texts of a mod are translated by its jsons/translations/<Language>.properties,
+  lines "English text = translation" (TranslationFileReader); English is the game's own text and has no file.
 * A mod is a folder with `jsons/ModOptions.json`, `maps/` and `preview.png` (preview.jpg or .png, shown by the mod
   manager: core/src/com/unciv/ui/screens/modmanager/ModInfoAndActionPane.kt). The in-game mod browser lists the GitHub
   repositories with the topic `unciv-mod`, and the Maps category those with `unciv-mod-maps`
@@ -485,12 +497,14 @@ def tile_map(grid: Grid, tiles: list[Tile], name: str, description: str, starts:
     }
 
 
-def without_mod(map_json: dict) -> dict:
-    """The same map for the base ruleset alone: no mod in its parameters and no mod resource on its tiles (for the bare
-    map file, which works without installing the mod)."""
+def without_mod(map_json: dict, bare: dict) -> dict:
+    """The same map for the base ruleset alone (the bare map file, which works without installing the mod): no mod in
+    its parameters, no mod resource on its tiles, and `bare`'s startingLocations and description, since the mod's
+    nations do not exist without it (TileMap.removeMissingTerrainModReferences would drop their locations)."""
     tiles = [{k: v for k, v in t.items() if k not in ("resource", "resourceAmount")} if t.get("resource") in MOD_RESOURCES
              else t for t in map_json["tileList"]]
-    return map_json | {"mapParameters": map_json["mapParameters"] | {"mods": []}, "tileList": tiles}
+    return map_json | {"mapParameters": map_json["mapParameters"] | {"mods": []}, "tileList": tiles,
+                       "startingLocations": bare["startingLocations"], "description": bare["description"]}
 
 
 def tiles_from_map(map_json: dict) -> list[Tile]:
@@ -519,6 +533,35 @@ def mod_options(author: str, url: str) -> dict:
     """jsons/ModOptions.json of a mod that adds maps and resources to the base ruleset, an extension mod (ModOptions.kt
     fields; the mod manager fills in the rest from GitHub when the mod is installed from there)."""
     return {"isBaseRuleset": False, "author": author, "modUrl": url, "topics": ["unciv-mod-maps"], "uniques": []}
+
+
+# A nation's unique: one more of each base yield on the tiles of its resource that its cities work (UniqueType
+# StatsFromTiles, "[stats] from [tileFilter] tiles [cityFilter]"; a resource's name is a tile filter).
+NATION_UNIQUE = "[+1 Food, +1 Production, +1 Gold] from [{resource}] tiles [in all cities]"
+
+
+def nation_json(name: str, outer, inner, cities: list[str], leader: str = "", start_bias: str | None = None,
+                unique_name: str = "", resource: str | None = None, intro: str = "",
+                city_state_type: str | None = None) -> dict:
+    """A Nations.json entry (Nation.kt fields): a major civilization, or a city-state of `city_state_type`."""
+    out = {"name": name}
+    if city_state_type:
+        out["cityStateType"] = city_state_type
+    else:
+        out |= {"leaderName": leader, "startBias": [start_bias] if start_bias else [], "uniqueName": unique_name,
+                "uniques": [NATION_UNIQUE.format(resource=resource)] if resource else [], "startIntroPart1": intro}
+    return out | {"outerColor": list(outer), "innerColor": list(inner), "cities": list(cities)}
+
+
+def properties(translations: dict[str, str]) -> str:
+    """A jsons/translations/<Language>.properties file: "English text = translation", one per line (a newline is written
+    as a backslash and an n). A text with " = " in it would split in the wrong place, and one with brackets would be read as a template."""
+    lines = []
+    for key, value in translations.items():
+        if " = " in key or "[" in key:
+            raise ValueError(f"not a plain translation key: {key!r}")
+        lines.append(f"{key} = {value}".replace("\n", "\\n"))
+    return "\n".join(lines) + "\n"
 
 
 def tile_resources_json() -> list[dict]:

@@ -1,0 +1,39 @@
+{
+  "_comment": "The texts of each autonomous community as an Unciv nation, in each language: the name of its unique (a bonus on the resource it holds most of, relative to its size), the text Unciv shows when a game starts, and what the page and the README say of it (its advantage, its start bias in Unciv's own terrain names, a city-state's type). English is the mod's own text (jsons/Nations.json) and Spanish its translation (jsons/translations/Spanish.properties). Filled in by pipeline/play.py from unciv.json's summary.",
+  "es": {
+    "unique_name": "Tierra de $resource_lower",
+    "intro": "$name: $population habitantes en $municipalities municipios (INE, Padrón $year). Empiezas en $capital. En este mapa tienes $land_tiles casillas de tierra, y en tu tierra y tu costa hay $resource_tiles de las $resource_map_tiles casillas de $resource_lower del mapa: tus ciudades sacan una más de comida, producción y oro de cada una que trabajen.",
+    "advantage": "$unique_name: $resource_tiles de las $resource_map_tiles casillas",
+    "city_state": "Ciudad-estado marítima",
+    "no_bias": "ninguna",
+    "terrains": {
+      "Coast": "Costa",
+      "Hill": "Colina",
+      "Mountain": "Montaña",
+      "Forest": "Bosque",
+      "Marsh": "Marisma",
+      "Grassland": "Pradera",
+      "Plains": "Llanura",
+      "Desert": "Desierto",
+      "Tundra": "Tundra"
+    }
+  },
+  "en": {
+    "unique_name": "Land of $resource",
+    "intro": "$name: $population people in $municipalities municipalities (INE, Padrón $year). You start in $capital. On this map you have $land_tiles land tiles, and your land and coast hold $resource_tiles of the map's $resource_map_tiles $resource_lower tiles: your cities get one more food, production and gold from each one they work.",
+    "advantage": "$unique_name: $resource_tiles of the $resource_map_tiles tiles",
+    "city_state": "Maritime city-state",
+    "no_bias": "none",
+    "terrains": {
+      "Coast": "Coast",
+      "Hill": "Hill",
+      "Mountain": "Mountain",
+      "Forest": "Forest",
+      "Marsh": "Marsh",
+      "Grassland": "Grassland",
+      "Plains": "Plains",
+      "Desert": "Desert",
+      "Tundra": "Tundra"
+    }
+  }
+}

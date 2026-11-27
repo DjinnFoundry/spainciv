@@ -8,12 +8,14 @@ import json
 import math
 import unittest
 import zipfile
+from collections import Counter
 from html import escape
 from unittest import mock
 
 from pipeline import countries, play, site
 from pipeline.core.lang import pick
-from pipeline.build import spain_unciv, unciv
+from pipeline.build import spain_flags, spain_unciv, unciv
+from pipeline.core.paths import ROOT
 from pipeline.build.world import COAST, LAKE, LAND, OCEAN
 from pipeline.core.hexgrid import HexGrid
 
@@ -362,8 +364,8 @@ class SpainMapTest(unittest.TestCase):
             for clock in t.rivers:
                 self.assertTrue(t.is_land and self.tiles[self.grid.neighbours(i)[clock]].is_land)
 
-    def test_spain_starts_in_madrid_and_the_others_far_apart(self):
-        starts = self.map["startingLocations"]
+    def test_the_bare_map_starts_spain_in_madrid_and_the_others_far_apart(self):
+        starts = self.doc["bare"]["startingLocations"]
         self.assertEqual((starts[0]["nation"], starts[0]["usage"]), ("Spain", "Human"))
         self.assertEqual(self.summary["starts"][0]["city"], "Madrid")
         self.assertTrue(all(s["nation"] == unciv.SPECTATOR for s in starts[1:]))
@@ -464,8 +466,10 @@ class ModResourceTest(unittest.TestCase):
         doc = built()["map"]
         self.assertEqual(doc["mapParameters"]["mods"], [spain_unciv.MOD_NAME])
         self.assertTrue(any(t.get("resource") == "Cerdo ibérico" for t in doc["tileList"]))
-        bare = unciv.without_mod(doc)
+        bare = unciv.without_mod(doc, built()["bare"])
         self.assertEqual(bare["mapParameters"]["mods"], [])
+        self.assertEqual({s["nation"] for s in bare["startingLocations"]}, {"Spain", unciv.SPECTATOR})
+        self.assertIn("España empieza en Madrid", bare["description"])
         self.assertFalse(any(t.get("resource") in unciv.MOD_RESOURCES for t in bare["tileList"]))
         self.assertEqual(len(bare["tileList"]), len(doc["tileList"]))
         self.assertEqual(doc["mapParameters"]["mods"], [spain_unciv.MOD_NAME])  # the original is untouched
@@ -490,15 +494,20 @@ class ModAndPageTest(unittest.TestCase):
         self.assertEqual({n.split("/")[0] for n in names}, {self.folder})
         inner = {n.split("/", 1)[1] for n in names}
         map_name = self.doc["summary"]["map_name"]
-        self.assertEqual(inner, {"jsons/ModOptions.json", "jsons/TileResources.json", f"maps/{map_name}",
+        nations = [n["name"] for n in self.doc["summary"]["nations"]]
+        self.assertEqual(inner, {"jsons/ModOptions.json", "jsons/TileResources.json", "jsons/Nations.json",
+                                 "jsons/translations/Spanish.properties", f"maps/{map_name}",
                                  "Images/ResourceIcons/Cerdo ibérico.png", "game.png", "game.atlas", "Atlases.json",
-                                 "preview.png", "README.md", "LICENSE"})
+                                 "preview.png", "README.md", "LICENSE",
+                                 *(f"Images/NationPortraits/{n}.png" for n in nations),
+                                 *(f"Images/NationIcons/{n}.png" for n in nations)})
         read = lambda p: z.read(f"{self.folder}/{p}")
         options = json.loads(read("jsons/ModOptions.json"))
         self.assertEqual((options["isBaseRuleset"], options["topics"]), (False, ["unciv-mod-maps"]))
         self.assertEqual(json.loads(read("jsons/TileResources.json")), unciv.tile_resources_json())
         self.assertEqual(read("Atlases.json").strip(), b"[game]")
-        self.assertIn("ResourceIcons/Cerdo ibérico", read("game.atlas").decode("utf-8"))
+        regions = [line for line in read("game.atlas").decode("utf-8").splitlines() if "/" in line and ":" not in line]
+        self.assertEqual(sorted(regions), sorted(n.removeprefix("Images/").removesuffix(".png") for n in inner if n.startswith("Images/")))
         self.assertEqual(unciv.decode(read(f"maps/{map_name}")), self.doc["map"])
         self.assertTrue(read("preview.png").startswith(b"\x89PNG"))
         self.assertEqual(self.files[play.MOD_ZIP](), self.files[play.MOD_ZIP]())  # deterministic
@@ -515,14 +524,16 @@ class ModAndPageTest(unittest.TestCase):
                 self.assertIn(f"| {names[resource][0]} | {n} |", text)
 
     def test_the_bare_map_is_the_map_without_the_mod(self):
-        self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"]))
+        self.assertEqual(unciv.decode(self.files[play.MAP_FILE]()), unciv.without_mod(self.doc["map"], self.doc["bare"]))
 
     def test_the_page(self):
         """One page per language, each linking to the other and back to the map in its language; the Unciv menu names
         are the game's own in that language (android/assets/jsons/translations)."""
         s = self.doc["summary"]
-        menus = {"es": ("Descargar mod con Enlace", "Mods de extensión", "Escoger mapa"),
-                 "en": ("Download mod from URL", "Extension mods", "Map file")}
+        menus = {"es": ("Descargar mod con Enlace", "Mods de extensión", "Escoger mapa", "Humano",
+                        "Seleccionar jugadores según las posiciones iniciales", "Juega con tu comunidad"),
+                 "en": ("Download mod from URL", "Extension mods", "Map file", "Human",
+                        "Select players from starting locations", "Play as your community")}
         for lang, other in (("es", "en"), ("en", "es")):
             html = self.files[play.PAGES[lang]]().decode("utf-8")
             self.assertIn(f'<html lang="{lang}">', html)
@@ -536,9 +547,183 @@ class ModAndPageTest(unittest.TestCase):
                 self.assertIn(f"<td>{escape(names[resource][0])}</td><td class=n>{n}</td>", html)
             for start in s["starts"][1:]:
                 self.assertIn(start["city"], html)
+            for row in play.nation_rows(s, lang):
+                self.assertIn("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>", html)
+            self.assertIn(play.moved_starts(s), html)
             for name in s["not_placed_designations"]:
                 self.assertIn(escape(pick(name, lang)), html)
         self.assertIn("(PDO)", self.files[play.PAGES["en"]]().decode("utf-8"))
+
+
+class NationRulesTest(unittest.TestCase):
+    """The rules that pick a nation's start bias, unique resource and starting tile (pipeline/build/spain_unciv.py)."""
+
+    def test_start_bias_is_the_most_over_represented_terrain_on_enough_land(self):
+        spain = Counter({"Plains": 60, "Forest": 20, "Coast": 20, "Hill": 10})
+        # Forest: 40 % of its land, twice Spain's share; Hill is rarer still in Spain but on 20 % only.
+        self.assertEqual(spain_unciv.start_bias(Counter({"Plains": 5, "Forest": 4, "Hill": 2}), 10, spain, 100), "Forest")
+        self.assertIsNone(spain_unciv.start_bias(Counter({"Plains": 6, "Hill": 2}), 10, spain, 100))  # Plains: lift 1
+
+    def test_unique_resource_prefers_enough_tiles_then_the_highest_lift(self):
+        totals = Counter({"Wine": 100, "Copper": 4, "Salt": 10})
+        held = Counter({"Wine": 10, "Copper": 1, "Salt": 2})
+        self.assertEqual(spain_unciv.unique_resource(held, totals, 0.05), "Salt")  # Copper's 1 tile is not enough
+        self.assertEqual(spain_unciv.unique_resource(Counter({"Copper": 1, "Wine": 1}), totals, 0.05), "Copper")
+        self.assertIsNone(spain_unciv.unique_resource(Counter(), totals, 0.05))
+
+    def test_a_seat_too_close_to_a_larger_start_moves_to_its_own_nearest_free_tile(self):
+        grid = unciv.Grid(25.0, 12, 9, (150.0, 112.0))
+        tiles = [unciv.Tile(base="Plains") for _ in grid.tiles]
+        a = grid.locate(150.0, 112.0)
+        b = grid.ring(a)[0]
+        of_tile = {t: "A" for t in range(len(tiles))} | {t: "B" for t in range(len(tiles)) if grid.center(t)[0] > 175}
+        placed = spain_unciv.seat_starts(grid, tiles, of_tile, [("A", *grid.center(a)), ("B", *grid.center(b))])
+        self.assertEqual(placed["A"], (a, 0))
+        tb, off = placed["B"]
+        self.assertEqual(of_tile[tb], "B")
+        self.assertEqual(spain_unciv.distance(grid, a, tb), spain_unciv.MIN_SEAT_GAP)
+        self.assertEqual(off, spain_unciv.distance(grid, tb, b))
+
+    def test_a_sea_tile_belongs_to_the_land_around_it_not_to_other_sea(self):
+        # One land tile of community 12 in a sea: only its ring of coast is 12's; the open sea is no one's.
+        world = fine_world()
+        fine = HexGrid(**world["grid"])
+        grid = unciv.Grid.covering(fine, 25.0)
+        t = grid.locate(world["width"] / 2, world["height"] / 2)
+        set_land(world, unciv.resample(world, grid)[t].cells, owner=0)
+        world["states"] = [{"fips": "15"}]  # A Coruña: Galicia
+        tiles = unciv.resample(world, grid)
+        unciv.terrain(world, grid, tiles)
+        of_tile = spain_unciv.tile_communities(world, grid, fine, tiles)
+        self.assertEqual(set(of_tile), {t, *grid.ring(t)})
+        self.assertEqual(set(of_tile.values()), {"12"})
+
+
+class NationsTest(unittest.TestCase):
+    """The nations of unciv.json as built, and the mod's Nations.json and translation made of them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = built()
+        cls.summary = cls.doc["summary"]
+        cls.nations = cls.summary["nations"]
+        cls.grid = grid_of(cls.summary)
+        cls.tiles = unciv.tiles_from_map(cls.doc["map"])
+        z = zipfile.ZipFile(io.BytesIO(play.files(ES)[play.MOD_ZIP]()))
+        folder = cls.summary["mod"]["name"]
+        cls.nations_json = json.loads(z.read(f"{folder}/jsons/Nations.json"))
+        cls.spanish = z.read(f"{folder}/jsons/translations/Spanish.properties").decode("utf-8")
+
+    def test_the_communities_are_civilizations_and_the_cities_city_states(self):
+        from pipeline.sources.es.provinces import COMMUNITIES
+        self.assertEqual({n["code"] for n in self.nations}, set(COMMUNITIES))
+        self.assertEqual({n["code"] for n in self.nations if n["city_state"]}, {"18", "19"})
+        self.assertEqual(len({n["name"] for n in self.nations}), len(self.nations))
+        for n in self.nations:
+            self.assertNotIn("/", n["name"])  # the name is a file name in Images/
+        by_name = {n["name"]: n for n in self.nations_json}
+        self.assertEqual(by_name["Ceuta"]["cityStateType"], "Maritime")
+        self.assertEqual(by_name["Euskadi (País Vasco)"]["leaderName"], "President of the Government")
+
+    def test_every_nation_starts_at_its_seat_far_enough_from_the_others(self):
+        by_pos = {p: i for i, p in enumerate(self.grid.positions)}
+        starts = self.doc["map"]["startingLocations"]
+        self.assertEqual([s["nation"] for s in starts], [n["name"] for n in self.nations])
+        idx = []
+        for s, n in zip(starts, self.nations):
+            self.assertEqual(s["usage"], "Normal" if n["city_state"] else "Human")
+            t = by_pos[(s["position"]["x"], s["position"]["y"])]
+            self.assertTrue(self.tiles[t].passable_land, n["name"])
+            idx.append(t)
+        for i, a in enumerate(idx):
+            for b in idx[i + 1:]:
+                self.assertGreaterEqual(spain_unciv.distance(self.grid, a, b), spain_unciv.MIN_SEAT_GAP)
+        moved = {n["name"]: n["start_off_seat"] for n in self.nations if n["start_off_seat"]}
+        self.assertEqual(set(moved), {"Castilla-La Mancha", "La Rioja"})  # Toledo by Madrid, Logroño by Vitoria
+        self.assertTrue(all(0 < v < spain_unciv.MIN_SEAT_GAP for v in moved.values()))
+
+    def test_cities_are_the_seat_then_the_most_populous_municipalities(self):
+        padron = json.loads((ROOT / "data" / "interim" / "es" / "ine_padron.json").read_text(encoding="utf-8"))["data"]
+        year = spain_unciv.padron_year(padron)
+        siane = json.loads((ROOT / "data" / "interim" / "es" / "siane.json").read_text(encoding="utf-8"))["data"]
+        from pipeline.sources.es.provinces import COMMUNITY_OF
+        code_of = {(COMMUNITY_OF[m["geoid"][:2]], m["name"]): m["geoid"] for m in siane["municipalities"]}
+        firsts = {n["name"]: n["cities"][0] for n in self.nations}
+        self.assertEqual(firsts["Canarias"], "Las Palmas de Gran Canaria")
+        self.assertEqual(firsts["Euskadi (País Vasco)"], "Vitoria-Gasteiz")
+        self.assertEqual(firsts["Galicia"], "Santiago de Compostela")
+        self.assertEqual(firsts["Castilla y León"], "Valladolid")
+        for n in self.nations:
+            if n["city_state"]:
+                self.assertEqual(n["cities"], [n["name"]])
+                continue
+            self.assertEqual(len(n["cities"]), spain_unciv.CITY_NAMES)
+            self.assertEqual(code_of[n["code"], n["cities"][0]], n["seat"])
+            pops = [padron["municipalities"][code_of[n["code"], c]]["pop"][year] for c in n["cities"][1:]]
+            self.assertEqual(pops, sorted(pops, reverse=True), n["name"])
+
+    def test_bias_unique_and_texts(self):
+        for n, j in zip(self.nations, self.nations_json):
+            self.assertEqual(j["name"], n["name"])
+            if n["city_state"]:
+                continue
+            self.assertIn(n["resource"], unciv.RESOURCES)
+            self.assertEqual(j["uniques"], [unciv.NATION_UNIQUE.format(resource=n["resource"])])
+            self.assertLessEqual(n["resource_tiles"], n["resource_map_tiles"])
+            self.assertTrue(n["start_bias"] is None or n["start_bias"] in spain_unciv.BIAS_TERRAINS)
+            self.assertTrue(pick(n["leader"], "es").startswith("Presidencia"))
+            for key in (j["leaderName"], j["uniqueName"], j["startIntroPart1"]):
+                self.assertIn(f"{key} = ", self.spanish)  # every English text has its Spanish line
+        self.assertIn("Tierra de vino", self.spanish)
+
+    def test_colours_contrast_as_unciv_asks_and_no_two_nations_share_both(self):
+        pairs = [(tuple(n["outer"]), tuple(n["inner"])) for n in self.nations]
+        self.assertEqual(len(set(pairs)), len(pairs))
+        for outer, inner in pairs:
+            self.assertGreaterEqual(spain_flags.contrast(outer, inner), 3)  # RulesetValidator.checkContrasts
+
+    def test_flag_images(self):
+        n = unciv.ICON_PX
+        for nation in self.nations:
+            portrait, icon = play.flag_images(nation)
+            self.assertEqual((len(portrait), len(icon)), (4 * n * n, 4 * n * n))
+            self.assertEqual((portrait[3], icon[3]), (0, 0))  # outside the disc
+            middle = 4 * (n * (n // 2) + n // 2)
+            self.assertEqual(portrait[middle + 3], 255)
+            if not nation["city_state"]:  # the icon shows the inner colour's part of the flag
+                self.assertTrue(any(icon[k] for k in range(3, len(icon), 4)), nation["name"])
+        galicia = next(x for x in self.nations if x["name"] == "Galicia")
+        portrait, _ = play.flag_images(galicia)
+        centre = 4 * (n * (n // 2) + n // 2)
+        self.assertEqual(tuple(portrait[centre:centre + 3]), spain_flags.CELESTE)  # the band crosses the centre
+
+
+class FormatHelpersTest(unittest.TestCase):
+    def test_nation_json(self):
+        major = unciv.nation_json("Galicia", (1, 2, 3), (4, 5, 6), ["Santiago"], leader="President", start_bias="Forest",
+                                  unique_name="Land of Iron", resource="Iron", intro="Hola")
+        self.assertEqual((major["startBias"], major["uniques"]), (["Forest"], ["[+1 Food, +1 Production, +1 Gold] from [Iron] tiles [in all cities]"]))
+        cs = unciv.nation_json("Ceuta", (0, 0, 0), (255, 255, 255), ["Ceuta"], city_state_type="Maritime")
+        self.assertEqual(set(cs), {"name", "cityStateType", "outerColor", "innerColor", "cities"})
+
+    def test_properties(self):
+        self.assertEqual(unciv.properties({"Land of Iron": "Tierra de hierro", "a\nb": "c\nd"}),
+                         "Land of Iron = Tierra de hierro\na\\nb = c\\nd\n")
+        for bad in ("[x] of y", "a = b"):
+            with self.assertRaises(ValueError):
+                unciv.properties({bad: "z"})
+
+    def test_contrast(self):
+        self.assertAlmostEqual(spain_flags.contrast((0, 0, 0), (255, 255, 255)), 21)
+        self.assertAlmostEqual(spain_flags.contrast((1, 2, 3), (1, 2, 3)), 1)
+
+    def test_atlas_packs_every_image(self):
+        images = {f"NationIcons/{k}": bytes(4 * unciv.ICON_PX ** 2) for k in range(12)}
+        out = play.icon_atlas(images)
+        text = out["game.atlas"].decode("utf-8")
+        self.assertIn("size: 1024, 256", text)
+        self.assertEqual(sum(line.startswith("NationIcons/") for line in text.splitlines()), 12)
+
 
 
 class BdminPositionTest(unittest.TestCase):
