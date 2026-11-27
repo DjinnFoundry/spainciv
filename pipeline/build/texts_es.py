@@ -623,6 +623,15 @@ SOURCES = {
         "pueblos.",
         "used_for": ["Lente de bares por 1.000 habitantes", "Índice de fiesta"],
     },
+    "osm_playas": {
+        "title": "Playas con nombre de España (OpenStreetMap, natural=beach)",
+        "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
+        "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
+        "description": "Todos los nodos, vías y relaciones de OpenStreetMap en España con natural=beach y nombre, en su "
+        "posición (el centro de una vía), con sus nombres (name, name:es, name:ca, name:gl, name:eu, name:ast, "
+        "alt_name, official_name, loc_name, old_name), de una sola consulta guardada. Lo mapean voluntarios.",
+        "used_for": ["Lente de Bandera Azul: la posición de cada playa que Wikidata no tiene"],
+    },
     "osm_militar": {
         "title": "Terreno e instalaciones militares de España (OpenStreetMap, landuse=military y military=*)",
         "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
@@ -645,6 +654,16 @@ SOURCES = {
         "histórica. Sirve para enlazar las instalaciones de OpenStreetMap con su elemento y para dar la rama que OSM "
         "no trae.",
         "used_for": ["Consejero militar: enlaces a Wikidata y rama de las instalaciones"],
+    },
+    "wikidata_playas": {
+        "title": "Wikidata: playas de España con coordenadas, nombres y municipio",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (dominio público)",
+        "description": "Todos los elementos de Wikidata en España que son una playa (Q40080 o una subclase) con "
+        "coordenadas, con sus etiquetas y alias en castellano, gallego, catalán, euskera, asturiano, aragonés, occitano "
+        "y «mul», y el código INE del municipio en que están. Lo editan voluntarios: unas costas están mucho mejor "
+        "cubiertas que otras.",
+        "used_for": ["Lente de Bandera Azul: la posición de cada playa"],
     },
 }
 
