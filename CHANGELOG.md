@@ -67,6 +67,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   cada uno (E27–E29) y que el valor de una vivienda sigue sin fuente por municipio.
 - Arrastrar el mapa se engancha menos: al entrar terreno nuevo se pinta solo la franja que aparece, no el
   mapa entero (con la CPU frenada ×4, de 104 a 22 ms por repintado a ×2,5; A18).
+- El zoom se engancha menos al asentarse: se pinta primero lo que se ve y el resto de la caché después, los planes del
+  relieve se reutilizan entre zooms parecidos y se precalientan dos y tres muescas de rueda. Con la CPU frenada ×4, tres
+  muescas desde la vista inicial dejan el fotograma más largo en 859 ms (antes 1575), y desde ×2,5 en 575 (antes 1342;
+  A25).
 - Los reyes guanches de Tenerife salen como «mencey» en vez de «monarca», con el cargo que les da Wikidata; un guanarteme de Gran Canaria saldría igual con el suyo.
 - Mayúsculas de los nombres como se escriben en castellano: «Palma de Mallorca», «Jerez de la Frontera», «Torre de Garay», «FGL Granada-Jaén», en aeropuertos, centrales, minas y lugares de Wikidata. Los aeropuertos pierden las marcas de nota de AENA («(**)») y los helipuertos salen como «Ceuta (helipuerto)».
 - Museos y castillos sin nombre en castellano toman el gallego, catalán o euskera antes que el inglés (antes salían 19 en inglés; quedan 12, que Wikidata solo nombra en inglés).
