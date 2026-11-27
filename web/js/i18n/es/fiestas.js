@@ -1,0 +1,21 @@
+// Spanish strings of the fiesta calendar (web/js/ext/fiestas; see web/js/i18n.js).
+export default {
+  "fiestas.lens.name": "Calendario de fiestas",
+  "fiestas.lens.desc": "Las fiestas de interés turístico del mes elegido, en los hexágonos de sus municipios y del color de la de más rango. Las fechas son las que publica la fuente de cada fiesta. La Secretaría de Estado de Turismo no publica fechas: una fiesta Internacional o Nacional lleva las de su declaración autonómica, si la tiene.",
+  "fiestas.lens.none": "Ninguna fiesta en {month}",
+  "fiestas.cat.internacional": "Internacional",
+  "fiestas.cat.nacional": "Nacional",
+  "fiestas.cat.autonomica": "Autonómica",
+  "fiestas.title": "¿Dónde hay fiesta en {month}?",
+  "fiestas.title.now": "¿Dónde hay fiesta este mes?",
+  "fiestas.close": "Cerrar el calendario (Esc)",
+  "fiestas.months": "Mes",
+  "fiestas.month": { one: "{month}: {n} fiesta", other: "{month}: {n} fiestas" },
+  "fiestas.summary": { one: "{n} fiesta con fecha en {month}. Púlsala para verla en el mapa.", other: "{n} fiestas con fecha en {month}. Pulsa una para verla en el mapa." },
+  "fiestas.undated": { one: "{n} fiesta no tiene mes en su fuente (no da fecha, o la fiesta es móvil, como la Semana Santa o el Carnaval) y no sale en ningún mes.", other: "{n} fiestas no tienen mes en su fuente (no da fecha, o la fiesta es móvil, como la Semana Santa o el Carnaval) y no salen en ningún mes." },
+  "fiestas.loading": "Cargando las fiestas…",
+  "fiestas.loadError": "No se han podido cargar las fiestas.",
+  "fiestas.tip": "{name} ({category}): {when}",
+  "fiestas.show": "Ver en el mapa",
+  "fiestas.nowhere": "Sin municipio en su fuente: no está en el mapa.",
+};

@@ -1,0 +1,21 @@
+// English strings of the fiesta calendar (web/js/ext/fiestas; see web/js/i18n.js).
+export default {
+  "fiestas.lens.name": "Fiesta calendar",
+  "fiestas.lens.desc": "The fiestas of tourist interest in the chosen month, on the hexes of their municipalities, each hex in the colour of its highest one. The dates are those each fiesta's source publishes. The Secretaría de Estado de Turismo publishes none: an International or National fiesta takes those of its regional declaration, if it has one.",
+  "fiestas.lens.none": "No fiesta in {month}",
+  "fiestas.cat.internacional": "International",
+  "fiestas.cat.nacional": "National",
+  "fiestas.cat.autonomica": "Regional",
+  "fiestas.title": "Where's the party in {month}?",
+  "fiestas.title.now": "Where's the party this month?",
+  "fiestas.close": "Close the calendar (Esc)",
+  "fiestas.months": "Month",
+  "fiestas.month": { one: "{month}: {n} fiesta", other: "{month}: {n} fiestas" },
+  "fiestas.summary": { one: "{n} fiesta dated in {month}. Pick it to see it on the map.", other: "{n} fiestas dated in {month}. Pick one to see it on the map." },
+  "fiestas.undated": { one: "{n} fiesta has no month in its source (it gives no date, or the feast is movable, like Holy Week or Carnival) and appears in no month.", other: "{n} fiestas have no month in their source (it gives no date, or the feast is movable, like Holy Week or Carnival) and appear in no month." },
+  "fiestas.loading": "Loading the fiestas…",
+  "fiestas.loadError": "The fiestas could not be loaded.",
+  "fiestas.tip": "{name} ({category}): {when}",
+  "fiestas.show": "Show on the map",
+  "fiestas.nowhere": "No municipality in its source: not on the map.",
+};
