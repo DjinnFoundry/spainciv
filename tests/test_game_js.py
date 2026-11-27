@@ -265,5 +265,128 @@ class GuessabilityTest(unittest.TestCase):
         self.assertTrue(got["narrowing"])
 
 
+@unittest.skipUnless(NODE, "node is not installed")
+class AlbumTest(unittest.TestCase):
+    """The province album (web/js/ext/game/album.js) on Spain's data: provinces by community from states.json, how
+    often each comes up from the pool, and the album's share text."""
+
+    SETUP = """
+        const A = await import('./web/js/ext/game/album.js');
+        const states = load('states');
+        const fipsSet = new Set(states.map((s) => s.fips));
+        const view = (album, stats) => A.albumView({ album, states, raw: w.raw, pool, firstFits: g.firstFits, stats });
+        const byName = (v, name) => v.communities.find((c) => c.name === name);
+        const fipsOf = (name) => states.find((s) => s.name === name).fips;
+    """
+
+    def album(self, body, lang="es"):
+        return run(self.SETUP + body, lang)
+
+    def test_normalize_drops_what_is_not_a_list_of_days(self):
+        got = self.album("""out([null, 'x', 7, { '18': '1' }, { '99': [1] }, { '18': [3, 1, 3, -2, 1.5, 0] }, { '18': [] }, [1]]
+            .map((a) => A.normalize(a, fipsSet)));""")
+        self.assertEqual(got, [{}, {}, {}, {}, {}, {"18": [1, 3]}, {}, {}])
+
+    def test_add_win_is_idempotent_and_does_not_mutate(self):
+        got = self.album("""
+            const a = { '18': [3] }, b = A.addWin(a, '18', 1), c = A.addWin(b, '18', 1), d = A.addWin(undefined, '15', 2);
+            out([a, b, c, b === c, d, A.hasWin(b, '18', 1), A.hasWin(b, '18', 2)]);
+        """)
+        self.assertEqual(got[0], {"18": [3]})
+        self.assertEqual(got[1], {"18": [1, 3]})
+        self.assertEqual(got[2], {"18": [1, 3]})
+        self.assertFalse(got[3])  # always a new object
+        self.assertEqual(got[4], {"15": [2]})
+        self.assertEqual(got[5:], [True, False])
+
+    def test_empty_album_counts_the_provinces_that_can_come_up(self):
+        got = self.album("""
+            const v = view({}, null), provs = A.provincesOf(v);
+            out({ communities: v.communities.length, total: v.total, got: v.got, complete: v.complete, cTotal: v.communitiesTotal,
+                  outside: v.outside.map((o) => [o.name, o.reason, o.fits < P.MIN_FIRST]),
+                  hexSum: provs.reduce((n, p) => n + p.hexes, 0), pool: pool.length, poolSize: v.poolSize,
+                  allPositive: provs.every((p) => p.hexes > 0),
+                  galicia: byName(v, 'Galicia').total, codes: v.communities.map((c) => c.code),
+                  slow: provs.filter((p) => p.slow).map((p) => p.fips).sort(),
+                  slowExpected: provs.filter((p) => Math.round(pool.length / p.hexes) > A.LONG_WAIT_DAYS).map((p) => p.fips).sort(),
+                  every: provs.every((p) => p.everyDays === Math.round(pool.length / p.hexes)),
+                  unassigned: [view({}, { won: 3 }).unassigned, view({ '18': [1, 2] }, { won: 1 }).unassigned, view({}, undefined).unassigned] });
+        """)
+        # Ceuta and Melilla are the only land hexes in their first-clue area, under MIN_FIRST (E84).
+        self.assertEqual(got["outside"], [["Ceuta", "first", True], ["Melilla", "first", True]])
+        self.assertEqual((got["communities"], got["cTotal"], got["total"]), (17, 17, 50))
+        self.assertEqual((got["got"], got["complete"]), (0, 0))
+        self.assertEqual(got["hexSum"], got["pool"])
+        self.assertEqual(got["poolSize"], got["pool"])
+        self.assertTrue(got["allPositive"] and got["every"])
+        self.assertEqual(got["galicia"], 4)
+        self.assertEqual(got["codes"], sorted(got["codes"]))  # INE order
+        self.assertEqual(got["slow"], got["slowExpected"])
+        self.assertEqual(got["unassigned"], [3, 0, 0])
+
+    def test_a_full_community_is_complete(self):
+        got = self.album("""
+            const galicia = states.filter((s) => s.community.name === 'Galicia').map((s) => s.fips);
+            const album = Object.fromEntries(galicia.map((f, k) => [f, [k + 1]]));
+            album[fipsOf('Granada')] = [9, 12];
+            const v = view(A.normalize(album, fipsSet), { won: 9 });
+            const pick = (c) => ({ got: c.got, total: c.total, complete: c.complete });
+            const gr = byName(v, 'Andalucía').provinces.find((p) => p.name === 'Granada');
+            out({ galicia: pick(byName(v, 'Galicia')), andalucia: pick(byName(v, 'Andalucía')), got: v.got, complete: v.complete,
+                  granada: gr.days, unassigned: v.unassigned });
+        """)
+        self.assertEqual(got["galicia"], {"got": 4, "total": 4, "complete": True})
+        self.assertEqual(got["andalucia"], {"got": 1, "total": 8, "complete": False})
+        self.assertEqual((got["got"], got["complete"]), (5, 1))
+        self.assertEqual(got["granada"], [9, 12])
+        self.assertEqual(got["unassigned"], 3)  # 9 won, 6 days recorded
+
+    SHARE = """
+        const galicia = states.filter((s) => s.community.name === 'Galicia').map((s) => s.fips);
+        const some = Object.fromEntries([...galicia, fipsOf('Granada'), fipsOf('La Rioja')].map((f) => [f, [1]]));
+        const allBut = (names) => Object.fromEntries(A.provincesOf(view({}, null)).filter((p) => !names.includes(p.name)).map((p) => [p.fips, [2]]));
+        const texts = [some, {}, allBut(['Soria', 'Teruel']), allBut(['Soria', 'Teruel', 'Lugo', 'Jaén', 'Cádiz', 'Huesca'])]
+          .map((a) => A.shareText(view(a, null), 'https://x/#juego'));
+        const v = view(some, null);
+        out({ texts, communities: v.communities.map((c) => c.name), provinces: A.provincesOf(v).map((p) => p.name) });
+    """
+
+    def test_share_text(self):
+        for lang in ("es", "en"):
+            got = self.album(self.SHARE, lang)
+            some, empty, two, six = (t.split("\n") for t in got["texts"])
+            with self.subTest(lang):
+                self.assertIn("6", some[0])
+                self.assertIn("50", some[0])
+                self.assertEqual(len(some[1]), 17)  # one square per community (each one code point)
+                self.assertEqual(some[1].count("🟩"), 2)  # Galicia and La Rioja
+                self.assertEqual(some[1].count("🟨"), 1)  # Andalucía
+                self.assertIn("Galicia, La Rioja", some[2])
+                self.assertIn("2", some[2])
+                self.assertEqual(some[-1], "https://x/#juego")
+                self.assertEqual(len(some), 4)  # 44 missing: none named
+                self.assertEqual(set(empty[1]), {"⬜"})
+                self.assertIn("0", empty[2])
+                self.assertEqual(len(two), 5)
+                self.assertIn("Teruel, Soria", two[3])  # community by community: Aragón before Castilla y León
+                self.assertEqual(len(six), 4)  # six missing: none named
+                # No province is named unless its community is complete or it is missing.
+                named = {p for p in got["provinces"] if p in got["texts"][0]} - set(got["communities"])
+                self.assertEqual(named, set())
+                self.assertNotIn("Granada", got["texts"][0])
+        es = self.album(self.SHARE)["texts"]
+        self.assertEqual(es[0].split("\n")[0], "Álbum de «Adivina el hexágono»: 6 de 50 provincias")
+        self.assertEqual(es[1].split("\n")[2], "Ninguna comunidad completa (0 de 17)")
+        self.assertTrue(es[2].split("\n")[3].startswith("Me faltan: "))
+
+    def test_share_text_in_english_has_no_spanish_ui_words(self):
+        got = self.album(self.SHARE, "en")
+        text = "\n".join(got["texts"])
+        for name in got["communities"] + got["provinces"]:
+            text = text.replace(name, "")
+        for word in ("Álbum", "provincias", "comunidad", "Completas", "Ninguna", "Me faltan", "Adivina"):
+            self.assertNotIn(word, text)
+
+
 if __name__ == "__main__":
     unittest.main()
