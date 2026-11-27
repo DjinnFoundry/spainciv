@@ -65,14 +65,33 @@ class ScanTest(unittest.TestCase):
             ride("ave", ("JS", 8 * H + 30 * M, 8 * H + 30 * M), ("MAD", 10 * H + 20 * M, 10 * H + 20 * M))
         j = self.best(conns, stop="G", walks=walks)
         self.assertEqual((j.duration, j.changes), (3 * H + 20 * M, 1))
-        self.assertEqual([(l.frm, l.to) for l in j.legs], [("G", "NORD"), ("JS", "MAD")])
+        self.assertEqual([(l.trip, l.frm, l.to) for l in j.legs], [("c", "G", "NORD"), (None, "NORD", "JS"), ("ave", "JS", "MAD")])
+        self.assertEqual((j.legs[1].dep, j.legs[1].arr), (8 * H, 8 * H + 13 * M))
         # 13 min walk + 10 min change: a 08:22 train is missed
         early = ride("ave", ("JS", 8 * H + 22 * M, 8 * H + 22 * M), ("MAD", 9 * H, 9 * H))
         self.assertIsNone(self.best(ride("c", ("G", 7 * H, 7 * H), ("NORD", 8 * H, 8 * H)) + early, stop="G", walks=walks))
         # a walk into a target stop ends the journey there
         walks2 = {"MAD2": [("MAD", 5 * M)]}
         j = self.best(ride("r", ("A", 8 * H, 8 * H), ("MAD2", 9 * H, 9 * H)), walks=walks2)
-        self.assertEqual((j.arr, j.to, j.legs[-1].to), (9 * H + 5 * M, "MAD", "MAD2"))
+        self.assertEqual((j.arr, j.to, j.changes), (9 * H + 5 * M, "MAD", 0))
+        self.assertEqual([(l.trip, l.frm, l.to) for l in j.legs], [("r", "A", "MAD2"), (None, "MAD2", "MAD")])
+
+    def test_a_journey_may_start_on_foot(self):
+        # València Nord: the C6 out and back is slower than walking to Joaquín Sorolla for the AVE.
+        walks = {"NORD": [("JS", 13 * M)], "JS": [("NORD", 13 * M)]}
+        conns = ride("c6", ("NORD", 7 * H, 7 * H), ("X", 7 * H + 20 * M, 7 * H + 20 * M)) + \
+            ride("c6b", ("X", 7 * H + 30 * M, 7 * H + 30 * M), ("NORD", 7 * H + 50 * M, 7 * H + 50 * M)) + \
+            ride("ave", ("JS", 8 * H + 30 * M, 8 * H + 30 * M), ("MAD", 10 * H + 20 * M, 10 * H + 20 * M))
+        p = profile(conns, {"MAD"}, 10 * M, walks)
+        j = p.best("NORD")
+        self.assertEqual((j.dep, j.arr, j.duration, j.changes), (8 * H + 17 * M, 10 * H + 20 * M, 2 * H + 3 * M, 0))
+        self.assertEqual([(l.trip, l.frm, l.to, l.dep, l.arr) for l in j.legs],
+                         [(None, "NORD", "JS", 8 * H + 17 * M, 8 * H + 30 * M), ("ave", "JS", "MAD", 8 * H + 30 * M, 10 * H + 20 * M)])
+        self.assertIn("NORD", p.stops())
+        # a train from the stop itself wins when it is shorter than walking first
+        direct = ride("d", ("NORD", 9 * H, 9 * H), ("MAD", 10 * H + 30 * M, 10 * H + 30 * M))
+        j = profile(conns + direct, {"MAD"}, 10 * M, walks).best("NORD")
+        self.assertEqual([l.trip for l in j.legs], ["d"])
 
     def test_several_targets(self):
         conns = ride("a", ("A", 8 * H, 8 * H), ("ATOCHA", 10 * H, 10 * H)) + \

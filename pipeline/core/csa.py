@@ -9,8 +9,10 @@ arrival. The shortest journey of the day from a stop is then the profile entry w
   staying on it through a call where one cannot get off is always allowed.
 - Changing trains at a stop takes at least `change` seconds; walking to a nearby stop takes its footpath's seconds,
   plus the same change time before the next train. A walk into a target stop ends the journey there.
+- A journey may start on foot: from a stop, walking to a nearby one (its footpath, no change time) and taking the
+  shortest journey from there counts when it is shorter than any train from the stop itself.
 - Each profile entry keeps the decision that made it, so the journey can be rebuilt: its legs (trip, from, to,
-  departure, arrival), its changes and the target stop it ends at.
+  departure, arrival; a walk is a leg whose trip is None), its changes and the target stop it ends at.
 
 Nothing here is about any one country: stops and trips are strings, times are seconds of the service day.
 """
@@ -38,7 +40,7 @@ class Connection(NamedTuple):
 
 
 class Leg(NamedTuple):
-    trip: str
+    trip: str | None  # None: a walk
     frm: str
     to: str
     dep: int
@@ -75,7 +77,7 @@ class Journey(NamedTuple):
 
     @property
     def changes(self) -> int:
-        return len(self.legs) - 1
+        return sum(1 for l in self.legs if l.trip is not None) - 1
 
 
 def trip_connections(trip: str, calls: list[tuple[str, int, int, bool, bool]]) -> list[Connection]:
@@ -85,23 +87,30 @@ def trip_connections(trip: str, calls: list[tuple[str, int, int, bool, bool]]) -
 
 
 class Profiles:
-    def __init__(self, by_stop: dict[str, tuple[list[int], list[Entry]]]):
-        self._by_stop = by_stop
+    def __init__(self, by_stop: dict[str, tuple[list[int], list[Entry]]], walks: dict[str, list[tuple[str, int]]]):
+        self._by_stop, self._walks = by_stop, walks
 
     def entries(self, stop: str) -> list[Entry]:
         """The stop's profile, latest departure first (arrivals strictly earlier as departures get earlier)."""
         return list(self._by_stop.get(stop, ([], []))[1])
 
-    def stops(self) -> list[str]:
-        return list(self._by_stop)
+    def stops(self) -> set[str]:
+        """The stops with a journey: those with a profile and those a walk away from one."""
+        return set(self._by_stop) | {s for s, near in self._walks.items() if any(j in self._by_stop for j, _ in near)}
 
     def best(self, stop: str) -> Journey | None:
-        """The shortest journey of the day from `stop` (the earliest departure among equally short ones)."""
-        entries = self._by_stop.get(stop, ([], []))[1]
-        if not entries:
+        """The shortest journey of the day from `stop`, by train from it or after a walk to a nearby stop (the
+        earliest departure among equally short ones)."""
+        options = [(e.arr - e.dep, e.dep, 0, e) for e in self._by_stop.get(stop, ([], []))[1]]
+        for j, w in self._walks.get(stop, ()):
+            options += [(e.arr - e.dep + w, e.dep - w, w, e) for e in self._by_stop.get(j, ([], []))[1]]
+        if not options:
             return None
-        e = min(reversed(entries), key=lambda e: e.arr - e.dep)
-        return rebuild(e)
+        _, dep, walk, e = min(options, key=lambda o: o[:2])
+        j = rebuild(e)
+        if not walk:
+            return j
+        return Journey(dep, j.arr, j.to, [Leg(None, stop, e.stop, dep, e.dep), *j.legs])
 
 
 def rebuild(e: Entry) -> Journey:
@@ -109,6 +118,8 @@ def rebuild(e: Entry) -> Journey:
     while e is not None:
         x = e.exit
         legs.append(Leg(e.trip, e.stop, x.stop, e.dep, x.arr))
+        if x.then_stop != x.stop:
+            legs.append(Leg(None, x.stop, x.then_stop, x.arr, x.arr + x.walk))
         end = x.then_stop
         e = x.then
     return Journey(first.dep, first.arr, end, legs)
@@ -157,7 +168,7 @@ def profile(connections: Iterable[Connection], targets: set[str], change: int,
         else:
             negdeps.append(-c.dep)
             entries.append(entry)
-    return Profiles(by_stop)
+    return Profiles(by_stop, walks)
 
 
 def km(a: tuple[float, float], b: tuple[float, float]) -> float:
