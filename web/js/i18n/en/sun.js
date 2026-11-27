@@ -1,0 +1,22 @@
+// English strings of the sunset lens (web/js/ext/sun; see web/js/i18n.js).
+export default {
+  "sun.lens.name": "Sunset",
+  "sun.lens.desc": "The clock time of sunrise and sunset, solar noon and the hours of daylight on the chosen day, at the centre of each hex. Spain keeps Central European Time (UTC+1; UTC+2 in summer) though nearly all of it lies west of Greenwich, so the sun sets very late in the west. The Canary Islands keep Western European Time (UTC+0; UTC+1 in summer). Summer time runs from the last Sunday of March to the last Sunday of October. NOAA solar position equations (after Jean Meeus): accurate to ±1 min, for a clear sea-level horizon.",
+  "sun.source": "NOAA solar position equations",
+  "sun.mode.sunset": "Sunset",
+  "sun.mode.sunrise": "Sunrise",
+  "sun.mode.day": "Daylight",
+  "sun.mode.noon": "Solar noon",
+  "sun.modes": "Which time",
+  "sun.tip": "{lead} · solar noon {noon} · {day} of daylight",
+  "sun.tip.sunset": "Sunset {time} {zone}",
+  "sun.tip.sunrise": "Sunrise {time} {zone}",
+  "sun.spread": "{a} and {b}: {diff} apart",
+  "sun.day": "Day",
+  "sun.picks": "Dates",
+  "sun.june": "21 June",
+  "sun.december": "21 December",
+  "sun.today": "Today",
+  "sun.close": "Close (Esc)",
+  "sun.why": "Spain keeps Central European Time though nearly all of it lies west of Greenwich: the sun runs behind the clock, the more so the further west. The Canary Islands, in their inset, are an hour behind the mainland.",
+};

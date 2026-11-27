@@ -70,6 +70,7 @@ COUNTRY = Country(
                     "Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"),),
         based_on=tr("Basado en {usaciv}, de Andrej Karpathy (MIT)", "Based on {usaciv} by Andrej Karpathy (MIT)"),
         game=True,
+        sunset=True,
     ),
     interim_dir=_interim,
     web_data_dir=_web,

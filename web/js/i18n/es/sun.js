@@ -1,0 +1,22 @@
+// Spanish strings of the sunset lens (web/js/ext/sun; see web/js/i18n.js).
+export default {
+  "sun.lens.name": "Atardecer",
+  "sun.lens.desc": "La hora del reloj a la que sale y se pone el sol, el mediodía solar y las horas de luz del día elegido, en el centro de cada hexágono. España usa la hora de Europa central (UTC+1; UTC+2 en verano) aunque casi toda está al oeste de Greenwich, así que en el oeste el sol se pone muy tarde. Canarias usa la de Europa occidental (UTC+0; UTC+1 en verano). La hora de verano va del último domingo de marzo al último domingo de octubre. Ecuaciones de posición solar de la NOAA (de Jean Meeus): precisión de ±1 min, con el horizonte despejado y a nivel del mar.",
+  "sun.source": "NOAA, ecuaciones de posición solar",
+  "sun.mode.sunset": "Puesta de sol",
+  "sun.mode.sunrise": "Salida del sol",
+  "sun.mode.day": "Horas de luz",
+  "sun.mode.noon": "Mediodía solar",
+  "sun.modes": "Qué hora",
+  "sun.tip": "{lead} · mediodía solar {noon} · {day} de día",
+  "sun.tip.sunset": "Puesta {time} {zone}",
+  "sun.tip.sunrise": "Salida {time} {zone}",
+  "sun.spread": "{a} y {b}: {diff} de diferencia",
+  "sun.day": "Día",
+  "sun.picks": "Fechas",
+  "sun.june": "21 de junio",
+  "sun.december": "21 de diciembre",
+  "sun.today": "Hoy",
+  "sun.close": "Cerrar (Esc)",
+  "sun.why": "España usa la hora de Europa central aunque casi toda está al oeste de Greenwich: el sol va por detrás del reloj, y más cuanto más al oeste. Canarias, en su recuadro, va una hora por detrás de la península.",
+};
