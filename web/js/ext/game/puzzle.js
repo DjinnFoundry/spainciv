@@ -22,7 +22,7 @@ export const DISTINCT = 10; // a named thing is distinctive when its name, as sh
 export const MIN_KINDS = 2; // a hex enters the pool with distinctive things of this many kinds
 export const MIN_FIRST = 20; // the first clue (area and sea) fits at least this many land hexes: it never gives the answer
 export const RIVER_KM = 400; // the rivers a clue names: at least this long across Spain's land on the map
-const SEED = 9; // day 1, the launch day, is Guadix (Granada)
+const SEED = 431; // day 1, the launch day, is Guadix (Granada); re-picked when the pool changed with the readable clues
 
 /** The puzzle number of a date's local calendar day: 1 on 27 November 2026. */
 export function dayNumber(date = new Date()) {
@@ -115,7 +115,9 @@ export function shareText({ day, kms, won, clues, url }) {
 
 /** A function that hides place names in a text: every municipality, province and city name of four letters or more,
  *  and `own` (the answer's municipality and province) whatever its length, whole words only, become "…". A hyphen
- *  and a space count as the same ("Castro-Urdiales", "Castro Urdiales"). */
+ *  and a space count as the same ("Castro-Urdiales", "Castro Urdiales"). A name that is more place than anything
+ *  else ("Montes de Toledo", "Miel de Granada") comes back empty, so no clue shows it: what is left would say
+ *  nothing. `readable` turns the "…" into prose for the reader. */
 export function placeMasker(names, own = []) {
   const fold = (s) => s.toLowerCase().replace(/[\s-]+/g, " ");
   const parts = new Set();
@@ -131,20 +133,33 @@ export function placeMasker(names, own = []) {
   // a set than as one regular expression).
   return (s) => {
     const words = [...s.matchAll(WORD)].map((m) => [m.index, m.index + m[0].length]);
-    let out = "", from = 0;
+    let out = "", from = 0, hidden = 0;
     for (let i = 0; i < words.length; i++) {
       for (let j = Math.min(words.length, i + most) - 1; j >= i; j--) {
         if (!parts.has(fold(s.slice(words[i][0], words[j][1])))) continue;
         out += s.slice(from, words[i][0]) + "…";
+        for (let k = i; k <= j; k++) hidden += words[k][1] - words[k][0];
         from = words[j][1];
         i = j;
         break;
       }
     }
-    return out + s.slice(from);
+    const bracketed = [...s.matchAll(/\([^)]*\)/g)].map((m) => [m.index, m.index + m[0].length]);
+    const outside = ([a]) => !bracketed.some(([x, y]) => a >= x && a < y); // "(DOP)" is not part of the name
+    const letters = words.filter(outside).reduce((n, [a, b]) => n + b - a, 0);
+    return hidden * 2 > letters ? "" : out + s.slice(from);
   };
 }
 const WORD = /[\p{L}\p{N}]+/gu;
+
+/** A masked name as prose: each "…" goes with the little word that tied it to the rest ("El Cascamorras de … y …"
+ *  → "El Cascamorras", "Festival de la Manzana, …" → "Festival de la Manzana"). */
+export function readable(s) {
+  return String(s)
+    .replace(/(?:,\s*|\s+(?:de|del|dels|des|do|da|dos|das|y|i|e|en|a|al)\s+|\s+)?(?:[ld]['’])?…/giu, "")
+    .replace(/^\s*(?:de|del|y|i|e|en)\s+/iu, "")
+    .replace(/\s+([,.;)])/g, "$1").replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ").trim();
+}
 
 // Compares two arrays of numbers element by element, for sorting by several keys.
 const lex = (a, b) => { for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] - b[k]; return 0; };
@@ -316,7 +331,10 @@ export function gameData({ w, proj, lenses, names = [], cities = [], people = nu
 // Every fact is {label, value, same(cell)}: `same` says whether another hex fits what the fact shows, as a reader
 // would check it (the same category, the same name, a number within 10 %). Numbers carry `num: true`: a reader can
 // check one against a lens, but a number alone points nowhere on the map.
-const fact = (label, value, same, num = false) => (value == null || value === "" ? null : { label, value, same, num });
+const fact = (label, value, same, num = false) => {
+  const shown = typeof value === "string" && value.includes("…") ? readable(value) : value;
+  return shown == null || shown === "" ? null : { label, value: shown, same, num };
+};
 const sameBy = (key, cell) => { const k = key(cell); return (c) => key(c) === k; };
 
 // A lens value as the map's tooltip writes it, except money in full ("12.512 €", "1.830 €/m²").

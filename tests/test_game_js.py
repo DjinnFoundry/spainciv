@@ -67,7 +67,7 @@ class DailyPickTest(unittest.TestCase):
         """)
         self.assertTrue(got["sorted"] and got["land_ok"] and got["kinds_ok"] and got["named_ok"])
         self.assertFalse(got["villarrobledo"])
-        self.assertGreater(got["n"], 3 * 365)  # three years without a repeat
+        self.assertGreater(got["n"], 2.5 * 365)  # over two and a half years without a repeat
         self.assertLess(got["n"], got["land"] / 3)  # most of Spain's hexes have too little of their own
         for kind in ("fiestas", "castles", "museums", "people", "wonders", "works", "food", "city"):
             self.assertGreater(got["kinds"].get(kind, 0), 0, kind)
@@ -83,7 +83,7 @@ class DailyPickTest(unittest.TestCase):
         self.assertTrue(got["again"] and got["inPool"] and got["wraps"] and got["before"] and got["notInOrder"])
         self.assertEqual(got["distinct"], got["n"])
         # A changed seed, pool rule or epoch changes every day's puzzle: this pins them (day 1 is Guadix).
-        self.assertEqual(got["first"], [16283, 6022, 6574])
+        self.assertEqual(got["first"], [16283, 16452, 15748])
 
     def test_a_game_saved_for_another_hex_starts_afresh(self):
         got = run("""
@@ -182,9 +182,16 @@ class CluesTest(unittest.TestCase):
     def test_masker_hides_place_names_as_whole_words(self):
         got = run("""const m = P.placeMasker(['Villaviciosa', 'Alicante/Alacant', 'Vic', 'Sella', 'Castro-Urdiales', "L'Hospitalet de Llobregat"], ['Vic']);
             out([m('Festival de la Manzana, Villaviciosa'), m('Hogueras de Alacant'), m('Salchichón de Vic'), m('Sellado de Vicente'),
-                 m('Plaza de toros de Castro Urdiales'), m("Fira de l'Hospitalet de Llobregat"), m('VILLAVICIOSA y alicante')]);""")
+                 m('Plaza de toros de Castro Urdiales'), m("Fira de l'Hospitalet de Llobregat"), m('VILLAVICIOSA y alicante'),
+                 m('Miel de Villaviciosa (DOP)')]);""")
         self.assertEqual(got, ["Festival de la Manzana, …", "Hogueras de …", "Salchichón de …", "Sellado de Vicente",
-                               "Plaza de toros de …", "Fira de …", "… y …"])
+                               "Plaza de toros de …", "", "", ""])  # a name that is mostly place says nothing: left out
+
+    def test_readable_turns_hidden_places_into_prose(self):
+        got = run("""out([P.readable('El Cascamorras de … y …'), P.readable('Festival de la Manzana, …'), P.readable("Fira de l'…"),
+                       P.readable('Cordero Segureño (IGP)'), P.readable('Plaza de toros de …'), P.readable('… de Pascua')]);""")
+        self.assertEqual(got, ["El Cascamorras", "Festival de la Manzana", "Fira", "Cordero Segureño (IGP)", "Plaza de toros",
+                               "Pascua"])
 
     def test_clues_come_from_the_data(self):
         for lang in ("es", "en"):
@@ -212,7 +219,8 @@ class CluesTest(unittest.TestCase):
             self.assertIn(got["person"]["name"], " ".join(f["value"] for f in got["facts"][5]))  # the most famous native, last
             # The Cascamorras by clue 4, its place names hidden; the hex placed from the city of Granada by clue 5,
             # unnamed first ("a city on the map"), then as the province's capital (naming Granada would name the province).
-            self.assertIn("El Cascamorras de … y …", [f["value"] for f in got["facts"][3] if f["label"] == got["fiesta"]][0])
+            self.assertIn("El Cascamorras (", [f["value"] for f in got["facts"][3] if f["label"] == got["fiesta"]][0])
+            self.assertFalse(any("…" in v for v in flat), lang)  # hidden places read as prose, never as "…"
             near, named = ([f["value"] for f in got["facts"][k] if f["label"] == got["position"]][0] for k in (3, 4))
             self.assertRegex(near, r"50 km")
             self.assertNotIn("Granada", near + named)
