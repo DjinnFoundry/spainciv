@@ -10,5 +10,6 @@ import explore from "./es/explore.js";
 import clima from "./es/clima.js";
 import embalses from "./es/embalses.js";
 import transit from "./es/transit.js";
+import timeline from "./es/timeline.js";
 
-export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore, ...clima, ...embalses, ...transit };
+export default { ...core, ...app, ...cityView, ...advisors, ...game, ...fiestas, ...sun, ...explore, ...clima, ...embalses, ...transit, ...timeline };

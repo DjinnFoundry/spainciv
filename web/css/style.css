@@ -265,6 +265,18 @@ kbd {
 .lens-panel-head h2 { flex: 1; margin: 0; font-family: var(--serif); font-size: 19px; color: var(--gold-bright); font-weight: normal; }
 @media (max-width: 700px) { .lens-panel { padding-top: 18px; } }
 
+/* ---------- a list of things to fly to in a panel (the fiesta calendar, the timeline; ext/flyToCells.js) ---------- */
+.dk-list { list-style: none; margin: 0; padding: 0; }
+.dk-item {
+  display: flex; flex-direction: column; width: 100%; padding: 5px 6px; text-align: left; background: none; color: inherit; font: inherit;
+  border: none; border-bottom: 1px solid rgba(201,164,92,.18); border-radius: 0;
+}
+button.dk-item { cursor: pointer; }
+button.dk-item:hover, .dk-item[aria-current] { background: rgba(90,74,36,.3); }
+.dk-name { font-weight: 600; overflow-wrap: anywhere; }
+.dk-where, .dk-when { font-size: 12px; overflow-wrap: anywhere; }
+.dk-where { color: var(--ink-dim); }
+
 /* ---------- the month strip and the links between month pages (ext/month.js) ---------- */
 .ms-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 10px 0 8px; }
 .ms-month {
@@ -285,16 +297,6 @@ kbd {
 .fc-sum { margin: 0 0 8px; }
 .fc-group h3 { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
 .fc-group h3 i { width: 11px; height: 11px; border-radius: 2px; flex: none; }
-.fc-list { list-style: none; margin: 0; padding: 0; }
-.fc-item {
-  display: flex; flex-direction: column; width: 100%; padding: 5px 6px; text-align: left; background: none; color: inherit; font: inherit;
-  border: none; border-bottom: 1px solid rgba(201,164,92,.18); border-radius: 0;
-}
-button.fc-item { cursor: pointer; }
-button.fc-item:hover, .fc-item[aria-current] { background: rgba(90,74,36,.3); }
-.fc-name { font-weight: 600; overflow-wrap: anywhere; }
-.fc-where, .fc-when { font-size: 12px; overflow-wrap: anywhere; }
-.fc-where { color: var(--ink-dim); }
 .fc-undated { margin: 14px 0 0; font-size: 12px; }
 
 /* ---------- a lens panel's colour key (app/lensPanel.js panelKey): phones only, where the sheet covers the legend ---------- */
@@ -389,6 +391,33 @@ body.sn-open #minimap-wrap, body.sn-open .minimap-toggle { display: none; }
   .em-top .lens-panel-head h2 { font-size: 16px; }
   .em-top .em-prov { margin: 2px 0 4px; }
 }
+
+/* ---------- great people through time (ext/timeline) ---------- */
+.tl-year { margin: 8px 0 6px; color: var(--ink-dim); }
+.tl-year b { font-family: var(--serif); font-size: 30px; font-weight: normal; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
+.tl-strip { position: relative; }
+.tl-strip svg { display: block; width: 100%; height: 44px; cursor: pointer; fill: rgba(201,164,92,.5); }
+.tl-now { stroke: var(--gold-bright); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.tl-scale { position: absolute; top: 0; left: 2px; font-size: 10px; pointer-events: none; }
+.tl-slider { display: block; width: 100%; height: 32px; margin: 2px 0 6px; accent-color: var(--gold); cursor: pointer; }
+.tl-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tl-btn {
+  min-width: 32px; min-height: 32px; padding: 4px 10px; background: rgba(0,0,0,.25); color: var(--ink); font: inherit;
+  border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+}
+.tl-btn:hover:not(:disabled) { border-color: var(--gold); }
+.tl-btn:disabled { opacity: .4; cursor: default; }
+.tl-btn[aria-pressed="true"] { color: var(--gold-bright); border-color: var(--gold); background: rgba(90,74,36,.35); }
+.tl-prev, .tl-next { font-size: 18px; line-height: 1; padding: 2px 8px; }
+.tl-play { min-width: 104px; }
+.tl-seg { display: inline-flex; }
+.tl-seg .tl-btn { border-radius: 0; }
+.tl-seg .tl-btn:first-child { border-radius: 4px 0 0 4px; }
+.tl-seg .tl-btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
+.tl-view { margin: 8px 0 0; }
+.tl-sum { margin: 10px 0 0; }
+.tl-h3 { margin: 12px 0 4px; font-family: var(--serif); font-size: 14px; font-weight: normal; color: var(--gold-bright); }
+.tl-note { margin: 10px 0 0; font-size: 12px; }
 
 @media (max-width: 1360px) and (min-width: 701px) {
   body.dock-open #minimap-wrap { display: none; }

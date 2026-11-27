@@ -269,7 +269,8 @@ export function initLensDock(opts) {
 
   // Categorical lenses (format "category"): values are indices into lens.categories, whose colours are the ramp
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
-  // one shows only that category (the same band mechanism as the histogram).
+  // one shows only that category (the same band mechanism as the histogram). A lens with `hide_empty` leaves out
+  // the swatches of categories no hex has (the timeline's trades of a year).
   const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
   const catBand = (l, k) => {
     const n = l.categories.length;
@@ -310,7 +311,7 @@ export function initLensDock(opts) {
 
   function renderCategoricalLegend(l) {
     const counts = catCounts(l);
-    const sw = l.categories.map((c, k) => `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
+    const sw = l.categories.map((c, k) => l.hide_empty && !counts[k] ? "" : `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
         title="${esc(c.description || c.name)} (${t("core.hexes", { n: counts[k] })})"><i style="background:${esc(c.color || l.ramp[k] || "#888")}"></i><span>${esc(c.name)}</span></button>`).join("");
     legend.hidden = false;
     legend.innerHTML = `

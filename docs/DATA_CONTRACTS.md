@@ -250,7 +250,8 @@ naming from the same file shares them, and the search box adds its people (by na
 focused. A lens that lists the same places per hex as another lens says `"labels_from": "<lens id>"` and carries
 only its own `names`, in that lens's order; the map copies the other lens's `labels` when it loads (Spain's
 `crime_type` from `crime`). `null_label` (optional) is what the tooltip says for a null value instead of "No data" (Spain's main-category
-lens: "Nadie", nobody born there).
+lens: "Nadie", nobody born there). `hide_empty` (optional, categorical lenses) leaves out of the legend the categories no
+hex has (the timeline's trades of a year).
 
 **Value display** (optional keys, any lens; absent = as before): `decimals` fixes the decimals of a `pct` value
 (otherwise 1 under 10 %, 0 above); `unit_in_value: true` writes the `unit` after a `pct` value in the tooltip, not on
@@ -278,9 +279,20 @@ Their interim files: `bdn_especies.json` = `{"period": [2013, 2018], "grid": "EE
 "cells_period": "2019-2024", "sporadic_cells": 37, "page": "4-6"}}}`.
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
-`great_people_kind`): `{"vintage", "categories": [{id, name, color}] (the categorical lens's), "people": [{"name",
-"note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into categories, "qid"}]}`, most famous first. Its
-`check(web_dir)` fails a person off Spanish land and a lens whose counts or main categories differ from the file.
+`great_people_kind`, and the timeline's people): `{"vintage", "categories": [{id, name, color}] (the categorical lens's),
+"timeline": {"until": 2026, "max_life": 122, "approximate": 113, "longer": 31, "left_out": {"no_birth", "no_death",
+"inconsistent"}}, "people": [{"name", "note": "pintor, 1881–1973", "place": "Málaga", "cell", "kind": index into
+categories, "qid", "life": [1881, 1973], "approx": true}]}`, most famous first. `life` = the years in which the person may have been alive, both
+included, as integer astronomical years (0 = 1 BC, -669 = 670 BC); absent for someone who cannot be placed in time
+(counted in `timeline.left_out` by reason). A birth or death given only as a decade or a century counts in full
+(`approx: true` on the person; `approximate` counts them, `longer` counts the lives that then span more than
+`max_life` years); someone Wikidata does not record as dead (no date-of-death statement of any kind), born in
+`until - max_life` or later, is alive up to `until`, the year of the Wikidata download (DECISIONS E105). A death
+recorded without a usable date leaves the person out (`no_death`) and prints as "1915–?" in the note. `personajes.en.json` carries only the English notes and
+places: the numbers stay in the Spanish file. Its `check(web_dir)` fails a person off Spanish land, a lens whose counts
+or main categories differ from the file, a `timeline` of the wrong shape (`until`, `max_life`, `approximate`, `longer` whole numbers, `left_out` one whole
+number per reason), a `life` that is not two integers in order up to `until`, and `timeline` counts that do not
+match the people; NOTEs count those shown alive today past 100 and the lives longer than `max_life`.
 
 **`fiestas.json`** (Spain, `pipeline/build/spain_fiesta.py`; read by the fiesta calendar, `web/js/ext/fiestas`, when it first
 opens): `{"vintage",
@@ -1021,7 +1033,13 @@ static layer `reservoirs`, hash keys `semana` and `embalse` (a reservoir's `name
 Walter-Lieth diagram in `ext/clima/walter.js`) and `transit` (hours to Madrid by train, only where the data has
 `transit.json`: lens `rail_madrid` with `hides_layers: ["rail"]`, static layers `transit-lines` (z 56) and
 `transit-stations` (z 69, above the landmark layers so its dots win the hit), both with a `click` that shows the
-tooltip on a touch or pen tap, e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`).
+tooltip on a touch or pen tap, e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`) and `timeline` (great people
+through time, only where the data has `personajes.json` and both great people lenses: lenses `great_people_year` and
+`great_people_year_kind`, overlay `timeline-dots`, mode `timeline`, hash key `anio` with the year as people write it,
+a minus for BC and no year 0, e.g. `#lens=great_people_year&anio=1000` or `anio=-201` (201 BC); no `anio`, or one
+that is not a year, opens at `timeline.until`; the year rules are in `ext/timeline/lifespan.js`).
+`ext/flyToCells.js` is the dock helper the fiesta calendar and the timeline use: highlight some hexes and fit them in
+the view.
 The calendar and the climate share one month (`ext/month.js`, hash key
 `mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. Moving between the
 two keeps the month; closing the last one open puts it back to this month, so a page opened again shows what the URL,

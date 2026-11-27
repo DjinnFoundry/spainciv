@@ -36,6 +36,7 @@ lists the public data behind the map.
   education (INE Annual Population Census), homeowners (2021 Census), land cover, broadband coverage, commuting, life
   expectancy, home value per m² (by province), religious weddings (Spain has no religion census) and burnt area (EFFIS); heritage, museums, castles
   and bullrings (Wikidata), ancient peoples, languages, Blue Flag beaches; food denominations and regional dishes;
+  famous people by birthplace (Wikidata), with a year control that shows who was alive;
   Fiestas de Interés Turístico, bars per inhabitant (OpenStreetMap), tourist dwellings (INE) and this map's own
   party index.
 - **Reservoirs**: the water in each basin week by week since 1988, from the Boletín Hidrológico (MITECO), with a ring
