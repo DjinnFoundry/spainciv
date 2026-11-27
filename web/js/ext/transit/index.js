@@ -14,6 +14,9 @@ import * as M from "./model.js";
 const LENS = "rail_madrid";
 const AFTER = "commuters";
 const BANDS = [0, 1, 2];
+// Below this hex radius (css px) the lines lose their casings and the dots their outlines: the whole of Spain stays
+// under 3 ms a layer (DECISIONS A18) and the casing would be thinner than a pixel anyway.
+const DETAIL_RPX = 14;
 
 export function install(app) {
   const after = app.lensById.get(AFTER);
@@ -28,7 +31,8 @@ export function install(app) {
   };
   app.addLens(lens, { after: AFTER });
 
-  let doc = null, net = null, date = "", loading = null;
+  let net = null, date = "", loading = null;
+  let dots = null; // the station dots of one zoom: {Rpx, other, madrid} (Path2D)
 
   function prepare(d) {
     const { served, ghost } = M.lineClasses(d);
@@ -47,7 +51,6 @@ export function install(app) {
         if (app.state.lens === lens) app.refreshLens();
         return;
       }
-      doc = d;
       date = M.dayLabel(d.date);
       const { values, names, labels } = M.lensLayer(d);
       const l = d.lens;
@@ -71,13 +74,15 @@ export function install(app) {
     draw(ctx, vp, w, o) {
       const s = vp.s, pad = 4 / s;
       const ghost = visibleTiles(net.ghost, vp, pad), served = visibleTiles(net.served, vp, pad);
-      const a0 = ctx.globalAlpha;
+      const detail = o.Rpx >= DETAIL_RPX;
       ctx.lineJoin = "round";
       if (ghost.length) {
         ctx.lineCap = "butt";
-        ctx.strokeStyle = "rgba(30,28,26,.55)";
-        ctx.lineWidth = 2.4 / s;
-        strokeAll(ctx, ghost, M.GHOST);
+        if (detail) {
+          ctx.strokeStyle = "rgba(30,28,26,.55)";
+          ctx.lineWidth = 2.4 / s;
+          strokeAll(ctx, ghost, M.GHOST);
+        }
         ctx.strokeStyle = "#d9d6d0";
         ctx.lineWidth = 1.2 / s;
         ctx.setLineDash([3 / s, 2.5 / s]);
@@ -87,7 +92,7 @@ export function install(app) {
       if (served.length) {
         ctx.lineCap = "round";
         ctx.strokeStyle = "rgba(255,250,238,.8)";
-        for (const b of BANDS) {
+        for (const b of detail ? BANDS : []) {
           ctx.lineWidth = (M.lineWidth(b, o.Rpx) + 1.6) / s;
           strokeAll(ctx, served, b);
         }
@@ -97,7 +102,6 @@ export function install(app) {
           strokeAll(ctx, served, b);
         }
       }
-      ctx.globalAlpha = a0;
     },
     hit(x, y, Rpx) {
       const it = M.hitLink(net.links, app.w.grid, x, y, Rpx);
@@ -109,17 +113,24 @@ export function install(app) {
   app.registerStaticLayer({
     id: "transit-stations", z: 65, visible: on, sig,
     draw(ctx, vp, w, o) {
-      const s = vp.s;
+      // One path per colour, filled and outlined once (1,400 separate arcs cost more than the 3 ms a layer may take),
+      // built once per zoom: a drag repaints strips at the same zoom (A18). Far out, dark dots without outlines.
+      const s = vp.s, detail = o.Rpx >= DETAIL_RPX;
+      if (dots?.Rpx !== o.Rpx) {
+        dots = { Rpx: o.Rpx, other: new Path2D(), madrid: new Path2D() };
+        for (const st of net.stations) {
+          const r = M.stationRadius(M.totalTrains(st), o.Rpx) / s;
+          const p = st.madrid ? dots.madrid : dots.other;
+          p.moveTo(st.x + r, st.y);
+          p.arc(st.x, st.y, r, 0, 2 * Math.PI);
+        }
+      }
       ctx.lineWidth = 1 / s;
       ctx.strokeStyle = "#1d1a18";
-      for (const st of net.stations) {
-        const r = M.stationRadius(M.totalTrains(st), o.Rpx) / s;
-        if (st.x + r < vp.x0 || st.x - r > vp.x1 || st.y + r < vp.y0 || st.y - r > vp.y1) continue;
-        ctx.fillStyle = st.madrid ? "#c8372d" : "#fffaf0";
-        ctx.beginPath();
-        ctx.arc(st.x, st.y, r, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
+      for (const [k, fill] of [["other", detail ? "#fffaf0" : "#1d1a18"], ["madrid", "#c8372d"]]) {
+        ctx.fillStyle = fill;
+        if (detail) ctx.stroke(dots[k]);
+        ctx.fill(dots[k]);
       }
     },
     hit: (x, y, Rpx) => M.hitStation(net.stations, x, y, Rpx, app.w.grid.R),
