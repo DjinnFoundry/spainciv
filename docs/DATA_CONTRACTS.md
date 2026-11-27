@@ -258,7 +258,9 @@ Galicia" | null, "community", "place": "O Carballiño" | null, "municipalities":
 `declaration`, `community` and `when` are written as the official source writes them, in its language; `when` is the
 source's text (a rule such as "el 12 de septiembre de cada año", or one year's edition such as "13 de febrero de 2026 -
 18 de febrero de 2026"), null where the source gives no date; `months` are the months that text names, empty for a
-movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates.
+movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates: an Internacional or
+Nacional fiesta has those of its community's entries for the same fiesta (`state_same`), their distinct texts joined by
+"; " and the union of their months, and none without such an entry.
 
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 

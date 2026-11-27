@@ -9,7 +9,8 @@ index, castles and bullrings.
   fiestas_interes_turistico.csv and fiestas_autonomicas.csv), named in the tooltip. A community's fiesta the State has
   since declared counts once, at the State's category; one with no municipality in its source (declared for a whole
   community, or held in a different village each year) is in the calendar but on no hex. `fiestas.json` lists them
-  all with their dates, where the source gives them.
+  all with their dates, where the source gives them; the State gives none, so a State's fiesta has those of its
+  community's entry for it, when there is one.
 * **Bars** (OpenStreetMap amenity=bar and pub) are counted in the municipality whose SIANE outline holds them; one
   outside every outline (the 1:3M coast is simplified) goes to the municipality with the nearest capital.
 * **Party index**: how many times Spain's usual a hex is, as the geometric mean of three factors: its bars and its
@@ -29,6 +30,7 @@ from ..core.geo import Shape, ShapeIndex
 from ..core.hexgrid import HexGrid
 from ..core.lang import tr
 from ..core.store import load_interim, load_interim_payload
+from ..sources.es.fiestas import split_year
 from .cities import nearest_land
 from .spain_named import named_counts, shore_cell
 
@@ -99,11 +101,30 @@ def party_index(factors: list[list]) -> list:
     return [None if any(f is None for f in fs) else round(math.prod(fs) ** (1 / len(fs)), 2) for fs in zip(*factors)]
 
 
+def twin_dates(twins: list[dict]) -> dict:
+    """The dates of a State's fiesta: the State publishes none, so they are those of its community's entries for the
+    same fiesta (`state_same`), each text as its source writes it (distinct texts joined by "; ") and the months they
+    name; none without such an entry."""
+    texts = list(dict.fromkeys(t["when"] for t in twins if t["when"]))
+    return {"when": "; ".join(texts) or None, "months": sorted({m for t in twins for m in t["months"]})}
+
+
 def all_fiestas(state: list[dict], regional: dict) -> list[dict]:
     """The State's fiestas and the communities' own, each once: a community's fiesta the State has since declared
-    (`state_same`) is left to the State's entry. A regional one carries its community's name for the declaration."""
+    (`state_same`) is left to the State's entry, which takes its dates. A regional one carries its community's name
+    for the declaration."""
     communities = regional["communities"]
-    return [{**f, "declaration": None, "place": None, "when": None, "months": []} for f in state] + [
+    twins: dict[tuple, list[dict]] = {}
+    for f in regional["fiestas"]:
+        if f["state_same"]:
+            twins.setdefault(split_year(f["state_same"]), []).append(f)
+    keys = [(f["name"], f["year"]) for f in state]
+    if unknown := sorted(set(twins) - set(keys), key=str):
+        raise RuntimeError(f"state_same names no State fiesta: {unknown}")
+    if len(set(keys)) != len(keys):
+        raise RuntimeError("two State fiestas with the same name and year: their twins' dates would be ambiguous")
+    return [{**f, "declaration": None, "place": None, **twin_dates(twins.get(k, []))}
+            for f, k in zip(state, keys)] + [
         {**f, "category": "autonomica", "community": communities[f["community"]]["name"],
          "declaration": communities[f["community"]]["declaration"]}
         for f in regional["fiestas"] if not f["state_same"]]

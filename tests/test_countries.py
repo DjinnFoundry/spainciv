@@ -1646,10 +1646,33 @@ class SpainFiestaLensesTest(unittest.TestCase):
                                                         "Galicia)"})
         self.assertEqual(FIESTA_WEIGHT["autonomica"] * 2, FIESTA_WEIGHT["nacional"])
         doc = fiesta_calendar(found, [[3], [5]], "2026-11-27")
+        # The State publishes no dates: its entry takes those of the community's entry for the same fiesta.
+        self.assertEqual((doc["fiestas"][0]["when"], doc["fiestas"][0]["months"]), ("Agosto", [8]))
         self.assertEqual(doc["fiestas"][1], {"name": "ENTROIDO DE LAZA", "category": "autonomica",
                                              "declaration": "Festa de Interese Turístico de Galicia",
                                              "community": "Galicia", "place": "Laza", "municipalities": ["32041"],
                                              "cells": [5], "when": None, "months": []})
+
+    def test_a_state_fiesta_takes_the_dates_of_all_its_community_entries(self):
+        from pipeline.build.spain_fiesta import all_fiestas
+
+        state = [{"name": "Ruta del Tambor", "category": "nacional", "year": 2014, "community": "Aragón",
+                  "municipalities": ["44013"]},
+                 {"name": "Fiesta sin fecha", "category": "internacional", "year": 1980, "community": "Aragón",
+                  "municipalities": ["44216"]}]
+
+        def twin(when, months, same="Ruta del Tambor (2014, incluye las Semanas Santas de Calanda)"):
+            return {"name": "X", "community": "aragon", "place": "", "municipalities": [], "when": when,
+                    "months": months, "state_same": same}
+
+        regional = {"communities": {"aragon": {"name": "Aragón", "declaration": None}},
+                    "fiestas": [twin("Semana Santa", []), twin("Del 9 al 15 de Agosto", [8]),
+                                twin("Semana Santa", []), twin("Julio y Septiembre", [7, 9])]}
+        found = all_fiestas(state, regional)
+        self.assertEqual([(f["when"], f["months"]) for f in found],
+                         [("Semana Santa; Del 9 al 15 de Agosto; Julio y Septiembre", [7, 8, 9]), (None, [])])
+        with self.assertRaises(RuntimeError):
+            all_fiestas(state, {**regional, "fiestas": [twin("Agosto", [8], same="Fiesta que no está (1999)")]})
 
     def test_the_calendar_must_match_the_lens(self):
         import tempfile
