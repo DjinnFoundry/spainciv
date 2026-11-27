@@ -1,4 +1,5 @@
-// Shared by the extensions' docks (fiestas, timeline): ring some hexes and bring them into view.
+// Shared by the extensions' docks (fiestas, timeline) and the lens legend's fly_to list: ring some hexes and bring them
+// into view.
 
 /** Highlight `cells` and fit them in the view, zooming in to `scale` css px per km at most (never out of a closer
  *  view). Returns the highlight, so the caller can tell later whether it is still the map's. */

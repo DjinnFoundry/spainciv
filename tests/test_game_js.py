@@ -225,6 +225,31 @@ class CluesTest(unittest.TestCase):
             self.assertRegex(near, r"50 km")
             self.assertNotIn("Granada", near + named)
 
+    def test_many_centenarians_is_a_number_in_clue_2_where_the_hex_stands_out(self):
+        for lang in ("es", "en"):
+            got = run("""
+                const { t } = await import('./web/js/i18n.js');
+                const L = lenses.get('centenarians'), label = t('game.f.centenarians');
+                const fact = (c) => P.buildClues(g, c)[1].facts.find((f) => f.label === label) || null;
+                const over = pool.find((c) => L.values[c] >= P.STANDOUT * L.national);
+                const guadix = P.dailyCell(pool, 1);
+                const f = fact(over);
+                out({ national: L.national, over, value: f && f.value, num: f && f.num, rate: L.values[over],
+                      guadix: fact(guadix), guadixRate: L.values[guadix],
+                      everyOver: pool.every((c) => !!fact(c) === (L.values[c] >= P.STANDOUT * L.national)) });
+            """, lang)
+            self.assertAlmostEqual(got["national"], 3.66, places=2)  # 18,164 centenarians in the census of 2026
+            self.assertIsNotNone(got["over"], lang)
+            self.assertTrue(got["num"], lang)  # a number: it does not narrow the map
+            times = got["rate"] / got["national"]
+            rate, ratio = (f"{got['rate']:.1f}", f"{times:.1f}") if lang == "en" else (
+                f"{got['rate']:.1f}".replace(".", ","), f"{times:.1f}".replace(".", ","))
+            self.assertEqual(got["value"], f"{rate} por 10.000 ({ratio} veces España)" if lang == "es"
+                             else f"{rate} per 10,000 ({ratio} times Spain's)")
+            self.assertIsNone(got["guadix"], lang)  # day 1's clue 2 stays as it was: Guadix's 3.7 is under the cut
+            self.assertLess(got["guadixRate"], 1.5 * got["national"])
+            self.assertTrue(got["everyOver"], lang)
+
     def test_every_fact_fits_its_own_answer(self):
         """The measure below counts the hexes a clue fits; the answer must always be one of them."""
         got = run("""

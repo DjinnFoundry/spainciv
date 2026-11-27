@@ -11,7 +11,8 @@ const nameOf = (table, id) => table.find((t) => t.id === id)?.name;
 // A lens with `names` and per-hex `labels` (indices into names) lists what covers the hex, up to this many.
 const LABELS_SHOWN = 8;
 
-export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
+// `tapped`: shown by a tap on a touch screen (a lens with touch_details), so the last line says a second tap opens it.
+export function showCellTooltip(mx, my, w, i, lens, showResources = true, tapped = false) {
   const raw = w.raw;
   const lines = [];
   const city = w.cityByCell.get(i);
@@ -53,7 +54,8 @@ export function showCellTooltip(mx, my, w, i, lens, showResources = true) {
     }
     if (res.length > 4) lines.push(`<span class="muted">${t("core.tip.more", { n: res.length - 4 })}</span>`);
   }
-  if (city) lines.push(`<span class="muted">${t("core.tip.openCity")}</span>`);
+  if (tapped) lines.push(`<span class="muted">${t("core.tip.tapAgain")}</span>`);
+  else if (city) lines.push(`<span class="muted">${t("core.tip.openCity")}</span>`);
   // A lens whose panel takes the click on a hex says what the click does instead (lens.click_hint, plain text).
   else if (o >= 0) lines.push(`<span class="muted">${lens?.click_hint ? esc(lens.click_hint) : t("core.tip.openState", { name: esc(raw.states[o].name) })}</span>`);
   show(mx, my, lines.join("<br>"));

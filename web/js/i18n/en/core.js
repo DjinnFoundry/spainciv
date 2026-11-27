@@ -42,6 +42,7 @@ export default {
   "core.tip.more": "+{n} more",
   "core.tip.openCity": "Click to open the city",
   "core.tip.openState": "Click to open {name}",
+  "core.tip.tapAgain": "Tap again to open it",
 
   // city and state panels
   "core.panel.city": "City",
@@ -105,6 +106,7 @@ export default {
   "core.lens.backToTerrain": "Back to terrain",
   "core.lens.categories": "{name} categories: click one to show only it",
   "core.lens.catHint": "Click a category to show only it",
+  "core.lens.flyTo": "Go to:",
   "core.lens.showingOnly": "Showing only {what}",
   "core.lens.allValues": "all values",
   "core.lens.scaleLabel": "Highlight a range of {name} values. Hover or drag; arrow keys move the highlight, Escape clears it.",

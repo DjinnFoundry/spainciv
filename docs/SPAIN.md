@@ -93,7 +93,8 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `serpavi` | Ministerio de Vivienda, SERPAVI 2011-2024 (rents declared in IRPF, XLSX) | Public-sector information, reuse citing the source (Ley 37/2007) | Monthly rent: median rent of the whole dwelling, flats and houses and an area's municipalities combined as a lease-weighted mean of medians; rent ÷ income |
 | `cobertura_banda_ancha` | Ministerio para la Transformación Digital: broadband coverage 2021-2025 by municipality (XLSX) | Public-sector information, reuse citing the source (Ley 37/2007) | Broadband lens: households covered at 100 Mbps or more under peak demand, June 2025 (coverage, not subscriptions) |
 | `ine_censo_lugar_trabajo` | INE tables 69968 and 69987 (Annual Population Census, employed by place of work: Spain, provinces, 151 main cities) | CC BY 4.0, citing INE | Commuting lens: employed who work in another municipality ÷ employed with a known workplace; other municipalities take the rest of their province |
-| `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities) | CC BY 4.0, citing INE | Life expectancy lens (2024); municipalities without their own figure take their province's |
+| `ine_esperanza_vida` | INE tables 1485 and 30687 (life expectancy at birth: provinces, 155 municipalities), 1486 and 30688 (at 65, both sexes, men and women: the same), 1415 (at 65, Spain) and 1449 (at 65, autonomous communities) | CC BY 4.0, citing INE | Life expectancy lenses at birth and at 65 (2024, the latest year every table shares, communities included); municipalities without their own figure take their province's; the communities (their latest year, 2025) only on the Unciv page |
+| `ine_censo_edad` | INE table 65034 (Annual Population Census, population by sex and five-year age group, 1 January 2026, provisional), read in a stream (about 2 GB with census sections), checked against table 1488 (share of the population over each age, by province) | CC BY 4.0, citing INE | Longevity lenses (E107, E108): oldest old (85+ ÷ 65+) and centenarians per 10,000, each smoothed towards Spain's figure, longevity zones; the Unciv longevity trait (E110) |
 | `ine_matrimonios` | INE tables 77172 and 37645 (MNP marriages by form of celebration: provinces, 150 main municipalities) | CC BY 4.0, citing INE | Religious weddings lens: religious ÷ all marriages (2025), by residence; other municipalities take the rest of their province |
 | `effis_incendios` | EC JRC, EFFIS (Copernicus EMS) burnt-area perimeters 2016-2025, WFS, with each fire's start month (`FIREDATE`) | CC BY 4.0 | Wildfires lens: hectares burnt per hex, each fire's area shared among the hexes it covers; the Unciv fire season: the fires of 500 ha or more per tile class |
 | `balance_criminalidad` | Ministerio del Interior, Balance de Criminalidad 2025 Q4 (January to December), Portal Estadístico de Criminalidad: CSV exports of tables 1509011 (provinces, Spain, abroad) and 1509012 (islands and municipalities over 20,000) | Public-sector information, reuse citing the source (Ley 37/2007) | Crime lens: known offences per 1,000 Padrón inhabitants (2025); the 427 listed municipalities have their own rate, every other one the rest of its province or, in the Balearic and Canary Islands, of its island; standout offence lens: per listed municipality or rest, the type most times Spain's rate, painted at 1.25 times or more in units of 20,000 residents or more (E85, F35) |
@@ -140,9 +141,13 @@ the site is served or packaged, `pipeline/play.py` makes from it:
 - `jugar.html` (Spanish) and `play.html` (English): how to play it and what is real data and what is game
   convention, linked from the help dialog in its language.
 
+The community with the highest oldest-old index (residents aged 85 and over ÷ those aged 65 and over, INE census
+of 2026), Castilla y León, has a second unique, "[+10]% growth [in all cities]": the index is real data, the growth a
+game convention (E110), and the page says both.
+
 The page, the README, the resource names and the nations' texts in Spanish and English are templates in
-`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51, E60–E62, E87, E88, E95, A15,
-A17, A28, A32, F17, F29 and F40. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with
+`pipeline/templates/` (A17, A28). The rules and the reasons are DECISIONS.md E51, E60–E62, E87, E88, E95, E110, A15,
+A17, A28, A32, F17, F29, F40 and F44. The map was checked in Unciv 5.0.1 (the jar of the GitHub release, run with
 `java -jar`): the mod installed through "Download mod from URL", the map in the editor with every resource kept
 (`docs/images/es-unciv-editor.jpg`), the 19 nations in the nation picker, and a 45-turn game with Galicia against the
 other 16 communities, each at its capital or beside it and Spain left without a starting location

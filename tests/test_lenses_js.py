@@ -68,3 +68,21 @@ class LensesJsTest(unittest.TestCase):
           return [line(file.lenses[0]), line(file.lenses[1]), line(sun), line(loose)];
         })()""")
         self.assertEqual(got, ["ine · INE Padrón, 1 January 2025", "Dated · 2024", "NOAA Solar Calculator", "free text"])
+
+    def test_years_take_decimals_and_a_long_unit_leaves_the_ticks_bare(self):
+        # Spain's life expectancy at 65 ("años más a los 65") prints its unit on its own line, so "20,0 años21,0 años"
+        # never overprints; the US age lens ("years") keeps its ticks as they were.
+        life = "{format: 'years', unit: 'more years at 65', domain: [20, 24], decimals: 1}"
+        age = "{format: 'years', unit: 'years', domain: [31, 54]}"
+        got = self.run_js(f"[m.formatLensValue({life}, 22.2), m.formatLensValue({{format: 'years', decimals: 2}}, 22.16), "
+                          f"m.formatLensTick({life}, 0, 0), m.formatLensTick({life}, 0.25, 1), m.formatLensTick({life}, 1, 4), "
+                          f"m.formatLensTick({age}, 0, 0), m.formatLensValue({age}, 38.44)]")
+        self.assertEqual(got, ["22.2 yrs", "22.16 yrs", "≤ 20.0", "21.0", "≥ 24.0", "≤ 31.0 yrs", "38.4 yrs"])
+
+    def test_a_lens_with_also_sources_names_each(self):
+        got = self.run_js("""(() => {
+          const sources = [{id: 'census', title: 'Census', vintage: '2026'}, {id: 'life', title: 'Life', vintage: '2024'}];
+          const line = m.lensSourceLine({lenses: []}, sources);
+          return [line({source: 'census', also_sources: ['life']}), line({source: 'census'})];
+        })()""")
+        self.assertEqual(got, ["Census · 2026 + Life · 2024", "Census · 2026"])

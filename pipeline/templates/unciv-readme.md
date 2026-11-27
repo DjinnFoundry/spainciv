@@ -15,6 +15,8 @@ de [$product]($url): costa, relieve, ríos, cubierta del suelo y recursos de dat
   en Unciv $release.
 - Cada comunidad empieza en su capital, con su bandera, sus municipios más poblados (Padrón $padron_year) como
   nombres de ciudad y una ventaja sobre el recurso que más tiene. Elige la tuya en la bandera de tu jugador.
+- $longevity_name, la comunidad con mayor proporción de vecinos de 85 años o más entre los de 65 o más (Censo anual
+  de población del INE), crece además un $growth % más rápido: es una convención del juego.
 - Al elegir el mapa «$map_name» en una partida nueva, Unciv activa este mod por sí solo.
 
 | Civilización | Empieza en | Ventaja | Tendencia de inicio |
@@ -52,6 +54,8 @@ Spain as a map for [Unciv](https://github.com/yairm210/Unciv), the open-source C
   Tested in Unciv $release.
 - Each community starts in its capital, with its flag, its most populous municipalities ($padron_year Padrón) as city
   names and an advantage on the resource it holds most of. Pick yours on your player's flag.
+- $longevity_name, the community with the largest share of residents aged 85 and over among those 65 and over (INE
+  Annual Population Census), also grows $growth% faster: a game convention.
 - When you pick the map «$map_name» for a new game, Unciv turns this mod on by itself.
 
 | Civilization | Starts in | Advantage | Start bias |

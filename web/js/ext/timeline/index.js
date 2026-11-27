@@ -19,7 +19,7 @@ import { lensPanel, panelHead } from "../../app/lensPanel.js";
 import { lang, t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
 import { namesFrom } from "../../ui/lenses.js";
-import { flyToCells } from "../flyToCells.js";
+import { flyToCells } from "../../app/flyToCells.js";
 import * as L from "./lifespan.js";
 
 const COUNT = "great_people_year";

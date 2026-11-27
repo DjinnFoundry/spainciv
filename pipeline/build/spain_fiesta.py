@@ -88,12 +88,22 @@ def per_inhabitant(totals: list) -> list:
     return [None if t is None else round(t[0] * PER / t[1], 1) for t in totals]
 
 
-def times_spain(totals: list, prior: float) -> list:
-    """Each hex's rate ÷ Spain's, the hex's count and residents first topped up with `prior` residents at Spain's
-    rate: (count + prior × Spain) ÷ (residents + prior) ÷ Spain."""
+def pooled_rate(totals: list) -> float:
+    """The rate of every hex together: all their counts ÷ all their residents."""
     known = [t for t in totals if t is not None]
-    spain = sum(c for c, _ in known) / sum(r for _, r in known)
-    return [None if t is None else (t[0] + prior * spain) / (t[1] + prior) / spain for t in totals]
+    return sum(c for c, _ in known) / sum(r for _, r in known)
+
+
+def shrunk_rate(totals: list, prior: float, rate: float) -> list:
+    """Each hex's rate drawn towards `rate`, its count and residents first topped up with `prior` residents at that
+    rate: (count + prior × rate) ÷ (residents + prior); null where the hex has no total."""
+    return [None if t is None else (t[0] + prior * rate) / (t[1] + prior) for t in totals]
+
+
+def times_spain(totals: list, prior: float) -> list:
+    """Each hex's rate ÷ Spain's (the hexes' pooled rate), shrunk towards Spain's with `prior` residents."""
+    spain = pooled_rate(totals)
+    return [None if r is None else r / spain for r in shrunk_rate(totals, prior, spain)]
 
 
 def party_index(factors: list[list]) -> list:

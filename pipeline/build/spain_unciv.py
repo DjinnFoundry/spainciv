@@ -23,8 +23,9 @@ Nations (COMMUNITY_NATIONS, CITY_STATES, nations()): the mod adds the 17 autonom
 Ceuta and Melilla as city-states, each starting at the municipality where its government sits. A nation's cities are
 its municipalities by population (Padrón), its government's seat first; its start bias, the terrain over-represented
 in its land on this map; its unique, a bonus on the resource it holds most of relative to its size; its colours and
-icon, its flag's (spain_flags). The map also keeps the starting locations of the bare map (starts()): Spain in Madrid
-and "Any Civ" in the largest urban areas, which is what the base ruleset alone can use.
+icon, its flag's (spain_flags). The community with the highest oldest-old index (85+ ÷ 65+, INE census) also grows
+faster (longevity(), unciv.LONGEVITY_UNIQUE), a game convention. The map also keeps the starting locations of the bare
+map (starts()): Spain in Madrid and "Any Civ" in the largest urban areas, which is what the base ruleset alone can use.
 """
 
 from __future__ import annotations
@@ -32,18 +33,21 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 
 from ..core.geo import ring_area, ring_centroid
-from ..core.hexgrid import HexGrid
-from ..core.store import load_interim, load_web, write_web
+from ..core.hexgrid import HexGrid, components
+from ..core.store import load_interim, load_interim_payload, load_web, write_web
 from ..core.lang import pick, tr
 from ..countries import active
+from ..sources.es.ine_people import ages_from
 from ..sources.es.provinces import COMMUNITY_OF
 from . import spain_flags, unciv
 from . import spain_unciv_fire as fire
+from .spain_longevity import OLD_FROM, OLDEST_FROM, census_is_provisional, oldest_old_index
 from .world import LAND
 from .spain_wonders import municipality_finder
 
 REQUIRES = ["world.json", "cities.json", "resources.json", "lenses.json", "_world", "calidad_diferenciada",
-            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario", "ine_padron", "effis_incendios"]
+            "igme_minas", "siane", "natural_earth_es", "ine_censo_agrario", "ine_padron", "effis_incendios",
+            "ine_censo_edad", "ine_esperanza_vida"]
 PRODUCES = ["unciv.json"]
 COUNTRIES = ("es",)
 
@@ -218,7 +222,7 @@ def place_points(resource: str, points: list[tuple[float, float]], grid: unciv.G
 def landmasses(grid: unciv.Grid, tiles) -> list[int]:
     """Each tile's landmass size in tiles (0 for water)."""
     size = [0] * len(tiles)
-    for group in unciv.components([t for t, tile in enumerate(tiles) if tile.is_land], grid.ring):
+    for group in components([t for t, tile in enumerate(tiles) if tile.is_land], grid.ring):
         for t in group:
             size[t] = len(group)
     return size
@@ -360,6 +364,34 @@ def seat_starts(grid: unciv.Grid, tiles, of_tile: dict[int, str], seats: list[tu
     return out
 
 
+def longevity_index(provinces: dict[str, dict]) -> dict[str, float]:
+    """Each major nation's oldest-old index: its provinces' residents aged 85 and over ÷ those aged 65 and over (the
+    census by age, ine_censo_edad), as a fraction."""
+    old: Counter = Counter()
+    oldest: Counter = Counter()
+    for code, counts in provinces.items():
+        community = COMMUNITY_OF[code]
+        if community in COMMUNITY_NATIONS:
+            old[community] += ages_from(counts, OLD_FROM)
+            oldest[community] += ages_from(counts, OLDEST_FROM)
+    return {c: oldest[c] / old[c] for c in sorted(old)}
+
+
+def longevity(ages_payload: dict, at65: dict) -> dict:
+    """The longevity trait (E110): the major nation with the highest oldest-old index, with Spain's, the census year and
+    whether its figures are provisional, and the community that leads in life expectancy at 65 (table 1449, the year
+    of the lenses) for the page."""
+    ages = ages_payload["data"]
+    index = longevity_index(ages["provinces"])
+    code = max(index, key=lambda c: (index[c], c))
+    top = max((c for c in at65["communities"] if c in COMMUNITY_NATIONS), key=lambda c: at65["communities"][c]["both"])
+    return {"code": code, "name": COMMUNITY_NATIONS[code][0], "index": round(index[code], 4),
+            "spain": round(oldest_old_index(ages["nation"]), 4), "year": ages["year"],
+            "provisional": census_is_provisional(ages_payload),
+            "e65_top": {"name": COMMUNITY_NATIONS[top][0], "value": at65["communities"][top]["both"],
+                        "year": at65["year"]}}
+
+
 def nations(world: dict, grid: unciv.Grid, fine: HexGrid, tiles, padron: dict, names: dict[str, str],
             seat_xy: dict[str, tuple[float, float]]) -> list[dict]:
     """The communities and the autonomous cities as nations of the mod, with what the mod and its page say of each
@@ -470,6 +502,10 @@ def build() -> None:
     padron = load_interim("ine_padron")
     nation_list = nations(world, grid, fine, tiles, padron, {g: m["name"] for g, m in munis.items()},
                           {g: proj(*m["centre"]) for g, m in munis.items()})
+    longest = longevity(load_interim_payload("ine_censo_edad"), load_interim("ine_esperanza_vida")["at65"])
+    for n in nation_list:
+        if n["code"] == longest["code"]:
+            n["longevity"] = {k: longest[k] for k in ("index", "spain", "year", "provisional")}
     nation_starts = [(n.pop("start"), n["name"], "Normal" if n["city_state"] else "Human") for n in nation_list]
     doc = unciv.tile_map(grid, tiles, MAP_NAME, DESCRIPTION.format(km=TILE_KM, starts=STARTS_TEXT), nation_starts, MOD_NAME)
     bare = unciv.tile_map(grid, tiles, MAP_NAME, DESCRIPTION.format(km=TILE_KM, starts=BARE_STARTS_TEXT),
@@ -489,7 +525,7 @@ def build() -> None:
         "natural_wonders": [wonder],
         "start_gap_tiles": START_GAP,
         "starts": [{"nation": nation, "usage": usage, "city": city} for _, nation, usage, city in start_list],
-        "nations": nation_list, "padron_year": padron_year(padron),
+        "nations": nation_list, "padron_year": padron_year(padron), "longevity": longest,
         "fire_season": fire.season(load_interim("effis_incendios"), tiles, fine, proj),
     }
     write_web("unciv.json", {"summary": summary, "map": doc,

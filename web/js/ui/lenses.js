@@ -33,7 +33,7 @@ export function formatLensValue(lens, v) {
     case "minutes": return t("core.lens.minutes", { n: fixed(v, 0) });
     case "clock": return clock(v);
     case "duration": return formatDuration(v);
-    case "years": return t("core.lens.years", { n: fixed(v, 1) });
+    case "years": return t("core.lens.years", { n: fixed(v, lens.decimals ?? 1) });
     // A lens with `decimals` writes every value with that many (the climate's "23,0 °C" next to "23,1 °C").
     case "float": return (lens.decimals != null ? fixed(v, lens.decimals) : v < 10 ? fixed(v, 1) : compact(v)) + (lens.unit ? " " + lens.unit : "");
   }
@@ -71,7 +71,11 @@ export function formatLensTick(lens, t, k = -1) {
   const v = lens.format === "int" && Number.isFinite(raw) ? Math.round(raw) : raw; // a count never reads "4.5"
   const short = ((lens.format === "int" || lens.format === "float") && lens.unit && lens.unit.length > 4
     && !(lens.format === "int" && perKm2(lens))) || lens.unit_in_value ? { ...lens, unit: null } : lens;
-  let s = lens.format === "duration" && Number.isFinite(v) && hourTicks(lens) ? durationTick(v) : formatLensValue(short, v);
+  // A years lens whose unit says more than "years" ("años al nacer") prints that unit on its own line too: the ticks
+  // are then the number alone, as "20,0 años21,0 años" would overprint.
+  const yearsAlone = lens.format === "years" && lens.unit && lens.unit.length > 5 && Number.isFinite(v);
+  let s = lens.format === "duration" && Number.isFinite(v) && hourTicks(lens) ? durationTick(v)
+    : yearsAlone ? fixed(v, lens.decimals ?? 1) : formatLensValue(short, v);
   const zero = Number.isFinite(v) && Math.abs(v) < 1e-9;
   if (zero) s = s.replace(/^(\$?)0[.,]0+(?!\d)/, (_, d) => d + "0");
   if (lens.bounded) return s; // the domain is the value's natural range (a share from 0 to 1): nothing lies beyond
@@ -111,12 +115,14 @@ const saveRecent = (ids) => {
  *  file's vintage: the municipal register's date is not the date of a calendar or of the sun's equations. */
 export function lensSourceLine(lensFile, sources = []) {
   const fromFile = new Set(lensFile?.lenses || []);
-  return (lens) => {
-    const src = sources.find((s) => s.id === lens.source);
-    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : lens.source;
+  const one = (lens, id) => {
+    const src = sources.find((s) => s.id === id);
+    const name = src ? src.publisher && src.title.length > 44 ? src.publisher : src.title : id;
     const vintage = src?.vintage || (fromFile.has(lens) ? lensFile.vintage : "") || "";
     return [name, vintage].filter(Boolean).map(esc).join(" · ");
   };
+  // A lens that also draws on other sources (`also_sources`, e.g. the longevity zones) names each after its own.
+  return (lens) => [lens.source, ...(lens.also_sources || [])].map((id) => one(lens, id)).join(" + ");
 }
 
 /**
@@ -290,6 +296,11 @@ export function initLensDock(opts) {
     return counts;
   });
   const noteHtml = (l) => (l.note ? `<div class="lg-note">${esc(l.note)}</div>` : "");
+  // A lens with `fly_to` (indices into its names) lists those names under its swatches; a click brings the hexes
+  // labelled with one into view (a zone hidden under a city banner, the longevity zones of Madrid and Barcelona).
+  const flyHtml = (l) => (l.fly_to?.length && l.names && l.labels ? `<div class="lg-fly"><span>${t("core.lens.flyTo")}</span>
+      ${l.fly_to.map((k) => `<button type="button" class="lg-fly-btn" data-k="${k}">${esc(l.names[k])}</button>`).join("")}</div>` : "");
+  const flyCells = (l, k) => l.labels.flatMap((ks, c) => (ks?.includes(k) ? [c] : []));
   // Both legends' title row: the lens, the details toggle and the close button.
   const legendHead = (l) => `<div class="lg-head"><span class="lg-ic">${glyph(l, 18)}</span><span class="title">${esc(l.heading || l.name)}</span>
         <button class="icon-btn lg-more" aria-expanded="${legendExpanded}" aria-label="${t("core.lens.showFull")}" title="${t("core.lens.details")}">${legendExpanded ? "−" : "+"}</button>
@@ -319,6 +330,7 @@ export function initLensDock(opts) {
       <div class="desc">${esc(l.description || l.unit || "")}</div>
       ${noteHtml(l)}
       <div class="lg-cats" role="group" aria-label="${esc(t("core.lens.categories", { name: l.name }))}">${sw}</div>
+      ${flyHtml(l)}
       <div class="lg-meta"><span class="src">${sourceLine(l)}</span></div>
       <div class="lg-hint" aria-live="polite">${t("core.lens.catHint")}</div>`;
     legend.querySelector(".lg-close").onclick = () => opts.onPick(null);
@@ -326,6 +338,11 @@ export function initLensDock(opts) {
     legend.querySelector(".lg-more").onclick = () => {
       legendExpanded = !legendExpanded;
       renderLegend();
+    };
+    const fly = legend.querySelector(".lg-fly");
+    if (fly) fly.onclick = (e) => {
+      const b = e.target.closest("button[data-k]");
+      if (b) opts.onFly?.(flyCells(l, +b.dataset.k));
     };
     legend.querySelector(".lg-cats").onclick = (e) => {
       const b = e.target.closest(".lg-cat");
@@ -360,6 +377,8 @@ export function initLensDock(opts) {
       return;
     }
     const l = active;
+    // A lens with `touch_details` shows its description on a phone once the legend is expanded (style.css).
+    legend.classList.toggle("touch-details", !!l.touch_details);
     if (isCategorical(l)) return renderCategoricalLegend(l);
     if (!l.domain) return renderPendingLegend(l);
     const ticks = [0, 0.25, 0.5, 0.75, 1]

@@ -1,19 +1,18 @@
 """Spain's Knowledge, Daily life, Faith and Hazards lenses: the Spanish counterparts of the US map's Broadband,
-Commute, Wellbeing, Faith and Disasters lenses, each from the official open figure that exists in Spain (DECISIONS).
+Commute, Faith and Disasters lenses, each from the official open figure that exists in Spain (DECISIONS).
 
 * **Broadband** (id and look of the US lens): households a network can serve at 100 Mbps or more, by municipality
   (Ministerio para la Transformación Digital). Coverage, where the US lens counts subscriptions.
 * **Commuting**: employed residents who work in another municipality (INE Annual Population Census). INE publishes
   where people work, not how long it takes them, so it is a share and not the US minutes: a lens of its own.
-* **Life expectancy** at birth (INE), standing in for the US Wellbeing index (CDC health estimates).
 * **Religious weddings**: share of marriages celebrated religiously (INE). Spain has no census of religion.
 * **Wildfires**: burnt area of the last ten seasons (EFFIS), standing in for the FEMA disaster declarations.
 
-INE publishes commuting, life expectancy and weddings for every province and for about 150 large municipalities.
-Those municipalities carry their own figure; every other municipality takes the rest of its province (the province's
-count minus its listed municipalities) where the figure is a count, and the province's own value where it is a rate
-(life expectancy). Each lens is spread to hexes like the income lens: the population-weighted mean of the hex's
-municipalities. Uninsured has no counterpart: public health care covers every resident (Real Decreto-ley 7/2018).
+INE publishes commuting and weddings for every province and for about 150 large municipalities. Those municipalities
+carry their own figure; every other municipality takes the rest of its province (the province's count minus its
+listed municipalities). Life expectancy, which stands in for the US Wellbeing index, is in spain_longevity.py. Each
+lens is spread to hexes like the income lens: the population-weighted mean of the hex's municipalities. Uninsured
+has no counterpart: public health care covers every resident (Real Decreto-ley 7/2018).
 
 The builder is spain.py, which calls `lenses()`; SOURCES go into its REQUIRES.
 """
@@ -28,10 +27,10 @@ from ..core.hexgrid import HexGrid
 from ..core.lang import Text, pct, tr
 from ..core.store import load_interim
 from ..sources.es.ine_daily import province_of
-from .lenses import AMENITIES_RAMP, COUNTY_LENSES, DISASTERS_RAMP, FAITH_RAMP, _spread
+from .lenses import COUNTY_LENSES, DISASTERS_RAMP, FAITH_RAMP, _spread
 
 SOURCES = [
-    "cobertura_banda_ancha", "ine_censo_lugar_trabajo", "ine_esperanza_vida", "ine_matrimonios", "effis_incendios",
+    "cobertura_banda_ancha", "ine_censo_lugar_trabajo", "ine_matrimonios", "effis_incendios",
 ]
 SPREAD = tr("Un hexágono muestra la media de sus municipios ponderada por población.",
             "A hex shows the population-weighted mean of its municipalities.")
@@ -117,26 +116,6 @@ def commuters_lens(data: dict, geoids: list[str], weights: list) -> dict:
     }
 
 
-def life_expectancy_lens(data: dict, geoids: list[str], weights: list) -> dict:
-    own, prov = data["municipalities"], data["provinces"]
-    return {
-        "id": "life_expectancy", "group": "life", "name": tr("Esperanza de vida", "Life expectancy"),
-        "icon": "l-amenities", "emoji": "❤️", "unit": tr("años al nacer", "years at birth"), "format": "years",
-        "scale": "linear", "higher_is": "good", "ramp": AMENITIES_RAMP, "source": "ine_esperanza_vida",
-        "description": tr(
-            "Esperanza de vida al nacer, ambos sexos, en {year} (Indicadores Demográficos Básicos del INE). Los {n} "
-            "municipios para los que el INE la calcula tienen la suya; los demás, la de su provincia, que incluye a esos "
-            "municipios (una esperanza de vida no se puede restar). Ocupa el lugar del índice de bienestar del mapa de "
-            "EE. UU. (estimaciones de salud de los CDC). {spread}",
-            "Life expectancy at birth, both sexes, in {year} (INE Basic Demographic Indicators). The {n} municipalities "
-            "INE calculates it for have their own; the others take their province's, which includes those "
-            "municipalities (a life expectancy cannot be subtracted). It takes the place of the US map's wellbeing index "
-            "(CDC health estimates). {spread}",
-        ).format(year=str(data["year"]), n=len(own), spread=SPREAD),
-        "values": _spread(weights, by_municipality(geoids, lambda g: own.get(g, prov.get(g[:2]))), 2),
-    }
-
-
 def religious_share(counts: dict) -> float | None:
     return counts.get("religious", 0) / counts["total"] if counts.get("total") else None
 
@@ -214,12 +193,11 @@ def wildfires_lens(data: dict, proj, grid: HexGrid, owner: list[int]) -> dict:
 
 
 def lenses(world: dict, weights: list, proj, grid: HexGrid) -> list[dict]:
-    """The five lenses, in the order of the US groups (Knowledge, Daily life, Faith, Hazards)."""
+    """The four lenses, in the order of the US groups (Knowledge, Daily life, Faith, Hazards)."""
     geoids = world["counties"]
     return [
         broadband_lens(load_interim("cobertura_banda_ancha"), geoids, weights),
         commuters_lens(load_interim("ine_censo_lugar_trabajo"), geoids, weights),
-        life_expectancy_lens(load_interim("ine_esperanza_vida"), geoids, weights),
         weddings_lens(load_interim("ine_matrimonios"), geoids, weights),
         wildfires_lens(load_interim("effis_incendios"), proj, grid, world["owner"]),
     ]

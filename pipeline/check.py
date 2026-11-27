@@ -541,8 +541,13 @@ def check_lenses(r: Report, doc, ctx: dict | None, source_ids: set | None) -> No
             r.fail(f"{what}: domain must be [lo, hi] with lo < hi (lo > 0 for log): {d!r}")
         if not (isinstance(lens["ramp"], list) and len(lens["ramp"]) >= 2 and all(COLOR.match(str(c)) for c in lens["ramp"])):
             r.fail(f"{what}: ramp must be ≥2 #hex colours")
-        if source_ids is not None and lens["source"] not in source_ids:
-            r.warn(f"{what}: source {lens['source']!r} is not in sources.json")
+        for src in [lens["source"], *lens.get("also_sources", [])]:
+            if source_ids is not None and src not in source_ids:
+                r.warn(f"{what}: source {src!r} is not in sources.json")
+        fly = lens.get("fly_to")
+        if fly is not None and not (isinstance(fly, list) and lens.get("names") and lens.get("labels")
+                                    and all(isinstance(k, int) and 0 <= k < len(lens["names"]) for k in fly)):
+            r.fail(f"{what}: fly_to must list indices into names, on a lens with names and labels")
         if "note" in lens and not (lens["note"] is None or isinstance(lens["note"], str)):
             r.fail(f"{what}: note must be a string or null")
         if lens["format"] == "category":
