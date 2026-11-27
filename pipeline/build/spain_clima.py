@@ -9,8 +9,10 @@
   holding it or the nearest land hex. Sunshine exists only there and is never spread to other hexes.
 * **Provinces**: AEMET's official 1991-2020 province normals (sources/es/aemet_normales.py), for the Walter-Lieth
   chart, the hexes without a grid value, and the check that compares the grid with them; "ESPAÑA PENINSULAR" gives the month strip.
-* **Domains**: the 2nd-98th percentile of the hex values over all 12 months (of the station values for sunshine), so
-  every month is drawn on one scale.
+* **Domains**: the 0.2nd-99.8th percentile of the hex values over all 12 months (temperature rounded outward to whole
+  degrees), and the lowest to the highest station value for sunshine, so every month is drawn on one scale. A month
+  pooled with eleven others sits near one end: the 2nd-98th percentile clamped a fifth of July's rain and an eighth of
+  January's frost, this one clamps under 2 % of the land in any month (tests/test_clima.py).
 """
 
 from __future__ import annotations
@@ -37,6 +39,8 @@ GRID_VARS = ["tmax", "tmin", "prec", "frost"]
 STATION_VARS = {"tmed": "tmean", "tmax": "tmax", "tmin": "tmin", "prec": "prec", "frost": "frost_lt0", "sun": "sun"}
 RANGES = {"temp": (-25, 45), "prec": (0, 1000), "frost": (0, 31), "sun": (0, 450)}
 GAP_WARN = 0.01  # share of the land hexes without a grid value
+DOMAIN_TAIL = 0.002  # the share of the pooled hex values left beyond each end of a scale
+GAPS_LISTED = 5  # check() names this many of the largest station-vs-hex differences
 STATION_KM = 15.0  # a station farther than this from its hex's centre is misplaced (1.5 hexes)
 T_WARN, P_WARN = 0.7, 0.15  # °C on the province mean maximum and minimum; share of the annual rain
 
@@ -49,12 +53,18 @@ RULES = {
                    "promediados en la provincia por AEMET.",
                    "AEMET's 1991-2020 province mean: station data interpolated to a grid and averaged over the "
                    "province by AEMET."),
-    "station": tr("Normal OMM 1991-2020 de la estación, enviada por AEMET a la Organización Meteorológica Mundial.",
-                  "The station's WMO 1991-2020 normal, sent by AEMET to the World Meteorological Organization."),
+    "station": tr("Normal OMM 1991-2020 de la estación, enviada por AEMET a la Organización Meteorológica Mundial. El "
+                  "hexágono es la media de una celda de unos 10 km y puede diferir de la estación por la altura y el "
+                  "entorno: laderas, costa, ciudad.",
+                  "The station's WMO 1991-2020 normal, sent by AEMET to the World Meteorological Organization. The hex "
+                  "is the mean of a cell about 10 km across and can differ from the station by its height and setting: "
+                  "slopes, coast, city."),
     "frost": tr("Días de helada: días con la mínima a 0 °C o menos en la rejilla. Las estaciones de la OMM cuentan los "
-                "días por debajo de 0 °C, y en los valles fríos la rejilla suaviza las heladas.",
+                "días por debajo de 0 °C; la rejilla suaviza las heladas de los valles fríos, y una estación en una "
+                "ciudad hiela menos que el campo de su celda.",
                 "Frost days: days with a minimum at or below 0 °C on the grid. The WMO stations count days below "
-                "0 °C, and the grid smooths frost in cold valleys."),
+                "0 °C; the grid smooths frost in cold valleys, and a station in a city freezes less than the "
+                "countryside of its cell."),
     "sun": tr("Horas de sol: solo en las 76 estaciones que las miden; no se interpolan entre estaciones.",
               "Sunshine hours: only at the 76 stations that measure them; they are not interpolated between stations."),
     "rain": tr("Lluvia: total del mes, con los días fechados como en los ficheros de AEMET (de 07 h a 07 h, por el día "
@@ -146,9 +156,11 @@ def domains(grid_vals: dict, stations: list[dict]) -> dict:
     temp = [None if a is None or b is None else (a + b) / 2
             for m in range(12) for a, b in zip(grid_vals["tmax"][m], grid_vals["tmin"][m])]
     flat = lambda v: [x for m in range(12) for x in grid_vals[v][m]]  # noqa: E731
-    return {"temp": percentile_domain(temp, False), "prec": percentile_domain(flat("prec"), True),
-            "frost": [0, percentile_domain(flat("frost"), False)[1]],
-            "sun": percentile_domain([x for s in stations if s["sun"] for x in s["sun"]], False)}
+    t0, t1 = percentile_domain(temp, False, DOMAIN_TAIL)
+    sun = [x for s in stations if s["sun"] for x in s["sun"]]
+    return {"temp": [math.floor(t0), math.ceil(t1)], "prec": percentile_domain(flat("prec"), True, DOMAIN_TAIL),
+            "frost": [0, percentile_domain(flat("frost"), False, DOMAIN_TAIL)[1]],
+            "sun": [math.floor(min(sun)), math.ceil(max(sun))]}
 
 
 def build() -> None:
@@ -166,7 +178,7 @@ def build() -> None:
     print(f"    {len(cells)} land hexes with a grid value ({counts.count(0)} from the nearest point), "
           f"{len(stations)} stations, {sum(s['sun'] is not None for s in stations)} with sunshine")
     write_web(FILE, {
-        "version": VERSION, "vintage": rocio_p["vintage"],
+        "version": VERSION, "vintage": rocio_p["vintage"], "provinces_period": official["period"],
         "sources": ["aemet_rocio", "omm_normales_es", "aemet_normales_provincias"],
         "rules": RULES, "cells": cells, "points": counts, "grid": grid_vals,
         "provinces": official["provinces"],
@@ -218,6 +230,8 @@ def shape_errors(doc: dict, size: int) -> list[str]:
             errs.append(f"domains.{k}: {lo}..{hi}")
     if sorted(doc.get("domains", {})) != sorted(RANGES):
         errs.append("domains: not temp, prec, frost and sun")
+    if not isinstance(doc.get("provinces_period"), str):
+        errs.append("provinces_period: missing")
     return errs
 
 
@@ -246,8 +260,30 @@ def province_deviations(doc: dict, province_of: list) -> list[str]:
         dn = None if tn is None else tn - statistics.fmean(ref["tmin"])
         dp = statistics.fmean(rain) / sum(ref["prec"]) - 1 if rain else None
         if (dx is not None and abs(dx) > T_WARN) or (dn is not None and abs(dn) > T_WARN) or (dp is not None and abs(dp) > P_WARN):
-            out.append(f"{code} (max {dx:+.1f} °C, min {dn:+.1f} °C, rain {dp:+.0%})")
+            out.append(f"{code} (max {_delta(dx, '+.1f')} °C, min {_delta(dn, '+.1f')} °C, rain {_delta(dp, '+.0%')})")
     return out
+
+
+def _delta(v: float | None, spec: str) -> str:
+    return "n/a" if v is None else format(v, spec)
+
+
+def station_gaps(doc: dict) -> list[tuple[float, str]]:
+    """Each station's largest |hex − station| mean temperature over the months, as (°C, "name, month: hex vs station"),
+    the largest first: a station placed on the wrong hex, or a unit slip, shows up at the top."""
+    index = {c: k for k, c in enumerate(doc["cells"])}
+    g = doc["grid"]
+    out = []
+    for s in doc["stations"]:
+        k = index.get(s["cell"])
+        gaps = [] if k is None else [
+            (abs((g["tmax"][m][k] + g["tmin"][m][k]) / 2 - s["tmed"][m]), m) for m in range(12)
+            if g["tmax"][m][k] is not None and g["tmin"][m][k] is not None]
+        if gaps:
+            gap, m = max(gaps)
+            hexv = (g["tmax"][m][k] + g["tmin"][m][k]) / 2
+            out.append((gap, f"{s['name']}, month {m + 1}: {hexv:.1f} vs {s['tmed'][m]:.1f} °C"))
+    return sorted(out, reverse=True)
 
 
 def check(web_dir) -> list[tuple[str, str]]:
@@ -265,6 +301,8 @@ def check(web_dir) -> list[tuple[str, str]]:
     province_of = [fips[o] if o >= 0 else None for o in owner]
     if errs := shape_errors(doc, len(owner)):
         return [("FAIL", f"{FILE}: {e}") for e in errs[:10]]
+    if "grid" not in world:
+        return [("FAIL", f"{FILE}: world.json is missing or has no grid, so the stations cannot be placed")]
     lines = []
     grid = HexGrid(**world["grid"])
     pj = world.get("country", {}).get("projection")
@@ -311,6 +349,9 @@ def check(web_dir) -> list[tuple[str, str]]:
                               f"{statistics.median(df) if df else 0:+.1f} days a month (median grid − station over "
                               "months with frost: the grid smooths "
                               "cold valleys, and the WMO counts < 0 °C where the grid counts ≤ 0 °C)"))
+    if worst := station_gaps(doc)[:GAPS_LISTED]:
+        lines.append(("NOTE", f"{FILE}: largest station-vs-hex gaps in mean temperature (hex vs station; slopes and "
+                              f"cities explain a few degrees): {'; '.join(text for _, text in worst)}"))
     lines.append(("PASS", f"{FILE}: {len(doc['cells'])} land hexes with a grid value "
                           f"({doc['points'].count(0)} from the nearest point), {len(doc['stations'])} stations "
                           f"({sum(bool(s['sun']) for s in doc['stations'])} with sunshine), "

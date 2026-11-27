@@ -2,6 +2,7 @@
 clima.json (pipeline/build/spain_clima.py) with its check."""
 
 import json
+import math
 import tempfile
 import unittest
 from array import array
@@ -62,8 +63,21 @@ class WmoStationTest(unittest.TestCase):
         s = O.station(wmo, page, {"aemet": "2331", "province": "09"})
         self.assertEqual((s["name"], s["coords"], s["aemet"], s["province"]), ("Burgos Aeropuerto", "aemet", "2331", "09"))
         self.assertAlmostEqual(s["lon"], -(3 + 37 / 60 + 13 / 3600), places=4)
-        rota = O.station(wmo, None, {"aemet": None, "province": "09"})
-        self.assertEqual((rota["coords"], rota["name"], rota["lon"]), ("wmo", "BURGOS/VILLAFRÍA", wmo["lon"]))
+        header = O.station(wmo, None, {"aemet": None, "province": "09", "name": None})
+        self.assertEqual((header["coords"], header["name"], header["lon"]), ("wmo", "Burgos/Villafría", wmo["lon"]))
+
+    def test_a_station_without_an_aemet_page_takes_the_tables_name_or_a_clean_header(self):
+        rota = O.parse_station(BURGOS_CSV.replace("BURGOS/VILLAFRÍA", "ROTA B.N.OBSERVATORIO'"))
+        named = O.station(rota, None, {"aemet": None, "province": "11", "name": "Rota, Base Naval"})
+        self.assertEqual(named["name"], "Rota, Base Naval")
+        self.assertEqual(O.station(rota, None, {"aemet": None, "province": "11", "name": None})["name"],
+                         "Rota B.N.Observatorio")  # no stray quote, not in capitals
+
+    def test_the_word_estacion_is_dropped_from_an_aemet_page_name(self):
+        page = ("<p><b>Estación</b>:&nbsp;Estación de Tortosa (Roquetes)&nbsp;-&nbsp;<b>Periodo</b> :&nbsp;1981-2010"
+                "&nbsp;-&nbsp;Altitud (m) :&nbsp;50&nbsp;</p><p>Latitud :&nbsp;40° 49' 13'' N&nbsp;-&nbsp;"
+                "Longitud :&nbsp;0° 29' 29'' E</p>")
+        self.assertEqual(O.parse_page(page)["name"], "Tortosa (Roquetes)")
 
     def test_a_station_without_a_required_parameter_fails(self):
         text = "\r\n".join(line for line in BURGOS_CSV.split("\r\n") if not line.startswith("8075,15,"))
@@ -73,8 +87,9 @@ class WmoStationTest(unittest.TestCase):
     def test_committed_table_lists_83_stations_with_provinces(self):
         table = O.read_table()
         self.assertEqual(len(table), 83)
-        self.assertEqual(table["08430"], {"aemet": "7178I", "province": "30"})  # Murcia: its header is wrong
-        self.assertEqual(table["08449"], {"aemet": None, "province": "11"})  # Rota: no AEMET page
+        self.assertEqual(table["08430"], {"aemet": "7178I", "province": "30", "name": None})  # Murcia: its header is wrong
+        self.assertEqual(table["08449"], {"aemet": None, "province": "11", "name": "Rota, Base Naval"})  # no AEMET page
+        self.assertEqual([w for w, r in table.items() if r["name"]], ["08449"])  # only a station without a page
         self.assertTrue(all(len(r["province"]) == 2 for r in table.values()))
 
 
@@ -103,6 +118,8 @@ class ProvinceNormalsTest(unittest.TestCase):
             N.by_province({"tmed": N.rows(self.csv(names[1:]))})
         with self.assertRaisesRegex(ValueError, "two rows"):
             N.rows(self.csv(names + names[:1]))
+        with self.assertRaisesRegex(ValueError, "not 1991-2020"):
+            N.rows(self.csv(names).replace(";1991-2020;", ";1981-2010;"))
 
     def test_the_real_zip_when_cached(self):
         from pipeline.core.paths import RAW
@@ -258,8 +275,7 @@ class ClimaBuilderTest(unittest.TestCase):
         self.assertGreaterEqual(d["temp"][1], 15.5)  # July's (16 + 5) / 2 … December's (21 + 11) / 2
         self.assertEqual(d["frost"][0], 0)
         self.assertGreaterEqual(d["frost"][1], 5)
-        self.assertLessEqual(d["sun"][0], 100)
-        self.assertGreaterEqual(d["sun"][1], 110)
+        self.assertEqual(d["sun"], [100, 111])  # the stations' lowest and highest: 76 values, none clamped
 
 
 def good_doc(owner):
@@ -274,7 +290,8 @@ def good_doc(owner):
             "provinces": {f"{c:02d}": {"tmed": [6.0] * 12, "tmax": [10.0] * 12, "tmin": [2.0] * 12, "prec": [50.0] * 12}
                           for c in range(1, 53)},
             "peninsular": {"tmed": [6.0] * 12, "prec": [50.0] * 12}, "stations": [station],
-            "domains": {"temp": [3, 27], "prec": [3, 180], "frost": [0, 21], "sun": [86, 380]}}
+            "domains": {"temp": [3, 27], "prec": [3, 180], "frost": [0, 21], "sun": [86, 380]},
+            "provinces_period": "1991-2020"}
 
 
 class ClimaCheckTest(unittest.TestCase):
@@ -330,6 +347,33 @@ class ClimaCheckTest(unittest.TestCase):
         doc["provinces"]["30"]["prec"] = [40.0] * 12  # rain 25 % above
         self.assertIn("30 (", [m for l, m in self.run_check(doc) if l == "WARN"][0])
 
+    def test_a_deviation_with_some_figures_missing_warns_without_failing(self):
+        doc = good_doc(self.owner)
+        k = doc["cells"].index(3)  # province 30's hexes: no complete maximum, rain 25 % above AEMET's
+        doc["grid"]["tmax"] = [list(r) for r in doc["grid"]["tmax"]]
+        doc["grid"]["tmax"][5][k] = doc["grid"]["tmax"][5][k + 1] = None
+        doc["provinces"]["30"]["prec"] = [40.0] * 12
+        warn = [m for l, m in self.run_check(doc) if l == "WARN"][0]
+        self.assertIn("30 (max n/a °C, min +0.0 °C, rain +25%)", warn)
+
+    def test_the_largest_station_gaps_are_listed(self):
+        doc = good_doc(self.owner)
+        note = [m for l, m in self.run_check(doc) if l == "NOTE" and "gaps" in m]
+        self.assertEqual(len(note), 1)
+        self.assertIn("Burgos Aeropuerto, month 12: 6.0 vs 3.6 °C", note[0])
+
+    def test_a_world_without_a_grid_fails_rather_than_raising(self):
+        world = {k: v for k, v in self.world.items() if k != "grid"}
+        lines = self.run_check(good_doc(self.owner), world)
+        self.assertEqual(self.levels(lines), ["FAIL"])
+        self.assertIn("no grid", lines[0][1])
+        self.assertIn("FAIL", self.levels(self.run_check(good_doc(self.owner), {"country": {"id": "es"}})))
+
+    def test_a_file_without_the_province_period_fails(self):
+        doc = good_doc(self.owner)
+        del doc["provinces_period"]
+        self.assertIn("provinces_period", self.run_check(doc)[0][1])
+
 
 class RealClimaTest(unittest.TestCase):
     def test_built_file_when_present(self):
@@ -344,6 +388,31 @@ class RealClimaTest(unittest.TestCase):
         self.assertEqual(sum(s["sun"] is not None for s in doc["stations"]), 76)
         murcia = next(s for s in doc["stations"] if s["wmo"] == "08430")
         self.assertEqual((murcia["coords"], murcia["province"]), ("aemet", "30"))
+        self.assertEqual(doc["provinces_period"], "1991-2020")
+        for s in doc["stations"]:  # the tooltip writes "Estación {name}"
+            self.assertFalse("'" in s["name"] or s["name"].isupper() or s["name"].lower().startswith("estación"),
+                             s["name"])
+        self.assertEqual(next(s["name"] for s in doc["stations"] if s["wmo"] == "08449"), "Rota, Base Naval")
+
+    def test_each_scale_clamps_little_of_any_month(self):
+        """One scale for twelve months puts the extreme months near its ends; under 2 % of a month's land hexes, and
+        no sunshine station, may fall beyond them."""
+        from pipeline.countries import COUNTRIES
+        path = COUNTRIES["es"].web_data_dir / "clima.json"
+        if not path.exists():
+            self.skipTest("clima.json not built")
+        doc = json.loads(path.read_text())
+        g, d = doc["grid"], doc["domains"]
+        temp = [[None if a is None or b is None else (a + b) / 2 for a, b in zip(g["tmax"][m], g["tmin"][m])]
+                for m in range(12)]
+        for var, rows in (("temp", temp), ("prec", g["prec"]), ("frost", g["frost"])):
+            lo, hi = d[var]
+            for m, row in enumerate(rows):
+                vals = [v for v in row if v is not None]
+                out = sum(not lo <= v <= hi for v in vals) / len(vals)
+                self.assertLess(out, 0.02, f"{var} month {m + 1}: {out:.1%} beyond {lo}..{hi}")
+        sun = [v for s in doc["stations"] if s["sun"] for v in s["sun"]]
+        self.assertEqual(d["sun"], [math.floor(min(sun)), math.ceil(max(sun))])
 
 
 if __name__ == "__main__":

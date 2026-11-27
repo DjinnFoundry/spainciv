@@ -14,8 +14,9 @@ import zipfile
 
 from ...core.source import Source, SourceInfo
 
-URL = "https://www.aemet.es/documentos/es/datos_abiertos/Estadisticas/Vigilancia_Clima/evc_normales_1991-2020.zip"
-ZIP = "evc_normales_1991-2020.zip"
+PERIOD = "1991-2020"  # every row's "periodo de referencia"; clima.json carries it as provinces_period
+ZIP = f"evc_normales_{PERIOD}.zip"
+URL = f"https://www.aemet.es/documentos/es/datos_abiertos/Estadisticas/Vigilancia_Clima/{ZIP}"
 PARAMS = {"tmed": "TMED", "tmax": "TMAX", "tmin": "TMIN", "prec": "PREC"}
 PENINSULA = "ESPAÑA PENINSULAR"
 MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
@@ -35,13 +36,15 @@ PROVINCE_CODES = {
 
 
 def rows(text: str) -> dict[str, list[float]]:
-    """One CSV: region → its 12 monthly values (the annual column is left out)."""
+    """One CSV: region → its 12 monthly values (the annual column is left out). Every row must be of PERIOD."""
     reader = csv.DictReader(io.StringIO(text), delimiter=";")
     out = {}
     for r in reader:
         region = r["región"].strip()
         if region in out:
             raise ValueError(f"{region}: two rows")
+        if r["periodo de referencia"].strip() != PERIOD:
+            raise ValueError(f"{region}: period {r['periodo de referencia']!r}, not {PERIOD}")
         out[region] = [float(r[m]) for m in MONTHS]
     return out
 
@@ -62,7 +65,7 @@ def read_zip(path) -> tuple[dict, dict, list]:
     """(provinces {INE code: {param: [12]}}, peninsula {param: [12]}, the files' dates)."""
     with zipfile.ZipFile(path) as z:
         def table(param: str, level: str) -> dict:
-            return rows(z.read(f"{PARAMS[param]}_1991_2020_{level}.csv").decode("latin-1"))
+            return rows(z.read(f"{PARAMS[param]}_{PERIOD.replace('-', '_')}_{level}.csv").decode("latin-1"))
 
         provinces = by_province({p: table(p, "Provincias") for p in PARAMS})
         peninsula = {p: table(p, "Nacional")[PENINSULA] for p in PARAMS}
@@ -90,5 +93,5 @@ class AemetNormalesProvincias(Source):
         provinces, peninsula, dated = read_zip(self.raw_dir / ZIP)
         y, m, d = dated[-1]
         when = f"{d} {calendar.month_name[m]} {y}"
-        return {"vintage": f"1991-2020 (AEMET CSVs of {when})", "_files": [ZIP],
+        return {"vintage": f"{PERIOD} (AEMET CSVs of {when})", "_files": [ZIP], "period": PERIOD,
                 "provinces": provinces, "peninsula": peninsula}

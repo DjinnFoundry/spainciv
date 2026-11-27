@@ -8,7 +8,9 @@ height, then one block per parameter with a row per calculation and the 12 month
 
 Seven stations have no sunshine. The WMO header's position is wrong for some stations (Murcia's longitude is that of
 another place), so a station takes its name and position from its own AEMET page when the committed table
-data/aemet_estaciones_omm.csv gives it an indicativo; Rota, which has no AEMET page, keeps the header's.
+data/aemet_estaciones_omm.csv gives it an indicativo; Rota, which has no AEMET page, keeps the header's position and
+takes the table's `nombre` ("Rota, Base Naval") for its abbreviated header name. AEMET calls one station "Estación de
+Tortosa (Roquetes)": the leading "Estación de" is dropped, as the tooltip already says "Estación".
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ MISSING = {"", "-9999", "-9999.0", "-9999.000000"}
 PAGE_COORDS = re.compile(r"Altitud \(m\) : (\d+) .*?Latitud : (\d+)° (\d+)' (\d+)'' (N|S) - "
                          r"Longitud : (\d+)° (\d+)' (\d+)'' (E|O)")
 PAGE_NAME = re.compile(r"Estación : (.+?) - ")
+NAME_PREFIX = re.compile(r"^Estación(?: de)?\s+", re.IGNORECASE)  # "Estación de Tortosa (Roquetes)"
 
 
 def dms(d, m, s, hemi: str) -> float:
@@ -71,25 +74,28 @@ def parse_page(text: str) -> dict:
     m, n = PAGE_COORDS.search(flat), PAGE_NAME.search(flat)
     if not m or not n:
         raise ValueError("no station name or coordinates on the AEMET page")
-    return {"name": n.group(1).strip(), "alt": int(m.group(1)), "lat": dms(*m.group(2, 3, 4, 5)),
+    return {"name": NAME_PREFIX.sub("", n.group(1).strip()), "alt": int(m.group(1)), "lat": dms(*m.group(2, 3, 4, 5)),
             "lon": dms(*m.group(6, 7, 8, 9))}
 
 
 def read_table(path: Path = TABLE) -> dict[str, dict]:
     with open(path, encoding="utf-8") as f:
         rows = list(csv.DictReader(line for line in f if not line.startswith("#")))
-    out = {wmo_number(r["wmo"]): {"aemet": r["indicativo"] or None, "province": r["provincia_ine"]} for r in rows}
+    out = {wmo_number(r["wmo"]): {"aemet": r["indicativo"] or None, "province": r["provincia_ine"],
+                                  "name": r["nombre"] or None} for r in rows}
     if len(out) != len(rows):
         raise ValueError(f"{path.name}: a WMO number twice")
     return out
 
 
 def station(wmo: dict, page: dict | None, row: dict) -> dict:
-    """A station's normals with the name and position of its AEMET page when it has one."""
+    """A station's normals with the name and position of its AEMET page when it has one; without one, the table's
+    name, else the WMO header's without quotes and in title case."""
     if missing := [k for k in REQUIRED if wmo[k] is None]:
         raise ValueError(f"{wmo['wmo']} {wmo['name']}: no 12 months of {missing}")
     place = page or wmo
-    return {"wmo": wmo["wmo"], "aemet": row["aemet"], "province": row["province"], "name": place["name"],
+    name = page["name"] if page else row.get("name") or wmo["name"].strip(" '\"").title()
+    return {"wmo": wmo["wmo"], "aemet": row["aemet"], "province": row["province"], "name": name,
             "lon": place["lon"], "lat": place["lat"], "alt": place["alt"], "coords": "aemet" if page else "wmo",
             **{k: wmo[k] for k in ["tmean", "tmax", "tmin", "prec", "frost_lt0", "sun"]}}
 
@@ -112,7 +118,7 @@ class OmmNormalesEs(Source):
         if self.offline and listing.exists():
             names = json.loads(listing.read_text())
         else:
-            index = self.download(INDEX, "index.html", force=True).read_text(encoding="utf-8")
+            index = self.download(INDEX, "index.html", force=force or not listing.exists()).read_text(encoding="utf-8")
             names = sorted(set(re.findall(r'href="([A-Z0-9]+_\d+\.csv)"', index)))
             if not names:
                 raise RuntimeError("no station CSVs in the NCEI index")
