@@ -39,8 +39,10 @@ COMMUNITIES = {
 }
 COMMUNITY_OF = {prov: comm for comm, (_, provs) in COMMUNITIES.items() for prov in provs}
 
-# Each community as the interface names it, in reading order, in Spanish and English (INE's names above are the ones
-# its tables match on).
+# Each community as the interface names it, in reading order, in Spanish and English, the same keys as COMMUNITIES
+# (INE's names above are the ones its tables match on). Data from a source keeps the name its source writes: the
+# fiestas name their community as each community's own list does (fiestas_autonomicas.COMMUNITIES, "Catalunya",
+# "Principado de Asturias"), since they are a transcription of those lists.
 COMMUNITY_NAMES = {
     "01": tr("Andalucía", "Andalusia"), "02": tr("Aragón", "Aragon"), "03": tr("Asturias", "Asturias"),
     "04": tr("Illes Balears", "Balearic Islands"), "05": tr("Canarias", "Canary Islands"),
@@ -52,6 +54,7 @@ COMMUNITY_NAMES = {
     "16": tr("País Vasco", "Basque Country"), "17": tr("La Rioja", "La Rioja"), "18": tr("Ceuta", "Ceuta"),
     "19": tr("Melilla", "Melilla"),
 }
+
 
 def display_name(name: str) -> str:
     """INE's inverted article form → reading order: 'Coruña, A' → 'A Coruña', 'Balears, Illes' → 'Illes Balears'."""

@@ -2,7 +2,18 @@
 // whole country and of each group of regions, and how the set is kept in localStorage. No DOM, no drawing.
 
 export const RADIUS = 1; // a reveal uncovers the hex and its neighbours
+export const MAX_RADIUS = 8; // the widest reveal, 217 hexes (about 3.7 % of Spain), for a map zoomed far out
 const VERSION = 1;
+
+/**
+ * How many rings of hexes a reveal uncovers so that it clears about `px` css px around the pointer at the map's zoom:
+ * Rpx is the hex radius on screen (grid.R × camera scale) and √3·Rpx the step from one hex centre to the next. At
+ * least RADIUS, at most MAX_RADIUS.
+ */
+export function revealRadius(Rpx, px) {
+  if (!(Rpx > 0)) return RADIUS;
+  return Math.max(RADIUS, Math.min(MAX_RADIUS, Math.round(px / (Math.sqrt(3) * Rpx))));
+}
 
 /** The cells within `radius` steps of `cell` (the cell first), on any grid with neighbour(i, d) for d = 0..5. */
 export function around(grid, cell, radius = RADIUS) {
@@ -30,6 +41,8 @@ export function around(grid, cell, radius = RADIUS) {
  *   reveal(cell, radius) → the land cells it explored that were not before (empty when nothing changed)
  *   isExplored(i), count, total, owners() → [{explored, total}] per region index, reset()
  *   encode() → string; decode(string) → true if it matched this map (else the set is left as it was)
+ *   merge(string) → true if it changed the set: a set saved by another tab of the same map is added to this one,
+ *                   unless one of the two was started again since; then the newer start wins (`epoch`, set by reset)
  */
 export function createExplored(grid, owner) {
   const land = [];
@@ -41,7 +54,7 @@ export function createExplored(grid, owner) {
   const totals = new Array(nRegions).fill(0);
   for (const i of land) totals[owner[i]]++;
   const done = new Array(nRegions).fill(0);
-  let count = 0;
+  let count = 0, epoch = 0;
   // The map the set belongs to: another grid or another coastline makes a saved set meaningless.
   const key = `${grid.cols}x${grid.rows}:${land.length}`;
 
@@ -62,30 +75,57 @@ export function createExplored(grid, owner) {
     isExplored: (i) => i >= 0 && i < grid.size && slot[i] >= 0 && bits[slot[i]] === 1,
     reveal: (cell, radius = RADIUS) => around(grid, cell, radius).filter(mark),
     owners: () => totals.map((total, r) => ({ explored: done[r], total })),
-    reset() {
-      bits.fill(0);
-      done.fill(0);
-      count = 0;
+    get epoch() { return epoch; },
+    reset(at = Date.now()) {
+      clear();
+      epoch = at;
     },
     encode() {
       const bytes = new Uint8Array(Math.ceil(land.length / 8));
       bits.forEach((b, k) => b && (bytes[k >> 3] |= 1 << (k & 7)));
-      return JSON.stringify({ v: VERSION, key, bits: btoa(String.fromCharCode(...bytes)) });
+      return JSON.stringify({ v: VERSION, key, epoch, bits: btoa(String.fromCharCode(...bytes)) });
     },
     decode(text) {
-      let saved, raw;
-      try {
-        saved = JSON.parse(text);
-        raw = atob(saved.bits);
-      } catch {
-        return false;
-      }
-      if (!saved || saved.v !== VERSION || saved.key !== key || raw.length !== Math.ceil(land.length / 8)) return false;
-      this.reset();
-      land.forEach((cell, k) => raw.charCodeAt(k >> 3) & (1 << (k & 7)) && mark(cell));
+      const saved = parse(text);
+      if (!saved) return false;
+      clear();
+      epoch = saved.epoch;
+      saved.cells.forEach(mark);
       return true;
     },
+    merge(text) {
+      const saved = parse(text);
+      if (!saved || saved.epoch < epoch) return false;
+      const before = count;
+      if (saved.epoch > epoch) {
+        clear();
+        epoch = saved.epoch;
+        saved.cells.forEach(mark);
+        return true;
+      }
+      saved.cells.forEach(mark);
+      return count !== before;
+    },
   };
+
+  function clear() {
+    bits.fill(0);
+    done.fill(0);
+    count = 0;
+  }
+
+  // A saved set of this map → {epoch, cells}; null when it is unreadable or belongs to another map.
+  function parse(text) {
+    let saved, raw;
+    try {
+      saved = JSON.parse(text);
+      raw = atob(saved.bits);
+    } catch {
+      return null;
+    }
+    if (!saved || saved.v !== VERSION || saved.key !== key || raw.length !== Math.ceil(land.length / 8)) return null;
+    return { epoch: Number(saved.epoch) || 0, cells: land.filter((cell, k) => raw.charCodeAt(k >> 3) & (1 << (k & 7))) };
+  }
 }
 
 /**
@@ -120,6 +160,16 @@ export function shownShare(explored, total) {
   return { x: Math.max(1, Math.floor(f * step + 1e-9)) / step, d };
 }
 
+/**
+ * The share bar of the copied text: one square per group of regions, 🟩 when it is all explored, 🟨 when some of it
+ * is, ⬜ when none; without groups, ten squares of tenths of the whole.
+ */
+export function progressSquares(model, groups) {
+  if (groups?.length) return groups.map((g) => (g.explored === g.total ? "🟩" : g.explored > 0 ? "🟨" : "⬜")).join("");
+  const tenths = Math.floor((model.count / model.total) * 10);
+  return "🟩".repeat(tenths) + "⬜".repeat(10 - tenths);
+}
+
 /** The saved set from `storage` (localStorage or alike) into `model`; false when absent, unreadable or blocked. */
 export function load(model, storage, storeKey) {
   try {
@@ -127,6 +177,16 @@ export function load(model, storage, storeKey) {
     return text ? model.decode(text) : false;
   } catch {
     return false; // storage blocked (private mode, sandbox): start from fog
+  }
+}
+
+/** What another tab saved in `storage`, added to `model` (model.merge): true when the set changed. */
+export function pull(model, storage, storeKey) {
+  try {
+    const text = storage?.getItem(storeKey);
+    return text ? model.merge(text) : false;
+  } catch {
+    return false;
   }
 }
 

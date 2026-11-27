@@ -48,9 +48,9 @@ function paperTile() {
 }
 
 /**
- * createFog(grid, model) → {draw(ctx), paint(cells?), bounds}
- *   draw(ctx)      ctx in world km (an app overlay): one drawImage of the fog canvas
- *   paint(cells)   repaint the fog around these cells (all of it when cells is omitted)
+ * createFog(grid, model) → {draw(ctx, alpha), paint(cells?)}
+ *   draw(ctx, alpha)  ctx in world km (an app overlay, the minimap): one drawImage of the fog canvas, at `alpha`
+ *   paint(cells)      repaint the fog around these cells (all of it when cells is omitted)
  */
 export function createFog(grid, model) {
   const R = grid.R;
@@ -107,6 +107,7 @@ export function createFog(grid, model) {
     for (const i of cells) puffPath(i);
     g.fillStyle = paper || PAPER;
     g.fill();
+    g.clip(); // the spots below stay on the clouds, never on the explored land beside them
     // Mottling: a light and a dark spot per hex, so the clouds are not one flat sheet.
     MOTTLE.forEach(([salt, color]) => {
       g.beginPath();
@@ -138,12 +139,13 @@ export function createFog(grid, model) {
   }
 
   return {
-    bounds: { x0, y0, x1, y1 },
-    canvas: cv,
     paint,
-    draw(ctx) {
+    draw(ctx, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha *= alpha;
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(cv, x0, y0, cv.width / k, cv.height / k);
+      ctx.restore();
     },
   };
 }
