@@ -9,8 +9,9 @@ web/index.html is written for the United States and is published as is for it. A
 - `<script id="country-page">`: lang, site_url, data_credit and notices as JSON, which web/js/app/country.js lays over
   the world.json `country` block (so a new address or credit needs no data rebuild), and `play` when the country has
   an Unciv map, and `data`, the names of its data files; a country in several languages adds `langs` (each language's
-  number locale) and `texts`, the page's texts in every language but the first; and `game: true` when the country
-  has the daily game (web/js/ext/game);
+  number locale) and `texts`, the page's texts in every language but the first; `game: true` when the country
+  has the daily game (web/js/ext/game); and `explore`, the groups of regions of the fog of war (web/js/ext/explore),
+  in each language like the other texts;
 - the Unciv page and downloads (pipeline/play.py) when its build made an Unciv map.
 
 generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.
@@ -73,6 +74,8 @@ def page_config(country: Country) -> dict:
     def texts(lang: str) -> dict:
         page = country.page.in_lang(lang)
         out = {"data_credit": page.data_credit, "notices": list(page.notices)}
+        if page.explore is not None:
+            out["explore"] = {"groups": [{"name": name, "regions": list(regions)} for name, regions in page.explore]}
         return out | {"play": play.PAGES[lang]} if has_play else out
 
     # The data files the site has, so the browser does not ask for the US-only ones (and log a 404 for each).

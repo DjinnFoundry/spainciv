@@ -97,10 +97,14 @@ class RenderTest(unittest.TestCase):
         self.assertNotIn("EuroGeographics", html)  # GISCO boundaries were replaced by the IGN's SIANE
         self.assertIn("Basado en usaciv, de Andrej Karpathy (MIT)", h.credits)
         self.assertIn('<a href="https://karpathy.ai/usaciv/"', html)
-        english = {"data_credit": en.data_credit, "notices": list(en.notices), "play": "play.html", "description": en.description,
-                   "credits": site.credits_inner(es, "en")}
+
+        def groups(p):  # the fog of war's groups of regions (Page.explore) in that page's language
+            return {"groups": [{"name": name, "regions": list(regions)} for name, regions in p.explore]}
+
+        english = {"data_credit": en.data_credit, "notices": list(en.notices), "explore": groups(en), "play": "play.html",
+                   "description": en.description, "credits": site.credits_inner(es, "en")}
         self.assertEqual(h.config, {"lang": "es", "site_url": es.site_url, "data_credit": page.data_credit, "notices": list(page.notices),
-                                    "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
+                                    "explore": groups(page), "play": "jugar.html", "langs": {"es": "es-ES", "en": "en-IE"}, "texts": {"en": english},
                                     "data": sorted(p.stem for p in es.web_data_dir.glob("*.json") if "." not in p.stem),
                                     "game": True})
         self.assertIn("lenses", h.config["data"])
@@ -121,6 +125,7 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(html.count("</script>"), TEMPLATE.count("</script>") + 1)
         self.assertEqual(Head(html).config["data_credit"], "</script>x")
         self.assertNotIn("game", Head(html).config)  # the daily game is the page's choice
+        self.assertNotIn("explore", Head(html).config)  # and so is the fog of war
 
     def test_a_changed_template_fails_loudly(self):
         with self.assertRaises(ValueError):

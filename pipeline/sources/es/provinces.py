@@ -6,6 +6,8 @@ the ISO 3166-2:ES subdivision codes are the short labels the map uses where a fu
 official ones (co-official spellings as INE publishes them).
 """
 
+from ...core.lang import tr
+
 PROVINCES = {
     "01": ("VI", "Araba/Álava"), "02": ("AB", "Albacete"), "03": ("A", "Alicante/Alacant"), "04": ("AL", "Almería"),
     "05": ("AV", "Ávila"), "06": ("BA", "Badajoz"), "07": ("PM", "Balears, Illes"), "08": ("B", "Barcelona"),
@@ -36,6 +38,20 @@ COMMUNITIES = {
     "18": ("Ceuta", ["51"]), "19": ("Melilla", ["52"]),
 }
 COMMUNITY_OF = {prov: comm for comm, (_, provs) in COMMUNITIES.items() for prov in provs}
+
+# Each community as the interface names it, in reading order, in Spanish and English (INE's names above are the ones
+# its tables match on).
+COMMUNITY_NAMES = {
+    "01": tr("Andalucía", "Andalusia"), "02": tr("Aragón", "Aragon"), "03": tr("Asturias", "Asturias"),
+    "04": tr("Illes Balears", "Balearic Islands"), "05": tr("Canarias", "Canary Islands"),
+    "06": tr("Cantabria", "Cantabria"), "07": tr("Castilla y León", "Castile and León"),
+    "08": tr("Castilla-La Mancha", "Castilla–La Mancha"), "09": tr("Cataluña", "Catalonia"),
+    "10": tr("Comunitat Valenciana", "Valencian Community"), "11": tr("Extremadura", "Extremadura"),
+    "12": tr("Galicia", "Galicia"), "13": tr("Comunidad de Madrid", "Community of Madrid"),
+    "14": tr("Región de Murcia", "Region of Murcia"), "15": tr("Navarra", "Navarre"),
+    "16": tr("País Vasco", "Basque Country"), "17": tr("La Rioja", "La Rioja"), "18": tr("Ceuta", "Ceuta"),
+    "19": tr("Melilla", "Melilla"),
+}
 
 def display_name(name: str) -> str:
     """INE's inverted article form → reading order: 'Coruña, A' → 'A Coruña', 'Balears, Illes' → 'Illes Balears'."""
