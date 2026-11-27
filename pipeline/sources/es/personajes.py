@@ -16,6 +16,9 @@ The answers are cached like any download, in three steps that keep every query s
 60-second limit: the people born in Spain (split by sitelink count) with their occupations and their positions,
 awards and canonization status; the class trees; and the labels, descriptions, dates and birthplaces of the people
 the rules keep, in batches.
+
+The payload carries the download date (`retrieved`, that of the first answer, which also names the vintage): the
+builder takes its year as today for the people without a death date (pipeline/build/spain_personajes.py lifespan).
 """
 
 from __future__ import annotations
@@ -415,8 +418,10 @@ class WikidataPersonajes(Source):
         out.sort(key=lambda r: (-r["sitelinks"], qid_number(r["qid"])))
         files = [f"{k}/{n}.json" for n in SHARDS for k in ("occupations", "honours")] + ["conquistadors_unborn.json"]
         files += [tree_file(cls) for cls in DEEP] + detail_files
+        retrieved = read_manifest(self.id)["occupations/spain_15.json"]["retrieved"][:10]
         return {
-            "vintage": f"Wikidata, {read_manifest(self.id)['occupations/spain_15.json']['retrieved'][:10]}",
+            "vintage": f"Wikidata, {retrieved}",
+            "retrieved": retrieved,
             "_files": files,
             "kinds": KIND_IDS,
             "conquistadors_without_birthplace": unborn,

@@ -1818,6 +1818,67 @@ class SpainGreatPeopleRulesTest(unittest.TestCase):
         self.assertEqual(years({"year": 1986, "precision": 11}, None, "en"), "b. 1986")
         self.assertEqual(years(None, {"year": 1550, "precision": 9}, "en"), "d. 1550")
 
+    def test_span_is_every_year_a_date_can_mean(self):
+        from pipeline.build.spain_personajes import span
+
+        def d(y, p):
+            return {"year": y, "precision": p}
+
+        self.assertEqual([span(d(1550, p)) for p in (11, 10, 9)], [(1550, 1550)] * 3)
+        self.assertEqual(span(d(1550, 8)), (1550, 1559))
+        self.assertEqual(span(d(-669, 8)), (-678, -669))  # the 670s BC: 679–670 BC
+        self.assertEqual([span(d(y, 7)) for y in (1401, 1450, 1500)], [(1401, 1500)] * 3)
+        self.assertEqual(span(d(1501, 7)), (1501, 1600))
+        self.assertEqual([span(d(y, 7)) for y in (-99, 0)], [(-99, 0)] * 2)  # the 1st century BC
+        self.assertEqual(span(d(-100, 7)), (-199, -100))  # the 2nd
+        self.assertIsNone(span(d(1000, 6)))
+        self.assertIsNone(span(d(1000, None)))
+        self.assertIsNone(span(None))
+
+    def test_lifespan_counts_ranges_in_full_and_the_living_up_to_the_download(self):
+        from pipeline.build.spain_personajes import MAX_LIFE, lifespan
+
+        def d(y, p=11):
+            return {"year": y, "precision": p}
+
+        self.assertEqual(MAX_LIFE, 122)
+        self.assertEqual(lifespan(d(1881), d(1973), 2026), (1881, 1973))  # Picasso
+        self.assertEqual(lifespan(d(800, 7), d(783, 9), 2026), (701, 783))  # Silo: 8th century, died 783
+        self.assertEqual(lifespan(d(1986), None, 2026), (1986, 2026))
+        self.assertEqual(lifespan(d(1904), None, 2026), (1904, 2026))  # 2026 - 122
+        self.assertEqual(lifespan(d(1903), None, 2026), "no_death")
+        self.assertEqual(lifespan(d(1950, 7), None, 2026), (1901, 2026))
+        self.assertEqual(lifespan(d(1900), d(2020, 7), 2026), (1900, 2026))  # a death range never passes the download
+        self.assertEqual(lifespan(d(1980), d(1000, 6), 2026), "no_death")  # a death date too vague to use
+        self.assertEqual(lifespan(None, d(1550), 2026), "no_birth")
+        self.assertEqual(lifespan(d(1000, 6), d(1050), 2026), "no_birth")
+        self.assertEqual(lifespan(d(1400), d(1370), 2026), "inconsistent")
+
+    def test_timeline_meta_counts_ranges_and_who_is_left_out(self):
+        from pipeline.build.spain_personajes import timeline_meta
+
+        def d(y, p=11):
+            return {"year": y, "precision": p}
+
+        people = [{"born": d(1881), "died": d(1973)}, {"born": d(800, 7), "died": d(783)},
+                  {"born": d(1550, 8), "died": None}, {"born": None, "died": d(1550)},
+                  {"born": d(1400), "died": d(1370)}, {"born": d(1990), "died": None}]
+        self.assertEqual(timeline_meta(people, 2026), {"until": 2026, "max_life": 122, "approximate": 1,
+                                                       "left_out": {"no_birth": 1, "no_death": 1, "inconsistent": 1}})
+
+    def test_the_download_date_names_the_vintage_and_the_timelines_today(self):
+        from unittest import mock
+
+        from pipeline.sources.es.personajes import WikidataPersonajes
+
+        src = WikidataPersonajes()
+        manifest = {"occupations/spain_15.json": {"retrieved": "2026-11-27T09:12:00+00:00"}}
+        with mock.patch.object(src, "_candidates", return_value={}), \
+                mock.patch.object(src, "_rows", return_value=[{"n": {"value": "3"}}]), \
+                mock.patch("pipeline.sources.es.personajes.read_manifest", return_value=manifest):
+            out = src.process()
+        self.assertEqual((out["vintage"], out["retrieved"]), ("Wikidata, 2026-11-27", "2026-11-27"))
+
     def test_noun_is_the_descriptions_word_a_nobels_trade_or_the_roles_noun_in_the_persons_gender(self):
         from pipeline.build.spain_personajes import noun, note
 
@@ -1892,7 +1953,8 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
                   at(1, name="Escritor", born={"year": 1547, "precision": 11}),
                   at(1, name="Pintor B", primary="artists", role="Q1028181"),
                   at(2, name="Escritora", female=True), at(4, name="Francés"), person(name="Sin lugar")]
-        payload = {"vintage": "Wikidata, 2026-11-26", "data": {"people": people, "conquistadors_without_birthplace": 2}}
+        payload = {"vintage": "Wikidata, 2026-11-26",
+                   "data": {"people": people, "conquistadors_without_birthplace": 2, "retrieved": "2026-11-26"}}
         with mock.patch.object(sp, "load_interim_payload", return_value=payload):
             (count, kind), doc = sp.great_people({"owner": self.owner}, lambda lon, lat: (lon, lat), self.grid,
                                                  [self.MUNI])
@@ -1908,6 +1970,10 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
         self.assertIn("Fuera quedan 2: 1 nacieron fuera de la España actual", count["description"]["es"])
         self.assertIn("Left out: 2, of whom 1 were born outside today's Spain", count["description"]["en"])
         self.assertEqual(doc["people"][1]["note"]["en"], "writer, b. 1547")
+        # Years of life: only the writer born in 1547 has a date, too old to be alive without a death date.
+        self.assertEqual([p.get("life") for p in doc["people"]], [None] * 4)
+        self.assertEqual(doc["timeline"], {"until": 2026, "max_life": 122, "approximate": 0,
+                                           "left_out": {"no_birth": 3, "no_death": 1, "inconsistent": 0}})
 
     def test_check_matches_the_lenses_against_the_people_file(self):
         import tempfile
@@ -1916,16 +1982,35 @@ class SpainGreatPeopleMapTest(unittest.TestCase):
         from pipeline.sources.es.personajes import KIND_IDS
 
         people = {"categories": [{"id": k} for k in KIND_IDS],
-                  "people": [{"name": "A", "cell": 1, "kind": KIND_IDS.index("writers")}]}
+                  "timeline": {"until": 2026, "max_life": 122, "approximate": 0,
+                               "left_out": {"no_birth": 0, "no_death": 0, "inconsistent": 0}},
+                  "people": [{"name": "A", "cell": 1, "kind": KIND_IDS.index("writers"), "life": [1881, 1973]}]}
         lenses = {"lenses": [{"id": "great_people", "names_from": sp.FILE, "values": [None, 1, 0, 0, None, None]},
                              {"id": "great_people_kind", "names_from": sp.FILE,
                               "values": [None, KIND_IDS.index("writers"), None, None, None, None]}]}
         with tempfile.TemporaryDirectory() as d:
             for name, doc in (("lenses", lenses), ("world", {"owner": self.owner}), (sp.FILE, people)):
                 Path(d, f"{name}.json").write_text(json.dumps(doc))
-            self.assertEqual(sp.check(d)[0][0], "PASS")
+            self.assertEqual([level for level, _ in sp.check(d)], ["PASS", "PASS", "NOTE"])
             lenses["lenses"][0]["values"][2] = 5
             Path(d, "lenses.json").write_text(json.dumps(lenses))
-            self.assertEqual(sp.check(d), [("FAIL", "lens great_people: values differ from personajes.json")])
+            self.assertEqual(sp.check(d)[0], ("FAIL", "lens great_people: values differ from personajes.json"))
             Path(d, "lenses.json").write_text(json.dumps({"lenses": [{"id": "density", "values": []}]}))
             self.assertEqual(sp.check(d), [])  # a map without people lenses (the US)
+
+    def test_check_the_years_of_life(self):
+        from pipeline.build import spain_personajes as sp
+
+        meta = {"until": 2026, "max_life": 122, "approximate": 1,
+                "left_out": {"no_birth": 1, "no_death": 0, "inconsistent": 0}}
+        good = {"timeline": meta, "people": [{"name": "A", "life": [1881, 1973]}, {"name": "B", "life": [1900, 2026]},
+                                             {"name": "C"}]}
+        self.assertEqual(sp.check_timeline(good), [
+            ("PASS", "personajes.json: 2 people placed in time up to 2026, 1 left out"),
+            ("NOTE", "personajes.json: 1 people shown alive in 2026 past 100 (no death date in Wikidata)")])
+        for life in ([1973, 1881], [1881, 2030], [1881.5, 1973], [1881], "1881–1973"):
+            bad = {**good, "people": [{"name": "A", "life": life}, *good["people"][1:]]}
+            self.assertEqual(sp.check_timeline(bad)[0][0], "FAIL", life)
+        self.assertEqual(sp.check_timeline({**good, "timeline": {**meta, "left_out": {"no_birth": 2}}})[0][0], "FAIL")
+        self.assertEqual(sp.check_timeline({**good, "timeline": {**meta, "approximate": 3}})[0][0], "FAIL")
+        self.assertEqual(sp.check_timeline({"people": []}), [("FAIL", "personajes.json: no timeline")])
