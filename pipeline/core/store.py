@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import lang
+
 
 
 def interim_dir() -> Path:
@@ -66,15 +68,43 @@ def load_interim(name: str) -> Any:
     return load_interim_payload(name)["data"]
 
 
+def _dump(data: Any) -> str:
+    return json.dumps(data, separators=(",", ":"), allow_nan=False)
+
+
 def write_web(name: str, data: Any) -> None:
-    text = json.dumps(data, separators=(",", ":"), allow_nan=False)
+    """Write web data/<name>. For a country in several languages (core/lang.py), its texts go in the first language
+    and <name minus .json>.<lang>.json gets the other languages' overlay, written even when empty so the browser can
+    always ask for it."""
+    from ..countries import active
+
+    langs = active().langs
+    base, overlays = lang.split(data, langs) if len(langs) > 1 else (data, {})
+    text = _dump(base)
     atomic_write_text(web_dir() / name, text)
-    print(f"    → {web_dir().parent.name}/{web_dir().name}/{name} ({len(text) / 1e3:.0f} kB)")
+    extra = ""
+    for code, overlay in overlays.items():
+        o = _dump(overlay)
+        atomic_write_text(web_dir() / lang.overlay_name(name, code), o)
+        extra += f", {code} {len(o) / 1e3:.0f} kB"
+    print(f"    → {web_dir().parent.name}/{web_dir().name}/{name} ({len(text) / 1e3:.0f} kB{extra})")
 
 
-def load_web(name: str, optional: bool = False) -> Any:
-    """Read a web data file another builder wrote (None if `optional` and it does not exist)."""
-    path = web_dir() / name
+def load_web(name: str, optional: bool = False, texts: bool = False) -> Any:
+    """Read a web data file another builder wrote (None if `optional` and it does not exist): its texts in the country's
+    first language, or with `texts` as lang.Text in every language (for a builder that writes the file again)."""
+    from ..countries import active
+
+    return read_web(web_dir(), name, active().langs if texts else (), optional)
+
+
+def read_web(folder: Path, name: str, langs: tuple[str, ...] = (), optional: bool = False) -> Any:
+    """A web data file of `folder` with the overlays of langs[1:] joined back as lang.Text (none: as it is)."""
+    path = Path(folder) / name
     if optional and not path.exists():
         return None
-    return json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if len(langs) < 2:
+        return data
+    overlays = {code: json.loads((path.parent / lang.overlay_name(name, code)).read_text(encoding="utf-8")) for code in langs[1:]}
+    return lang.join(data, overlays, langs[0])

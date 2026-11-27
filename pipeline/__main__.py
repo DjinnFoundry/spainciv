@@ -213,7 +213,7 @@ def cmd_serve(port=8765, argv=()):
     the page turns half new, half stale. So the server runs in a child process that restarts when that code changes."""
     if os.environ.get(SERVE_CHILD):
         with http.server.ThreadingHTTPServer(("127.0.0.1", port), site_handler()) as srv:
-            print(f"serving web/ ({countries.active().name}) at http://127.0.0.1:{port}", flush=True)
+            print(f"serving web/ ({countries.active().id}) at http://127.0.0.1:{port}", flush=True)
             srv.serve_forever()
         return
     cmd = [sys.executable, "-m", "pipeline", *argv]
