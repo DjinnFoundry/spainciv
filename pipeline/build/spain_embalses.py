@@ -1,12 +1,12 @@
 """Spain's reservoirs week by week (embalses.json, embalses_semanas.json) for the reservoirs lens (web/js/ext/embalses).
 
-* **Basins** (E93): a land hex goes to the Boletín basin (DDHH polygon) that holds its centre; a peninsular one
+* **Basins** (E91): a land hex goes to the Boletín basin (DDHH polygon) that holds its centre; a peninsular one
   outside every polygon (the 1:… coast of the layer is simplified) to the nearest polygon within SNAP_KM, else to
   none. The hexes of the island provinces, Ceuta and Melilla get none, by province code: the Boletín covers the
   peninsula only.
 * **Basin figures**: per week, Σ water stored and Σ capacity of the basin's reservoirs that report that week
   (pipeline/sources/es/embalses.py), the Boletín's own formula.
-* **Positions** (E93): (1) the Boletín map's point with the identical basin and name, which every reservoir of the
+* **Positions** (E91): (1) the Boletín map's point with the identical basin and name, which every reservoir of the
   latest week must have; (2) for a reservoir it no longer reports, the Wikidata reservoirs and dams one of whose names
   normalises to the same as its own (`name_key`) and that lie inside its basin or within WIKIDATA_KM of it: their mean
   when they all lie within WIKIDATA_KM of each other (core.geo.spread_mean, the beaches' rule, E74); when they split,

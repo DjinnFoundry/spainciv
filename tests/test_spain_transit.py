@@ -1,5 +1,5 @@
 """Hours to Madrid by train: the train sources (pipeline/sources/es/trenes.py) and the rules and check of
-pipeline/build/spain_transit.py (DECISIONS E101–E104)."""
+pipeline/build/spain_transit.py (DECISIONS E101)."""
 
 import copy
 import io

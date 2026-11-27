@@ -8,7 +8,7 @@ row) and the placement (INE codes). `fetch` caches every document the table cite
 for provenance. Where a list can be read with the standard library (`LISTS`), the build reads it and fails unless the
 table has exactly its fiestas, so a new declaration is not missed. A fiesta the State has since declared Nacional or
 Internacional names that entry of fiestas_interes_turistico.csv in `state_same`, and the map counts it once, at the
-State's category. Rules: DECISIONS.md E77–E79 and F34.
+State's category. Rules: DECISIONS.md E45 and F34.
 """
 
 from __future__ import annotations

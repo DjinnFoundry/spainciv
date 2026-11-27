@@ -1,5 +1,5 @@
 """The Blue Flag beaches lens: each beach ADEAC lists, at the beach itself when Wikidata or OpenStreetMap has it by
-name in its municipality, else on its municipality's coast (DECISIONS E24, E74–E76).
+name in its municipality, else on its municipality's coast (DECISIONS E24, E74, E75).
 
 Matching (`match`): an ADEAC beach and a record are the same beach when one of the beach's name forms (`forms`: the
 whole name, without its bracket, the bracket alone, each part of a name joined with '-', '/' or 'y') has the same key

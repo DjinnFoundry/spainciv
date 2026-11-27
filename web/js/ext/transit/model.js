@@ -5,7 +5,7 @@ import { esc, int } from "../../format.js";
 import { country } from "../../app/country.js";
 import { formatDuration } from "../../ui/lenses.js";
 
-// Passenger trains a day on a link: 1–9, 10–49, 50 or more (DECISIONS E103).
+// Passenger trains a day on a link: 1–9, 10–49, 50 or more (DECISIONS E101).
 export const BANDS = [10, 50];
 export const band = (n) => (n >= BANDS[1] ? 2 : n >= BANDS[0] ? 1 : 0);
 export const GHOST = "g";

@@ -1,5 +1,5 @@
 // Great people through time, "¿Quién vivía en {año}?" / "Who was alive in {year}?", on a map whose data has
-// personajes.json with years of life (Spain; DECISIONS E105, E106, A35).
+// personajes.json with years of life (Spain; DECISIONS E105, A35).
 //
 //   lenses "great_people_year" (people alive per hex, the ramp and fixed domain of great_people, so a colour is the
 //     same count in every year; a hex with nobody alive is grey, not the colour of one) and "great_people_year_kind"
