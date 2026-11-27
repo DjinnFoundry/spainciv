@@ -6,6 +6,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- Unciv: Galicia juega con peces, Extremadura con cerdo ibérico, Asturias con carbón y Castilla y León con ovejas, elegidos a mano en vez de por la regla (que les daba hierro, piedra, caballos y uranio). La página de jugar lo dice (E90).
 - **España por descubrir**, la niebla de guerra: en el menú Mapa, «Por descubrir» cubre de nubes la tierra que aún no has visto. Mientras está encendido, se despeja al dejar el ratón sobre un hexágono, al pincharlo o tocarlo, al buscar una ciudad o al jugar al juego del día, y cuanto más alejado está el mapa, más tierra despeja cada vez. Las lentes se ven a través de la niebla, y la selección y las marcas del juego quedan por encima; el minimapa también lleva la niebla. Un panel plegable cuenta el porcentaje de España explorado y el de cada comunidad, copia un texto con una casilla por comunidad y permite empezar de nuevo. Lo explorado se guarda en el navegador y se suma entre pestañas. En castellano e inglés; el mapa de EE. UU. no lo tiene (A29).
 - **Álbum de provincias** en «Adivina el hexágono»: una pestaña nueva del panel colorea en la silueta de España la
   provincia de cada hexágono acertado, con una tira por comunidad autónoma que se marca en dorado al completarla. Cada

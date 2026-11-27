@@ -712,10 +712,24 @@ class NationsTest(unittest.TestCase):
         self.assertIn("You start 2 tiles from Logroño.", play.nation_texts(self.summary, rioja, "en")["intro"])
         self.assertEqual(play.nation_texts(self.summary, rioja, "es")["starts_in"], "Logroño (a 2 casillas)")
         self.assertEqual(play.nation_texts(self.summary, by_name["Galicia"], "es")["starts_in"], "Santiago de Compostela")
-        self.assertEqual(cyl["resource"], "Uranium")  # dormant until Atomic Theory: the texts say so
-        self.assertIn("hasta que descubres Teoría atómica", play.nation_texts(self.summary, cyl, "es")["intro"])
-        self.assertIn("revealed by Atomic Theory", play.nation_texts(self.summary, cyl, "en")["advantage"])
+        asturias = by_name["Asturias"]
+        self.assertEqual(asturias["resource"], "Coal")  # dormant until Industrialization: the texts say so
+        self.assertIn("hasta que descubres Industrialización", play.nation_texts(self.summary, asturias, "es")["intro"])
+        self.assertIn("revealed by Industrialization", play.nation_texts(self.summary, asturias, "en")["advantage"])
+        self.assertNotIn("revealed", play.nation_texts(self.summary, cyl, "en")["advantage"])  # sheep: always seen
         self.assertNotIn("revealed", play.nation_texts(self.summary, by_name["Canarias"], "en")["advantage"])
+
+    def test_editorial_picks_are_held_and_said(self):
+        by_code = {n["code"]: n for n in self.nations}
+        for code, resource in spain_unciv.UNIQUE_PICKS.items():
+            n = by_code[code]
+            self.assertEqual((n["resource"], n["resource_editorial"]), (resource, True))
+            self.assertGreater(n["resource_tiles"], 0, n["name"])
+        self.assertFalse(by_code["08"]["resource_editorial"])  # Castilla-La Mancha keeps the rule's wine
+        es = play.unique_fallback(self.summary, "es")
+        self.assertIn("elegido a mano en", es)
+        self.assertIn("Galicia (", es)
+        self.assertNotIn("Galicia", es.split("entre todos")[-1])  # a picked nation is not listed as a fallback
 
     def test_terrain_and_technology_names_are_unciv_s_own(self):
         # Unciv 5.0.1, android/assets/jsons/translations/Spanish.properties: what its nation picker shows.

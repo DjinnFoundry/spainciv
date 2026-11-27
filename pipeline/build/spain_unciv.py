@@ -144,6 +144,10 @@ BIAS_TERRAINS = ("Coast", "Hill", "Mountain", "Forest", "Marsh", "Grassland", "P
 # relative to the community's share of the land, among those it holds at least this many tiles of (or, if it holds
 # none so many, among all it holds).
 UNIQUE_MIN_TILES = 2
+# Editorial picks over the rule (E90): what anyone expects of these communities, each on tiles the community holds
+# (the build fails if it holds none). The rule gave Galicia iron, Extremadura stone, Asturias horses and Castilla y
+# León uranium, which stays hidden until Atomic Theory.
+UNIQUE_PICKS = {"12": "Fish", "11": "Cerdo ibérico", "03": "Coal", "07": "Sheep"}
 # Unciv lets no city be founded within 3 tiles of another (ModConstants.minimalCityDistance, Tile.canBeSettled): a
 # nation whose seat is closer than this to a larger one's start begins on the nearest tile of its own land that is not.
 MIN_SEAT_GAP = 4
@@ -373,14 +377,16 @@ def nations(world: dict, grid: unciv.Grid, fine: HexGrid, tiles, padron: dict, n
     for code, (name, seat, leader) in COMMUNITY_NATIONS.items():
         mine = [t for t in land if of_tile[t] == code]
         held = held_by[code]
-        resource = unique_resource(held, resources, len(mine) / len(land))
+        resource = UNIQUE_PICKS.get(code) or unique_resource(held, resources, len(mine) / len(land))
+        if not held[resource]:
+            raise RuntimeError(f"{name}: its unique's resource {resource} is on none of its tiles")
         munis = community_municipalities(padron, code).values()
         out.append({
             "code": code, "name": name, "city_state": False, "leader": leader, "seat": seat,
             "cities": city_names(code, seat, padron, names), "population": sum(population(m, year) for m in munis),
             "municipalities": len(munis), "land_tiles": len(mine),
             "start_bias": start_bias(terrain_counts(grid, tiles, mine), len(mine), spain_terrains, len(land)),
-            "resource": resource, "resource_tiles": held[resource], "resource_map_tiles": resources[resource],
+            "resource": resource, "resource_editorial": code in UNIQUE_PICKS, "resource_tiles": held[resource], "resource_map_tiles": resources[resource],
             **flag_fields(code),
         })
     for code, (name, seat) in CITY_STATES.items():
