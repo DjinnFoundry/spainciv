@@ -246,9 +246,12 @@ class PackageTest(unittest.TestCase):
 
 @unittest.skipUnless(NODE, "node is not installed")
 class CountryJsTest(unittest.TestCase):
-    def country(self, world, page_json):
+    def country(self, world, page_json, browser=()):
+        """setCountry in node, with the page settings `page_json` and the browser's languages `browser`. Node has its own
+        `navigator`, whose languages follow the machine's locale: replaced so the result does not depend on it."""
         doc = "null" if page_json is None else "{getElementById: (id) => id === 'country-page' ? {textContent: %s} : null}" % json.dumps(page_json)
         script = (
+            f"Object.defineProperty(globalThis, 'navigator', {{value: {{languages: {json.dumps(list(browser))}}}}});"
             f"import({json.dumps(COUNTRY_JS.as_uri())}).then(({{setCountry}}) => "
             f"console.log(JSON.stringify(setCountry({json.dumps(world)}, {doc}))));"
         )
@@ -263,6 +266,13 @@ class CountryJsTest(unittest.TestCase):
         self.assertEqual(c["notices"], ["Límites: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
         self.assertEqual(c["data_credit"], es.page.in_lang("es").data_credit)
         self.assertEqual(c["product"], "spainciv")
+
+    def test_browser_language_picks_its_texts(self):
+        es = countries.COUNTRIES["es"]
+        c = self.country({"country": {"id": "es"}}, json.dumps(site.page_config(es)), browser=["en-GB"])
+        self.assertEqual((c["lang"], c["locale"]), ("en", dict(es.locales)["en"]))
+        self.assertEqual(c["notices"], ["Boundaries: Atlas Nacional de España (ANE), CC BY 4.0, ign.es"])
+        self.assertEqual(c["data_credit"], es.page.in_lang("en").data_credit)
 
     def test_us_without_page_settings(self):
         c = self.country({}, None)
