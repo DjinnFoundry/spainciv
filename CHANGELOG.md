@@ -8,11 +8,13 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ### Añadido
 - Grupo de lentes **Longevidad**, detrás de Vida diaria: la esperanza de vida al nacer (pasa aquí), el
   **sobreenvejecimiento** (de 85 años o más entre los de 65 o más; España, 15,6 %), los **centenarios** por 10.000
-  (España, 3,66; suavizados hacia la tasa de España para que una aldea no gane con uno), la **esperanza de vida a los
-  65** (España, 21,87 años en 2024; el tooltip da hombres y mujeres) y las **zonas de longevidad**: los hexágonos que
-  tocan con las tres medidas en lo alto, con nombre (Zamora, Ourense, Béjar, Segovia, Madrid…). Del Censo anual de
-  población del INE de 2026 (provisional) y sus Indicadores Demográficos Básicos. La descripción avisa de que las
-  zonas se apoyan en la España rural y envejecida (E107, E108, F44).
+  (España, 3,66), los dos suavizados hacia la cifra de España para que una aldea no gane con unos pocos vecinos, la
+  **esperanza de vida a los 65** (España, 21,87 años en 2024; el tooltip da hombres y mujeres) y las **zonas de
+  longevidad**: los hexágonos que se tocan con las tres medidas en lo alto, comparadas con el decimal que enseña cada
+  lente. Por hexágonos son sobre todo la meseta del Duero y Ourense; por residentes, Madrid y Barcelona, que reúnen el
+  72 %. La leyenda lista las seis zonas más pobladas y lleva el mapa a cada una. En el móvil, con estas lentes, un
+  toque en un hexágono enseña su tooltip y la leyenda ampliada, la descripción. Del Censo anual de población del INE
+  de 2026 (provisional) y sus Indicadores Demográficos Básicos de 2024 (E107, E108, F44).
 - «Adivina el hexágono»: la pista 2 dice «Muchos centenarios» cuando el hexágono tiene 1,5 veces la tasa de España o
   más. Los días ya fijados no cambian (E109).
 - Unciv: Castilla y León, la comunidad con mayor proporción de mayores de 85 entre los de 65 o más (19,2 %), crece un
@@ -165,6 +167,10 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E9, E49).
 
 ### Corregido
+- Los municipios cuyo artículo lleva apóstrofo ya no salen con un espacio de más: «L'Hospitalet de Llobregat», no
+  «L' Hospitalet de Llobregat».
+- En las lentes de esperanza de vida, las marcas de la escala de la leyenda ya no se pisan («20,0 años21,0 años»): el
+  número va solo y la unidad, en su línea.
 - Panel del Maestre del Comercio: los puertos de España se partían con «…» («Bahía de Algecira…») y sus barras
   salían vacías; ahora el nombre baja de línea y la barra es el total. Con un panel abierto al lado, los botones de
   lentes de abajo se quedan en el icono en vez de cortar el último («Estudios superior»). La flecha de orden de una

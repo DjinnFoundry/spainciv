@@ -257,9 +257,17 @@ lens: "Nadie", nobody born there). `hide_empty` (optional, categorical lenses) l
 hex has (the timeline's trades of a year).
 
 **Value display** (optional keys, any lens; absent = as before): `decimals` fixes the decimals of a `pct` value
-(otherwise 1 under 10 %, 0 above); `unit_in_value: true` writes the `unit` after a `pct` value in the tooltip, not on
+(otherwise 1 under 10 %, 0 above), a `float` value and a `years` value (otherwise 1); a `years` lens whose `unit` is
+longer than "years" prints its legend ticks as the number alone, the unit on its own line; `unit_in_value: true` writes the `unit` after a `pct` value in the tooltip, not on
 the legend's ticks; `bounded: true` says the domain is the value's natural range, so the legend's end ticks and band
 hint carry no ≤/≥.
+
+**Reaching a lens's details** (optional keys, any lens; the US sets none): `also_sources`, more ids of sources.json
+the legend's source line names after `source`'s (`check` validates them); `touch_details: true`, on a touch screen the
+first tap on a hex shows its tooltip, as hovering does with a mouse, with "Tap again to open it" as its last line, and
+a second tap on that hex does what a tap does; on a phone the legend's + also shows the description, which is
+otherwise hidden there; `fly_to`, indices into `names` the categorical legend lists under its swatches, each a button
+that rings the hexes `labels` gives that name and brings them into view (`app/flyToCells.js`).
 
 **Wildlife lenses** (Spain, `pipeline/build/spain_fauna.py`): `lynx`, `bear`, `wolf`, `imperial_eagle` and
 `bearded_vulture`, in group `fauna` (the first of Spain's own groups, so the picker shows it after Land), with
@@ -284,17 +292,18 @@ Their interim files: `bdn_especies.json` = `{"period": [2013, 2018], "grid": "EE
 **Spain's longevity lenses** (group `longevity`, right after `life`; `pipeline/build/spain_longevity.py`, DECISIONS
 E107–E108). The census counts (`ine_censo_edad`, INE table 65034) are pooled per hex before dividing: each municipality
 adds its count × the share of its census residents the hex holds. Life expectancy is the municipality's own for INE's
-155, else its province's, as a population-weighted mean. Every text is bilingual.
+155, else its province's, as a population-weighted mean. The three zone measures are stored at the one decimal the map
+shows (`DIGITS`: 0.173 is "17,3 %"), so a tooltip and the zones never disagree. Every text is bilingual.
 
 | id | format | unit | higher_is | notes |
 |---|---|---|---|---|
 | `life_expectancy` | `years` | years at birth | `good` | `AMENITIES_RAMP`; moved here from `life` with the same values |
-| `oldest_old` | `pct` | aged 85+ among those 65+ | `neutral` | unsmoothed; `note`: counted where people live (care homes raise their municipality's), depopulation moves it less than the share over 65 |
-| `centenarians` | `float` | per 10,000 inhabitants | `neutral` | (c + 10,000 × Spain) ÷ (r + 10,000); `national` = Spain's rate; `names`/`labels`: each municipality with centenarians, whole count and raw rate; `note`: the smoothing |
-| `life_expectancy_65` | `years` | more years at 65 | `good` | `AMENITIES_RAMP`; `names`/`labels`: each unit (municipality or province) with both sexes, men and women |
-| `longevity_zones` | `category` | | `neutral` | 4 categories (none, one, two, all three), domain `[0, 3]`; `thresholds` `{oldest_old, centenarians, life_expectancy_65}` (the population-weighted 75th percentiles); `names` = the zones ("Zona de Zamora: 71 hexágonos, 136.620 residentes"), `labels` = the zone of a zone hex, else null; `check` fails a zone hex under a threshold |
+| `oldest_old` | `pct`, `decimals` 1 | aged 85+ among those 65+ | `neutral` | (85+ + 200 × Spain) ÷ (65+ + 200), `OLDEST_PRIOR`; 3 digits; `note`: counted where people live (care homes raise their municipality's), depopulation moves it less than the share over 65 |
+| `centenarians` | `float`, `decimals` 1 | per 10,000 inhabitants | `neutral` | (c + 10,000 × Spain) ÷ (r + 10,000) × 10,000; `national` = Spain's rate; `names`/`labels`: each municipality with centenarians and its whole count, with its raw rate from 10,000 residents (`RATE_MIN`); `note`: the smoothing; `touch_details` |
+| `life_expectancy_65` | `years`, `decimals` 1 | more years at 65 | `good` | `name` "Vida a los 65", `heading` "Esperanza de vida a los 65"; `AMENITIES_RAMP`; `names`/`labels`: each unit (municipality or province) with both sexes, men and women; `touch_details` |
+| `longevity_zones` | `category` | | `neutral` | 4 categories (none, one, two, all three), domain `[0, 3]`; `thresholds` `{oldest_old, centenarians, life_expectancy_65}` (the population-weighted 75th percentiles of the stored values); `names` = the zones ("Zona de Ourense: 67 hexágonos, 290.397 residentes", "1 hexágono" for one), `labels` = the zone of a zone hex, else null; `fly_to` = the 6 zones with most residents; `also_sources` `["ine_esperanza_vida"]`; `touch_details`; `check` fails a hex whose count is not how many of its values reach the thresholds, a hex with all three outside a zone (or the reverse), or no zone |
 
-Icons `l-oldest-old`, `l-centenarians`, `l-life-65` and `l-longevity` fall back to their emoji (👵 💯 ⌛ 🌿).
+Icons `l-oldest-old`, `l-centenarians`, `l-life-65` and `g-longevity` (the zones lens takes it through `ALIASES`).
 
 **`personajes.json`** (Spain, `pipeline/build/spain_personajes.py`; the `names_from` file of `great_people` and
 `great_people_kind`, and the timeline's people): `{"vintage", "categories": [{id, name, color}] (the categorical lens's),
@@ -1056,7 +1065,7 @@ through time, only where the data has `personajes.json` and both great people le
 `great_people_year_kind`, overlay `timeline-dots`, mode `timeline`, hash key `anio` with the year as people write it,
 a minus for BC and no year 0, e.g. `#lens=great_people_year&anio=1000` or `anio=-201` (201 BC); no `anio`, or one
 that is not a year, opens at `timeline.until`; the year rules are in `ext/timeline/lifespan.js`).
-`ext/flyToCells.js` is the dock helper the fiesta calendar and the timeline use: highlight some hexes and fit them in
+`app/flyToCells.js` is the helper the fiesta calendar, the timeline and a lens's `fly_to` list use: highlight some hexes and fit them in
 the view.
 The calendar and the climate share one month (`ext/month.js`, hash key
 `mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. Moving between the

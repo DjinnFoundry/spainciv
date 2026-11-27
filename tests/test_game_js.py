@@ -246,7 +246,7 @@ class CluesTest(unittest.TestCase):
                 f"{got['rate']:.1f}".replace(".", ","), f"{times:.1f}".replace(".", ","))
             self.assertEqual(got["value"], f"{rate} por 10.000 ({ratio} veces España)" if lang == "es"
                              else f"{rate} per 10,000 ({ratio} times Spain's)")
-            self.assertIsNone(got["guadix"], lang)  # day 1's clue 2 stays as it was: Guadix's 3.67 is under the cut
+            self.assertIsNone(got["guadix"], lang)  # day 1's clue 2 stays as it was: Guadix's 3.7 is under the cut
             self.assertLess(got["guadixRate"], 1.5 * got["national"])
             self.assertTrue(got["everyOver"], lang)
 

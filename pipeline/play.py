@@ -242,9 +242,11 @@ def nation_texts(summary: dict, nation: dict, lang: str) -> dict[str, str]:
 
 
 def longevity_fields(longevity: dict, lang: str) -> dict[str, str]:
-    """The numbers of the longevity trait as `lang` writes them: the index, Spain's, the census year and the growth."""
+    """The numbers of the longevity trait as `lang` writes them: the index, Spain's, the census year (with its status
+    while INE calls it provisional) and the growth."""
+    status = {"es": ", datos provisionales", "en": ", provisional"}[lang] if longevity.get("provisional") else ""
     return {"index": pct(longevity["index"], 1, lang), "spain": pct(longevity["spain"], 1, lang),
-            "census_year": str(longevity["year"]), "growth": str(unciv.LONGEVITY_GROWTH)}
+            "census_year": f"{longevity['year']}{status}", "growth": str(unciv.LONGEVITY_GROWTH)}
 
 
 def nation_json(summary: dict, nation: dict) -> dict:

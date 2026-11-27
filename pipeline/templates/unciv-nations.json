@@ -47,7 +47,7 @@
     "hidden": " That resource stays hidden, and gives nothing, until you discover $tech.",
     "advantage": "$resource: $resource_tiles of the map's $resource_map_tiles $resource_word tiles (+1 food, production and gold$hidden_short)",
     "hidden_short": "; revealed by $tech",
-    "longevity_name": "$unique_name and of long life",
+    "longevity_name": "$unique_name and Long Life",
     "longevity_intro": " You also have the largest share of the oldest old: $index of your residents aged 65 and over are 85 or older (Spain: $spain; INE Annual Population Census $census_year). Your cities grow $growth% faster, a game convention.",
     "longevity_advantage": "; longevity: $index of those 65 and over are 85 or older, the highest share (Spain: $spain): +$growth% growth",
     "fallback": ", or among all it holds if none reaches $unique_min: $names",

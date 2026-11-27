@@ -10,8 +10,9 @@ Commute, Faith and Disasters lenses, each from the official open figure that exi
 
 INE publishes commuting and weddings for every province and for about 150 large municipalities. Those municipalities
 carry their own figure; every other municipality takes the rest of its province (the province's count minus its
-listed municipalities). Life expectancy, which stands in for the US Wellbeing index, is in spain_longevity.py. Each lens is spread to hexes like the income lens: the population-weighted mean of the hex's
-municipalities. Uninsured has no counterpart: public health care covers every resident (Real Decreto-ley 7/2018).
+listed municipalities). Life expectancy, which stands in for the US Wellbeing index, is in spain_longevity.py. Each
+lens is spread to hexes like the income lens: the population-weighted mean of the hex's municipalities. Uninsured
+has no counterpart: public health care covers every resident (Real Decreto-ley 7/2018).
 
 The builder is spain.py, which calls `lenses()`; SOURCES go into its REQUIRES.
 """

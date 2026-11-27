@@ -132,8 +132,7 @@ class IneEsperanzaVida(IneTables):
         "INE computes it for (about 150 large ones, table 30687); life expectancy at 65, both sexes, men and women, for "
         "every province (table 1486), the same municipalities (table 30688), Spain (table 1415) and the autonomous "
         "communities (table 1449). INE works them out from deaths (Movimiento Natural de la Población) and "
-        "population. The map takes the latest year the provincial and municipal tables share; the communities, their "
-        "latest year.",
+        "population. The map takes the latest year all the tables share.",
         used_for=["Life expectancy lens", "Life expectancy at 65 lens", "Longevity zones", "Unciv: the longevity trait"],
     )
     TABLES = {"provinces": 1485, "municipalities": 30687, "provinces_65": 1486, "municipalities_65": 30688,
@@ -151,17 +150,18 @@ class IneEsperanzaVida(IneTables):
         return out
 
     def at65(self) -> dict:
+        """Life expectancy at 65 in the latest year the provinces, the municipalities, Spain and every community share,
+        so one year in the vintage covers every figure the map and the Unciv page show."""
         prov, muni = self.by_year("provinces_65", 2), self.by_year("municipalities_65", 5)
         nation, comms = self.by_year("nation_65", None), self.by_year("communities_65", 2, geo_col=1, sex_col=0)
-        years = [y for y in sorted(set(prov) & set(muni) & set(nation)) if set(PROVINCES) <= set(prov[y])]
-        comm_years = [y for y in sorted(comms) if set(COMMUNITIES) <= set(comms[y])]
-        if not years or not comm_years:
-            raise RuntimeError(f"{self.id}: no year with every province in table 1486, municipalities in table 30688 "
-                               "and Spain in table 1415, or none with every community in table 1449")
-        year, comm_year = years[-1], comm_years[-1]
+        years = [y for y in sorted(set(prov) & set(muni) & set(nation) & set(comms))
+                 if set(PROVINCES) <= set(prov[y]) and set(COMMUNITIES) <= set(comms[y])]
+        if not years:
+            raise RuntimeError(f"{self.id}: no year with every province in table 1486, municipalities in table 30688, "
+                               "Spain in table 1415 and every community in table 1449")
+        year = years[-1]
         return {"year": int(year), "nation": nation[year]["nation"], "provinces": dict(sorted(prov[year].items())),
-                "municipalities": dict(sorted(muni[year].items())), "communities_year": int(comm_year),
-                "communities": dict(sorted(comms[comm_year].items()))}
+                "municipalities": dict(sorted(muni[year].items())), "communities": dict(sorted(comms[year].items()))}
 
     def process(self):
         levels: dict[str, dict[str, dict[str, float]]] = {"provinces": {}, "municipalities": {}}

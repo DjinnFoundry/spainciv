@@ -62,11 +62,12 @@ COMMUNITY_SHORT_NAMES = {
 
 
 def display_name(name: str) -> str:
-    """INE's inverted article form → reading order: 'Coruña, A' → 'A Coruña', 'Balears, Illes' → 'Illes Balears'."""
+    """INE's inverted article form → reading order: 'Coruña, A' → 'A Coruña', 'Balears, Illes' → 'Illes Balears',
+    'Hospitalet de Llobregat, L\'' → 'L\'Hospitalet de Llobregat' (an elided article takes no space)."""
     if ", " in name:
         rest, article = name.rsplit(", ", 1)
         if len(article.split()) == 1 and article[:1].isupper() and len(article) <= 5:
-            return f"{article} {rest}"
+            return f"{article}{rest}" if article.endswith("'") else f"{article} {rest}"
     return name
 
 

@@ -8,6 +8,8 @@ web/js/hex.js mirrors this exactly — keep the two in sync.
 from __future__ import annotations
 
 import math
+from collections import deque
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 SQRT3 = math.sqrt(3)
@@ -73,3 +75,19 @@ class HexGrid:
 
     def to_dict(self) -> dict:
         return {"radius": self.radius, "cols": self.cols, "rows": self.rows}
+
+
+def components(cells: list[int], neighbours: Callable[[int], Iterable[int]]) -> list[list[int]]:
+    """Connected groups of `cells`, `neighbours` giving the cells next to one (HexGrid.neighbours, Grid.ring)."""
+    todo, out = set(cells), []
+    while todo:
+        start = todo.pop()
+        group, queue = [start], deque([start])
+        while queue:
+            for n in neighbours(queue.popleft()):
+                if n in todo:
+                    todo.remove(n)
+                    group.append(n)
+                    queue.append(n)
+        out.append(sorted(group))
+    return out

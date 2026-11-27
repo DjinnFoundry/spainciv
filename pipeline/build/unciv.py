@@ -55,11 +55,10 @@ import gzip
 import json
 import math
 from collections import Counter, deque
-from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import cached_property
 
-from ..core.hexgrid import HexGrid
+from ..core.hexgrid import HexGrid, components
 from ..core.raster import Canvas
 from .world import COAST_DEPTH_M, GROUP_ID, LAKE, LAND, MOUNTAINS, PEAKS
 
@@ -289,22 +288,6 @@ def resample(world: dict, grid: Grid) -> list[Tile]:
     for t in land:
         tiles[t].base = "Plains"  # terrain() decides
     return tiles
-
-
-def components(cells: list[int], neighbours: Callable[[int], Iterable[int]]) -> list[list[int]]:
-    """Connected groups of `cells`, `neighbours` giving the cells next to one (HexGrid.neighbours, Grid.ring)."""
-    todo, out = set(cells), []
-    while todo:
-        start = todo.pop()
-        group, queue = [start], deque([start])
-        while queue:
-            for n in neighbours(queue.popleft()):
-                if n in todo:
-                    todo.remove(n)
-                    group.append(n)
-                    queue.append(n)
-        out.append(sorted(group))
-    return out
 
 
 def terrain(world: dict, grid: Grid, tiles: list[Tile]) -> None:

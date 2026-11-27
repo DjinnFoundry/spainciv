@@ -628,6 +628,7 @@ class ModAndPageTest(unittest.TestCase):
             self.assertIn(row, html)
             self.assertIn(convention, html)
             self.assertIn(play.longevity_fields(s["longevity"], lang)["index"], html)
+            self.assertIn({"es": "2026, datos provisionales", "en": "2026, provisional"}[lang], html)
 
     def test_the_page_explains_the_fire_season(self):
         f = self.doc["summary"]["fire_season"]
@@ -958,14 +959,17 @@ class NationsTest(unittest.TestCase):
         ages = json.loads((ROOT / "data" / "interim" / "es" / "ine_censo_edad.json").read_text(encoding="utf-8"))["data"]
         index = spain_unciv.longevity_index(ages["provinces"])
         self.assertEqual(set(index), set(spain_unciv.COMMUNITY_NATIONS))  # majors only: no Ceuta or Melilla
-        old = sum(spain_unciv.group_sum(c, spain_unciv.OLD) for p, c in ages["provinces"].items() if COMMUNITY_OF[p] == "07")
-        self.assertAlmostEqual(index["07"], sum(spain_unciv.group_sum(c, spain_unciv.OLDEST) for p, c in
-                                                ages["provinces"].items() if COMMUNITY_OF[p] == "07") / old)
+        cyl_provinces = [c for p, c in ages["provinces"].items() if COMMUNITY_OF[p] == "07"]
+        old = sum(spain_unciv.ages_from(c, 65) for c in cyl_provinces)
+        self.assertAlmostEqual(index["07"], sum(spain_unciv.ages_from(c, 85) for c in cyl_provinces) / old)
         longest = self.summary["longevity"]
         self.assertEqual((longest["code"], longest["name"]), ("07", "Castilla y León"))
         self.assertEqual(longest["code"], max(index, key=index.get))
         self.assertGreater(longest["index"], longest["spain"])
         self.assertEqual(longest["e65_top"]["name"], "Madrid")  # life expectancy at 65 picks another community
+        at65 = json.loads((ROOT / "data" / "interim" / "es" / "ine_esperanza_vida.json").read_text(encoding="utf-8"))
+        self.assertEqual(longest["e65_top"]["year"], at65["data"]["at65"]["year"], "the year of the lenses")
+        self.assertTrue(longest["provisional"])  # the 2026 census by age is provisional until May 2027
         with_trait = [j["name"] for j in self.nations_json if "[+10]% growth [in all cities]" in j.get("uniques", [])]
         self.assertEqual(with_trait, ["Castilla y León"])
         self.assertEqual([n["name"] for n in self.nations if "longevity" in n], ["Castilla y León"])

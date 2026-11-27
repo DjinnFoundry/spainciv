@@ -99,6 +99,12 @@ class IneCensoNacimiento(CensoSecciones):
     CATEGORIES = {"Extranjero": "abroad"}
 
 
+def ages_from(counts: dict, start: int) -> int:
+    """Residents aged `start` and over, of a place's census counts by age (IneCensoEdad: each age group keyed by the
+    age it starts at, beside "total")."""
+    return sum(n for k, n in counts.items() if k != "total" and int(k) >= start)
+
+
 class IneCensoEdad(CensoSecciones):
     """Residents aged 65 and over by five-year group, and every resident, from the census by section (table 65034).
     Table 1488 (share of the population over each age, by province) checks it: the provinces' shares of 85+ and 100+
@@ -124,7 +130,7 @@ class IneCensoEdad(CensoSecciones):
     TOTAL_LABEL = "Todas las edades"
     CATEGORIES = {**{f"De {a} a {a + 4} años": str(a) for a in range(65, 100, 5)}, "100 y más años": "100"}
     TOPIC = "Sexo y edad"
-    CHECKED = {"85": "85 y más años", "100": "100 y más años"}  # the groups from this age up → table 1488's label
+    CHECKED = {85: "85 y más años", 100: "100 y más años"}  # the groups from this age up → table 1488's label
     TOLERANCE = 0.01  # percentage points: table 1488 rounds to two decimals
 
     def fetch(self, force=False):
@@ -142,7 +148,7 @@ class IneCensoEdad(CensoSecciones):
         for code in PROVINCES:
             counts = out["provinces"][code]
             for start, label in self.CHECKED.items():
-                ours = 100 * sum(n for k, n in counts.items() if k != "total" and int(k) >= int(start)) / counts["total"]
+                ours = 100 * ages_from(counts, start) / counts["total"]
                 theirs = published.get((code, label))
                 if theirs is None or abs(ours - theirs) > self.TOLERANCE:
                     raise RuntimeError(f"{self.id} {year}: province {code} has {ours:.3f} % aged {label!r} in table "

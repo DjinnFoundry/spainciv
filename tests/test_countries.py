@@ -120,6 +120,7 @@ class SpainReferenceTest(unittest.TestCase):
         self.assertEqual(display_name("Palmas, Las"), "Las Palmas")
         self.assertEqual(display_name("Rioja, La"), "La Rioja")
         self.assertEqual(display_name("Madrid"), "Madrid")
+        self.assertEqual(display_name("Hospitalet de Llobregat, L'"), "L'Hospitalet de Llobregat")  # elided: no space
 
     def test_community_name_reads_in_order(self):
         got = {code: community_name(code) for code in COMMUNITIES}
@@ -1221,8 +1222,13 @@ class SpainVintageTest(unittest.TestCase):
                        ("AENA 2025 (final)", "AENA 2025 (datos definitivos)"), ("SIIU, students 2024-2025", "SIIU, matriculados 2024-2025"),
                        ("OAPN, Red de Parques Nacionales; visitors 2025", "OAPN, Red de Parques Nacionales; visitantes 2025"),
                        ("MAPA, Calidad diferenciada (2017 areas); eAmbrosia", "MAPA, Calidad diferenciada (zonas de 2017); eAmbrosia"),
-                       ("powerplantmatching 2889ad9d1; OpenStreetMap (Canary Islands)", "powerplantmatching 2889ad9d1; OpenStreetMap (Canarias)")]:
+                       ("powerplantmatching 2889ad9d1; OpenStreetMap (Canary Islands)", "powerplantmatching 2889ad9d1; OpenStreetMap (Canarias)"),
+                       ("INE Censo anual de población (Sexo y edad), 1 January 2026 (provisional)",
+                        "INE Censo anual de población (Sexo y edad), 1 de enero de 2026 (datos provisionales)")]:
             self.assertEqual(vintage(en), {"es": es, "en": en})
+        built = {s["id"]: s for s in json.loads((ROOT / "sites" / "es" / "data" / "sources.json").read_text(encoding="utf-8"))}
+        for census in ("ine_censo_edad", "ine_censo_nacimiento"):  # the census by section: 2026 is provisional
+            self.assertTrue(built[census]["vintage"].endswith("1 de enero de 2026 (datos provisionales)"), census)
         for es, en in [("Cobertura de banda ancha (Ministerio para la Transformación Digital), junio de 2025",
                         "Broadband coverage (Ministerio para la Transformación Digital), June 2025"),
                        ("Ministerio de Vivienda, valor tasado, 2.º trimestre de 2026", "Ministerio de Vivienda, appraised value, Q2 2026")]:
@@ -1448,13 +1454,28 @@ class SpainDailyLensesTest(unittest.TestCase):
         out = self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files()})
         at65 = out["at65"]
         self.assertEqual(at65["year"], 2024, "2025 has no municipality in table 30688")
-        self.assertEqual(at65["communities_year"], 2025, "the communities take their own latest year")
+        self.assertNotIn("communities_year", at65)  # the communities take the same year: one year in the vintage
+        self.assertEqual(at65["communities"]["13"], {"both": 21.5, "men": 19.5, "women": 23.5})
         self.assertEqual(at65["municipalities"], {"28079": {"both": 22.78, "men": 20.73, "women": 24.31}})
         self.assertEqual(at65["provinces"]["49"], {"both": 21.5, "men": 19.5, "women": 23.5})
         self.assertEqual(at65["nation"], {"both": 21.5, "men": 19.5, "women": 23.5})
         self.assertEqual(len(at65["communities"]), 19)
         with self.assertRaises(RuntimeError):  # 2024 lacks a province and 2025 a municipality: no shared year
             self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files(drop="49")})
+        no_community = self.at65_files()
+        no_community["1449.csv"] = "".join(l + "\n" for l in no_community["1449.csv"].splitlines()
+                                           if not l.split(";")[1:3] == ["13 C", "2024"])
+        with self.assertRaisesRegex(RuntimeError, "every community"):  # 2024 lacks Madrid, 2025 a municipality
+            self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **no_community})
+
+    def test_life_expectancy_at_birth_and_at_65_must_share_their_year(self):
+        from pipeline.sources.es.ine_daily import IneEsperanzaVida
+
+        prov = "﻿Provincias;Sexo;Periodo;Total\n" + "".join(
+            f"{code} P;Ambos sexos;{y};83,5\n" for code in PROVINCES for y in (2024, 2025))
+        muni = "﻿Municipios;Sexo;Periodo;Total\n28079 Madrid;Ambos sexos;2025;85,3\n"  # at birth: 2025; at 65: 2024
+        with self.assertRaisesRegex(RuntimeError, "at birth is of 2025 and at 65 of 2024"):
+            self.process(IneEsperanzaVida(), {"1485.csv": prov, "30687.csv": muni, **self.at65_files()})
 
     def test_broadband_reads_the_newest_100_mbps_column(self):
         from pipeline.sources.es import broadband
@@ -1582,9 +1603,26 @@ class SpainLongevityTest(unittest.TestCase):
         ages = {"municipalities": {"A": {"total": 1000, "65": 90, "85": 10},  # 10 % of its old are 85+
                                    "B": {"total": 1000, "65": 10, "85": 10}}}  # half of its old are 85+
         geoids, weights = ["A", "B"], [[(0, 1000.0), (1, 1000.0)], [(1, 500.0)], []]
-        old, oldest = (sl.census_totals(ages, geoids, g, weights) for g in (sl.OLD, sl.OLDEST))
-        # (10 + 10) ÷ (100 + 20), not the mean of 10 % and 50 %; half of B: 5 ÷ 10
-        self.assertEqual(sl.share(oldest, old), [round(20 / 120, 4), 0.5, None])
+        old, oldest = (sl.census_totals(ages, geoids, a, weights) for a in (sl.OLD_FROM, sl.OLDEST_FROM))
+        # (10 + 10) ÷ (100 + 20), not the mean of 10 % and 50 %; half of B: 5 ÷ 10. Unshrunk (prior 0), to 3 digits.
+        self.assertEqual(sl.oldest_old_values(oldest, old, 0, 0.156), [round(20 / 120, 3), 0.5, None])
+
+    def test_ages_from_sums_the_groups_from_an_age(self):
+        from pipeline.sources.es.ine_people import ages_from
+
+        counts = {"total": 1000, "65": 60, "80": 20, "85": 15, "100": 1}
+        self.assertEqual((ages_from(counts, 65), ages_from(counts, 85), ages_from(counts, 100)), (96, 16, 1))
+
+    def test_a_village_of_fifty_does_not_lead_the_oldest_old(self):
+        from pipeline.build import spain_longevity as sl
+
+        # Alpanseque (Soria): 51 residents, 26 aged 65 and over, 10 aged 85 and over: 38.5 % raw
+        village, town = ((10.0, 51.0), (26.0, 51.0)), ((400.0, 9000.0), (2000.0, 9000.0))  # the town: 20 % raw
+        spain = 0.156
+        got = sl.oldest_old_values([village[0], town[0]], [village[1], town[1]], sl.OLDEST_PRIOR, spain)
+        self.assertEqual(got, [round((10 + 200 * spain) / 226, 3), round((400 + 200 * spain) / 2200, 3)])
+        self.assertLess(got[0], got[1])
+        self.assertLess(got[0], 0.2)
 
     def test_a_hamlet_with_one_centenarian_does_not_beat_a_town_with_twenty(self):
         from pipeline.build import spain_longevity as sl
@@ -1610,6 +1648,10 @@ class SpainLongevityTest(unittest.TestCase):
         from pipeline.build import spain_longevity as sl
 
         self.assertEqual(sl.weighted_percentile([(1, 10), (2, 10), (3, 70), (4, 10)], 0.75), 3)
+        with self.assertRaises(ValueError):
+            sl.weighted_percentile([], 0.75)
+        with self.assertRaisesRegex(RuntimeError, "no hex has all three"):
+            sl.zone_counts([[None, 0.2], [0.1, None], [0.1, 0.2]], [1, 1])
         # four empty hexes with high values and one city: the weighted cut is the city's, not the hexes'
         measures = [[0.3, 0.3, 0.3, 0.3, 0.2, None]] * 3
         cuts, counts = sl.zone_counts(measures, [1, 1, 1, 1, 1000, 0])
@@ -1628,6 +1670,82 @@ class SpainLongevityTest(unittest.TestCase):
         self.assertEqual([(z["name"], z["cells"], z["residents"]) for z in found],
                          [("Bembibre", [0, 1], 550), ("Cea", [3], 5)])
         self.assertEqual(sl.zone_label(found[0])["es"], "Zona de Bembibre: 2 hexágonos, 550 residentes")
+        self.assertEqual(sl.zone_label(found[1]), {"es": "Zona de Cea: 1 hexágono, 5 residentes",
+                                                   "en": "Cea zone: 1 hex, 5 residents"})
+
+    def zone_world(self):
+        """Six hexes in a row: 0–1 and 3 meet all three thresholds, 2 meets two, 4 one, 5 is the sea."""
+        from pipeline.core.hexgrid import HexGrid
+
+        grid = HexGrid(radius=1.0, cols=6, rows=1)
+        weights = [[(0, 100.0)], [(0, 50.0), (1, 400.0)], [(1, 10.0)], [(2, 1000.0)], [(3, 3000.0)], []]
+        residents = [sum(w for _, w in p) for p in weights]
+        measures = {"oldest_old": [0.2, 0.2, 0.2, 0.2, 0.1, None], "centenarians": [5.0, 5.0, 5.0, 5.0, 3.0, None],
+                    "life_expectancy_65": [23.0, 23.0, 21.0, 23.0, 23.0, None]}
+        return grid, weights, residents, measures
+
+    def test_the_zones_lens_says_its_numbers(self):
+        from pipeline.build import spain_longevity as sl
+
+        grid, weights, residents, measures = self.zone_world()
+        names = {"A": "Alba", "B": "Bembibre", "C": "Cea", "D": "Duero"}
+        lens = sl.zones_lens(measures, residents, [5.0, 5.0, 5.0, 50.0, 50.0, None], [0.3, 0.3, 0.3, 0.1, 0.1, None],
+                             [0, 0, 0, 0, 0, -1], grid, weights, ["A", "B", "C", "D"], names, 2024, 2026, 155)
+        # the weighted cuts: hex 4's 3,000 residents are under three quarters of the 4,560, so they take hex 0–3's values
+        self.assertEqual(lens["thresholds"], {"oldest_old": 0.2, "centenarians": 5.0, "life_expectancy_65": 23.0})
+        self.assertEqual(lens["values"], [3, 3, 2, 3, 1, None])
+        es = lens["description"]["es"]
+        self.assertIn("de 20,0 % o más, centenarios de 5,0 por 10.000 o más y esperanza de vida a los 65 de 23,0 años", es)
+        self.assertIn("2 zonas, 3 hexágonos y 1550 residentes", es)
+        self.assertIn("Las de más hexágonos son Bembibre (2 hexágonos) y Cea (1 hexágono)", es)
+        self.assertIn("las de más residentes, Cea (1000) y Bembibre (550), y las dos primeras reúnen el 100 %", es)
+        self.assertIn("el 67 % de los de las zonas tiene menos de 12,5", es)  # hexes 0 and 1 of 0, 1 and 3
+        self.assertIn("frente al 60 % de los de tierra", es)
+        self.assertIn("y el 67 % está en el cuarto", es)
+        self.assertEqual(lens["fly_to"], [1, 0])  # the legend lists the most residents first
+        self.assertTrue(lens["note"]["en"].endswith("by residents, Cea and Bembibre."))
+
+    def test_no_zone_is_an_error_that_says_so(self):
+        from pipeline.build import spain_longevity as sl
+
+        grid, weights, residents, measures = self.zone_world()
+        measures["life_expectancy_65"] = [23.0, 21.0, 21.0, 21.0, 23.0, None]  # no hex has all three
+        measures["centenarians"] = [3.0, 5.0, 5.0, 5.0, 3.0, None]
+        with self.assertRaisesRegex(RuntimeError, "no hex meets all three thresholds"):
+            sl.zones_lens(measures, residents, [None] * 6, [None] * 6, [0, 0, 0, 0, 0, -1], grid, weights,
+                          ["A", "B", "C", "D"], {}, 2024, 2026, 155)
+
+    def test_the_check_catches_a_count_or_a_zone_that_does_not_match(self):
+        import tempfile
+
+        from pipeline.build import spain_longevity as sl
+
+        def run(zone_values, labels):
+            lenses = [{"id": "oldest_old", "values": [0.2, 0.1, 0.2]}, {"id": "centenarians", "values": [5.0, 5.0, 5.0]},
+                      {"id": "life_expectancy_65", "values": [23.0, 23.0, 23.0]},
+                      {"id": "longevity_zones", "values": zone_values, "labels": labels, "names": ["Zona de A"],
+                       "thresholds": {"oldest_old": 0.2, "centenarians": 5.0, "life_expectancy_65": 23.0}}]
+            with tempfile.TemporaryDirectory() as d:
+                (Path(d) / "lenses.json").write_text(json.dumps({"lenses": lenses}))
+                return sl.check(d)
+
+        self.assertEqual(run([3, 2, 3], [[0], None, [0]])[0][0], "PASS")
+        bad = run([3, 3, 3], [[0], [0], [0]])  # hex 1 is under the oldest-old cut but counts three
+        self.assertEqual(bad[0][0], "FAIL")
+        self.assertIn("([1])", bad[0][1])
+        unlabelled = run([3, 2, 3], [[0], None, None])  # hex 2 has all three and no zone
+        self.assertEqual(unlabelled[0][0], "FAIL")
+        self.assertIn("([2])", unlabelled[0][1])
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "lenses.json").write_text(json.dumps({"lenses": []}))
+            self.assertEqual(sl.check(d), [])
+
+    def test_a_small_village_lists_its_centenarians_without_a_rate(self):
+        from pipeline.build import spain_longevity as sl
+
+        self.assertEqual(sl.centenarian_line("Rello", {"total": 21, "100": 1}), "Rello: 1")
+        self.assertEqual(sl.centenarian_line("Lugo", {"total": 97000, "100": 80}),
+                         {"es": "Lugo: 80 (8,2 por 10.000)", "en": "Lugo: 80 (8.2 per 10,000)"})
 
     def test_life_expectancy_lenses_take_a_listed_municipality_or_its_province(self):
         from pipeline.build import spain_longevity as sl
@@ -1643,7 +1761,7 @@ class SpainLongevityTest(unittest.TestCase):
         birth = sl.life_lens("birth", life, geoids, weights, names)
         self.assertEqual((birth["id"], birth["group"], birth["values"]), ("life_expectancy", "longevity", [84.75, 83.5, None]))
         at65 = sl.life_lens("65", life, geoids, weights, names)
-        self.assertEqual(at65["values"], [22.75, 21.0, None])
+        self.assertEqual(at65["values"], [22.8, 21.0, None])  # one decimal, as the map shows it
         self.assertEqual([[at65["names"][k]["es"] for k in at65["labels"][c]] for c in (0, 1)],
                          [["Madrid: 23,00 (hombres 21,00, mujeres 24,50)",
                            "Provincia de Madrid: 22,00 (hombres 20,00, mujeres 23,50)"],
@@ -1660,8 +1778,14 @@ class SpainLongevityTest(unittest.TestCase):
         cent = next(l for l in doc["lenses"] if l["id"] == "centenarians")
         self.assertAlmostEqual(cent["national"], 3.66, places=2)
         zones = next(l for l in doc["lenses"] if l["id"] == "longevity_zones")
-        self.assertTrue(any("Madrid" in n for n in zones["names"]))  # the weighted rule keeps the capital
-        self.assertTrue(zones["names"][0].startswith("Zona de Zamora"))
+        for city in ("Madrid", "Barcelona"):  # the weighted rule keeps the large cities
+            self.assertTrue(any(n.startswith(f"Zona de {city}:") for n in zones["names"]), city)
+        self.assertFalse([n for n in zones["names"] if " 1 hexágonos" in n])
+        self.assertIn("Barcelona", zones["description"])
+        # no hex shows a value at or above a printed threshold without counting it (check() reads every hex)
+        from pipeline.build import spain_longevity as sl
+
+        self.assertEqual(sl.check(ROOT / "sites" / "es" / "data")[0][0], "PASS")
 
 
 class SpainCrimeTest(unittest.TestCase):
