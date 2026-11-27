@@ -623,6 +623,29 @@ SOURCES = {
         "pueblos.",
         "used_for": ["Lente de bares por 1.000 habitantes", "Índice de fiesta"],
     },
+    "osm_militar": {
+        "title": "Terreno e instalaciones militares de España (OpenStreetMap, landuse=military y military=*)",
+        "publisher": "Colaboradores de OpenStreetMap, a través de la API Overpass",
+        "license": "ODbL 1.0 (© colaboradores de OpenStreetMap)",
+        "description": "Todas las zonas de OpenStreetMap en España con landuse=military o military=base, barracks, "
+        "airfield, naval_base, training_area, range, danger_area u office, con su límite, nombre y operador, y los "
+        "puntos con nombre que llevan esas etiquetas, de una sola consulta guardada. Lo mapean voluntarios: los nombres "
+        "y operadores son suyos, y algunos límites cubren solo parte de un recinto. El Ministerio de Defensa no publica "
+        "una lista abierta de sus instalaciones.",
+        "used_for": ["Consejero militar: instalaciones, campos de maniobras y guarniciones",
+                     "Capa militar del mapa (fuertes y terreno restringido)"],
+    },
+    "wikidata_militar": {
+        "title": "Wikidata: bases, cuarteles, academias y arsenales militares de España",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (dominio público)",
+        "description": "Elementos en España cuya clase es cuartel, academia o escuela militar, base aérea, naval o "
+        "militar, estación naval, arsenal, maestranza aérea, hospital militar, centro o campo de entrenamiento, con "
+        "coordenadas, operador (P137) y rama (P241), sin los que Wikidata da por disueltos o como instalación militar "
+        "histórica. Sirve para enlazar las instalaciones de OpenStreetMap con su elemento y para dar la rama que OSM "
+        "no trae.",
+        "used_for": ["Consejero militar: enlaces a Wikidata y rama de las instalaciones"],
+    },
 }
 
 

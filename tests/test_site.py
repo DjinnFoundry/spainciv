@@ -226,7 +226,9 @@ class PackageTest(unittest.TestCase):
         self.assertEqual((out / "index.html").read_bytes(), site.index_bytes(es))
         self.assertEqual((out / "og-image.png").read_bytes(), b"\x89PNG card")
         self.assertEqual((out / "data" / "world.json").read_bytes(), (es.web_data_dir / "world.json").read_bytes())
-        self.assertFalse((out / "data" / "military.json").exists())  # US data never leaks into Spain's site
+        # US data never leaks into Spain's site: its military.json is Spain's own
+        self.assertEqual((out / "data" / "military.json").read_bytes(), (es.web_data_dir / "military.json").read_bytes())
+        self.assertNotEqual((out / "data" / "military.json").read_bytes(), (WEB / "data" / "military.json").read_bytes())
         for path in play.files(es):
             self.assertTrue((out / path).is_file(), path)
         for name in ("LICENSE", "NOTICE"):

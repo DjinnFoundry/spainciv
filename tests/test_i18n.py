@@ -22,7 +22,7 @@ NODE = shutil.which("node")
 WEB_JS = ROOT / "web" / "js"
 # t("key"), t('key') or t(`key`) with a literal key: the keys the code asks for.
 KEY_USE = re.compile(r"""\bt\(\s*(["'`])([A-Za-z0-9_.@-]+)\1""")
-# usOr("key") in an advisor: "key.us" on the US map, "key" elsewhere (web/js/ext/advisors/views/energy.js).
+# usOr("key"): "key.us" on the US map, "key" elsewhere (web/js/i18n.js).
 US_OR_USE = re.compile(r"""\busOr\(\s*(["'`])([A-Za-z0-9_.@-]+)\1""")
 
 
@@ -316,6 +316,7 @@ class SpanishDataTest(unittest.TestCase):
     # Keys whose values are ids or codes, never shown as text.
     CODES = {"id", "type", "kind", "key", "icon", "motif", "rule", "group", "format", "scale", "higher_is", "color", "dark",
              "source", "sources", "file", "files", "sha256", "url", "cbsa", "county", "state", "naics", "via", "basis",
+             "component", "tier", "status", "branch_from", "osm", "installation", "hex_state",  # military.json
              "district", "category", "unit_type", "qid", "ramp", "kinds", "industries", "site_url", "product", "lang",
              "locale", "currency",
              "map", "natural_wonders"}  # unciv.json: the Unciv map and wonder, in the game's own (English) identifiers

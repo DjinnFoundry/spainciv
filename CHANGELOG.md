@@ -14,7 +14,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   - Los nombres propios se quedan como los escribe su fuente.
   - Los números siguen al idioma: «1,6 B €» en castellano y «€1.6T» en inglés.
   - Las capas inglesas pesan unos 80 kB comprimidas, 38 kB sin la de personajes, que solo se carga al abrir sus
-    lentes. No repiten ningún valor (A18–A22, E67).
+    lentes. No repiten ningún valor (A20–A24, E72).
 - Los ficheros de datos que España no tiene (los del Ejército y del comercio de EE. UU.) ya no se piden, así que
   desaparecen los dos 404 de la consola.
 - Mapa de Unciv: el uranio y el aluminio buscan su casilla hasta unos 50 km del yacimiento (3 casillas de uranio y
@@ -26,6 +26,12 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   municipales; el tooltip dice cómo se obtuvo cada zona. Penedès, Priorat, Idiazabal, los txakolis y otros que no
   casaban por el nombre quedan enlazados a su registro. En el mapa de Unciv, el vino pasa de 81 a 132 casillas
   (E64–E66, F31).
+- **Ejército** para España: el General deja de estar vacío. 478 instalaciones militares de OpenStreetMap (23 grandes,
+  75 bases), con su rama (Tierra, Armada, Aire y del Espacio, UME), su superficie y su enlace a Wikidata; los 15 mayores
+  campos de maniobras como terreno restringido (San Gregorio, 338 km²; Chinchilla, 149; Sierra del Retín, 100); las
+  instalaciones y el terreno militar por provincia; y 29 ciudades con guarnición. Rota y Morón van marcadas como de uso
+  conjunto con Estados Unidos. La capa militar del mapa dibuja sus fuertes y campos. Sin efectivos ni gasto por
+  provincia: el anuario de Defensa no se pudo descargar (E67–E71, A19, F32).
 - **Jugar en Unciv**: España como mapa de Unciv (la versión libre de Civilization V), con mod descargable, mapa suelto
   y una página que explica cómo instalarlo en el ordenador y en Android y qué es dato real y qué convención del juego
   (enlazada desde la ayuda). 83 × 53 casillas de 25 km con la costa, el relieve, los bosques, los ríos y la cubierta del
@@ -55,6 +61,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E30, E31).
 
 ### Corregido
+- Arrastrar el mapa se engancha menos: al entrar terreno nuevo se pinta solo la franja que aparece, no el
+  mapa entero (con la CPU frenada ×4, de 104 a 22 ms por repintado a ×2,5; A18).
 - Los reyes guanches de Tenerife salen como «mencey» en vez de «monarca», con el cargo que les da Wikidata; un guanarteme de Gran Canaria saldría igual con el suyo.
 - Mayúsculas de los nombres como se escriben en castellano: «Palma de Mallorca», «Jerez de la Frontera», «Torre de Garay», «FGL Granada-Jaén», en aeropuertos, centrales, minas y lugares de Wikidata. Los aeropuertos pierden las marcas de nota de AENA («(**)») y los helipuertos salen como «Ceuta (helipuerto)».
 - Museos y castillos sin nombre en castellano toman el gallego, catalán o euskera antes que el inglés (antes salían 19 en inglés; quedan 12, que Wikidata solo nombra en inglés).

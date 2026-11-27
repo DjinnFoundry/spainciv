@@ -349,6 +349,7 @@ export async function extendData(data, names) {
 }
 
 function extendMilitary(data, mil) {
+  if (country().id !== "us") return extendMilitaryRegions(data, mil);
   const { states, metros } = data.levels;
   const v = mil.vintage || {};
   const instBy = (k) => {
@@ -385,6 +386,29 @@ function extendMilitary(data, mil) {
     r.v.encampment = c ? (c.tier === "fortress" ? "Fortress" : "Garrison") + (c.naval ? " (naval)" : "") : null;
     r.v.installations = byMetro.get(r.key) || 0;
   }
+}
+
+// A military.json without the US blocks (Spain): installations and military land by region, installations by metro.
+function extendMilitaryRegions(data, mil) {
+  const { states, metros } = data.levels;
+  const G = t("adv.group.military"), src = (mil.sources || [])[0] || "";
+  const vintage = mil.vintage?.installations || "";
+  const region = country().levels.region.one.toLowerCase();
+  states.addFields([
+    F4("installations", t("adv.mil.installations"), "int", { source: src, group: G, description: t("adv.f.milInst.desc", { region, vintage }) }),
+    F4("mil_land", t("adv.mil.m.land"), "float", { unit: "km²", source: src, group: G, description: t("adv.f.milLand.desc", { region, vintage }) }),
+  ]);
+  for (const r of states.rows) {
+    const s = mil.states?.[r.key];
+    r.v.installations = s ? s.installations : null;
+    r.v.mil_land = s ? s.area_km2 : null;
+  }
+  const byMetro = new Map();
+  for (const it of mil.installations || []) if (it.cbsa) byMetro.set(it.cbsa, (byMetro.get(it.cbsa) || 0) + 1);
+  metros.addFields([
+    F4("installations", t("adv.mil.installations"), "int", { source: src, group: G, description: t("adv.f.milInstMetro.desc", { vintage }) }),
+  ]);
+  for (const r of metros.rows) r.v.installations = byMetro.get(r.key) || 0;
 }
 
 function extendDistricts(data, d) {

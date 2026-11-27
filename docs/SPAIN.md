@@ -9,7 +9,7 @@ Decisions (and why) are in `DECISIONS.md`, what is missing in `ROADMAP.md`, what
 
 ## Language
 
-The Spanish site is in Spanish and English (DECISIONS A18–A21, E67). The language shown is the one in the URL
+The Spanish site is in Spanish and English (DECISIONS A20–A24, E72). The language shown is the one in the URL
 (`#lang=en`), else the one the visitor last picked (`localStorage`), else the first of the browser's languages the
 site has, else Spanish; a small button at the end of the top bar switches (the page reloads in the other language) and
 the shareable URL carries `lang=`, so a link opens in the sender's language (`web/js/app/country.js`,
@@ -28,7 +28,7 @@ the shareable URL carries `lang=`, so a link opens in the sender's language (`we
   texts=True)`. The tables shared with the US builders are translated in `pipeline/build/texts_es.py`; the Almanac's
   source entries take their English from the sources themselves (`pipeline/sources/es`).
 - **Names**: a name taken from a source stays as the source writes it, in both languages (places, people, dishes,
-  fiestas, denominations, museums, plants, mines); the map translates only the words it adds around it (E67).
+  fiestas, denominations, museums, plants, mines); the map translates only the words it adds around it (E72).
 - **Page**: the head, the social card and the credits are written in Spanish, the language of the data, because link
   previews never run the page; in English the page swaps its credits and description when it loads. The Unciv page is
   `jugar.html` in Spanish and `play.html` in English.
@@ -64,6 +64,8 @@ Spanish source gets its Almanac entry in `texts_es.SOURCES`; a new builder text 
 | `fiestas_interes_turistico` | Secretaría de Estado de Turismo: the Fiestas de Interés Turístico Internacional and Nacional pages of turismo.gob.es, placed in their municipalities by `pipeline/sources/es/data/fiestas_interes_turistico.csv` | Public-sector information, reuse citing the source (Ley 37/2007) | Fiestas lens (90 Internacional, 164 Nacional; a fiesta on both lists counts once, as Internacional), party index |
 | `ine_viviendas_turisticas` | INE table 39363 (experimental statistic on tourist dwellings, latest period: May 2026) | CC BY 4.0, citing INE | Tourist dwellings per 1,000 inhabitants lens, party index |
 | `osm_bares` | OpenStreetMap amenity=bar and amenity=pub (no cafés), one cached Overpass query, `out center` | ODbL 1.0 | Bars per 1,000 inhabitants lens (coverage uneven: cities and coasts far better mapped than villages), party index |
+| `osm_militar` | OpenStreetMap landuse=military and military=base, barracks, airfield, naval_base, training_area, range, danger_area, office, with boundaries, one cached Overpass query (`out geom`) | ODbL 1.0 | Military advisor and map layer (`pipeline/build/spain_military.py`): installations, branch from operator or name, tier from boundary area, the 15 largest training grounds as restricted ground, garrison cities (E67-E70). Guardia Civil and police posts, civil and former sites are left out |
+| `wikidata_militar` | Wikidata SPARQL: barracks, military academies, air, naval and military bases, arsenals, training grounds and military hospitals in Spain with coordinates, operator (P137) and branch (P241), without the dissolved (P576) or historic military sites | CC0 | Links the OSM installations to their Wikidata item (within 1.5 km or inside the boundary) and gives the branch OSM lacks |
 | `mivau_valor_tasado` | Ministerio de Vivienda, appraised value of free-market housing per m² (CSV VDP006_01), latest quarter with all 52 provinces | Public-sector information, citing the source | Home value lens, by province |
 | `ine_padron` | INE table 29005 (Padrón revision by municipality) | CC BY 4.0, citing INE | Population, growth, density lens |
 | `ine_pib` | INE table 80109 (Contabilidad Regional, GDP by province) | CC BY 4.0, citing INE | Gold (GDP) by province |

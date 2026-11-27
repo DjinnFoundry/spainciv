@@ -21,7 +21,11 @@ decisiones que salgan van a `DECISIONS.md`.
 - Lentes de personas: la edad es la media (no hay mediana municipal), los estudios superiores cuentan desde los 15 años (E41) y la vivienda en propiedad es del Censo de 2021, sin los 1.357 municipios de secciones confidenciales (E43).
 - La renta de los hogares es una media (el INE no publica la mediana municipal) y el alquiler de un área es la media de medianas municipales ponderada por contratos (E27, E29).
 - Los campos de los consejeros apuntan a los ids de fuente de EE UU (`acs_1yr`, `bea_gdp`) también en España.
-- Los ciudadanos de la City View y los ejércitos, el comercio y los desastres siguen siendo solo de EE UU.
+- Los ciudadanos de la City View, el comercio y los desastres siguen siendo solo de EE UU.
+- Ejército (E67-E71): faltan los efectivos por provincia del Anuario Estadístico Militar (ODS de 2023 en datos.gob.es;
+  `publicaciones.defensa.gob.es` no respondía el 27-11-2026) y el gasto de Defensa por provincia. Los límites son los
+  de OpenStreetMap, y 165 de las 478 instalaciones no tienen rama (oficinas, residencias, institutos del Órgano
+  Central y sitios cuyo nombre no la dice).
 - Distritos: describen el municipio núcleo de cada área (5 de las 86 áreas tienen un núcleo sin divisiones CNAE en el
   Censo y se quedan sin distritos); los municipios no tienen distritos propios. Sin Encampment (defensa no se separa a
   dos dígitos).
@@ -41,8 +45,9 @@ decisiones que salgan van a `DECISIONS.md`.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
-- Rendimiento: arrastrar y el primer dibujado tras cambiar de zoom siguen bloqueando 40–115 ms con la CPU frenada
-  ×4 (opciones: relieve desde 8 px, lienzo más ancho hacia el arrastre, teselas o worker).
+- Rendimiento: el primer dibujado tras cambiar de zoom sigue bloqueando con la CPU frenada ×4, sobre todo al
+  alejar (pinta los sprites de la escala nueva). Opciones: relieve desde 8 px o worker; repintar por bandas se
+  probó y se descartó (A18).
 - La línea base de EE UU con datos frescos da 52 PASS y los datos publicados por Karpathy 51 PASS y 1 WARN; el repo
   sigue con los de Karpathy (D6).
 

@@ -52,7 +52,9 @@ class RegistryTest(unittest.TestCase):
         es = builders_for("es")
         self.assertEqual(list(es)[0], "world")
         self.assertEqual(list(es)[-1], "catalog")
-        self.assertNotIn("military", es)
+        self.assertNotIn("military", es)  # the US builder; Spain's military.json comes from its own
+        self.assertIn("spain_military", es)
+        self.assertNotIn("spain_military", BUILDERS)
 
     def test_requires_per_country(self):
         world = BUILDERS["world"]
