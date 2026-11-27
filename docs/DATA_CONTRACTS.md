@@ -791,7 +791,8 @@ over 1991-2020 by spainciv), `omm_normales_es` (the WMO 1991-2020 normals of AEM
 
 ```jsonc
 {
-  "version": 1, "vintage": "1991-2020",
+  "version": 1, "vintage": "1991-2020",  // the ROCIO grid's period
+  "provinces_period": "1991-2020",        // the province normals' period (aemet_normales_provincias): the diagram's
   "sources": ["aemet_rocio", "omm_normales_es", "aemet_normales_provincias"],
   "rules": {"grid": Text, "province": Text, "station": Text, "frost": Text, "sun": Text, "rain": Text},  // quoted by the panel
   "cells": [int],                  // land hexes with a grid value, ascending
@@ -812,9 +813,15 @@ over 1991-2020 by spainciv), `omm_normales_es` (the WMO 1991-2020 normals of AEM
   province figure. A hex's province is world.json `owner` → states.json `fips`.
 * Frost on the grid is days with a minimum ≤ 0 °C; the stations' `frost` counts days < 0 °C (the WMO's rule).
 * `sun` exists only for the 76 stations that measure it; it is never spread to other hexes.
-* `domains`: the 2nd-98th percentile of the hex values over all 12 months (of the station values for sunshine), so the
-  twelve months share one colour scale.
-* `rules` are bilingual (`tr`; the English overlay is `clima.en.json`); station names are AEMET's or the WMO header's.
+* `domains`: the 0.2nd-99.8th percentile of the hex values over all 12 months (temperature rounded outward to whole
+  degrees), and the lowest to the highest station value for sunshine, so the twelve months share one colour scale. Under
+  2 % of any month's land hexes fall beyond the ends (tests/test_clima.py), and those are drawn in the end colours.
+* `rules` are bilingual (`tr`; the English overlay is `clima.en.json`). Station names are those of AEMET's station
+  pages without a leading "Estación de"; a station without a page takes the `nombre` of
+  `pipeline/sources/es/data/aemet_estaciones_omm.csv` (Rota, Base Naval).
+* `check` fails on a station off its province or over 15 km from its hex, warns on a province whose grid means are off
+  AEMET's normal, and lists the five largest station-vs-hex gaps in mean temperature (on the Canaries a hex runs up the
+  slopes, up to 4 °C colder than the coastal station).
 
 ## sources.json
 
@@ -863,7 +870,9 @@ the groups its progress panel counts by; the explored set, its storage and the r
 `clima` (the climate of the month, only where the data has `clima.json`: lenses `clima_temp`, `clima_lluvia`,
 `clima_heladas`, `clima_sol`, mode `clima`, e.g. `#lens=clima_temp&mes=1`; the values are in `ext/clima/season.js`, the
 Walter-Lieth diagram in `ext/clima/walter.js`). The calendar and the climate share one month (`ext/month.js`, hash key
-`mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. The API:
+`mes`): a link with `mes` opens the page whose lens it carries, and `mes` alone opens the calendar. Moving between the
+two keeps the month; closing the last one open puts it back to this month, so a page opened again shows what the URL,
+which has lost `mes`, would open. The API:
 
 
 **Data.**
@@ -967,11 +976,17 @@ and minutes ("15 h 24 min"), in the tooltip, the legend's ticks and the Almanac;
 title. Optional for such a lens: `heading`, the name of what it shows now, for the legend's title and the tooltip
 (`name` stays in the picker); `tip(cell)`, a line of plain text (or a list of lines) the tooltip asks for the hex under
 the pointer, instead of `names`/`labels` built for every hex; `scale_text`, the Almanac's line about its scale when its domain changes with
-the user's choices. Its `source` is an id of sources.json, and the legend never gives it the lenses.json `vintage`.
+the user's choices; `decimals`, for `format: "float"`, writes every value with that many decimals ("23,0 °C" next to
+"23,1 °C"; without it a value of 10 or more drops them); `click_hint`, the tooltip's last line in place of "Click to open
+<province>" when the lens's panel takes the click; `domain: null` while its values are not in yet (the legend shows its
+name and description only, and the map paints its land as no data). Its `source` is an id of sources.json, and the
+legend never gives it the lenses.json `vintage`.
 A lens that opens a panel in the left dock with it (the calendar, the sun lens) uses `lensPanel(app, lens,
 {mode, open, close})` from `app/lensPanel.js`: the lens and the mode open and close together, and `#lens=<id>` opens both.
 Several lenses can share one panel (`lensPanel(app, [lenses], {…, pick})`, the climate's four): moving between them
-keeps it open, and `pick()` names the lens it opens on.
+keeps it open, and `pick()` names the lens it opens on. On a phone the dock is a bottom sheet that covers the legend:
+`panelKey()` in the panel's HTML and `updatePanelKey(dock, lens, label)` give it the lens's ramp and three ticks, shown on
+phones only (the sun lens and the climate).
 
 **Lenses.** Legend ticks print numbers only (plus short units: %, $, min, /km²); a longer `unit` is printed once under
 the ticks, so keep `unit` a plain phrase ("adherents per 100 residents"), not part of the number. `lens.note` is shown in the legend; `format: "category"` lenses get a swatch legend (see lenses.json).
