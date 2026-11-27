@@ -1148,6 +1148,8 @@ async function main() {
         cell, city: city || null, resource, state: owner >= 0 ? owner : null, x: mx, y: my, pointerType: e.pointerType,
         layer: lh?.layer.id ?? null, item: lh?.item ?? null,
       };
+      // "tap": every click, before a layer, a mode or the default takes it; listeners only watch (e.g. ext/explore).
+      events.emit("tap", ev);
       // A static layer's click(item, ev) returning true consumes the click (e.g. opening its own card). It goes
       // before the "mapclick" handlers, except while a mode (City View, advisors) is active: the mode owns clicks.
       const layerClick = () => {

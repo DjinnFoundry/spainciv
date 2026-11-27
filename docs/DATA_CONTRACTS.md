@@ -807,7 +807,10 @@ several languages, with the `lang` hash key) and `game` (the daily game "Adivina
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
 also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `explore` (the fog of war "España por
+descubrir", map toggle `explore`, only where the page settings have `explore`: `{groups: [{name, regions: [fips]}]}`,
+the groups its progress panel counts by; the explored set and its storage are in `ext/explore/model.js`, the clouds in
+`ext/explore/fog.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
@@ -857,7 +860,9 @@ city banners: the first non-null `hit()` wins and its `tooltip(item)` is shown (
 `"hover"` event payload is `{cell, city, resource, x, y, layer, item}` (`layer` = id or null). A click builds
 `ev = {cell, city, resource, state, x, y, pointerType, layer, item}`; outside a mode the layer's `click(item, ev)` goes
 first (true consumes it), then the `"mapclick"` handlers, then the default (select city/state). While a mode is active
-(City View, advisors) the `"mapclick"` handlers go first and the layer's `click` only after them.
+(City View, advisors) the `"mapclick"` handlers go first and the layer's `click` only after them. Before any of that,
+the `"tap"` event gets the same `ev` for every click: it is for watching (the fog of war explores the hex), so its
+handlers must not return true.
 
 **Map toggles.** `app.ui.addMapToggle({id, label, icon, get() → bool, set(on), title?, default?}) → remove()`: a switch
 in the "Map" menu next to the Resources toggle in the lens dock (one button + a small menu, so it fits phones). `set` is

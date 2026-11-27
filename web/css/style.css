@@ -512,6 +512,30 @@ body.panel-open #lens-area { right: calc(394px + var(--dock-right, 0px)); }
 }
 #loading.error { font-size: 15px; letter-spacing: 0; text-transform: none; padding: 40px; text-align: center; }
 
+/* ---------- the fog of war (ext/explore): its progress panel, top left over the map ---------- */
+.explore-panel {
+  position: fixed; top: calc(var(--topbar-h) + 10px); left: calc(12px + var(--dock-left, 0px)); z-index: 11;
+  width: 260px; max-height: calc(100vh - 220px); max-height: calc(100dvh - 220px); overflow-y: auto;
+  padding: 10px 12px; font-size: 13px; line-height: 1.4;
+}
+.explore-panel h2 { margin: 0 0 4px; font-family: var(--serif); font-size: 16px; font-weight: normal; color: var(--gold-bright); }
+.ex-line { margin: 0 0 6px; }
+.ex-line b { color: var(--gold-bright); font-size: 15px; }
+.ex-bar, .ex-mini { display: block; height: 6px; border-radius: 3px; background: rgba(230,215,180,.18); overflow: hidden; }
+.ex-bar i, .ex-mini i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.ex-hint { margin: 6px 0; font-size: 12px; }
+.ex-groups summary { cursor: pointer; color: var(--gold-bright); font-family: var(--serif); margin: 4px 0; }
+.ex-groups ol { list-style: none; margin: 0; padding: 0; }
+.ex-groups li { display: grid; grid-template-columns: 1fr 54px 44px; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px; }
+.ex-groups li b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ex-groups li.done span:first-child::after { content: " ✓"; color: var(--gold-bright); }
+.ex-mini { height: 4px; }
+.ex-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+@media (max-width: 700px) {
+  .explore-panel { top: calc(var(--topbar-h) + 6px); left: 8px; right: 8px; width: auto; max-height: 45vh; padding: 8px 10px; }
+  .ex-hint { display: none; }
+}
+
 /* ---------- narrower desktops ---------- */
 #topbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 #topbar::-webkit-scrollbar { display: none; }
