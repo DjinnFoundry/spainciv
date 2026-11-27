@@ -211,6 +211,22 @@ SOURCES = {
         "población, el empleo y la huella de una ciudad suman los de sus municipios.",
         "used_for": ["Ciudades (áreas urbanas) y sus municipios"],
     },
+    "boletin_hidrologico": {
+        "title": "Boletín Hidrológico: reserva de los embalses semana a semana desde 1988 (BD-Embalses), con los puntos "
+        "de los embalses y las cuencas del mapa del Boletín",
+        "publisher": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO), Boletín Hidrológico",
+        "license": "Información del sector público, reutilizable citando la fuente y conservando la fecha de "
+        "actualización (Ley 37/2007, RD 1495/2011 art. 7; aviso legal del MITECO); el MITECO no avala este mapa",
+        "description": "La base de datos histórica del Boletín Hidrológico semanal (BD-Embalses, «sin validación»): de "
+        "cada embalse que sigue, cada martes desde 1988, su cuenca, su capacidad y el agua que guarda en hm³, y si es "
+        "hidroeléctrico. El modelo de datos (Modelo de datos BD-Embalses 1988-2022) describe una tabla con la cuenca "
+        "(AMBITO_NOMBRE), el embalse (EMBALSE_NOMBRE), la fecha (FECHA), la capacidad (AGUA_TOTAL), el agua embalsada "
+        "(AGUA_ACTUAL) y la marca de uso hidroeléctrico (ELECTRICO_FLAG); las cifras validadas solo están en el Anuario "
+        "de Aforos. La posición de los embalses de la última semana y el contorno de las 16 cuencas salen de las dos "
+        "capas del mapa del propio Boletín (ArcGIS Online, cuenta BolHidro_miteco), que usan los nombres de la base de "
+        "datos.",
+        "used_for": ["Lente de embalses: agua embalsada por cuenca y por embalse, semana a semana desde 1988"],
+    },
     "corine": {
         "title": "CORINE Land Cover 2018 (a través del WMS de ocupación del suelo de la IDEE)",
         "publisher": "Servicio de Vigilancia Terrestre de Copernicus (AEMA); servido por el Instituto Geográfico Nacional (IDEE)",
@@ -678,6 +694,15 @@ SOURCES = {
         "histórica. Sirve para enlazar las instalaciones de OpenStreetMap con su elemento y para dar la rama que OSM "
         "no trae.",
         "used_for": ["Consejero militar: enlaces a Wikidata y rama de las instalaciones"],
+    },
+    "wikidata_presas": {
+        "title": "Wikidata: embalses y presas de España con coordenadas y nombres",
+        "publisher": "Wikidata (Fundación Wikimedia y editores voluntarios)",
+        "license": "CC0 1.0 (dominio público)",
+        "description": "Todos los elementos de Wikidata en España que son un embalse (Q131681) o una presa (Q12323), o "
+        "de una subclase, con coordenadas, con sus etiquetas y alias en castellano, catalán, gallego y euskera. Solo "
+        "sirve para los embalses que el Boletín Hidrológico dejó de dar, que su mapa no sitúa; lo editan voluntarios.",
+        "used_for": ["Lente de embalses: la posición de los embalses que ya no están en el Boletín"],
     },
     "wikidata_playas": {
         "title": "Wikidata: playas de España con coordenadas, nombres y municipio",
