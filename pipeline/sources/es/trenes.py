@@ -215,7 +215,7 @@ class HorariosTren(Source):
             ft, fs = t.day(day)
             trips += ft
             for s, v in fs.items():
-                stops.setdefault(s, v)
+                stops.setdefault(s, [*v, t.feed.id])  # the first feed's name and position (FEEDS order)
             m = read_manifest(self.id).get(t.feed.file, {})
             trains = len({(x[0], x[4]) for x in ft})
             feeds.append({"id": t.feed.id, "window": [d.isoformat() for d in windows[t.feed.id]], "trains": trains,
