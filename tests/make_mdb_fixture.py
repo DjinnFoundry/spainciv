@@ -36,8 +36,8 @@ def main(path: Path) -> None:
     with Jet4(path) as db:
         table = next(t for t in db.tables() if t.startswith(TABLE_PREFIX))
         pg = db.tables()[table]
-        owners = db._owners  # filled by tables(): data pages by their table's definition page
-        pages = sorted({0, *tdef_pages(db, CATALOG_PAGE), *owners[CATALOG_PAGE], *tdef_pages(db, pg), *owners[pg][:DATA_PAGES]})
+        pages = sorted({0, *tdef_pages(db, CATALOG_PAGE), *db.data_pages(CATALOG_PAGE), *tdef_pages(db, pg),
+                        *db.data_pages(pg)[:DATA_PAGES]})
         out = bytearray((pages[-1] + 1) * PAGE)
         for n in pages:
             out[n * PAGE:(n + 1) * PAGE] = db.page(n)

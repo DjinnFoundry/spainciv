@@ -127,7 +127,7 @@ def row(b: bytes, cols: list[Column]) -> dict:
 
 
 class Jet4:
-    """An open .mdb file: Jet4(path).tables(), .columns(name), .row_count(name), .rows(name)."""
+    """An open .mdb file: Jet4(path).tables(), .columns(name), .row_count(name), .rows(name), .data_pages(tdef page)."""
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -186,13 +186,8 @@ class Jet4:
             cols.append(Column(name, t, num, var, fo, ln, fixed, scale))
         return num_rows, cols
 
-    def _rows(self, pg: int, names: list[str] | None = None) -> Iterator[dict]:
-        _, cols = self._tdef(pg)
-        if names is not None:
-            missing = set(names) - {c.name for c in cols}
-            if missing:
-                raise MdbError(f"{self.path.name}: no column {', '.join(sorted(missing))}")
-            cols = [c for c in cols if c.name in names]
+    def data_pages(self, tdef_page: int) -> list[int]:
+        """The data pages of the table defined on page `tdef_page`, in file order (every page is scanned once)."""
         if self._owners is None:  # every data page, by the TDEF page it belongs to
             self._owners = {}
             for n in range(self.pages):
@@ -200,7 +195,16 @@ class Jet4:
                 h = self.f.read(8)
                 if h[0] == 0x01:
                     self._owners.setdefault(struct.unpack_from("<I", h, 4)[0], []).append(n)
-        for n in self._owners.get(pg, []):
+        return self._owners.get(tdef_page, [])
+
+    def _rows(self, pg: int, names: list[str] | None = None) -> Iterator[dict]:
+        _, cols = self._tdef(pg)
+        if names is not None:
+            missing = set(names) - {c.name for c in cols}
+            if missing:
+                raise MdbError(f"{self.path.name}: no column {', '.join(sorted(missing))}")
+            cols = [c for c in cols if c.name in names]
+        for n in self.data_pages(pg):
             p = self.page(n)
             end = PAGE
             for r in range(struct.unpack_from("<H", p, 12)[0]):

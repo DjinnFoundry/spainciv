@@ -66,6 +66,14 @@ class FixtureTest(unittest.TestCase):
                                    "ELECTRICO_FLAG": Decimal(1)})
         self.assertEqual(list(self.db.rows(TABLE, ["FECHA"]))[1], {"FECHA": datetime(1988, 1, 12)})
 
+    def test_data_pages_of_a_table_in_file_order(self):
+        # The fixture keeps the catalog's data page and the table's first two (make_mdb_fixture.py reads them here).
+        pages = self.db.data_pages(self.db.tables()[TABLE])
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(pages, sorted(pages))
+        self.assertEqual(self.db.data_pages(mdb.CATALOG_PAGE), [17])
+        self.assertEqual(self.db.data_pages(12345), [])
+
     def test_deleted_rows_are_skipped(self):
         # The catalog page holds 154 slots, 129 of them deleted: only the live objects come back.
         p = self.db.page(17)

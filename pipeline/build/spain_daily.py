@@ -23,7 +23,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 
-from ..core.geo import ring_area, ring_centroid
+from ..core.geo import ring_area, ring_centroid, row_crossings
 from ..core.hexgrid import HexGrid
 from ..core.lang import Text, pct, tr
 from ..core.store import load_interim
@@ -169,19 +169,9 @@ def burnt_cells(fires: list[dict], proj, grid: HexGrid, step_km: float = 0.2) ->
     out: dict[int, float] = {}
     for fire in fires:
         rings = [[proj(lon, lat) for lon, lat in r] for r in fire["rings"]]
-        rows: dict[int, list[float]] = {}
-        for ring in rings:
-            for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
-                if y1 == y2:
-                    continue
-                lo, hi = sorted((y1, y2))
-                for k in range(math.ceil(lo / step_km - 0.5), math.ceil(hi / step_km - 0.5)):
-                    y = (k + 0.5) * step_km
-                    rows.setdefault(k, []).append(x1 + (y - y1) * (x2 - x1) / (y2 - y1))
         hits: dict[int, int] = {}
-        for k, xs in rows.items():
+        for k, xs in row_crossings(rings, step_km, 0.5).items():
             y = (k + 0.5) * step_km
-            xs.sort()
             for a, b in zip(xs[::2], xs[1::2]):
                 for j in range(math.ceil(a / step_km - 0.5), math.ceil(b / step_km - 0.5)):
                     c = grid.cell_at((j + 0.5) * step_km, y)

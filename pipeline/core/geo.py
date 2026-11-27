@@ -274,6 +274,63 @@ def ring_centroid(ring: list[tuple[float, float]]) -> tuple[float, float]:
     return cx / (6 * a), cy / (6 * a)
 
 
+def ring_edges(rings: Iterable[list[tuple[float, float]]]) -> Iterator[tuple[tuple, tuple]]:
+    """Every edge (a, b) of the rings, each ring closed."""
+    for ring in rings:
+        yield from zip(ring, ring[1:] + ring[:1])
+
+
+def row_crossings(rings: Iterable[list[tuple[float, float]]], dy: float, offset: float = 0.0) -> dict[int, list[float]]:
+    """Scanline: for each row k (y = (k + offset)·dy) the edges cross, the sorted x of the crossings. A point of a row
+    is inside (even-odd rule, holes included) when an odd number of them lie left of it. Half-open in y, like
+    ring_contains, so a vertex on a row counts once."""
+    rows: dict[int, list[float]] = {}
+    for (x1, y1), (x2, y2) in ring_edges(rings):
+        if y1 == y2:
+            continue
+        lo, hi = sorted((y1, y2))
+        for k in range(math.ceil(lo / dy - offset), math.ceil(hi / dy - offset)):
+            y = (k + offset) * dy
+            rows.setdefault(k, []).append(x1 + (y - y1) * (x2 - x1) / (y2 - y1))
+    for xs in rows.values():
+        xs.sort()
+    return rows
+
+
+KM_PER_DEG_LAT = 110.57  # a degree of latitude, and of longitude at the equator, in km (flat-earth distances)
+KM_PER_DEG_LON = 111.32
+
+
+def lonlat_scale(lat: float) -> tuple[float, float]:
+    """km per degree of longitude and of latitude at `lat`, for flat-earth distances over a few km."""
+    return KM_PER_DEG_LON * math.cos(math.radians(lat)), KM_PER_DEG_LAT
+
+
+def flat_km(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Distance in km between two lon/lat points, flat-earth at their mean latitude (fine over a few km)."""
+    kx, ky = lonlat_scale((a[1] + b[1]) / 2)
+    return math.hypot((a[0] - b[0]) * kx, (a[1] - b[1]) * ky)
+
+
+def segment_distance(p: tuple[float, float], a: tuple, b: tuple, kx: float = 1.0, ky: float = 1.0) -> float:
+    """Distance from p to the segment a-b, the x and y offsets scaled by kx and ky: 1 and 1 in map km, lonlat_scale
+    of p's latitude for lon/lat points in km."""
+    ax, ay, bx, by = (a[0] - p[0]) * kx, (a[1] - p[1]) * ky, (b[0] - p[0]) * kx, (b[1] - p[1]) * ky
+    dx, dy = bx - ax, by - ay
+    t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / (dx * dx + dy * dy)))
+    return math.hypot(ax + t * dx, ay + t * dy)
+
+
+def spread_mean(points: list[tuple[float, float]], limit_km: float) -> tuple[float, float] | None:
+    """One place from lon/lat points that may be the same place (a thing mapped in pieces, or twice): their mean,
+    rounded to 5 decimals, when they all lie within `limit_km` of each other (flat_km), else None (two places of one
+    name). None for no points."""
+    if not points or any(flat_km(p, q) > limit_km for p in points for q in points):
+        return None
+    lon, lat = (round(sum(axis) / len(points), 5) for axis in zip(*points))
+    return lon, lat
+
+
 class Shape:
     """A (multi)polygon as a bag of rings; even-odd rule handles holes."""
 
@@ -292,6 +349,12 @@ class Shape:
             if ring_contains(r, x, y):
                 inside = not inside
         return inside
+
+    def distance(self, x: float, y: float, kx: float = 1.0, ky: float = 1.0) -> float:
+        """0 inside; outside, the distance to the nearest edge (segment_distance, with its kx and ky)."""
+        if self.contains(x, y):
+            return 0.0
+        return min((segment_distance((x, y), a, b, kx, ky) for a, b in ring_edges(self.rings)), default=math.inf)
 
 
 class ShapeIndex:
