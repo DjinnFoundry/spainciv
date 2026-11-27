@@ -681,7 +681,7 @@ SOURCES = {
         "ella se puede subir o bajar. El día es el primer martes, miércoles o jueves en que cada operador y cada núcleo "
         "de Cercanías lleva al menos el 90 % de sus trenes habituales de ese día de la semana. Iryo no publica un "
         "horario abierto propio: su fichero es una recopilación no oficial de los horarios de iryo.eu. Los autobuses "
-        "no se cuentan. Origen de los datos: Renfe Operadora. Powered by MITRAMS.",
+        "no se cuentan. «Origen de los datos: Renfe Operadora». «Powered by MITRAMS».",
         "used_for": ["Lente de horas a Madrid en tren", "Estaciones y vías con tren mientras esa lente está abierta"],
     },
     "osm_ferrocarril": {

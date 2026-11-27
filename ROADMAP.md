@@ -42,6 +42,10 @@ decisiones que salgan van a `DECISIONS.md`.
   mapear, y en los muy pequeños un solo bar dispara la tasa por habitante.
 - Fiestas: la colocación es a mano (CSV); una declaración nueva en turismo.gob.es hace fallar el build hasta situarla.
   Faltan las fiestas de interés turístico autonómicas.
+- Tren a Madrid (E84–E87): el horario es de un día fijo y hay que reconstruirlo cada mes (el fichero de Cercanías
+  cubre un mes). Sin clave del NAP, Ouigo sale de la copia de Mobility Database, que acaba el 12 de diciembre de 2026,
+  y Renfe Feve no entra, así que la vía métrica sin tren no se dibuja. Faltan FGC, Euskotren, FGV, SFM, metros y
+  tranvías. 15 pares de paradas no casan con las vías de OpenStreetMap.
 - Pernoctaciones hoteleras por punto turístico (EOH del INE): fuera; el INE solo publica cada punto en sus meses de
   temporada (F24).
 - Pueblos prerromanos: las fronteras son territorios del punto más cercano de Pleiades, no límites históricos.
@@ -61,4 +65,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Por decidir (David)
 
+- Tren a Madrid (F35): abrir una cuenta en el NAP para la clave (`NAP_API_KEY`), que trae Ouigo oficial y Renfe Feve;
+  si vale el fichero no oficial de Iryo; y si se acepta la cláusula «siempre actualizada» de la licencia del MITRAMS
+  con un horario de un día fijo (hoy la fecha sale en la lente y en el Almanaque).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.

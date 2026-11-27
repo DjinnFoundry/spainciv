@@ -174,8 +174,8 @@ class HorariosTren(Source):
         "medium distance; Cercanías and Rodalies), Ouigo and Iryo, with each call's times and whether one may board or "
         "get off there. The day is the first Tuesday, Wednesday or Thursday on which every operator and every "
         "Cercanías network runs at least 90% of its usual trips for that weekday. Iryo publishes no open timetable of "
-        "its own: its feed is an unofficial compilation of the timetables on iryo.eu. Buses are left out. Origen de "
-        "los datos: Renfe Operadora. Powered by MITRAMS.",
+        "its own: its feed is an unofficial compilation of the timetables on iryo.eu. Buses are left out. «Origen de "
+        "los datos: Renfe Operadora». «Powered by MITRAMS».",
         used_for=["Hours to Madrid by train lens", "Stations and passenger track while that lens is open"],
     )
 

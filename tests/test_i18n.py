@@ -338,6 +338,7 @@ class SpanishDataTest(unittest.TestCase):
         "National Centers for Environmental Information",  # the NOAA office that publishes ETOPO
         "Institute for the Study of the Ancient World",  # Pleiades' publisher (NYU)
         "power=plant",  # the OpenStreetMap tag
+        "Powered by MITRAMS",  # the credit the NAP's licence asks for, word for word
         "Alma Mater Museum",  # the museum of the Archdiocese of Zaragoza is called so
         # Museums that Wikidata names only in English (or in English before Catalan, Galician or Basque, the label
         # order of pipeline/sources/es/wikidata.py). A new label order needs a fresh fetch of the Wikidata queries.

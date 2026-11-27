@@ -222,7 +222,7 @@ Produced by `pipeline/build/lenses.py`.
              {"id": "life", "name": "Daily life"}, {"id": "land", "name": "Land"}],
   "lenses": [{
     "id": "density", "group": "people", "name": "Population", "icon": "l-people", "emoji": "👥",
-    "unit": "people / km²", "format": "int|usd|pct|float|minutes|years",   // pct values are 0..1 fractions
+    "unit": "people / km²", "format": "int|usd|pct|float|minutes|years|duration",   // pct: 0..1; duration: minutes, shown "2 h 36 min"
     "scale": "log|linear", "domain": [1, 2000],   // 2nd-98th percentile of the hex values, computed at build time "ramp": ["#..", "..."], "higher_is": "good|bad|neutral",
     "source": "acs_5yr", "description": "...",
     "values": [number|null],       // per cell; null on non-US cells
@@ -262,6 +262,41 @@ source's text (a rule such as "el 12 de septiembre de cada año", or one year's 
 movable feast it does not tie to a month (Semana Santa, Carnaval). The State's lists give no dates: an Internacional or
 Nacional fiesta has those of its community's entries for the same fiesta (`state_same`), their distinct texts joined by
 "; " and the union of their months, and none without such an entry.
+
+**`hides_layers`** (optional, a lens built in the browser): the ids of the static layers that hide while the lens is open
+(`["rail"]` for the train lens, which draws its own network). No US lens sets it.
+
+**`transit.json`** (Spain, `pipeline/build/spain_transit.py`; loaded by `web/js/ext/transit` the first time the lens
+`rail_madrid` opens; 736 kB, 86 kB gzipped, on the timetable of 9 December 2026):
+
+```jsonc
+{"version": 1, "vintage": "Horarios de Renfe, Ouigo e Iryo del miércoles 9 de diciembre de 2026",
+ "sources": ["horarios_tren", "osm_ferrocarril", "siane"],
+ "date": "2026-12-09", "week": ["2026-12-07", "2026-12-13"],   // the day (DECISIONS E85) and its Monday to Sunday
+ "feeds": [{"id": "renfe_av_ld", "name": "…", "trains": 1382, "window": ["2026-11-26", "2027-09-29"],
+            "file_date": "2026-11-27", "unofficial": false}],
+ "params": {"change_min": 10, "walk_km": 1.5, "walk_kmh": 4.5, "access_km": 30, "access_kmh": 40},
+ "rules": {"day": "…", "router": "…", "access": "…", "trains": "…", "ghost": "…"},
+ "kinds": [{"id": "ld", "name": "…"}, {"id": "md", "name": "…"}, {"id": "cer", "name": "…"}],
+ "lens": {"format": "duration", "scale": "linear", "domain": [45, 420], "ramp": ["#…"], "higher_is": "bad",
+          "unit": "…", "description": "…", "note": "…", "null_label": "…",
+          "values": [minutes | null],          // per cell: land hexes within 30 km of a station with a train to Madrid
+          "station": [station index | null]},  // per cell: the station the value counts from
+ "stations": [{"name": "Sevilla-Santa Justa", "x": 759.8, "y": 796.0, "cell": 16084, "stops": ["51003"],
+               "trains": [35, 50, 130],        // distinct trains one can board there that day, by kind (ld, md, cer)
+               "madrid": true,                  // only on a station inside the municipality of Madrid (best is null)
+               "best": null | {"min": 156, "dep": "15:33", "arr": "18:09", "to": "Madrid-Puerta de Atocha-Almudena Grandes",
+                               "changes": 0, "legs": [["AVE", "02151", "Sevilla-Santa Justa", "Madrid-Puerta de Atocha-Almudena Grandes"]]}}],
+ "links": [[a, b, trains]],   // hex links (a < b, neighbours) with passenger trains that day
+ "ghost": [[a, b]],            // Adif track with none
+ "matching": {"pairs": 1985, "abroad": 22, "unmatched": 15, "unmatched_pairs": [["Antequera AV", "Málaga María Zambrano"]]}}
+```
+
+Stations are sorted by trains, most first, and their names, `to` and `legs` are written as the feeds write them (E72).
+The lens texts, rules, kinds and feed names are `Text` (overlay `transit.en.json`). `check` fails a link that is not
+between neighbours or has a foreign end, a link both served and ghost, a station off land, a negative minute, a `values`
+or `station` array of another length than the grid, a cell whose station and value disagree, and a journey faster than
+the straight line at 350 km/h; it notes the coverage, the unmatched stop pairs and the file size.
 
 **County lenses from the Religion Census, CDC PLACES, FEMA and ACS veterans** (ids are a contract with the frontend, which may link to them):
 
@@ -807,7 +842,9 @@ several languages, with the `lang` hash key) and `game` (the daily game "Adivina
 `juego`, only where the page settings say `game: true`; its rules, pool and clues are in `ext/game/puzzle.js`, which
 also reads `personajes`, `wonders`, `resources` and `infrastructure` through `app.loadData` when the site has them) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
-`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
+`#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`) and `transit` (hours to Madrid by train,
+only where the data has `transit.json`: lens `rail_madrid` with `hides_layers: ["rail"]`, static layers `transit-lines` (z 56)
+and `transit-stations` (z 65), e.g. `#lens=rail_madrid`; the rules without canvas are in `ext/transit/model.js`). The API:
 
 **Data.**
 * `app.data.<name>`: the core files (`world`, `cities`, `states`, `nation`, `lenses`, `resources`, `sources`) are loaded
