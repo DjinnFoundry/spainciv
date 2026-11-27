@@ -10,7 +10,7 @@ web/index.html is written for the United States and is published as is for it. A
   the world.json `country` block (so a new address or credit needs no data rebuild), and `play` when the country has
   an Unciv map, and `data`, the names of its data files; a country in several languages adds `langs` (each language's
   number locale) and `texts`, the page's texts in every language but the first; `game: true` when the country
-  has the daily game (web/js/ext/game) and `sunset: true` when it has the sunset lens (web/js/ext/sun);
+  has the daily game (web/js/ext/game) and `sunset: true` when it has the sun lens (web/js/ext/sun);
 - the Unciv page and downloads (pipeline/play.py) when its build made an Unciv map.
 
 generated_files() lists what is written from code rather than copied from web/, for `serve` and `package` alike.

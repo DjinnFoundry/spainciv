@@ -33,7 +33,7 @@ class Page:
     notices: tuple[str, ...] = ()  # licence notices that must stay visible on the map
     based_on: str = "Based on {usaciv} by Andrej Karpathy (MIT)"  # usaciv's credit on the map; {usaciv} is the link
     game: bool = False  # the daily game "Adivina el hexágono" (web/js/ext/game) in the top bar
-    sunset: bool = False  # the sunset lens "Atardecer" (web/js/ext/sun): the country's clocks are in web/js/ext/sun/solar.js
+    sunset: bool = False  # the sun lens "Sol y reloj" (web/js/ext/sun): the country's clocks are in web/js/ext/sun/solar.js
 
     def in_lang(self, lang: str) -> "Page":
         """The page with every text in `lang`."""

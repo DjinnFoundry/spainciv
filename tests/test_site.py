@@ -120,7 +120,7 @@ class RenderTest(unittest.TestCase):
         self.assertIn("n&lt;", html)
         self.assertEqual(html.count("</script>"), TEMPLATE.count("</script>") + 1)
         self.assertEqual(Head(html).config["data_credit"], "</script>x")
-        self.assertNotIn("game", Head(html).config)  # the daily game and the sunset lens are the page's choice
+        self.assertNotIn("game", Head(html).config)  # the daily game and the sun lens are the page's choice
         self.assertNotIn("sunset", Head(html).config)
 
     def test_a_changed_template_fails_loudly(self):
