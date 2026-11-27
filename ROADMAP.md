@@ -55,7 +55,7 @@ decisiones que salgan van a `DECISIONS.md`.
 
 ## Más adelante
 
-- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E84). Los datos están:
+- **Parques nacionales como maravillas naturales en Unciv** (fase 2 del álbum, fuera de E89). Los datos están:
   `wonders.json` tiene los 16 parques con sus límites del OAPN y sus hexágonos, y un mod puede añadir terrenos
   `"type": "NaturalWonder"` en `jsons/Terrains.json` (`TileNormalizer` conserva el `naturalWonder` de una casilla si
   el ruleset lo tiene). Lo que cuesta, visto en el código de Unciv 5.0.1: el tileset por defecto es HexaRealm, con
@@ -75,5 +75,5 @@ decisiones que salgan van a `DECISIONS.md`.
 ## Por decidir (David)
 
 - Nombres de las comunidades en inglés: hoy van como los escribe el INE en los dos idiomas, como en el calendario de
-  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E84).
+  fiestas; pasar a «Catalonia», «Basque Country»… es un `tr()` en `community_name` (E89).
 - Si los `web/data` de EE UU se regeneran con datos de hoy.

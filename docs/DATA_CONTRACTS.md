@@ -816,7 +816,7 @@ index) and every one has `community`.
 The game keeps one `localStorage` object, `<product>.game`: `{today: {day, cell, guesses, clues}, stats: {played, won,
 streak, best, lastDay, lastWin}, album: {"18": [1], "15": [3, 1127]}}`, where `album` maps an INE province code to the
 sorted puzzle days won for a hex of that province; it is cleaned on every read and written over a fresh read (DECISIONS
-E84)) and `fiestas`
+E89)) and `fiestas`
 (the fiesta calendar, only where the data has `fiestas.json`: lens `fiestas_mes`, mode `fiestas`, hash key `mes`, e.g.
 `#lens=fiestas_mes&mes=8`; the month rules are in `ext/fiestas/calendar.js`). The API:
 

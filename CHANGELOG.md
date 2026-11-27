@@ -10,7 +10,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   provincia de cada hexágono acertado, con una tira por comunidad autónoma que se marca en dorado al completarla. Cada
   provincia dice cuántos hexágonos tiene en el juego y cada cuánto sale (Segovia, una vez cada 187 días); Ceuta y
   Melilla no salen nunca y el álbum cuenta 50 provincias y 17 comunidades. El panel dice qué día quedaría completo ganando todas las partidas (desde el
-  día 1, el 172). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E84).
+  día 1, el 172). Se copia como texto o se descarga como tarjeta. `states.json` de España lleva la comunidad de cada provincia (E89).
 - **Adivina el hexágono, pistas que se pueden seguir**. El hexágono del día ya no es un pueblo cualquiera con
   gente: tiene al menos dos cosas con nombre propio (una fiesta, un castillo, una maravilla, un museo, una central, un
   personaje famoso, una denominación de origen pequeña…). Las pistas van de la zona de España y la distancia al mar a
