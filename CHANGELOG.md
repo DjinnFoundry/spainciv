@@ -11,7 +11,7 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
   Fiesta de Interés Turístico Regional de Castilla-La Mancha…), de la lista oficial de cada comunidad. Pasan a
   sumar 0,5 puntos en el índice de fiesta. `fiestas.json` guarda todas las fiestas con sus fechas, donde la fuente las
   da (798 de 1.296), para un calendario futuro. Euskadi, Illes Balears, Ceuta y Melilla no declaran ninguna
-  (E74–E76, F33).
+  (E77–E79, F34).
 - **spainciv en inglés**. El mapa se abre en el idioma del navegador (inglés si el navegador lo prefiere; si no,
   castellano). Un botón pequeño al final de la barra superior cambia de idioma, el sitio recuerda la elección y el
   enlace que se comparte la lleva (`#lang=en`).
