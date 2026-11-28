@@ -1,6 +1,7 @@
 // Spanish strings of the reservoirs lens (web/js/ext/embalses; see web/js/i18n.js).
 export default {
   "embalses.lens.name": "Embalses",
+  "embalses.key": "Agua embalsada en cada cuenca, % de su capacidad",
   "embalses.lens.desc": "Agua embalsada en cada cuenca la semana elegida, en % de su capacidad: la suma de los hectómetros cúbicos de sus embalses entre la suma de sus capacidades, contando solo los que el Boletín Hidrológico del Ministerio para la Transición Ecológica dio esa semana. Cada anillo es un embalse; su arco, la parte llena. Son los datos semanales sin validar del Boletín desde 1988; los validados están en el Anuario de Aforos. La capacidad total ha crecido desde 1988: el panel da la de cada semana.",
   "embalses.lens.none": "Fuera del Boletín Hidrológico, que cubre la península",
   "embalses.title": "Embalses · semana del {date}",

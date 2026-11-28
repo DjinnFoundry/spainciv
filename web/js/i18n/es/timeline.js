@@ -29,6 +29,7 @@ export default {
   "timeline.view": "Ver",
   "timeline.view.count": "Cuántos",
   "timeline.view.kind": "Por oficio",
+  "timeline.key.count": "Personajes vivos por hexágono",
   "timeline.summary": { one: "{count} personaje vivo en {year}, de los {total} que tienen fechas.", other: "{count} personajes vivos en {year}, de los {total} que tienen fechas." },
   "timeline.approx": { one: "{count} cuenta por una fecha de década o de siglo.", other: "{count} cuentan por una fecha de década o de siglo." },
   "timeline.famous": "Los más famosos",

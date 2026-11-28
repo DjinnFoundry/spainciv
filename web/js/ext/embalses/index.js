@@ -5,15 +5,16 @@
 //   static layer "reservoirs" (z 65, only with the lens): a ring per reservoir placed that week, its arc the share
 //     of its capacity it holds, larger reservoirs drawn first so the small ones stay on top; zoomed out, the rings
 //     shrink with the map and the smallest drop out (S.ringPx)
-//   mode "embalses" (app/lensPanel.js: opens and closes with the lens): the left dock with the week control, Spain's
-//     line since 1988, a clicked reservoir's own line and the basins from the driest
+//   mode "embalses" (app/lensPanel.js: opens and closes with the lens): the left dock with the week control, on phones
+//     the lens's colour key (the sheet covers the legend), Spain's line since 1988, a clicked reservoir's own line and
+//     the basins from the driest
 //   URL hash: #lens=embalses&semana=1995-11-07&embalse=Alcántara
 // embalses.json loads the first time the lens opens; the weekly matrix (embalses_semanas.json) the first time the
 // week leaves the latest one or a reservoir is clicked. The series rules live in series.js.
 import { country } from "../../app/country.js";
 import { t } from "../../i18n.js";
 import { esc, int, pct } from "../../format.js";
-import { lensPanel, panelHead } from "../../app/lensPanel.js";
+import { lensPanel, panelHead, panelKey } from "../../app/lensPanel.js";
 import * as S from "./series.js";
 
 const LENS = "embalses";
@@ -350,6 +351,7 @@ export function install(app) {
           <button type="button" class="em-btn" data-jump="latest">${esc(t("embalses.latest"))}</button>
         </div>
       </div></div>
+      ${panelKey()}
       <p class="em-big"><span class="em-where muted">${esc(t("embalses.spain"))}</span> <b data-pct></b> <span data-amount></span></p>
       <figure class="em-chart">${chartSvg()}<figcaption class="muted">${esc(t("embalses.chart"))}</figcaption></figure>
       <section class="em-res" data-res hidden></section>
@@ -357,6 +359,7 @@ export function install(app) {
       <h3 class="em-h3">${esc(t("embalses.basins"))}</h3>
       <ol class="em-basins" data-basins></ol>
       <p class="em-note muted" data-note></p>`;
+    panel.updateKey(lens, t("embalses.key"));
     const slider = dock.querySelector(".em-slider");
     slider.oninput = () => setWeek(+slider.value, { final: false });
     slider.onchange = () => setWeek(+slider.value);

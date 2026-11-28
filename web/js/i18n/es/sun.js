@@ -14,7 +14,6 @@ export default {
   "sun.tip.day": "{time} de luz",
   "sun.spread": "{a} y {b}: {diff} de diferencia.",
   "sun.spread.ce": "Con la hora de Europa central: {a} y {b}, {diff}.",
-  "sun.key": "Colores del mapa",
   "sun.day": "Día",
   "sun.picks": "Fechas",
   "sun.june": "21 de junio",

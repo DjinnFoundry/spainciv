@@ -328,12 +328,14 @@ class ClimatePanelTest(unittest.TestCase):
             const chart = app.dockEl.querySelector('.cl-chart');
         """, extra="hint, pinned: chart.innerHTML, scrolled: chart.scrolled, "
                    "key: app.dockEl.querySelector('.pk-key').querySelector('.pk-ticks').innerHTML, "
-                   "ramp: app.dockEl.querySelector('.pk-key').querySelector('.pk-ramp').style.background")
+                   "ramp: app.dockEl.querySelector('.pk-key').querySelector('.pk-ramp').style.background, "
+                   "cap: app.dockEl.querySelector('.pk-key').querySelector('.pk-cap').textContent")
         self.assertIn("Pasa el puntero", got["hint"])  # built on the desktop
         self.assertIn("Toca otra provincia para cambiarla.", got["pinned"])
         self.assertEqual(got["scrolled"], 1)
         self.assertEqual(got["key"], "<span>0 °C</span><span>14,0 °C</span><span>≥ 28,0 °C</span>")
         self.assertTrue(got["ramp"].startswith("linear-gradient(90deg, #2b3f8f"))
+        self.assertEqual(got["cap"], "Temperatura media en enero")  # the lens heading, the legend's title
         self.assertIn("normales de AEMET 1991-2020", got["pinned"])
 
     def test_the_link_to_the_fiestas_keeps_the_month_and_back(self):
@@ -383,7 +385,7 @@ class SunPanelTest(unittest.TestCase):
             out({{ before, mode: app.mode, lens: app.state.lens?.id ?? null, dia: app.keys.get('dia').get(),
                    sol: app.keys.get('sol').get(), heading: lens.heading ?? null, painted: painted(),
                    land: w.raw.owner.filter((o) => o >= 0).length, tip: cell >= 0 ? lens.tip(cell) : null,
-                   source: lens.source, icon: lens.icon }});
+                   source: lens.source, icon: lens.icon, key: app.dockEl?.querySelector('.pk-key')?.querySelector('.pk-cap').textContent ?? null }});
         """, PRELUDE + SPAIN)
 
     def test_a_link_with_a_day_and_a_time_opens_the_lens_on_them(self):
@@ -395,6 +397,10 @@ class SunPanelTest(unittest.TestCase):
         # The tooltip gives the rest of the day, without the sunrise the lens already shows, and the zone.
         self.assertRegex(got["tip"], r"^Mediodía solar \d\d:\d\d · Puesta \d\d:\d\d · \d+ h( \d+ min)? de luz · (CEST|WEST)$")
         self.assertEqual((got["source"], got["icon"]), ("noaa_solar", "l-sunset"))
+
+    def test_the_phone_key_is_captioned_with_the_lens_heading(self):
+        got = self.open("#lens=atardecer&sol=salida")
+        self.assertEqual(got["key"], "Salida del sol")  # as the legend's title
 
     def test_either_key_opens_it_and_back_or_forward_changes_the_time(self):
         got = self.open("#sol=mediodia", then="app.keys.get('sol').set('dia');")
@@ -439,7 +445,8 @@ class ReservoirsPanelTest(unittest.TestCase):
             for (let i = 0; i < 5; i++) await tick();
             out({{ mode: app.mode, lens: app.state.lens?.id ?? null, semana: app.keys.get('semana').get(),
                    embalse: app.keys.get('embalse').get(), painted: lens.values.filter((v) => v != null).length, loads,
-                   count: els.get('[data-count]')?.textContent ?? null, res: els.get('[data-res]')?.innerHTML ?? null }});
+                   count: els.get('[data-count]')?.textContent ?? null, res: els.get('[data-res]')?.innerHTML ?? null,
+                   key: typeof key === 'undefined' ? null : key }});
         """, PRELUDE + SPAIN)
 
     def test_a_link_with_the_lens_and_a_week_opens_it_on_that_week(self):
@@ -477,6 +484,17 @@ class ReservoirsPanelTest(unittest.TestCase):
         self.assertEqual(got["count"], "No se ha podido cargar la serie semanal: los anillos y los embalses solo están "
                                         "en la última semana.")
         self.assertIn("No se ha podido cargar la serie semanal", got["res"])
+
+    def test_on_a_phone_the_panel_has_the_colour_key(self):
+        got = self.open("#lens=embalses", then="const k = app.dockEl.querySelector('.pk-key'); "
+                        "const key = { cap: k.querySelector('.pk-cap').textContent, ticks: k.querySelector('.pk-ticks').innerHTML, "
+                        "ramp: k.querySelector('.pk-ramp').style.background, label: k.attrs['aria-label'], "
+                        "inHtml: app.dockEl.innerHTML.includes('class=\"pk-key\"') };")
+        self.assertTrue(got["key"]["inHtml"])
+        self.assertEqual(got["key"]["cap"], "Agua embalsada en cada cuenca, % de su capacidad")
+        self.assertEqual(got["key"]["ticks"], "<span>0\u00a0%</span><span>50\u00a0%</span><span>≥ 100\u00a0%</span>")  # the legend's
+        self.assertTrue(got["key"]["ramp"].startswith("linear-gradient(90deg, #593215"))
+        self.assertEqual(got["key"]["label"], "Agua embalsada en cada cuenca, % de su capacidad: 0\u00a0%, 50\u00a0%, ≥ 100\u00a0%")
 
 
 

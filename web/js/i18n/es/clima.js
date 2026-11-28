@@ -41,7 +41,6 @@ export default {
   "clima.extremes.frost.none": "En {month} ninguna estación de la OMM tiene días bajo 0 °C en su normal 1991-2020.",
   "clima.extremes.sun": "Más sol en {month}: {top}, {max}; menos: {bottom}, {min} (normales OMM 1991-2020).",
   "clima.extremes.sun.none": "Sin horas de sol en {month}.",
-  "clima.key": "Escala de {what}",
   "clima.link": "Clima de {month}",
   "clima.loading": "Cargando el clima…",
   "clima.loadError": "No se ha podido cargar el clima.",

@@ -14,7 +14,7 @@
 // clima.json is loaded the first time the panel opens; until then the lenses have no domain and the legend shows only
 // their name. A new month or variable repaints the lens once; nothing moves.
 import { country } from "../../app/country.js";
-import { lensPanel, panelHead, panelKey, updatePanelKey } from "../../app/lensPanel.js";
+import { lensPanel, panelHead, panelKey } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { css, parseHex, rampColor } from "../../color.js";
 import { esc, fixed, int } from "../../format.js";
@@ -269,7 +269,7 @@ export function install(app) {
       b.setAttribute("aria-selected", String(on));
       b.tabIndex = on ? 0 : -1;
     });
-    updatePanelKey(dock, lens, t("clima.key", { what: lens.heading }));
+    panel.updateKey(lens, lens.heading); // the key's caption, as the legend's title
     dock.querySelector(".cl-sum").textContent = summary(lens, month);
     dock.querySelector(".cl-rule").textContent = RULES[variable].map((k) => doc.rules[k]).join(" ");
     dock.querySelector(".cl-links").innerHTML = monthLinks(ms, MODE);

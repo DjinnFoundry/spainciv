@@ -10,14 +10,16 @@
 //     close()       forget what the panel holds; the dock is emptied and hidden after it
 //     pick()        the lens the panel opens on when none of its lenses is active (the first by default)
 //   panel.dock      the dock element while open, else null
+//   panel.updateKey(lens, label)   draw the lens into the dock's panelKey(): the label as its caption, then its ramp
+//                   and three of its legend ticks, or for a categorical lens the swatches its legend shows (the
+//                   legend's hide_empty rule) and, when there are none, the lens's null_label
 //   panelHead(title, closeLabel)   the panel's title row, with the close button
 //   panelKey()                     a colour key for the panel, shown on phones only: there the dock is a bottom
 //                                  sheet that covers the lens legend
-//   updatePanelKey(dock, lens, label)   draw the lens's ramp and three of its legend ticks into that key
 // A link that names one of the lenses (#lens=<id>) opens it: the hash's lens key was read before the extension added
 // the lens. `leaving` keeps the mode's own lens change from re-entering it.
 import { esc } from "../format.js";
-import { formatLensTick } from "../ui/lenses.js";
+import { categoryColor, categoryCounts, formatLensTick, isCategorical, shownCategories } from "../ui/lenses.js";
 
 const CLASS = "lens-panel";
 const KEY_TICKS = [[0, 0], [0.5, 2], [1, 4]]; // [position on the ramp, legend tick index] of the key's labels
@@ -25,15 +27,31 @@ const KEY_TICKS = [[0, 0], [0.5, 2], [1, 4]]; // [position on the ramp, legend t
 export const panelHead = (title, closeLabel) => `<header class="${CLASS}-head"><h2>${esc(title)}</h2>
   <button type="button" class="icon-btn" data-close aria-label="${esc(closeLabel)}" title="${esc(closeLabel)}">✕</button></header>`;
 
-export const panelKey = () => `<div class="pk-key" role="img"><i class="pk-ramp"></i><div class="pk-ticks"></div></div>`;
+export const panelKey = () =>
+  `<div class="pk-key" role="img"><span class="pk-cap"></span><i class="pk-ramp"></i><div class="pk-ticks"></div></div>`;
 
-export function updatePanelKey(dock, lens, label) {
-  const key = dock.querySelector(".pk-key");
-  if (!key || !lens.domain) return;
-  const ticks = KEY_TICKS.map(([p, k]) => formatLensTick(lens, p, k));
-  key.querySelector(".pk-ramp").style.background = `linear-gradient(90deg, ${lens.ramp.join(",")})`;
-  key.querySelector(".pk-ticks").innerHTML = ticks.map((s) => `<span>${esc(s)}</span>`).join("");
-  key.setAttribute("aria-label", `${label}: ${ticks.join(", ")}`);
+// The key's caption is the label; the aria-label adds what the key shows, since a role="img" hides its text.
+function drawKey(dock, lens, label, owner) {
+  const key = dock?.querySelector(".pk-key");
+  if (!key) return;
+  const ramp = key.querySelector(".pk-ramp"), ticks = key.querySelector(".pk-ticks");
+  key.querySelector(".pk-cap").textContent = label;
+  const categorical = isCategorical(lens);
+  key.classList.toggle("pk-swatches", categorical);
+  ramp.hidden = categorical;
+  if (categorical) {
+    const shown = shownCategories(lens, categoryCounts(lens, owner)), names = shown.map((k) => lens.categories[k].name);
+    ticks.innerHTML = shown.length
+      ? shown.map((k, i) => `<span class="pk-cat"><i style="background:${esc(categoryColor(lens, k))}"></i>${esc(names[i])}</span>`).join("")
+      : `<span>${esc(lens.null_label ?? "")}</span>`;
+    key.setAttribute("aria-label", `${label}: ${shown.length ? names.join(", ") : lens.null_label ?? ""}`);
+    return;
+  }
+  if (!lens.domain) return;
+  const marks = KEY_TICKS.map(([p, k]) => formatLensTick(lens, p, k));
+  ramp.style.background = `linear-gradient(90deg, ${lens.ramp.join(",")})`;
+  ticks.innerHTML = marks.map((m) => `<span>${esc(m)}</span>`).join("");
+  key.setAttribute("aria-label", `${label}: ${marks.join(", ")}`);
 }
 
 export function lensPanel(app, lensOrLenses, { mode, width = 360, label, open, close, pick }) {
@@ -81,5 +99,6 @@ export function lensPanel(app, lensOrLenses, { mode, width = 360, label, open, c
     get dock() {
       return dock;
     },
+    updateKey: (lens, label) => drawKey(dock, lens, label, app.w.raw.owner),
   };
 }

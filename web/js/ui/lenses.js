@@ -91,6 +91,24 @@ export function lensValueAt(lens, t) {
   return d0 + t * (d1 - d0);
 }
 
+// Categorical lenses (format "category"): values are indices into lens.categories. These three are the legend's rule
+// for which swatches it shows and in which colour; a lens panel's phone key (app/lensPanel.js) draws the same ones.
+export const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
+/** Land hexes (owner >= 0) per category. */
+export function categoryCounts(lens, owner) {
+  const counts = new Array(lens.categories.length).fill(0);
+  for (let i = 0; i < lens.values.length; i++) {
+    const v = lens.values[i];
+    if (v == null || owner[i] < 0) continue;
+    const k = Math.round(v);
+    if (k >= 0 && k < counts.length) counts[k]++;
+  }
+  return counts;
+}
+export const categoryColor = (lens, k) => lens.categories[k].color || lens.ramp?.[k] || "#888";
+/** The categories the legend shows: all of them, or with `hide_empty` only those some hex has. */
+export const shownCategories = (lens, counts) => lens.categories.flatMap((_, k) => (!lens.hide_empty || counts[k] > 0 ? [k] : []));
+
 const TERRAIN = { id: null, icon: "terrain", emoji: "🗺️", get name() { return t("core.lens.terrain"); } };
 const RECENT_KEY = "civusa.recentLenses";
 const DEFAULT_RECENT = ["density", "income", "bachelors"];
@@ -276,25 +294,14 @@ export function initLensDock(opts) {
   // Categorical lenses (format "category"): values are indices into lens.categories, whose colours are the ramp
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
   // one shows only that category (the same band mechanism as the histogram). A lens with `hide_empty` leaves out
-  // the swatches of categories no hex has (the timeline's trades of a year).
-  const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
+  // the swatches of categories no hex has (shownCategories; the timeline's trades of a year).
   const catBand = (l, k) => {
     const n = l.categories.length;
     if (n < 2) return [-Infinity, Infinity];
     const h = 0.5 / (n - 1);
     return [k === 0 ? -Infinity : k / (n - 1) - h, k === n - 1 ? Infinity : k / (n - 1) + h];
   };
-  const catCounts = (l) => cached(`cat:${l.id}`, l, () => {
-    const counts = new Array(l.categories.length).fill(0);
-    const owner = w.raw.owner;
-    for (let i = 0; i < l.values.length; i++) {
-      const v = l.values[i];
-      if (v == null || owner[i] < 0) continue;
-      const k = Math.round(v);
-      if (k >= 0 && k < counts.length) counts[k]++;
-    }
-    return counts;
-  });
+  const catCounts = (l) => cached(`cat:${l.id}`, l, () => categoryCounts(l, w.raw.owner));
   const noteHtml = (l) => (l.note ? `<div class="lg-note">${esc(l.note)}</div>` : "");
   // A lens with `fly_to` (indices into its names) lists those names under its swatches; a click brings the hexes
   // labelled with one into view (a zone hidden under a city banner, the longevity zones of Madrid and Barcelona).
@@ -322,8 +329,8 @@ export function initLensDock(opts) {
 
   function renderCategoricalLegend(l) {
     const counts = catCounts(l);
-    const sw = l.categories.map((c, k) => l.hide_empty && !counts[k] ? "" : `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
-        title="${esc(c.description || c.name)} (${t("core.hexes", { n: counts[k] })})"><i style="background:${esc(c.color || l.ramp[k] || "#888")}"></i><span>${esc(c.name)}</span></button>`).join("");
+    const sw = shownCategories(l, counts).map((k) => { const c = l.categories[k]; return `<button type="button" class="lg-cat" data-k="${k}" aria-pressed="false"
+        title="${esc(c.description || c.name)} (${t("core.hexes", { n: counts[k] })})"><i style="background:${esc(categoryColor(l, k))}"></i><span>${esc(c.name)}</span></button>`; }).join("");
     legend.hidden = false;
     legend.innerHTML = `
       ${legendHead(l)}

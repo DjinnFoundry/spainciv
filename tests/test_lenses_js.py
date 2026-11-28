@@ -1,4 +1,5 @@
-"""web/js/ui/lenses.js helpers that the people lenses rely on (run with node; skipped without it)."""
+"""web/js/ui/lenses.js helpers that the people lenses rely on, and the icon or emoji every lens needs in the quick row
+(run with node; skipped without it)."""
 
 import json
 import shutil
@@ -6,14 +7,19 @@ import subprocess
 import unittest
 from pathlib import Path
 
-LENSES_JS = Path(__file__).resolve().parents[1] / "web" / "js" / "ui" / "lenses.js"
+from test_lens_panel_js import PRELUDE, SPAIN, run as run_panel
+
+ROOT = Path(__file__).resolve().parents[1]
+LENSES_JS = ROOT / "web" / "js" / "ui" / "lenses.js"
+ICONS_JS = ROOT / "web" / "js" / "icons.js"
 NODE = shutil.which("node")
 
 
 @unittest.skipUnless(NODE, "node is not installed")
 class LensesJsTest(unittest.TestCase):
     def run_js(self, body: str):
-        script = f"import({json.dumps(LENSES_JS.as_uri())}).then((m) => {{ console.log(JSON.stringify({body})); }});"
+        script = (f"Promise.all([import({json.dumps(LENSES_JS.as_uri())}), import({json.dumps(ICONS_JS.as_uri())})])"
+                  f".then(([m, I]) => {{ console.log(JSON.stringify({body})); }});")
         out = subprocess.run([NODE, "--input-type=module", "-e", script], capture_output=True, text=True, check=True)
         return json.loads(out.stdout)
 
@@ -86,3 +92,68 @@ class LensesJsTest(unittest.TestCase):
           return [line({source: 'census', also_sources: ['life']}), line({source: 'census'})];
         })()""")
         self.assertEqual(got, ["Census · 2026 + Life · 2024", "Census · 2026"])
+
+    # The quick row shows only icons when it would not fit (ui/lenses.js fitQuick): a lens without an SVG icon or an
+    # emoji would be an empty chip.
+    def test_every_us_lens_has_an_svg_icon(self):
+        # So the US quick row never holds an emoji. Spain's lenses are checked in the browser below.
+        lenses = [{"id": l["id"], "icon": l.get("icon")} for l in json.loads((ROOT / "web/data/lenses.json").read_text())["lenses"]]
+        got = self.run_js(f"{json.dumps(lenses)}.filter((l) => !I.hasIcon(l.icon)).map((l) => l.id)")
+        self.assertEqual(got, [])
+
+    def test_every_spanish_lens_has_an_icon_or_an_emoji(self):
+        # Every lens of Spain, from the file or built in the browser by an extension.
+        got = run_panel("""
+            setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', sunset: true,
+                                    data: ['fiestas', 'clima', 'embalses', 'transit', 'personajes'] } }, null);
+            const { glyph } = await import('./web/js/ui/icon.js');
+            const app = spainApp('');
+            Object.assign(app, { registerOverlay: () => () => {}, requestDraw() {}, invalidate() {}, cam: { scale: 1 } });
+            for (const x of ['fiestas', 'sun', 'clima', 'embalses', 'transit', 'timeline']) (await import(`./web/js/ext/${x}/index.js`)).install(app);
+            await tick();
+            out([...app.lensById.values()].map((l) => { const g = glyph(l, 15);
+              return [l.id, /<svg[^>]*>[\s\S]*<path/.test(g) || /class="emoji"[^>]*>(?!•<)[^<]+</.test(g)]; }));
+        """, PRELUDE + SPAIN)
+        ids = [i for i, _ in got]
+        for lens in ("density", "lynx", "fiestas_mes", "atardecer", "clima_temp", "clima_lluvia", "clima_heladas", "clima_sol",
+                     "embalses", "rail_madrid", "great_people_year", "great_people_year_kind"):
+            self.assertIn(lens, ids)
+        self.assertEqual([i for i, ok in got if not ok], [])
+
+    def test_category_helpers_match_the_legend_rule(self):
+        got = self.run_js("""(() => {
+          const cats = [{name: 'A', color: '#111'}, {name: 'B'}, {name: 'C'}];
+          const lens = {categories: cats, ramp: ['#a00', '#0b0'], values: [0, 1, 1, null, 2, 0.6]};
+          const counts = m.categoryCounts(lens, [0, 0, -1, 0, -1, 3]);
+          return {counts, all: m.shownCategories(lens, counts), hidden: m.shownCategories({...lens, hide_empty: true}, counts),
+                  colors: [0, 1, 2].map((k) => m.categoryColor(lens, k))};
+        })()""")
+        # owner < 0 (sea) and null are not counted; 0.6 rounds to 1
+        self.assertEqual(got["counts"], [1, 2, 0])
+        self.assertEqual(got["all"], [0, 1, 2])
+        self.assertEqual(got["hidden"], [0, 1])
+        self.assertEqual(got["colors"], ["#111", "#0b0", "#888"])
+
+    def test_a_quick_chip_without_an_svg_has_its_emoji_and_its_name_in_the_title(self):
+        # When the row would not fit only the glyph shows (style.css .icons): the chip keeps the emoji glyph() writes
+        # and a title, from which the browser names an icon-only button.
+        script = """
+          import { readFileSync } from 'node:fs';
+          const el = () => ({ innerHTML: '', hidden: false, title: '', classList: { add() {}, remove() {}, toggle() {} },
+            setAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] });
+          const els = {};
+          Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => '["lynx","density"]', setItem() {} }, configurable: true });
+          globalThis.window = { addEventListener() {} };
+          globalThis.document = { getElementById: (id) => (els[id] ||= el()), addEventListener() {}, contains: () => false };
+          const world = JSON.parse(readFileSync('sites/es/data/world.json', 'utf8'));
+          (await import('./web/js/app/country.js')).setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES' } }, null);
+          const { initLensDock } = await import('./web/js/ui/lenses.js');
+          initLensDock({ lenses: JSON.parse(readFileSync('sites/es/data/lenses.json', 'utf8')), onPick() {}, onBand() {} }).render(null);
+          console.log(JSON.stringify([...els['lens-quick'].innerHTML.matchAll(/<button[^>]*data-id="([^"]*)"[^>]*title="([^"]*)">([\\s\\S]*?)<\\/button>/g)]
+            .map(([, id, title, body]) => [id, title, /<svg/.test(body), /<span class="emoji"[^>]*>([^<]*)</.exec(body)?.[1] ?? null])));
+        """
+        out = subprocess.run([NODE, "--input-type=module", "-e", script], cwd=ROOT, capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(out.stdout), [["", "Terreno (sin lente)", True, None],
+                                                  ["lynx", "Lente Lince ibérico", False, "🐈"],
+                                                  ["density", "Lente Población", True, None],
+                                                  ["income", "Lente Renta", True, None]])

@@ -29,6 +29,7 @@ export default {
   "timeline.view": "Show",
   "timeline.view.count": "How many",
   "timeline.view.kind": "By trade",
+  "timeline.key.count": "Great people alive per hex",
   "timeline.summary": { one: "{count} person alive in {year}, of the {total} with dates.", other: "{count} people alive in {year}, of the {total} with dates." },
   "timeline.approx": { one: "{count} counts from a date given as a decade or a century.", other: "{count} count from a date given as a decade or a century." },
   "timeline.famous": "The most famous",
