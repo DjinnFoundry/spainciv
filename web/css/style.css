@@ -508,12 +508,13 @@ html:not([lang="en"]) .yield-tile .lbl { font-size: 9px; letter-spacing: 0; }
 #lens-area > * { pointer-events: auto; }
 body.panel-open #lens-area { right: calc(394px + var(--dock-right, 0px)); }
 #lens-area { container-type: inline-size; }
-/* A narrow dock (e.g. beside the open panel) shows icons only for the quick lenses; a lens without an SVG icon keeps
-   its emoji (glyph() writes it as span.emoji), or its button would be an empty box. */
+/* A narrow dock (e.g. beside the open panel) and a row that would not fit (ui/lenses.js fitQuick, .icons) show icons
+   only for the quick lenses; a lens without an SVG icon keeps its emoji (glyph() writes it as span.emoji), or its
+   button would be an empty box. */
 @container (max-width: 560px) {
   .lens-quick .lens-btn:not(.active) span:not(.emoji), .res-toggle span { display: none; }
 }
-.lens-quick.icons .lens-btn:not(.active) span { display: none; } /* a row that would not fit (ui/lenses.js fitQuick) */
+.lens-quick.icons .lens-btn:not(.active) span:not(.emoji) { display: none; }
 .lens-dock { display: flex; align-items: center; gap: 4px; padding: 5px; max-width: 100%; min-width: 0; }
 .lens-quick { display: flex; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .lens-quick::-webkit-scrollbar { display: none; }

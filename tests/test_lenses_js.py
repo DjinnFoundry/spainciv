@@ -6,14 +6,17 @@ import subprocess
 import unittest
 from pathlib import Path
 
-LENSES_JS = Path(__file__).resolve().parents[1] / "web" / "js" / "ui" / "lenses.js"
+ROOT = Path(__file__).resolve().parents[1]
+LENSES_JS = ROOT / "web" / "js" / "ui" / "lenses.js"
+ICONS_JS = ROOT / "web" / "js" / "icons.js"
 NODE = shutil.which("node")
 
 
 @unittest.skipUnless(NODE, "node is not installed")
 class LensesJsTest(unittest.TestCase):
     def run_js(self, body: str):
-        script = f"import({json.dumps(LENSES_JS.as_uri())}).then((m) => {{ console.log(JSON.stringify({body})); }});"
+        script = (f"Promise.all([import({json.dumps(LENSES_JS.as_uri())}), import({json.dumps(ICONS_JS.as_uri())})])"
+                  f".then(([m, I]) => {{ console.log(JSON.stringify({body})); }});")
         out = subprocess.run([NODE, "--input-type=module", "-e", script], capture_output=True, text=True, check=True)
         return json.loads(out.stdout)
 
@@ -86,3 +89,14 @@ class LensesJsTest(unittest.TestCase):
           return [line({source: 'census', also_sources: ['life']}), line({source: 'census'})];
         })()""")
         self.assertEqual(got, ["Census · 2026 + Life · 2024", "Census · 2026"])
+
+    def test_every_lens_file_has_an_svg_icon_or_an_emoji(self):
+        # The quick row shows only icons when it would not fit (ui/lenses.js fitQuick); a lens without either would be
+        # an empty chip. The US lenses all have an SVG, so the US quick row never holds an emoji.
+        files = {f: [{"id": l["id"], "icon": l.get("icon"), "emoji": l.get("emoji")}
+                     for l in json.loads((ROOT / f).read_text())["lenses"]]
+                 for f in ("web/data/lenses.json", "sites/es/data/lenses.json")}
+        got = self.run_js(f"Object.fromEntries(Object.entries({json.dumps(files)}).map(([f, ls]) => "
+                          "[f, ls.map((l) => [l.id, I.hasIcon(l.icon), !!l.emoji])]))")
+        self.assertEqual([i for i, svg, _ in got["web/data/lenses.json"] if not svg], [])
+        self.assertEqual([i for i, svg, emoji in got["sites/es/data/lenses.json"] if not (svg or emoji)], [])
