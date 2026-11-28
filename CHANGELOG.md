@@ -6,6 +6,9 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
+- **Personajes en el tiempo** en el móvil: el panel tapa la leyenda, así que bajo el selector de vista lleva la
+  clave de color. En Cuántos, la escala (≤ 1, 6, ≥ 36 personajes por hexágono); en Por oficio, los oficios con
+  alguien vivo ese año (5 en el año 1000, 15 hoy), que cambian con el año (A35, A36).
 - Grupo de lentes **Longevidad**, detrás de Vida diaria: la esperanza de vida al nacer (pasa aquí), el
   **sobreenvejecimiento** (de 85 años o más entre los de 65 o más; España, 15,6 %), los **centenarios** por 10.000
   (España, 3,66), los dos suavizados hacia la cifra de España para que una aldea no gane con unos pocos vecinos, la
@@ -167,6 +170,8 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 - Paro, renta de los hogares, alquiler y alquiler ÷ renta en las áreas urbanas, las provincias y España, con la comparación con España en cada panel. Paro: parados ÷ población activa del Censo anual del INE (2024). Renta: renta neta media por hogar del Atlas de Distribución de Renta de los Hogares (2024), rotulada como media. Alquiler: mediana mensual del SERPAVI del Ministerio de Vivienda (2024). Madrid: 8,0 %, 52.548 €, 844 € al mes; España: 11,5 %, 40.591 €, 620 €. El valor de la vivienda y el oro de las ciudades siguen vacíos por falta de fuente municipal (E9, E49).
 
 ### Corregido
+- Barra rápida: cuando la fila solo cabe con iconos, una lente sin icono propio («Personajes vivos en 2026»,
+  «Lince ibérico») enseña su emoji en vez de un botón vacío (A36).
 - Los municipios cuyo artículo lleva apóstrofo ya no salen con un espacio de más: «L'Hospitalet de Llobregat», no
   «L' Hospitalet de Llobregat».
 - En las lentes de esperanza de vida, las marcas de la escala de la leyenda ya no se pisan («20,0 años21,0 años»): el
