@@ -6,9 +6,11 @@ decisiones están en `DECISIONS.md`; lo pendiente, en `ROADMAP.md`.
 ## Sin publicar
 
 ### Añadido
-- **Personajes en el tiempo** en el móvil: el panel tapa la leyenda, así que bajo el selector de vista lleva la
-  clave de color. En Cuántos, la escala (≤ 1, 6, ≥ 36 personajes por hexágono); en Por oficio, los oficios con
-  alguien vivo ese año (5 en el año 1000, 15 hoy), que cambian con el año (A35, A36).
+- **Personajes en el tiempo** y **Embalses** en el móvil: el panel tapa la leyenda, así que lleva la clave de color
+  con su rótulo. En Cuántos, la escala (≤ 1, 6, ≥ 36 personajes por hexágono); en Por oficio, los oficios que
+  encabezan al menos un hexágono ese año (5 en el año 1000, 15 hoy), y «Nadie vivo en…» en los años sin ninguno; en
+  Embalses, la escala del agua embalsada (0 %, 50 %, ≥ 100 % de la capacidad). Las claves del sol y del clima llevan
+  ahora también su rótulo a la vista (A35, A36).
 - Grupo de lentes **Longevidad**, detrás de Vida diaria: la esperanza de vida al nacer (pasa aquí), el
   **sobreenvejecimiento** (de 85 años o más entre los de 65 o más; España, 15,6 %), los **centenarios** por 10.000
   (España, 3,66), los dos suavizados hacia la cifra de España para que una aldea no gane con unos pocos vecinos, la

@@ -168,3 +168,10 @@ The site is a Cloudflare Pages project of its own (`spainciv`, account Djinn Fou
 
     uv run python -m pipeline package --country es
     wrangler pages deploy dist/spainciv --project-name spainciv --branch main
+
+The scripts are ES modules served without a version in their names, so a returning visitor must get them all from
+the same deploy: one module from an older deploy that lacks a name a newer one imports stops the whole page. The
+package's `_headers` (`pipeline/site.py`) makes `/js/*` and `/css/*` revalidate on every visit, which keeps the set
+consistent. Deploys made before it let a browser keep them for 4 hours (`max-age=14400`, still what production
+served on 2026-11-28): on the first deploy that carries `_headers`, a visitor whose browser holds those copies can get
+a mixed set until they expire. Purging Cloudflare's cache does not reach them, since they are in the browser.
