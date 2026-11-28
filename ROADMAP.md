@@ -7,6 +7,20 @@ decisiones que salgan van a `DECISIONS.md`.
 
 1. **Revisión de David** de las decisiones marcadas «Claude» en `DECISIONS.md`.
 
+## Mecánicas de SimGrammar que faltan (en curso, 2026-11-28)
+
+Recuento con la regla de Yohei: 29 presentes y 6 parciales de 199. Una rama por mecánica, siete familias en paralelo:
+
+- **Gobierno:** elecciones por municipio (Ministerio del Interior); satisfacción ciudadana (CIS por comunidad).
+- **Economía:** recaudación e impuestos por municipio (AEAT, Hacienda); mercado de trabajo y salarios (EPA, AEAT);
+  valor del suelo (Catastro).
+- **Recursos:** cultivos (MAPA); ganadería (censo agrario); potencial renovable (viento y sol, IDAE).
+- **Logística:** tráfico (intensidad media diaria, Ministerio y DGT); cobertura de servicios (distancia al hospital).
+- **Entorno:** contaminación (NO₂, EEA); clima futuro (AdapteCCa); avisos de AEMET; contagio (gripe o COVID por
+  provincia).
+- **Información:** proyecciones de población del INE; feed de avisos; histogramas comparativos.
+- **Población:** flujos migratorios entre provincias (INE), que completan la inmigración por atractivo.
+
 ## Huecos conocidos
 
 - Lentes diarias (E32, E38): trabajan fuera, esperanza de vida y bodas solo tienen dato propio en unos 150 municipios;
