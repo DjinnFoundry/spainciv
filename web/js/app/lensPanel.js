@@ -13,11 +13,13 @@
 //   panelHead(title, closeLabel)   the panel's title row, with the close button
 //   panelKey()                     a colour key for the panel, shown on phones only: there the dock is a bottom
 //                                  sheet that covers the lens legend
-//   updatePanelKey(dock, lens, label)   draw the lens's ramp and three of its legend ticks into that key
+//   updatePanelKey(dock, lens, label, owner)   draw the lens into that key: its ramp and three of its legend ticks, or
+//                                  for a categorical lens the swatches its legend shows (owner: the hexes' owners,
+//                                  which the legend's hide_empty rule counts on)
 // A link that names one of the lenses (#lens=<id>) opens it: the hash's lens key was read before the extension added
 // the lens. `leaving` keeps the mode's own lens change from re-entering it.
 import { esc } from "../format.js";
-import { formatLensTick } from "../ui/lenses.js";
+import { categoryColor, categoryCounts, formatLensTick, shownCategories } from "../ui/lenses.js";
 
 const CLASS = "lens-panel";
 const KEY_TICKS = [[0, 0], [0.5, 2], [1, 4]]; // [position on the ramp, legend tick index] of the key's labels
@@ -27,11 +29,24 @@ export const panelHead = (title, closeLabel) => `<header class="${CLASS}-head"><
 
 export const panelKey = () => `<div class="pk-key" role="img"><i class="pk-ramp"></i><div class="pk-ticks"></div></div>`;
 
-export function updatePanelKey(dock, lens, label) {
+export function updatePanelKey(dock, lens, label, owner) {
   const key = dock.querySelector(".pk-key");
-  if (!key || !lens.domain) return;
+  if (!key) return;
+  const ramp = key.querySelector(".pk-ramp");
+  if (lens.format === "category" && lens.categories?.length) {
+    const shown = shownCategories(lens, categoryCounts(lens, owner)), names = shown.map((k) => lens.categories[k].name);
+    key.classList.add("pk-swatches");
+    ramp.hidden = true;
+    key.querySelector(".pk-ticks").innerHTML = shown.map((k, i) =>
+      `<span class="pk-cat"><i style="background:${esc(categoryColor(lens, k))}"></i>${esc(names[i])}</span>`).join("");
+    key.setAttribute("aria-label", `${label}: ${names.join(", ")}`);
+    return;
+  }
+  key.classList.remove("pk-swatches");
+  ramp.hidden = false;
+  if (!lens.domain) return;
   const ticks = KEY_TICKS.map(([p, k]) => formatLensTick(lens, p, k));
-  key.querySelector(".pk-ramp").style.background = `linear-gradient(90deg, ${lens.ramp.join(",")})`;
+  ramp.style.background = `linear-gradient(90deg, ${lens.ramp.join(",")})`;
   key.querySelector(".pk-ticks").innerHTML = ticks.map((s) => `<span>${esc(s)}</span>`).join("");
   key.setAttribute("aria-label", `${label}: ${ticks.join(", ")}`);
 }

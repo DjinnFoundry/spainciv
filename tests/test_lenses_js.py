@@ -100,3 +100,17 @@ class LensesJsTest(unittest.TestCase):
                           "[f, ls.map((l) => [l.id, I.hasIcon(l.icon), !!l.emoji])]))")
         self.assertEqual([i for i, svg, _ in got["web/data/lenses.json"] if not svg], [])
         self.assertEqual([i for i, svg, emoji in got["sites/es/data/lenses.json"] if not (svg or emoji)], [])
+
+    def test_category_helpers_match_the_legend_rule(self):
+        got = self.run_js("""(() => {
+          const cats = [{name: 'A', color: '#111'}, {name: 'B'}, {name: 'C'}];
+          const lens = {categories: cats, ramp: ['#a00', '#0b0'], values: [0, 1, 1, null, 2, 0.6]};
+          const counts = m.categoryCounts(lens, [0, 0, -1, 0, -1, 3]);
+          return {counts, all: m.shownCategories(lens, counts), hidden: m.shownCategories({...lens, hide_empty: true}, counts),
+                  colors: [0, 1, 2].map((k) => m.categoryColor(lens, k))};
+        })()""")
+        # owner < 0 (sea) and null are not counted; 0.6 rounds to 1
+        self.assertEqual(got["counts"], [1, 2, 0])
+        self.assertEqual(got["all"], [0, 1, 2])
+        self.assertEqual(got["hidden"], [0, 1])
+        self.assertEqual(got["colors"], ["#111", "#0b0", "#888"])
