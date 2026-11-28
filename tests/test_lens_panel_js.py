@@ -445,7 +445,8 @@ class ReservoirsPanelTest(unittest.TestCase):
             for (let i = 0; i < 5; i++) await tick();
             out({{ mode: app.mode, lens: app.state.lens?.id ?? null, semana: app.keys.get('semana').get(),
                    embalse: app.keys.get('embalse').get(), painted: lens.values.filter((v) => v != null).length, loads,
-                   count: els.get('[data-count]')?.textContent ?? null, res: els.get('[data-res]')?.innerHTML ?? null }});
+                   count: els.get('[data-count]')?.textContent ?? null, res: els.get('[data-res]')?.innerHTML ?? null,
+                   key: typeof key === 'undefined' ? null : key }});
         """, PRELUDE + SPAIN)
 
     def test_a_link_with_the_lens_and_a_week_opens_it_on_that_week(self):
@@ -483,6 +484,17 @@ class ReservoirsPanelTest(unittest.TestCase):
         self.assertEqual(got["count"], "No se ha podido cargar la serie semanal: los anillos y los embalses solo están "
                                         "en la última semana.")
         self.assertIn("No se ha podido cargar la serie semanal", got["res"])
+
+    def test_on_a_phone_the_panel_has_the_colour_key(self):
+        got = self.open("#lens=embalses", then="const k = app.dockEl.querySelector('.pk-key'); "
+                        "const key = { cap: k.querySelector('.pk-cap').textContent, ticks: k.querySelector('.pk-ticks').innerHTML, "
+                        "ramp: k.querySelector('.pk-ramp').style.background, label: k.attrs['aria-label'], "
+                        "inHtml: app.dockEl.innerHTML.includes('class=\"pk-key\"') };")
+        self.assertTrue(got["key"]["inHtml"])
+        self.assertEqual(got["key"]["cap"], "Agua embalsada en cada cuenca, % de su capacidad")
+        self.assertEqual(got["key"]["ticks"], "<span>0\u00a0%</span><span>50\u00a0%</span><span>≥ 100\u00a0%</span>")  # the legend's
+        self.assertTrue(got["key"]["ramp"].startswith("linear-gradient(90deg, #593215"))
+        self.assertEqual(got["key"]["label"], "Agua embalsada en cada cuenca, % de su capacidad: 0\u00a0%, 50\u00a0%, ≥ 100\u00a0%")
 
 
 

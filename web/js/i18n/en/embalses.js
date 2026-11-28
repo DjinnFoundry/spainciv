@@ -2,6 +2,7 @@
 // of Spain, so its English speaks of Spain and nothing goes in en-ES.
 export default {
   "embalses.lens.name": "Reservoirs",
+  "embalses.key": "Water held in each basin, % of its capacity",
   "embalses.lens.desc": "Water held in each basin in the chosen week, as % of its capacity: the cubic hectometres of its reservoirs over the sum of their capacities, counting only those the Boletín Hidrológico of the Ministry for the Ecological Transition reported that week. Each ring is a reservoir; its arc, the full part. These are the Boletín's weekly figures since 1988, not validated; the validated ones are in the Anuario de Aforos. Total capacity has grown since 1988: the panel gives each week's.",
   "embalses.lens.none": "Outside the Boletín Hidrológico, which covers the peninsula",
   "embalses.title": "Reservoirs · week of {date}",
