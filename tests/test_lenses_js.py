@@ -114,3 +114,27 @@ class LensesJsTest(unittest.TestCase):
         self.assertEqual(got["all"], [0, 1, 2])
         self.assertEqual(got["hidden"], [0, 1])
         self.assertEqual(got["colors"], ["#111", "#0b0", "#888"])
+
+    def test_a_quick_chip_without_an_svg_has_its_emoji_and_its_name_in_the_title(self):
+        # When the row would not fit only the glyph shows (style.css .icons): the chip keeps the emoji glyph() writes
+        # and a title, from which the browser names an icon-only button.
+        script = """
+          import { readFileSync } from 'node:fs';
+          const el = () => ({ innerHTML: '', hidden: false, title: '', classList: { add() {}, remove() {}, toggle() {} },
+            setAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] });
+          const els = {};
+          Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => '["lynx","density"]', setItem() {} }, configurable: true });
+          globalThis.window = { addEventListener() {} };
+          globalThis.document = { getElementById: (id) => (els[id] ||= el()), addEventListener() {}, contains: () => false };
+          const world = JSON.parse(readFileSync('sites/es/data/world.json', 'utf8'));
+          (await import('./web/js/app/country.js')).setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES' } }, null);
+          const { initLensDock } = await import('./web/js/ui/lenses.js');
+          initLensDock({ lenses: JSON.parse(readFileSync('sites/es/data/lenses.json', 'utf8')), onPick() {}, onBand() {} }).render(null);
+          console.log(JSON.stringify([...els['lens-quick'].innerHTML.matchAll(/<button[^>]*data-id="([^"]*)"[^>]*title="([^"]*)">([\\s\\S]*?)<\\/button>/g)]
+            .map(([, id, title, body]) => [id, title, /<svg/.test(body), /<span class="emoji"[^>]*>([^<]*)</.exec(body)?.[1] ?? null])));
+        """
+        out = subprocess.run([NODE, "--input-type=module", "-e", script], cwd=ROOT, capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(out.stdout), [["", "Terreno (sin lente)", True, None],
+                                                  ["lynx", "Lente Lince ibérico", False, "🐈"],
+                                                  ["density", "Lente Población", True, None],
+                                                  ["income", "Lente Renta", True, None]])
