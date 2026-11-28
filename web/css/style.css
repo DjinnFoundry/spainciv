@@ -301,6 +301,7 @@ button.dk-item:hover, .dk-item[aria-current] { background: rgba(90,74,36,.3); }
 
 /* ---------- a lens panel's colour key (app/lensPanel.js panelKey): phones only, where the sheet covers the legend ---------- */
 .pk-key { margin: 12px 0 0; }
+.pk-cap { display: block; margin-bottom: 3px; font-size: 11px; color: var(--ink-dim); } /* the label of the key */
 .pk-ramp { display: block; height: 10px; border-radius: 2px; }
 .pk-ticks { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--ink-dim); }
 .pk-swatches .pk-ticks { flex-wrap: wrap; justify-content: flex-start; gap: 2px 10px; } /* a categorical lens: its legend's swatches */

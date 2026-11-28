@@ -8,7 +8,8 @@
 //   mode "timeline" (app/lensPanel.js: opens and closes with either lens): the left dock with the year, a strip of
 //     people alive per decade, a slider, steps by decade or century, play, the view switch and the most famous people
 //     alive; on phones, where the dock is a sheet over the legend, the panel carries the colour key of the lens on
-//     (lensPanel.panelKey: the count's ramp, or the swatches of the trades alive that year)
+//     (lensPanel.panelKey: the count's ramp, or the swatches of the trades that lead some hex that year, the legend's
+//     hide_empty rule)
 //   URL hash: #lens=great_people_year&anio=1000, signed as people write years (anio=-201 = 201 BC, no year 0);
 //     no anio (or one that is not a year) = the download year
 //   overlay "timeline-dots": while the hexes are too small to read, a dot on each hex with someone alive, in its lens
@@ -16,7 +17,7 @@
 // personajes.json is loaded the first time the timeline opens; the year rules live in lifespan.js. A year change
 // repaints with refreshLens() only (A18 and A26 stay intact); play adds no history entries.
 import { country } from "../../app/country.js";
-import { lensPanel, panelHead, panelKey, updatePanelKey } from "../../app/lensPanel.js";
+import { lensPanel, panelHead, panelKey } from "../../app/lensPanel.js";
 import { lang, t } from "../../i18n.js";
 import { esc, int } from "../../format.js";
 import { namesFrom } from "../../ui/lenses.js";
@@ -299,7 +300,7 @@ export function install(app) {
   function updateView() {
     const l = app.state.lens;
     panel.dock?.querySelectorAll("[data-lens]").forEach((b) => b.setAttribute("aria-pressed", String(l?.id === b.dataset.lens)));
-    if (el.slider && ours(l)) updatePanelKey(panel.dock, l, t(l === kindLens ? "timeline.key.kind" : "timeline.key.count"), owner);
+    if (el.slider && ours(l)) panel.updateKey(l, l === kindLens ? kindLens.unit[0].toUpperCase() + kindLens.unit.slice(1) : t("timeline.key.count"));
   }
 
   function render() {

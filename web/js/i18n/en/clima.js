@@ -41,7 +41,6 @@ export default {
   "clima.extremes.frost.none": "In {month} no WMO station has days below 0 °C in its 1991-2020 normal.",
   "clima.extremes.sun": "Most sun in {month}: {top}, {max}; least: {bottom}, {min} (WMO 1991-2020 normals).",
   "clima.extremes.sun.none": "No sunshine hours in {month}.",
-  "clima.key": "Scale of {what}",
   "clima.link": "Climate in {month}",
   "clima.loading": "Loading the climate…",
   "clima.loadError": "The climate could not be loaded.",

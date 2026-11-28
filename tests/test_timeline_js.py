@@ -204,10 +204,10 @@ const paste = async (hash) => { stack.splice(++at, Infinity, hash); location.has
 const back = async () => { location.hash = stack[--at]; listeners.popstate.forEach((f) => f()); await settle(); };
 const shown = () => ({ hash: location.hash, entries: stack.length, mode: app.mode, year: dock?.querySelector('.tl-y').textContent ?? null,
                        lens: state.lens?.name ?? null });
-// The phone colour key (app/lensPanel.js panelKey) as the dock holds it: ticks or swatches, the ramp and the label.
+// The phone colour key (app/lensPanel.js panelKey) as the dock holds it: caption, ticks or swatches, ramp and label.
 const key = () => {
   const k = dock.querySelector('.pk-key'), ticks = k.querySelector('.pk-ticks').innerHTML;
-  return { swatches: k.classes.has('pk-swatches'), rampHidden: k.querySelector('.pk-ramp').hidden,
+  return { caption: k.querySelector('.pk-cap').textContent, swatches: k.classes.has('pk-swatches'), rampHidden: k.querySelector('.pk-ramp').hidden,
            ramp: k.querySelector('.pk-ramp').style.background ?? null, label: k.attrs['aria-label'] ?? null, ticks,
            cats: [...ticks.matchAll(/<span class="pk-cat"><i style="background:([^"]*)"><\/i>([^<]*)<\/span>/g)].map(([, c, n]) => [n, c]),
            afterView: dock.innerHTML.indexOf('class="pk-key"') > dock.innerHTML.indexOf('tl-view') };
@@ -296,7 +296,6 @@ class TimelineLinkTest(unittest.TestCase):
         self.assertEqual((got["again"]["mode"], got["again"]["year"]), ("timeline", "1520"))
 
 
-
 @unittest.skipUnless(NODE, "node is not installed")
 class TimelineKeyTest(unittest.TestCase):
     """On a phone the dock is a bottom sheet over the legend: the panel carries the colour key of the lens on."""
@@ -306,16 +305,21 @@ class TimelineKeyTest(unittest.TestCase):
         self.assertTrue(got["afterView"])
         self.assertEqual(got["ticks"], "<span>≤ 1</span><span>6</span><span>≥ 36</span>")
         self.assertTrue(got["ramp"].startswith("linear-gradient(90deg, #1c1530"))
+        self.assertEqual(got["caption"], "Personajes vivos por hexágono")
         self.assertEqual(got["label"], "Personajes vivos por hexágono: ≤ 1, 6, ≥ 36")
         self.assertFalse(got["swatches"])
         self.assertFalse(got["rampHidden"])
 
-    def test_the_kind_view_lists_only_the_trades_alive_that_year(self):
+    def test_the_kind_view_lists_only_the_trades_that_lead_a_hex_that_year(self):
+        # The legend's hide_empty rule: a trade with someone alive that leads no hex has no swatch. In 1000 Ibn Hazm
+        # (philosopher, 994-1064) is alive, but no hex has philosophers as its leading trade.
         got = drive("""
             await go('#lens=great_people_year&anio=1000');
             setLens('great_people_year_kind');
             await settle();
-            const y1000 = { key: key(), present: present('great_people_year_kind') };
+            const { alive } = await import('./web/js/ext/timeline/lifespan.js');
+            const trades = [...new Set(people.people.filter((p) => alive(p, 1000)).map((p) => people.categories[p.kind].name))];
+            const y1000 = { key: key(), present: present('great_people_year_kind'), alive: trades };
             await paste('#lens=great_people_year_kind&anio=1520');
             out({ y1000, y1520: { key: key(), present: present('great_people_year_kind') } });
         """)
@@ -323,7 +327,10 @@ class TimelineKeyTest(unittest.TestCase):
         self.assertEqual([n for n, _ in k["cats"]], ["Reyes y reinas", "Militares", "Santos y religiosos", "Científicos", "Médicos"])
         self.assertEqual(k["cats"], got["y1000"]["present"])  # each swatch in its category's colour
         self.assertTrue(k["swatches"] and k["rampHidden"])
+        self.assertEqual(k["caption"], "Oficio con más personajes vivos")
         self.assertEqual(k["label"], "Oficio con más personajes vivos: " + ", ".join(n for n, _ in k["cats"]))
+        self.assertIn("Filósofos", got["y1000"]["alive"])
+        self.assertNotIn("Filósofos", [n for n, _ in k["cats"]])
         k = got["y1520"]["key"]
         self.assertEqual(len(k["cats"]), 14)
         self.assertEqual(k["cats"], got["y1520"]["present"])
@@ -340,6 +347,14 @@ class TimelineKeyTest(unittest.TestCase):
         self.assertFalse(got["count"]["swatches"])
         self.assertFalse(got["count"]["rampHidden"])
         self.assertEqual(got["count"]["ticks"], "<span>≤ 1</span><span>6</span><span>≥ 36</span>")
+        self.assertEqual(got["count"]["label"], "Personajes vivos por hexágono: ≤ 1, 6, ≥ 36")
+        self.assertEqual(got["count"]["caption"], "Personajes vivos por hexágono")
+
+    def test_a_year_without_a_leading_trade_says_so_in_the_key(self):
+        got = drive("await go('#lens=great_people_year_kind&anio=-530'); out(key());")
+        self.assertEqual(got["cats"], [])
+        self.assertEqual(got["ticks"], "<span>Nadie vivo en 530 a. C.</span>")
+        self.assertEqual(got["label"], "Oficio con más personajes vivos: Nadie vivo en 530 a. C.")
 
 
 if __name__ == "__main__":

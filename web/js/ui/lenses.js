@@ -93,6 +93,7 @@ export function lensValueAt(lens, t) {
 
 // Categorical lenses (format "category"): values are indices into lens.categories. These three are the legend's rule
 // for which swatches it shows and in which colour; a lens panel's phone key (app/lensPanel.js) draws the same ones.
+export const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
 /** Land hexes (owner >= 0) per category. */
 export function categoryCounts(lens, owner) {
   const counts = new Array(lens.categories.length).fill(0);
@@ -294,7 +295,6 @@ export function initLensDock(opts) {
   // stops (domain [0, n-1], linear), so world.js colours them exactly. The legend is a row of swatches; clicking
   // one shows only that category (the same band mechanism as the histogram). A lens with `hide_empty` leaves out
   // the swatches of categories no hex has (shownCategories; the timeline's trades of a year).
-  const isCategorical = (l) => l?.format === "category" && Array.isArray(l.categories) && l.categories.length > 0;
   const catBand = (l, k) => {
     const n = l.categories.length;
     if (n < 2) return [-Infinity, Infinity];

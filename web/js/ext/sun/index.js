@@ -14,7 +14,7 @@
 // Nothing is worked out until the panel first opens. The sun and the clocks live in solar.js; each hex is its centre's
 // longitude and latitude (geo.js mapProjection).
 import { country } from "../../app/country.js";
-import { lensPanel, panelHead, panelKey, updatePanelKey } from "../../app/lensPanel.js";
+import { lensPanel, panelHead, panelKey } from "../../app/lensPanel.js";
 import { t } from "../../i18n.js";
 import { clock, esc, longDate } from "../../format.js";
 import { mapProjection } from "../../geo.js";
@@ -186,7 +186,7 @@ export function install(app) {
     });
     const input = dock.querySelector(".sn-day input");
     if (input.value !== S.isoDay(day)) input.value = S.isoDay(day);
-    updatePanelKey(dock, lens, t("sun.key"));
+    panel.updateKey(lens, lens.heading); // the key's caption, as the legend's title
     dock.querySelector(".sn-note").textContent = lens.note;
   }
 }
