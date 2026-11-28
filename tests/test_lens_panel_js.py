@@ -620,29 +620,5 @@ class TimelinePanelTest(unittest.TestCase):
                 self.assertEqual((closed["mode"], closed["lens"]), (None, None))
 
 
-
-@unittest.skipUnless(NODE, "node is not installed")
-class LensGlyphTest(unittest.TestCase):
-    def test_every_spanish_lens_has_an_icon_or_an_emoji(self):
-        # A quick-row chip shows only its glyph when the row would not fit: every lens of Spain, from the file or built
-        # in the browser, has an SVG icon or an emoji to show there.
-        got = run("""
-            setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', sunset: true,
-                                    data: ['fiestas', 'clima', 'embalses', 'transit', 'personajes'] } }, null);
-            const { glyph } = await import('./web/js/ui/icon.js');
-            const app = spainApp('');
-            Object.assign(app, { registerOverlay: () => () => {}, requestDraw() {}, invalidate() {}, cam: { scale: 1 } });
-            for (const x of ['fiestas', 'sun', 'clima', 'embalses', 'transit', 'timeline']) (await import(`./web/js/ext/${x}/index.js`)).install(app);
-            await tick();
-            out([...app.lensById.values()].map((l) => { const g = glyph(l, 15);
-              return [l.id, /<svg[^>]*>[\s\S]*<path/.test(g) || /class="emoji"[^>]*>(?!•<)[^<]+</.test(g)]; }));
-        """, PRELUDE + SPAIN)
-        ids = [i for i, _ in got]
-        for built in ("fiestas_mes", "atardecer", "clima_temp", "clima_lluvia", "clima_heladas", "clima_sol", "embalses",
-                      "rail_madrid", "great_people_year", "great_people_year_kind"):
-            self.assertIn(built, ids)
-        self.assertEqual([i for i, ok in got if not ok], [])
-
-
 if __name__ == "__main__":
     unittest.main()

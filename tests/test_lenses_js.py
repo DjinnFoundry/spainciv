@@ -1,10 +1,13 @@
-"""web/js/ui/lenses.js helpers that the people lenses rely on (run with node; skipped without it)."""
+"""web/js/ui/lenses.js helpers that the people lenses rely on, and the icon or emoji every lens needs in the quick row
+(run with node; skipped without it)."""
 
 import json
 import shutil
 import subprocess
 import unittest
 from pathlib import Path
+
+from test_lens_panel_js import PRELUDE, SPAIN, run as run_panel
 
 ROOT = Path(__file__).resolve().parents[1]
 LENSES_JS = ROOT / "web" / "js" / "ui" / "lenses.js"
@@ -90,16 +93,32 @@ class LensesJsTest(unittest.TestCase):
         })()""")
         self.assertEqual(got, ["Census · 2026 + Life · 2024", "Census · 2026"])
 
-    def test_every_lens_file_has_an_svg_icon_or_an_emoji(self):
-        # The quick row shows only icons when it would not fit (ui/lenses.js fitQuick); a lens without either would be
-        # an empty chip. The US lenses all have an SVG, so the US quick row never holds an emoji.
-        files = {f: [{"id": l["id"], "icon": l.get("icon"), "emoji": l.get("emoji")}
-                     for l in json.loads((ROOT / f).read_text())["lenses"]]
-                 for f in ("web/data/lenses.json", "sites/es/data/lenses.json")}
-        got = self.run_js(f"Object.fromEntries(Object.entries({json.dumps(files)}).map(([f, ls]) => "
-                          "[f, ls.map((l) => [l.id, I.hasIcon(l.icon), !!l.emoji])]))")
-        self.assertEqual([i for i, svg, _ in got["web/data/lenses.json"] if not svg], [])
-        self.assertEqual([i for i, svg, emoji in got["sites/es/data/lenses.json"] if not (svg or emoji)], [])
+    # The quick row shows only icons when it would not fit (ui/lenses.js fitQuick): a lens without an SVG icon or an
+    # emoji would be an empty chip.
+    def test_every_us_lens_has_an_svg_icon(self):
+        # So the US quick row never holds an emoji. Spain's lenses are checked in the browser below.
+        lenses = [{"id": l["id"], "icon": l.get("icon")} for l in json.loads((ROOT / "web/data/lenses.json").read_text())["lenses"]]
+        got = self.run_js(f"{json.dumps(lenses)}.filter((l) => !I.hasIcon(l.icon)).map((l) => l.id)")
+        self.assertEqual(got, [])
+
+    def test_every_spanish_lens_has_an_icon_or_an_emoji(self):
+        # Every lens of Spain, from the file or built in the browser by an extension.
+        got = run_panel("""
+            setCountry({ country: { ...world.country, lang: 'es', locale: 'es-ES', sunset: true,
+                                    data: ['fiestas', 'clima', 'embalses', 'transit', 'personajes'] } }, null);
+            const { glyph } = await import('./web/js/ui/icon.js');
+            const app = spainApp('');
+            Object.assign(app, { registerOverlay: () => () => {}, requestDraw() {}, invalidate() {}, cam: { scale: 1 } });
+            for (const x of ['fiestas', 'sun', 'clima', 'embalses', 'transit', 'timeline']) (await import(`./web/js/ext/${x}/index.js`)).install(app);
+            await tick();
+            out([...app.lensById.values()].map((l) => { const g = glyph(l, 15);
+              return [l.id, /<svg[^>]*>[\s\S]*<path/.test(g) || /class="emoji"[^>]*>(?!•<)[^<]+</.test(g)]; }));
+        """, PRELUDE + SPAIN)
+        ids = [i for i, _ in got]
+        for lens in ("density", "lynx", "fiestas_mes", "atardecer", "clima_temp", "clima_lluvia", "clima_heladas", "clima_sol",
+                     "embalses", "rail_madrid", "great_people_year", "great_people_year_kind"):
+            self.assertIn(lens, ids)
+        self.assertEqual([i for i, ok in got if not ok], [])
 
     def test_category_helpers_match_the_legend_rule(self):
         got = self.run_js("""(() => {
